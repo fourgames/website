@@ -1,5 +1,7 @@
 import "bulma/css/bulma.min.css";
 
+document.getElementById("year").textContent = new Date().getFullYear();
+
 // // import './style.css'
 // import javascriptLogo from "./assets/javascript.svg";
 // import viteLogo from "./assets/vite.svg";

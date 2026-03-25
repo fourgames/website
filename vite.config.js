@@ -2,7 +2,7 @@ import { defineConfig } from "vite";
 import purgecss from "vite-plugin-purgecss";
 
 export default defineConfig({
-	base: "/website/", // Detta gör alla sökvägar relativa, vilket fungerar överallt
+	base: "/", // Detta gör alla sökvägar relativa, vilket fungerar överallt
 	// ... dina andra inställningar
 	plugins: [
 		// purgecss({

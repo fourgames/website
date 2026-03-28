@@ -2,6 +2,26 @@ import "bulma/css/bulma.min.css";
 
 document.getElementById("year").textContent = new Date().getFullYear();
 
+document.addEventListener("DOMContentLoaded", () => {
+	// 1. Get all "navbar-burger" elements
+	const $navbarBurgers = Array.prototype.slice.call(document.querySelectorAll(".navbar-burger"), 0);
+
+	// 2. Check if there are any navbar burgers
+	if ($navbarBurgers.length > 0) {
+		// 3. Add a click event on each of them
+		$navbarBurgers.forEach((el) => {
+			el.addEventListener("click", () => {
+				// 4. Get the target from the "data-target" attribute
+				const target = el.dataset.target;
+				const $target = document.getElementById(target);
+
+				// 5. Toggle the "is-active" class on both the "navbar-burger" and the "navbar-menu"
+				el.classList.toggle("is-active");
+				$target.classList.toggle("is-active");
+			});
+		});
+	}
+});
 // // import './style.css'
 // import javascriptLogo from "./assets/javascript.svg";
 // import viteLogo from "./assets/vite.svg";

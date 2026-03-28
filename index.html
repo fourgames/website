@@ -77,139 +77,136 @@
 		</nav>
 
 		<header>
-			<section
-				id="support-us"
-				class="hero is-success is-halfheight site-bg"
-				style="background: url(&quot;src/assets/rednight.webp&quot;) center/cover no-repeat"
-			>
-				<header class="columns is-centered hero">
-					<div class="columns is-centered">
-						<div class="column is-one-fifth button is-danger is-hidden-mobile">
-							First column is-one-fifth
-						</div>
-						<div class="column is-three-fifths px-5 py-5">
-							<!-- <nav class="navbar is-transparent is-spaced is-fixed-top" role="navigation" aria-label="main navigation">
-								<div class="container">
-									<div class="navbar-brand">
-										<a
-											class="navbar-item has-text-white subtitle"
-											href="/"
-											style="background-color: transparent; transition: filter 0.2s"
-											onmouseover="this.style.filter = 'brightness(1.3)'"
-											onmouseout="this.style.filter = 'brightness(1)'"
-										>
-											<figure class="image is-64x64">
-												<img src="/favicon.svg" alt="Four Games" style="max-height: none" />
-											</figure>
-											Four Games
-										</a>
+			<section id="support-us" class="hero is-halfheight" style="position: relative; overflow: hidden">
+				<picture style="position: absolute; inset: 0; z-index: -1">
+					<source srcset="src/assets/rednight.webp" type="image/webp" />
+					<img
+						src="src/assets/rednight.jpg"
+						alt="Night sky"
+						style="width: 100%; height: 100%; object-fit: cover"
+					/>
+				</picture>
 
-										<a
-											role="button"
-											class="navbar-burger"
-											aria-label="menu"
-											aria-expanded="false"
-											data-target="navbarBasicExample"
-										>
-											<span aria-hidden="true"></span>
-											<span aria-hidden="true"></span>
-											<span aria-hidden="true"></span>
-											<span aria-hidden="true"></span>
-										</a>
-									</div>
+				<div class="columns is-gapless hero-body" style="padding: 0; display: flex; align-items: stretch">
+					<div class="column is-one-fifth is-hidden-mobile">
+						<div class="button is-danger" style="height: 100%; border-radius: 0; display: flex">Left</div>
+					</div>
 
-									<div
-										id="navbarBasicExample"
-										class="navbar-menu is-shadowless "
-										style="background-color: transparent"
-									>
-										<div class="navbar-end">
-											<div class="navbar-item is-flex is-justify-content-end">
-												
-										</div>
-									</div>
-								</div>
-							</nav> -->
-
-							<div class="container">
-								<h1 class="title has-text-white">Support us</h1>
-								<p class="subtitle has-text-white">
-									The best way to support our work
-									<br />
-									is by becoming a YouTube Supporter.
-								</p>
-								<div class="buttons">
-									<a
-										class="button is-danger has-text-white"
-										href="https://www.youtube.com/@FourGamesAB/join"
-										target="_blank"
-									>
-										<span class="icon">
-											<img
-												src="src/assets/youtube-brands-solid-full.svg"
-												alt="YouTube"
-												style="filter: brightness(0) invert(1)"
-											/>
-										</span>
-										<strong>Join</strong>
-									</a>
-								</div>
+					<div class="column is-three-fifth">
+						<div
+							class="button"
+							style="
+								height: 100%;
+								width: 100%;
+								border-radius: 0;
+								display: flex;
+								flex-direction: column;
+								align-items: flex-start; /* Pushes content to the left */
+								text-align: left;
+								background-color: transparent; /* Removes the color */
+								border: none; /* Removes the button border */
+								box-shadow: none; /* Removes the hover shadow */
+								padding: 2rem 1rem; /* Adjusts the inner space */
+								cursor: default; /* Stops it from looking like a clickable button */
+							"
+						>
+							<h1 class="title has-text-white">Support us</h1>
+							<p class="subtitle has-text-white">
+								The best way to support our work
+								<br />
+								is by becoming a YouTube Supporter.
+							</p>
+							<div class="buttons">
+								<a
+									class="button is-danger has-text-white"
+									href="https://www.youtube.com/@FourGamesAB/join"
+									target="_blank"
+								>
+									<span class="icon">
+										<img
+											src="src/assets/youtube-brands-solid-full.svg"
+											alt="YouTube"
+											style="filter: brightness(0) invert(1)"
+										/>
+									</span>
+									<strong>Join</strong>
+								</a>
 							</div>
 						</div>
-						<div class="column is-one-fifth button is-danger is-hidden-mobile">
-							Third column is-one-fifth
-						</div>
 					</div>
-				</header>
+					<div class="column is-one-fifth is-hidden-mobile">
+						<div class="button is-danger" style="height: 100%; border-radius: 0; display: flex">Left</div>
+					</div>
+				</div>
 			</section>
 		</header>
 
 		<main>
-			<div class="columns is-centered">
-				<div class="column is-one-fifth button is-danger is-hidden-mobile">First column is-one-fifth</div>
-				<div class="column is-three-fifths button is-info">
-					<main class="has-text-centered">
-						<h1>Second column is-three-fifths</h1>
-
-						<div id="contact-us" class="box" style="max-width: 400px; margin: 2rem auto">
-							<h1 class="title is-4">Contact us</h1>
-
-							<form action="https://formspree.io/f/mbdplgvl" method="POST">
-								<div class="field">
-									<label class="label">Email</label>
-									<div class="control">
-										<input
-											class="input"
-											type="email"
-											name="email"
-											placeholder="example@gmail.com"
-											required
-										/>
-									</div>
-								</div>
-
-								<div class="field">
-									<label class="label">Message</label>
-									<div class="control">
-										<textarea
-											class="textarea"
-											name="message"
-											placeholder="Your message"
-											required
-										></textarea>
-									</div>
-								</div>
-
-								<div class="field">
-									<div class="control">
-										<button class="button is-dark is-fullwidth" type="submit">Submit</button>
-									</div>
-								</div>
-							</form>
-						</div>
-					</main>
+			<div class="columns is-gapless">
+				<div class="column is-one-fifth is-hidden-mobile">
+					<div class="button is-danger" style="height: 100%; border-radius: 0; display: flex">Left</div>
 				</div>
-				<div class="column is-one-fifth button is-danger is-hidden-mobile">Third column is-one-fifth</div>
+
+				<div class="column is-three-fifth">
+					<div class="button is-info" style="height: 100%; border-radius: 0; display: flex">
+						<div class="columns is-multiline">
+							<div id="our-games" class="column is-full">
+								<div class="notification is-primary">First Vertical Block</div>
+							</div>
+							
+							<div id="our-videos" class="column is-full">
+								<div  class="notification is-link">Second Vertical Block</div>
+							</div>
+
+							<div id="contact-us" class="column is-full">
+								<div class="notification is-info">
+									<div class="box">
+										<h1 class="title is-4">Contact us</h1>
+
+										<form action="https://formspree.io/f/mbdplgvl" method="POST">
+											<div class="field">
+												<label class="label">Email</label>
+												<div class="control">
+													<input
+														class="input"
+														type="email"
+														name="email"
+														placeholder="example@gmail.com"
+														required
+													/>
+												</div>
+											</div>
+
+											<div class="field">
+												<label class="label">Message</label>
+												<div class="control">
+													<textarea
+														class="textarea"
+														name="message"
+														placeholder="Your message"
+														required
+													></textarea>
+												</div>
+											</div>
+
+											<div class="field">
+												<div class="control">
+													<button class="button is-dark is-fullwidth" type="submit">
+														Submit
+													</button>
+												</div>
+											</div>
+										</form>
+									</div>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="column is-one-fifth is-hidden-mobile">
+					<div class="button is-danger" style="height: 100%; border-radius: 0; display: flex">Left</div>
+				</div>
 			</div>
 		</main>
 

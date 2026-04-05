@@ -1,1 +1,3 @@
-# website just fast and dirty site will rebuild later with React + TypeScript + Vite + Bulma
+# 🍀 Website Four Games
+> [!NOTE]
+> In development website just made fast will rebuild later with React + TypeScript + Vite

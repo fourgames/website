@@ -11,14 +11,14 @@ contributing, especially via bug reports or pull requests.
 
 ## Reporting bugs
 
-Report bugs [here](https://github.com/fourgames/resources/issues/new).
+Report bugs [here](https://github.com/fourgames/website/issues/new).
 
 Make sure that the bug you are experiencing is reproducible in the latest Godot
 release.
 
 ## Proposing features or improvements
 
-Feature proposal [here](https://github.com/fourgames/resources/discussions/new?category=ideas).
+Feature proposal [here](https://github.com/fourgames/website/discussions/new?category=ideas).
 
 ## Contributing pull requests
 
@@ -88,13 +88,13 @@ change without having to dive into the Git history.
 To communicate with developers (e.g. to discuss a feature you want to implement
 or a bug you want to fix), the following channels can be used:
 
-- [Bug tracker](https://github.com/fourgames/resources/issues): If there is an
+- [Bug tracker](https://github.com/fourgames/website/issues): If there is an
   existing issue about a topic you want to discuss, you can participate directly.
   If not, you can open a new issue. Please mind the guidelines outlined above
   for bug reporting.
-- [Feature proposals](https://github.com/fourgames/resources/discussions):
-  To propose a new feature start a new discussion [here](https://github.com/fourgames/resources/discussions/new/choose?category=ideas). Don't
-  hesitate to start by talking about your idea to make sure that it makes sense in resources's context.
+- [Feature proposals](https://github.com/fourgames/website/discussions):
+  To propose a new feature start a new discussion [here](https://github.com/fourgames/website/discussions/new/choose?category=ideas). Don't
+  hesitate to start by talking about your idea to make sure that it makes sense in website's context.
 
 Thanks for your interest in contributing!
 

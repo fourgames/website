@@ -128,7 +128,7 @@ import ContainerWrapper from "../common/ContainerWrapper.vue";
 								Developing a Godot project template and curated resources to help developers.
 							</p>
 						</div>
-						<hr class="bg-warning" />
+						<hr class="bg-success" />
 					</li>
 
 					<li>

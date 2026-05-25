@@ -132,7 +132,7 @@ import ContainerWrapper from "../common/ContainerWrapper.vue";
 					</li>
 
 					<li>
-						<hr class="bg-warning" />
+						<hr class="bg-success" />
 						<div class="timeline-middle grid place-items-center w-6 h-6">
 							<span
 								class="col-start-1 row-start-1 w-5 h-5 rounded-full bg-warning/30 animate-ping"

@@ -1,7 +1,7 @@
 <script setup>
 import ContainerWrapper from "../common/ContainerWrapper.vue";
 
-const steamAppIds = [2807130, 3958210, 5207970];
+const steamAppIds = [2807130, 3958210, 5253650, 5207970];
 </script>
 
 <template>

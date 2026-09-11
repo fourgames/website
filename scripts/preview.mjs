@@ -28,7 +28,7 @@ const isFile = async (file) => (await stat(file).catch(() => null))?.isFile() ??
 async function send(req, res, status, file) {
 	const type = TYPES[path.extname(file)] ?? "application/octet-stream";
 	let body = await readFile(file);
-	const headers = { "Content-Type": type, "Cache-Control": "max-age=600" };
+	const headers = { "Content-Type": type, "Cache-Control": "no-cache" };
 	if (/text|javascript|json|xml|svg/.test(type) && /\bgzip\b/.test(req.headers["accept-encoding"] ?? "")) {
 		body = gzipSync(body);
 		headers["Content-Encoding"] = "gzip";

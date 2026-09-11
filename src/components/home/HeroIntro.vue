@@ -55,7 +55,7 @@ import { SITE } from "@/data/site.js";
 						/>
 						<source
 							type="image/avif"
-							srcset="/images/hero/hero-960.avif 960w, /images/hero/hero-1440.avif 1440w, /images/hero/hero-1920.avif 1920w"
+							srcset="/images/hero/hero-960.avif 960w, /images/hero/hero-1536.avif 1536w, /images/hero/hero-1920.avif 1920w"
 							sizes="(min-width: 68rem) 64rem, calc(100vw - 4.5rem)"
 						/>
 						<img

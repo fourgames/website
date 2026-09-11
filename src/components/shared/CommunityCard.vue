@@ -10,7 +10,7 @@ const props = defineProps({
 	title: { type: String, default: "Join our Discord" },
 	text: {
 		type: String,
-		default: "Chat with the team, get help with your Godot projects and be first to hear about new games.",
+		default: "Chat with us, get help with your Godot projects and be first to hear about new games.",
 	},
 	headingLevel: { type: String, default: "h3" },
 });

@@ -30,7 +30,7 @@ import PartnerGrid from "@/components/jobs/PartnerGrid.vue";
 			<div v-reveal>
 				<CommunityCard
 					title="Chat with us on Discord"
-					text="Drop a message in the server — the whole team is there, and it's where we answer fastest."
+					text="Drop a message in the server — it's where we answer fastest."
 				/>
 			</div>
 			<div v-reveal="100"><ContactForm /></div>

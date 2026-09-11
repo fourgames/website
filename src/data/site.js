@@ -16,6 +16,9 @@ export const SITE = {
 	youtube: {
 		handle: "@FourGamesAB",
 		channelId: "UCGf6yX8yYzo1FBzhmKhFduA",
+		// Featured "Most popular" video when there's no YOUTUBE_API_KEY (the keyless feed only sees the
+		// 15 newest uploads). With a key, the build finds the true most popular video by itself.
+		popularFallbackId: "bR0v-yoZYZA",
 	},
 	discord: {
 		guildId: "1084592623819444365",

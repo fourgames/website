@@ -2,7 +2,7 @@
 
 # fourgames.se
 
-The website of **Four Games**, an indie studio from Sweden making games in Godot, sharing free tutorials and open-sourcing the tools we use.
+The website of **Four Games**, an indie studio making games in Godot, sharing free tutorials and open-sourcing the tools we use.
 
 Vue 3 + Vite + Tailwind CSS v4, prerendered to static HTML and hosted on GitHub Pages.
 

@@ -14,7 +14,7 @@ export const GAMES = [
 		fallback: {
 			status: "released",
 			name: "Reforge Front",
-			image: "/images/hero/hero-m-640.avif",
+			image: "/images/games/reforge-front.avif",
 			tagline: "Defend the furnace from waves of goblins by building and upgrading in an FPS tower defense.",
 		},
 	},

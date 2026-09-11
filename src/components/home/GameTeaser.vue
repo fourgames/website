@@ -44,6 +44,10 @@ const statusLabel = props.game.status === "upcoming" ? "Coming soon" : "In devel
 			</p>
 			<h3 class="text-base font-semibold tracking-tight sm:text-lg">{{ game.name }}</h3>
 			<p class="mt-1.5 text-sm text-muted sm:mt-2">{{ game.description }}</p>
+			<p class="mt-2 inline-flex items-center gap-1.5 text-xs font-medium text-accent-2">
+				<Icon name="heart" class="size-3.5" />
+				Free for members at launch
+			</p>
 			<div class="mt-auto pt-3 sm:pt-5">
 				<Button v-if="game.status === 'upcoming'" :href="game.storeUrl" variant="secondary" size="sm" icon="steam">
 					Wishlist on Steam

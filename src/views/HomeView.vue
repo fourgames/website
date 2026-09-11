@@ -4,11 +4,13 @@ import Section from "@/components/ui/Section.vue";
 import GamesSection from "@/components/home/GamesSection.vue";
 import HeroIntro from "@/components/home/HeroIntro.vue";
 import MembershipCTA from "@/components/home/MembershipCTA.vue";
+import MembershipPerks from "@/components/home/MembershipPerks.vue";
 import VideosSection from "@/components/home/VideosSection.vue";
 </script>
 
 <template>
 	<HeroIntro />
+	<MembershipPerks />
 	<GamesSection />
 	<VideosSection />
 	<Section

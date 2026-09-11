@@ -9,7 +9,7 @@ export const routes = [
 				title: "Four Games — Indie games made in Godot",
 				absoluteTitle: true,
 				description:
-					"Four Games is an indie game studio from Sweden. We make games in Godot, share free tutorials on YouTube, and open-source the tools we use.",
+					"Four Games makes indie games in Godot, shares free tutorials on YouTube, and open-sources the tools we use.",
 			},
 		},
 	},

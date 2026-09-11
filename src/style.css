@@ -56,7 +56,6 @@
 	--text-display--letter-spacing: -0.035em;
 
 	--shadow-card: inset 0 1px 0 0 rgb(255 255 255 / 0.04), 0 1px 2px rgb(0 0 0 / 0.4);
-	--shadow-glow: 0 0 0 1px rgb(72 186 255 / 0.18), 0 20px 80px -20px rgb(74 144 226 / 0.45);
 
 	--ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
 

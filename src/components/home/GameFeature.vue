@@ -2,6 +2,7 @@
 import { computed } from "vue";
 import Badge from "@/components/ui/Badge.vue";
 import Button from "@/components/ui/Button.vue";
+import { SITE } from "@/data/site.js";
 
 const props = defineProps({ game: { type: Object, required: true } });
 
@@ -46,6 +47,7 @@ const price = computed(() => (props.game.isFree ? "Free to play" : props.game.pr
 		<div class="flex flex-col p-6 sm:p-8 lg:p-10">
 			<div class="flex flex-wrap items-center gap-2">
 				<Badge tone="success" dot>Out now</Badge>
+				<Badge tone="accent">Free for members</Badge>
 				<Badge v-for="genre in game.genres" :key="genre">{{ genre }}</Badge>
 			</div>
 			<h3 class="mt-5 text-2xl font-semibold tracking-tight sm:text-3xl">{{ game.name }}</h3>
@@ -62,13 +64,15 @@ const price = computed(() => (props.game.isFree ? "Free to play" : props.game.pr
 				</div>
 			</dl>
 
-			<div class="mt-auto flex flex-wrap items-center gap-x-5 gap-y-3 pt-8">
-				<Button :href="game.storeUrl" icon="steam">Buy on Steam</Button>
-				<p v-if="price" class="text-sm text-muted">
-					<span class="sr-only">Price: </span>
-					<span class="font-medium text-fg">{{ price }}</span>
-					<span v-if="game.price?.discountPercent" class="ml-2 text-success">−{{ game.price.discountPercent }}%</span>
-				</p>
+			<div class="mt-auto flex flex-wrap items-center gap-3 pt-8">
+				<Button :href="game.storeUrl" icon="steam">
+					Buy on Steam
+					<span v-if="price" class="font-normal text-bg/60">
+						<span class="sr-only">for</span>
+						{{ price }}
+					</span>
+				</Button>
+				<Button :href="SITE.links.youtubeJoin" variant="secondary" icon="youtube">Get it free as a member</Button>
 			</div>
 		</div>
 	</article>

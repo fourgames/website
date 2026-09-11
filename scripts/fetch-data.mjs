@@ -269,7 +269,7 @@ async function fetchYouTubeApi(key) {
 }
 
 // Keyless fallback: the public feed has the 15 newest uploads (incl. view counts, no durations).
-// "Popular" is then the most-viewed of those 15.
+// "Popular" is the pinned SITE.youtube.popularFallbackId (title via oEmbed), else the most-viewed of those 15.
 async function fetchYouTubeRss() {
 	if (!SITE.youtube.channelId) throw new SkipError("no YOUTUBE_API_KEY and no SITE.youtube.channelId");
 	const res = await request(`https://www.youtube.com/feeds/videos.xml?channel_id=${SITE.youtube.channelId}`);
@@ -291,7 +291,21 @@ async function fetchYouTubeRss() {
 		}));
 	if (videos.length === 0) throw new Error("RSS feed had no videos");
 
-	const popular = [...videos].sort((a, b) => b.viewCount - a.viewCount)[0];
+	let popular = null;
+	const pinnedId = SITE.youtube.popularFallbackId;
+	if (pinnedId) {
+		popular = videos.find((v) => v.id === pinnedId) ?? null;
+		if (!popular) {
+			try {
+				const watchUrl = `https://www.youtube.com/watch?v=${pinnedId}`;
+				const embed = await fetchJson(`https://www.youtube.com/oembed?url=${encodeURIComponent(watchUrl)}&format=json`);
+				popular = { id: pinnedId, title: embed.title, publishedAt: null, viewCount: null, durationSeconds: 0, embeddable: true, thumbs: [] };
+			} catch (error) {
+				warn("youtube", `pinned video ${pinnedId}: ${error.message} — using the most viewed recent upload`);
+			}
+		}
+	}
+	popular ??= [...videos].sort((a, b) => b.viewCount - a.viewCount)[0];
 	const latest = videos.filter((v) => v.id !== popular.id).slice(0, 6);
 
 	// The feed doesn't say which thumbnail sizes exist (older uploads often lack sd/maxres, and

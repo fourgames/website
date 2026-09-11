@@ -34,7 +34,7 @@ const views = (n) => `${formatCompact(n)} views`;
 		id="videos"
 		eyebrow="YouTube"
 		title="Learn Godot with us"
-		description="Free tutorials from the team — from quick tips to full beginner courses."
+		description="Free Godot tutorials — from quick tips to full beginner courses."
 	>
 		<template #actions>
 			<Button :href="SITE.links.youtube" variant="secondary" icon="youtube">Visit channel</Button>
@@ -57,7 +57,7 @@ const views = (n) => `${formatCompact(n)} views`;
 							<Icon name="eye" class="size-4" />
 							{{ views(current.viewCount) }}
 						</span>
-						<RelativeTime :datetime="current.publishedAt" />
+						<RelativeTime v-if="current.publishedAt" :datetime="current.publishedAt" />
 					</div>
 					<h3 class="mt-3 text-xl font-semibold tracking-tight sm:text-2xl">{{ current.title }}</h3>
 				</div>
@@ -93,12 +93,25 @@ const views = (n) => `${formatCompact(n)} views`;
 							<span class="min-w-0">
 								<span class="line-clamp-2 text-sm font-medium text-fg">{{ video.title }}</span>
 								<span class="mt-1 block text-xs text-subtle">
-									{{ views(video.viewCount) }} · <RelativeTime :datetime="video.publishedAt" />
+									<template v-if="video.viewCount !== null">{{ views(video.viewCount) }} · </template>
+									<RelativeTime v-if="video.publishedAt" :datetime="video.publishedAt" />
 								</span>
 							</span>
 						</a>
 					</li>
 				</ul>
+				<p class="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-xl border border-accent/20 bg-accent/[0.06] px-4 py-3 text-sm text-muted">
+					<Icon name="clock" class="size-4 text-accent-2" />
+					Members watch new tutorials early.
+					<a
+						:href="SITE.links.youtubeJoin"
+						target="_blank"
+						rel="noopener noreferrer"
+						class="font-medium text-accent-2 transition-colors hover:text-fg"
+					>
+						Become a member<span class="sr-only"> (opens in new tab)</span> →
+					</a>
+				</p>
 			</div>
 		</div>
 

@@ -37,8 +37,7 @@ import { SITE } from "@/data/site.js";
 				</p>
 
 				<div class="mt-9 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center lg:justify-start">
-					<Button :href="SITE.links.youtubeJoin" size="lg" icon="youtube">Become a member</Button>
-					<Button :href="SITE.links.discord" variant="secondary" size="lg" icon="discord">Join Discord</Button>
+					<Button :href="SITE.links.discord" size="lg" icon="discord">Join Discord</Button>
 				</div>
 			</div>
 

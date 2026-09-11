@@ -192,7 +192,15 @@ async function fetchYouTube() {
 		console.log("[youtube] YOUTUBE_API_KEY is not set — using the public RSS feed (latest 15 uploads only)");
 		return fetchYouTubeRss();
 	}
+	try {
+		return await fetchYouTubeApi(key);
+	} catch (error) {
+		warn("youtube", `Data API failed (${error.message}) — falling back to the RSS feed`);
+		return fetchYouTubeRss();
+	}
+}
 
+async function fetchYouTubeApi(key) {
 	const api = (endpoint, params) =>
 		fetchJson(`https://www.googleapis.com/youtube/v3/${endpoint}?${new URLSearchParams({ ...params, key })}`);
 
@@ -219,7 +227,6 @@ async function fetchYouTube() {
 		const res = await api("videos", {
 			part: "snippet,contentDetails,statistics,status",
 			id: ids.slice(i, i + 50).join(","),
-			maxResults: "50",
 		});
 		items.push(...(res.items ?? []));
 	}

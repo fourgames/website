@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Build-time API data (see scripts/fetch-data.mjs)
+src/data/generated/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

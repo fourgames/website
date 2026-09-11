@@ -1,12 +1,14 @@
 <script setup>
-import Navbar from "./components/layout/Navbar.vue";
-import Hero from "./components/layout/Hero.vue";
-import Footer from "./components/layout/Footer.vue";
+import SiteFooter from "./components/layout/SiteFooter.vue";
+import SiteHeader from "./components/layout/SiteHeader.vue";
+import SkipLink from "./components/layout/SkipLink.vue";
 </script>
 
 <template>
-	<Navbar />
-	<Hero />
-	<router-view />
-	<Footer />
+	<SkipLink />
+	<SiteHeader />
+	<main id="main" tabindex="-1">
+		<RouterView />
+	</main>
+	<SiteFooter />
 </template>

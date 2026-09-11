@@ -1,40 +1,78 @@
-name: Deploy static content to Pages
+name: Build and deploy
 
 on:
   push:
     branches: ["main"]
+  # Daily rebuild so Steam, YouTube, GitHub and Discord data stay fresh (and new store pages appear).
+  schedule:
+    - cron: "17 4 * * *"
   workflow_dispatch:
 
 permissions:
   contents: read
-  pages: write
-  id-token: write
 
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Last good API data, so a third-party outage never empties a section.
+      - name: Restore build-time data
+        uses: actions/cache/restore@v6
+        with:
+          path: src/data/generated
+          key: site-data-v1-${{ github.run_id }}
+          restore-keys: site-data-v1-
+
+      - name: Fetch build-time data
+        run: npm run data
+        env:
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          GITHUB_TOKEN: ${{ github.token }}
+
+      - name: Save build-time data
+        uses: actions/cache/save@v6
+        with:
+          path: src/data/generated
+          key: site-data-v1-${{ github.run_id }}
+
+      - name: Build and prerender
+        run: npm run build
+
+      - name: Set up Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: ./dist
+
   deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      # Detta är magin som fixar Bulma och Vite
-      - name: Build
-        run: npm install && npm run build
-
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
-        with:
-          # Viktigt: Vi laddar bara upp den färdigbyggda mappen
-          path: './dist'
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

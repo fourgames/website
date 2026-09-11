@@ -1,18 +1,18 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en">
 	<head>
 		<meta charset="UTF-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-		<title>Four Games</title>
-		<style>
-			html[data-theme="dark"] {
-				background-color: #1d232a;
-			}
-		</style>
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<!--head:start--><title>Four Games</title><!--head:end-->
+		<meta name="color-scheme" content="dark" />
+		<meta name="theme-color" content="#0f0f0f" />
+		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+		<link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+		<!--preload-links-->
 	</head>
 	<body>
-		<div id="app"></div>
-		<script type="module" src="/src/main.js"></script>
+		<div id="app"><!--app-html--></div>
+		<script type="module" src="/src/entry-client.js"></script>
 	</body>
 </html>

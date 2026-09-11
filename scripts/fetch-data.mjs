@@ -142,7 +142,7 @@ async function fetchSteam(previous) {
 	for (const [index, { appId }] of GAMES.entries()) {
 		if (index > 0) await sleep(300);
 		try {
-			const json = await fetchJson(`https://store.steampowered.com/api/appdetails?appids=${appId}&cc=se&l=english`);
+			const json = await fetchJson(`https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=english`);
 			const entry = json?.[appId];
 			if (!entry) throw new Error("empty response");
 			if (!entry.success) {

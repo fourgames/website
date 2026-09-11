@@ -2,7 +2,7 @@
 
 export const MEMBERSHIP = {
 	tier: "Supporter",
-	price: "SEK 49",
+	price: "$4.99",
 	period: "month",
 	pitch: "Support Four Games on YouTube and get every game we make — free.",
 	perks: [
@@ -31,5 +31,5 @@ export const MEMBERSHIP = {
 			text: "Loyalty badges next to your name in comments and live chat.",
 		},
 	],
-	fineprint: "Recurring payment · cancel anytime · handled by YouTube",
+	fineprint: "Recurring payment · cancel anytime · price varies by region · handled by YouTube",
 };

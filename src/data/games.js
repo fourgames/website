@@ -1,10 +1,15 @@
-// Our Steam games. Plain ESM: scripts/fetch-data.mjs imports this to know which app IDs to fetch.
+// Games that Steam can't tell us about. Plain ESM: scripts/fetch-data.mjs imports this too.
 //
-// Live Steam data (name, art, description, price…) is fetched at build time and always wins.
-// `fallback` is used while a game has no public store page yet ("Coming soon" card):
+// Published games are discovered automatically at build time from the public store search
+// (SITE.steam.publisher / .developer), so a new store page needs NO entry here — it appears on the
+// site by itself within a day, "Coming soon" pages included. Add an entry only for:
+//   • an unannounced game, which has no public store page for the search to find; or
+//   • an offline fallback, so the site still renders before the first fetch succeeds.
+//
+// Every `fallback` field is used only where live Steam data is missing — Steam always wins.
 //   name     – shown instead of the Steam name (e.g. a codename)
-//   tagline  – one-liner under the name
-//   image    – optional path in /public, 460×215 or larger (e.g. "/images/games/project-x.webp")
+//   tagline  – one-liner under the name (unannounced games share a generic one if left out)
+//   image    – optional path in /public, Steam capsule art at 460×215 (cards use that ratio)
 //   hue      – colour of the placeholder art when there's no image (0–360)
 //   status   – only used if Steam can't be reached at build time ("released" | "unlisted")
 
@@ -16,30 +21,6 @@ export const GAMES = [
 			name: "Reforge Front",
 			image: "/images/games/reforge-front.avif",
 			tagline: "Defend the furnace from waves of goblins by building and upgrading in an FPS tower defense.",
-		},
-	},
-	{
-		appId: 3958210,
-		fallback: {
-			name: "Unannounced project",
-			tagline: "Something new is in the forge. Join the Discord to be first to see it.",
-			hue: 212,
-		},
-	},
-	{
-		appId: 5253650,
-		fallback: {
-			name: "Unannounced project",
-			tagline: "In development. Follow along for the reveal.",
-			hue: 150,
-		},
-	},
-	{
-		appId: 5207970,
-		fallback: {
-			name: "Unannounced project",
-			tagline: "Early days — more to share soon.",
-			hue: 265,
 		},
 	},
 ];

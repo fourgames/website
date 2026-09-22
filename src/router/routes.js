@@ -6,10 +6,32 @@ export const routes = [
 		component: () => import("@/views/HomeView.vue"),
 		meta: {
 			head: {
-				title: "Four Games — Indie games made in Godot",
+				title: "Four Games: Indie games made in Godot",
 				absoluteTitle: true,
 				description:
 					"Four Games makes indie games in Godot, shares free tutorials on YouTube, and open-sources the tools we use.",
+			},
+		},
+	},
+	{
+		path: "/games",
+		name: "games",
+		component: () => import("@/views/GamesView.vue"),
+		meta: {
+			head: {
+				title: "Games",
+				description: "Indie games made in Godot by Four Games, out now on Steam and free for members.",
+			},
+		},
+	},
+	{
+		path: "/videos",
+		name: "videos",
+		component: () => import("@/views/VideosView.vue"),
+		meta: {
+			head: {
+				title: "Videos",
+				description: "Free Godot tutorials from Four Games, from quick tips to full beginner courses.",
 			},
 		},
 	},
@@ -39,6 +61,8 @@ export const routes = [
 	},
 	// GitHub Pages also serves the physical files — keep one canonical URL per page.
 	{ path: "/index.html", redirect: "/" },
+	{ path: "/games.html", redirect: "/games" },
+	{ path: "/videos.html", redirect: "/videos" },
 	{ path: "/code.html", redirect: "/code" },
 	{ path: "/jobs.html", redirect: "/jobs" },
 	{
@@ -58,6 +82,8 @@ export const routes = [
 // Pages written by scripts/prerender.mjs. Flat files so GitHub Pages serves /code without a redirect.
 export const prerenderTargets = [
 	{ url: "/", file: "index.html", sitemap: true },
+	{ url: "/games", file: "games.html", sitemap: true },
+	{ url: "/videos", file: "videos.html", sitemap: true },
 	{ url: "/code", file: "code.html", sitemap: true },
 	{ url: "/jobs", file: "jobs.html", sitemap: true },
 	{ url: "/404", file: "404.html", sitemap: false },

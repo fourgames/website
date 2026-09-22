@@ -1,27 +1,17 @@
 <script setup>
-import CommunityCard from "@/components/shared/CommunityCard.vue";
-import Section from "@/components/ui/Section.vue";
 import GamesSection from "@/components/home/GamesSection.vue";
-import HeroIntro from "@/components/home/HeroIntro.vue";
-import MembershipCTA from "@/components/home/MembershipCTA.vue";
-import MembershipPerks from "@/components/home/MembershipPerks.vue";
+import GetInvolved from "@/components/home/GetInvolved.vue";
+import HeroBanner from "@/components/home/HeroBanner.vue";
+import MembershipBand from "@/components/home/MembershipBand.vue";
+import MembershipSection from "@/components/home/MembershipSection.vue";
 import VideosSection from "@/components/home/VideosSection.vue";
 </script>
 
 <template>
-	<HeroIntro />
-	<MembershipPerks />
+	<HeroBanner />
 	<GamesSection />
 	<VideosSection />
-	<Section
-		id="community"
-		eyebrow="Community"
-		title="Hang out with us"
-		description="Ask questions, share what you're building, and help shape our games."
-	>
-		<div class="grid gap-4 sm:gap-6 lg:grid-cols-2">
-			<div v-reveal><CommunityCard /></div>
-			<div v-reveal="100"><MembershipCTA /></div>
-		</div>
-	</Section>
+	<MembershipSection />
+	<GetInvolved />
+	<MembershipBand />
 </template>

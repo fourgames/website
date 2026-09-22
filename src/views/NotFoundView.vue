@@ -6,16 +6,15 @@ import { SITE } from "@/data/site.js";
 
 <template>
 	<PageHeader
-		eyebrow="404"
-		title="This page wandered off"
+		title="404: page not found"
 		description="The page you're looking for doesn't exist or has moved. Here are some places to go instead."
 	>
 		<div class="flex flex-wrap gap-3">
-			<Button to="/">Back to home</Button>
-			<Button to="/code" variant="secondary">Open Source</Button>
-			<Button to="/jobs" variant="secondary">Work with us</Button>
+			<Button to="/" variant="blue">Back to home</Button>
+			<Button to="/games">Games</Button>
+			<Button to="/videos">Videos</Button>
 		</div>
-		<p class="mt-10 text-sm text-subtle">
+		<p class="mt-8 text-sm text-date">
 			Think this is a bug?
 			<a :href="SITE.links.issues" target="_blank" rel="noopener noreferrer" class="link">
 				Report a website issue<span class="sr-only"> (opens in new tab)</span>

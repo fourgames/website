@@ -5,6 +5,9 @@
  *   node scripts/fetch-data.mjs            fetch every source
  *   node scripts/fetch-data.mjs youtube    fetch only the named source(s)
  *   node scripts/fetch-data.mjs --ensure   no network: create empty defaults for missing/invalid files
+ *
+ * Steam's hero screenshots are also mirrored into public/images/hero as AVIF, so the home page's
+ * LCP image comes off our own origin in a third of the bytes instead of Steam's CDN.
  *   node scripts/fetch-data.mjs --strict   exit non-zero if any source fails (debugging)
  *
  * Each source falls back to: fresh data → the existing file (if valid and not too old) → empty
@@ -13,14 +16,22 @@
  * Env: YOUTUBE_API_KEY (required for videos), GITHUB_TOKEN (optional, avoids rate limits).
  * For local runs you can put them in .env.local (gitignored). Keys are never logged or written out.
  */
-import { mkdir, readFile, rename, writeFile, appendFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, stat, writeFile, appendFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { SITE } from "../src/data/site.js";
 import { GAMES } from "../src/data/games.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const OUT_DIR = path.join(ROOT, "src/data/generated");
-const SCHEMA_VERSION = 1;
+// Hero screenshots, re-encoded from Steam's JPEGs (see mirrorHeroShots). Generated, gitignored,
+// and cached by the daily workflow alongside OUT_DIR.
+const HERO_DIR = path.join(ROOT, "public/images/hero");
+const HERO_URL = "/images/hero";
+// What HeroBanner.vue asks for either side of HERO_MOBILE_QUERY. 960 covers a phone at 2x and is
+// still smaller than the 600px JPEG Steam serves, because AVIF.
+const HERO_SIZES = { thumb: 960, full: 1920 };
+const SCHEMA_VERSION = 3;
 const DAY = 86_400_000;
 const IN_ACTIONS = process.env.GITHUB_ACTIONS === "true";
 
@@ -44,12 +55,15 @@ class HttpError extends Error {
 }
 
 const SOURCES = {
-	steam: { maxAge: 90 * DAY, empty: () => ({ apps: {} }), fetch: fetchSteam },
+	steam: { maxAge: 90 * DAY, empty: () => ({ appIds: [], apps: {} }), fetch: fetchSteam },
 	youtube: {
 		// YouTube API policy: don't keep API data longer than 30 days.
 		maxAge: 30 * DAY,
-		empty: () => ({ channel: null, popular: null, latest: [] }),
+		empty: () => ({ channel: null, popular: null, latest: [], videos: [] }),
 		fetch: fetchYouTube,
+		// The full catalogue is written to its own file. Only /videos imports it, so the home page's
+		// bundle keeps carrying just `channel`/`popular`/`latest` however large the channel grows.
+		split: { key: "videos", file: "youtube-videos" },
 	},
 	github: { maxAge: 90 * DAY, empty: () => ({ repos: [] }), fetch: fetchGitHub },
 	discord: {
@@ -83,12 +97,33 @@ if (ENSURE) {
 		}
 	}
 	if (results.length) console.log(`fetch-data --ensure: wrote defaults for ${results.map((r) => r.name).join(", ")}`);
+	await dropMissingHeroShots();
 } else {
 	const settled = await Promise.allSettled(names.map((name) => runSource(name)));
 	settled.forEach((s, i) => results.push(s.status === "fulfilled" ? s.value : { name: names[i], outcome: "error", note: String(s.reason) }));
 	printSummary(results);
 	await writeStepSummary(results);
 	if (STRICT && results.some((r) => r.outcome !== "live")) process.exit(1);
+}
+
+// The mirrored images live outside OUT_DIR, so they can go missing while steam.json still points at
+// them (a cleared workflow cache, a cleaned checkout). Point those screenshots back at Steam rather
+// than shipping a hero that 404s.
+async function dropMissingHeroShots() {
+	const steam = await readFileJson("steam");
+	const shots = Object.values(steam?.apps ?? {}).flatMap((app) => app.screenshots ?? []);
+	let dropped = 0;
+	for (const shot of shots) {
+		if (!shot.localFull) continue;
+		const files = [shot.localFull, shot.localThumb].map((url) => path.join(ROOT, "public", url ?? ""));
+		if ((await Promise.all(files.map(exists))).every(Boolean)) continue;
+		delete shot.localFull;
+		delete shot.localThumb;
+		dropped++;
+	}
+	if (!dropped) return;
+	await writeJson("steam", { appIds: steam.appIds, apps: steam.apps }, steam.fetchedAt);
+	console.log(`fetch-data --ensure: ${dropped} hero image(s) missing — those slides fall back to Steam's CDN`);
 }
 
 // ---------------------------------------------------------------------------
@@ -100,8 +135,12 @@ async function runSource(name) {
 	const existing = await readExisting(name);
 	try {
 		const data = await source.fetch(existing?.data);
-		await write(name, data, new Date().toISOString());
-		return { name, outcome: "live", note: data.source === "rss" ? "RSS fallback — add YOUTUBE_API_KEY for all-time most popular" : undefined };
+		const notes = [];
+		if (data.source === "rss") notes.push("RSS fallback — add YOUTUBE_API_KEY for the full catalogue");
+		if (data.videos) notes.push(`${data.videos.length} videos`);
+		const bytes = await write(name, data, new Date().toISOString());
+		notes.push(`${Math.round(bytes / 1024)} KB`);
+		return { name, outcome: "live", note: notes.join(", ") };
 	} catch (error) {
 		const reason = error instanceof SkipError ? `skipped: ${error.message}` : error.message;
 		if (existing && existing.age <= source.maxAge) {
@@ -116,30 +155,90 @@ async function runSource(name) {
 }
 
 async function readExisting(name) {
+	const { split } = SOURCES[name];
+	// A half-written pair counts as absent, so the two files can never drift apart.
+	if (split && !(await readFileJson(split.file))) return null;
+	const json = await readFileJson(name);
+	if (!json || json.schemaVersion !== SCHEMA_VERSION || !json.fetchedAt) return null;
+	return { data: json, age: Date.now() - Date.parse(json.fetchedAt) };
+}
+
+async function readFileJson(file) {
 	try {
-		const json = JSON.parse(await readFile(path.join(OUT_DIR, `${name}.json`), "utf8"));
-		if (json.schemaVersion !== SCHEMA_VERSION || !json.fetchedAt) return null;
-		return { data: json, age: Date.now() - Date.parse(json.fetchedAt) };
+		return JSON.parse(await readFile(path.join(OUT_DIR, `${file}.json`), "utf8"));
 	} catch {
 		return null;
 	}
 }
 
 async function write(name, data, fetchedAt) {
-	const file = path.join(OUT_DIR, `${name}.json`);
-	const tmp = `${file}.${process.pid}.tmp`;
-	await writeFile(tmp, JSON.stringify({ schemaVersion: SCHEMA_VERSION, fetchedAt, ...data }, null, 2) + "\n");
-	await rename(tmp, file);
+	const { split } = SOURCES[name];
+	let bytes = 0;
+	if (split) {
+		const { [split.key]: extracted, ...rest } = data;
+		bytes += await writeJson(split.file, { [split.key]: extracted ?? [] }, fetchedAt);
+		data = rest;
+	}
+	return bytes + (await writeJson(name, data, fetchedAt));
+}
+
+async function writeJson(file, data, fetchedAt) {
+	const target = path.join(OUT_DIR, `${file}.json`);
+	const tmp = `${target}.${process.pid}.tmp`;
+	const json = JSON.stringify({ schemaVersion: SCHEMA_VERSION, fetchedAt, ...data }, null, 2) + "\n";
+	await writeFile(tmp, json);
+	await rename(tmp, target);
+	return Buffer.byteLength(json);
 }
 
 // ---------------------------------------------------------------------------
 // Steam
 // ---------------------------------------------------------------------------
 
+// Our app IDs, straight from the public store search — no API key, no login. Only apps with a
+// public store page show up here; unannounced ones stay hand-listed in src/data/games.js.
+async function discoverAppIds() {
+	const filters = [
+		["publisher", SITE.steam?.publisher],
+		["developer", SITE.steam?.developer],
+	].filter(([, name]) => name);
+	if (!filters.length) throw new SkipError("no SITE.steam publisher/developer configured");
+
+	const ids = new Set();
+	let requests = 0;
+	for (const [filter, name] of filters) {
+		for (let start = 0; start < 200; start += 50) {
+			if (requests++ > 0) await sleep(300);
+			const url =
+				`https://store.steampowered.com/search/results/?term=&${filter}=${encodeURIComponent(name)}` +
+				`&infinite=1&start=${start}&count=50&cc=us&l=english`;
+			const page = await fetchJson(url);
+			// Bundles and packages carry a comma-separated list of app IDs — skip those.
+			for (const [, id] of String(page.results_html ?? "").matchAll(/data-ds-appid="(\d+)"/g)) ids.add(Number(id));
+			if (start + 50 >= Number(page.total_count ?? 0)) break;
+		}
+	}
+	return [...ids];
+}
+
 async function fetchSteam(previous) {
+	const manual = GAMES.map((g) => g.appId);
+	let discovered = [];
+	try {
+		discovered = await discoverAppIds();
+	} catch (error) {
+		// Discovery is a bonus: never let it shrink the games list.
+		discovered = previous?.appIds ?? [];
+		warn("steam", `app discovery failed (${error.message}) — falling back to ${discovered.length} known app IDs`);
+	}
+
+	// Hand-authored order first, then anything newly discovered, newest app ID first.
+	const extra = discovered.filter((id) => !manual.includes(id)).sort((a, b) => b - a);
+	const appIds = [...new Set([...manual, ...extra])];
+
 	const apps = {};
 	let failures = 0;
-	for (const [index, { appId }] of GAMES.entries()) {
+	for (const [index, appId] of appIds.entries()) {
 		if (index > 0) await sleep(300);
 		try {
 			const json = await fetchJson(`https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=english`);
@@ -153,6 +252,7 @@ async function fetchSteam(previous) {
 			const d = entry.data;
 			apps[appId] = {
 				status: d.release_date?.coming_soon ? "upcoming" : "released",
+				type: d.type ?? "game",
 				name: d.name,
 				shortDescription: decodeEntities(d.short_description ?? ""),
 				headerImage: d.header_image ?? null,
@@ -170,7 +270,9 @@ async function fetchSteam(previous) {
 					.filter(([, supported]) => supported)
 					.map(([platform]) => platform),
 				genres: (d.genres ?? []).map((g) => g.description).slice(0, 3),
-				screenshots: (d.screenshots ?? []).slice(0, 3).map((s) => ({ thumb: s.path_thumbnail, full: s.path_full })),
+				// All of them: the hero shuffles across every screenshot of every game, and only two
+				// are ever put in the DOM (see HeroBanner.vue), so a long list costs nothing.
+				screenshots: (d.screenshots ?? []).map((s) => ({ thumb: s.path_thumbnail, full: s.path_full })),
 			};
 		} catch (error) {
 			failures++;
@@ -178,8 +280,94 @@ async function fetchSteam(previous) {
 			warn("steam", `app ${appId}: ${error.message}`);
 		}
 	}
-	if (failures === GAMES.length) throw new Error("every Steam request failed");
-	return { apps };
+	if (failures === appIds.length) throw new Error("every Steam request failed");
+
+	// A discovered DLC or demo has its own store page but isn't a game of ours — drop it.
+	// Anything hand-listed in games.js is kept whatever Steam calls it.
+	const kept = appIds.filter((id) => manual.includes(id) || !apps[id]?.type || apps[id].type === "game");
+	for (const id of appIds) if (!kept.includes(id)) delete apps[id];
+
+	await mirrorHeroShots(apps);
+	return { appIds: kept, apps };
+}
+
+// Pull every hero screenshot down and re-encode it as AVIF at both the sizes the hero asks for.
+// The home page's LCP is one of these, and serving it ourselves drops a cross-origin DNS + TLS
+// handshake off the critical path on top of the bytes saved (206 KB JPEG → ~69 KB AVIF).
+//
+// Each file is named after the content hash already in Steam's URL, so the daily rebuild re-uses
+// whatever the workflow cache restored and only pays for screenshots that are actually new. Any
+// failure here is survivable: the Steam URLs stay in the data and the hero falls back to the CDN.
+async function mirrorHeroShots(apps) {
+	const shots = Object.values(apps).flatMap((app) => app.screenshots ?? []);
+	if (!shots.length) return;
+
+	let sharp;
+	try {
+		({ default: sharp } = await import("sharp"));
+	} catch {
+		warn("steam", "sharp is not installed — hero screenshots will load from Steam's CDN");
+		return;
+	}
+	await mkdir(HERO_DIR, { recursive: true });
+
+	const keep = new Set();
+	let encoded = 0;
+	let reused = 0;
+	let failed = 0;
+	for (const shot of shots) {
+		if (!shot.full) continue;
+		const id = shotId(shot.full);
+		const files = Object.fromEntries(Object.entries(HERO_SIZES).map(([key, w]) => [key, `${id}-${w}.avif`]));
+		Object.values(files).forEach((file) => keep.add(file));
+
+		const present = await Promise.all(Object.values(files).map((file) => exists(path.join(HERO_DIR, file))));
+		const missing = Object.entries(files).filter((_, i) => !present[i]);
+		try {
+			if (missing.length) {
+				const source = Buffer.from(await (await request(shot.full)).arrayBuffer());
+				for (const [key, file] of missing) {
+					// Write via a temp name so an interrupted run can't leave a truncated image behind that
+					// the next build would happily re-use.
+					const target = path.join(HERO_DIR, file);
+					const tmp = `${target}.${process.pid}.tmp`;
+					await sharp(source)
+						.resize({ width: HERO_SIZES[key], withoutEnlargement: true })
+						.avif({ quality: 50, effort: 4 })
+						.toFile(tmp);
+					await rename(tmp, target);
+					encoded++;
+				}
+			}
+			reused += Object.keys(files).length - missing.length;
+			shot.localThumb = `${HERO_URL}/${files.thumb}`;
+			shot.localFull = `${HERO_URL}/${files.full}`;
+		} catch (error) {
+			failed++;
+			warn("steam", `hero screenshot ${id}: ${error.message} — falling back to Steam's CDN for it`);
+		}
+	}
+
+	// Screenshots come and go as store pages change; drop the images nothing points at any more.
+	let pruned = 0;
+	for (const file of await readdir(HERO_DIR).catch(() => [])) {
+		if (!/^[0-9a-f]{16}-\d+\.avif$/.test(file) || keep.has(file)) continue;
+		await rm(path.join(HERO_DIR, file), { force: true });
+		pruned++;
+	}
+	console.log(
+		`[steam] hero images: ${encoded} encoded, ${reused} cached, ${pruned} pruned` + (failed ? `, ${failed} failed` : ""),
+	);
+}
+
+// Steam already puts a content hash in the path (…/<sha1>/ss_<sha1>.1920x1080.jpg?t=…); reuse it so
+// the filename only changes when the screenshot itself does, not when the ?t= cache buster moves.
+function shotId(url) {
+	return createHash("sha1").update(new URL(url).pathname).digest("hex").slice(0, 16);
+}
+
+async function exists(file) {
+	return (await stat(file).catch(() => null)) !== null;
 }
 
 // ---------------------------------------------------------------------------
@@ -231,6 +419,8 @@ async function fetchYouTubeApi(key) {
 		items.push(...(res.items ?? []));
 	}
 
+	// The whole catalogue is kept, so the per-video shape stays small: no thumbnail URLs (src/lib/videos.js
+	// derives them from the id) — just the largest size YouTube actually has for this upload.
 	const videos = items
 		.filter((v) => v.status?.privacyStatus === "public" && v.snippet?.liveBroadcastContent === "none")
 		.map((v) => ({
@@ -239,21 +429,15 @@ async function fetchYouTubeApi(key) {
 			publishedAt: v.snippet.publishedAt,
 			viewCount: Number(v.statistics?.viewCount ?? 0),
 			durationSeconds: parseIsoDuration(v.contentDetails?.duration),
-			embeddable: v.status?.embeddable !== false,
-			thumbs: Object.values(v.snippet.thumbnails ?? {})
-				.filter((t) => t.width >= 320)
-				.map((t) => ({ url: t.url, width: t.width, height: t.height }))
-				.sort((a, b) => a.width - b.width),
+			thumbWidth: Math.max(320, ...Object.values(v.snippet.thumbnails ?? {}).map((t) => t.width ?? 0)),
 		}))
-		.filter((v) => longFormOnly || v.durationSeconds > 180);
+		.filter((v) => longFormOnly || v.durationSeconds > 180)
+		.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
 
 	if (videos.length === 0 && Number(channel.statistics?.videoCount) > 0) throw new Error("0 usable videos returned");
 
 	const popular = [...videos].sort((a, b) => b.viewCount - a.viewCount)[0] ?? null;
-	const latest = videos
-		.filter((v) => v.id !== popular?.id)
-		.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt))
-		.slice(0, 6);
+	const latest = videos.filter((v) => v.id !== popular?.id).slice(0, 6);
 
 	return {
 		source: "api",
@@ -265,6 +449,7 @@ async function fetchYouTubeApi(key) {
 		},
 		popular,
 		latest,
+		videos,
 	};
 }
 
@@ -286,8 +471,7 @@ async function fetchYouTubeRss() {
 			publishedAt: new Date(pick(entry, /<published>([^<]+)<\/published>/)).toISOString(),
 			viewCount: Number(pick(entry, /<media:statistics views="(\d+)"/) || 0),
 			durationSeconds: 0,
-			embeddable: true,
-			thumbs: [],
+			thumbWidth: 320,
 		}));
 	if (videos.length === 0) throw new Error("RSS feed had no videos");
 
@@ -299,7 +483,7 @@ async function fetchYouTubeRss() {
 			try {
 				const watchUrl = `https://www.youtube.com/watch?v=${pinnedId}`;
 				const embed = await fetchJson(`https://www.youtube.com/oembed?url=${encodeURIComponent(watchUrl)}&format=json`);
-				popular = { id: pinnedId, title: embed.title, publishedAt: null, viewCount: null, durationSeconds: 0, embeddable: true, thumbs: [] };
+				popular = { id: pinnedId, title: embed.title, publishedAt: null, viewCount: null, durationSeconds: 0, thumbWidth: 320 };
 			} catch (error) {
 				warn("youtube", `pinned video ${pinnedId}: ${error.message} — using the most viewed recent upload`);
 			}
@@ -309,18 +493,14 @@ async function fetchYouTubeRss() {
 	const latest = videos.filter((v) => v.id !== popular.id).slice(0, 6);
 
 	// The feed doesn't say which thumbnail sizes exist (older uploads often lack sd/maxres, and
-	// YouTube serves a grey placeholder for them) — so probe the larger ones.
+	// YouTube serves a grey placeholder for them) — so probe the larger ones. mqdefault/hqdefault
+	// always exist, so 320 is a safe floor.
 	const exists = async (url) => (await fetch(url, { method: "HEAD", signal: AbortSignal.timeout(5000) }).catch(() => null))?.ok ?? false;
 	await Promise.all(
-		[popular, ...latest].map(async (video) => {
+		[popular, ...videos].map(async (video) => {
 			const base = `https://i.ytimg.com/vi/${video.id}`;
 			const [sd, maxres] = await Promise.all([exists(`${base}/sddefault.jpg`), exists(`${base}/maxresdefault.jpg`)]);
-			video.thumbs = [
-				{ url: `${base}/mqdefault.jpg`, width: 320, height: 180 },
-				{ url: `${base}/hqdefault.jpg`, width: 480, height: 360 },
-				...(sd ? [{ url: `${base}/sddefault.jpg`, width: 640, height: 480 }] : []),
-				...(maxres ? [{ url: `${base}/maxresdefault.jpg`, width: 1280, height: 720 }] : []),
-			];
+			video.thumbWidth = maxres ? 1280 : sd ? 640 : 480;
 		}),
 	);
 	return {
@@ -328,13 +508,16 @@ async function fetchYouTubeRss() {
 		channel: { id: SITE.youtube.channelId, title: decodeEntities(pick(xml, /<title>([^<]*)<\/title>/)), subscriberCount: null, videoCount: null },
 		popular,
 		latest,
+		videos,
 	};
 }
+
+const PLAYLIST_PAGES = 20; // 50 items per page — 1000 videos before we start truncating.
 
 async function listPlaylist(api, playlistId) {
 	const ids = [];
 	let pageToken;
-	for (let page = 0; page < 20; page++) {
+	for (let page = 0; page < PLAYLIST_PAGES; page++) {
 		const res = await api("playlistItems", {
 			part: "contentDetails",
 			playlistId,
@@ -343,8 +526,9 @@ async function listPlaylist(api, playlistId) {
 		});
 		ids.push(...(res.items ?? []).map((item) => item.contentDetails.videoId));
 		pageToken = res.nextPageToken;
-		if (!pageToken) break;
+		if (!pageToken) return ids;
 	}
+	warn("youtube", `playlist ${playlistId} has more than ${ids.length} videos — raise PLAYLIST_PAGES`);
 	return ids;
 }
 

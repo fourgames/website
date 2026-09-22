@@ -1,59 +1,114 @@
 <script setup>
-import { onBeforeUnmount, onMounted, ref } from "vue";
-import { RouterLink } from "vue-router";
-import Button from "@/components/ui/Button.vue";
-import Logo from "@/components/ui/Logo.vue";
+import { computed, ref, watch } from "vue";
+import { useRoute } from "vue-router";
+import Icon from "@/components/ui/Icon.vue";
+import LogoMark from "@/components/ui/LogoMark.vue";
 import NavLink from "@/components/ui/NavLink.vue";
-import MobileMenu from "./MobileMenu.vue";
-import { NAV_LINKS } from "@/data/nav.js";
-import { SITE } from "@/data/site.js";
+import { DONATE, NAV_LEFT, NAV_RIGHT } from "@/data/nav.js";
+import { reshuffleHero } from "@/lib/hero.js";
 
-// A 1px sentinel at the top of the page: once it scrolls out of view, the pill gets more opaque.
-const sentinel = ref(null);
-const scrolled = ref(false);
-let observer;
+// A literal port of godotengine.org's navbar: one absolute, frosted bar on every page, one <nav>
+// that the breakpoint restyles from a row into the mobile panel. Only the text colour adapts —
+// white over the hero image, navbar colour elsewhere. Geometry lives in style.css (.site-bar etc).
+const route = useRoute();
+const isHome = computed(() => route.name === "home");
 
-onMounted(() => {
-	observer = new IntersectionObserver(([entry]) => {
-		scrolled.value = !entry.isIntersecting;
-	});
-	observer.observe(sentinel.value);
-});
-onBeforeUnmount(() => observer?.disconnect());
+// Their menu is a CSS checkbox, so every tap reloads the page and resets it. We're an SPA, so close
+// it by hand — on the link click, and again on the route change for anything that redirects.
+// Visibility itself stays CSS-driven, which is what makes the desktop nav reappear cleanly when you
+// widen the window while it's open.
+const open = ref(false);
+watch(
+	() => route.fullPath,
+	() => (open.value = false),
+);
+
+// The hero keeps one screenshot for the whole session, so clicking the logo is the way to ask for
+// another — whether that is a real navigation home or a no-op click while already there.
+function onLogoClick() {
+	if (isHome.value) reshuffleHero();
+}
 </script>
 
 <template>
-	<div ref="sentinel" aria-hidden="true" class="pointer-events-none absolute top-0 left-0 h-4 w-px"></div>
-	<header class="fixed inset-x-0 top-3 z-40 px-3 [view-transition-name:site-header]" :data-scrolled="scrolled">
-		<div
-			class="header-pill mx-auto flex h-14 max-w-pill items-center justify-between gap-3 rounded-full border border-white/[0.08] pr-2 pl-2 backdrop-blur-xl backdrop-saturate-150"
-		>
-			<RouterLink
-				to="/"
-				class="flex items-center gap-2.5 rounded-full py-1.5 pr-3 pl-2 font-semibold tracking-tight whitespace-nowrap text-fg"
-				aria-label="Four Games — home"
-			>
-				<Logo class="size-7" />
-				<span>Four Games</span>
-			</RouterLink>
+	<header
+		:class="[
+			'site-header absolute inset-x-0 top-0 z-40 nav:top-2 [view-transition-name:site-header]',
+			isHome ? 'text-white' : 'text-navbar-link',
+			{ 'is-open': open },
+		]"
+		@keydown.esc="open = false"
+	>
+		<div class="site-bar">
+			<!-- #nav_head: the logo row. Below the breakpoint it also carries the donate pill and
+			     the menu toggle, and the nav unrolls underneath it. -->
+			<div class="flex h-[51.5px] w-full items-center justify-between nav:w-auto">
+				<NavLink to="/" class="site-logo text-lg sm:text-xl" aria-label="Four Games, home" @navigate="onLogoClick">
+					<LogoMark class="size-12" />
+					<span>Four Games</span>
+				</NavLink>
 
-			<nav aria-label="Main" class="hidden md:block">
-				<ul class="flex items-center gap-0.5">
-					<li v-for="link in NAV_LINKS" :key="link.to">
+				<div class="flex items-center gap-1 nav:hidden">
+					<NavLink :to="DONATE.to" class="nav-donate" @navigate="open = false">
+						<Icon :name="DONATE.icon" class="relative top-px mr-1 inline w-[13px]" />
+						{{ DONATE.label }}
+					</NavLink>
+					<button
+						type="button"
+						class="nav-toggle"
+						aria-controls="site-nav"
+						:aria-expanded="open"
+						@click="open = !open"
+					>
+						<Icon name="menu" class="size-6" :stroke-width="2.25" />
+						<span class="sr-only">{{ open ? "Close menu" : "Open menu" }}</span>
+					</button>
+				</div>
+			</div>
+
+			<nav id="site-nav" aria-label="Main" :class="['site-nav', { 'is-open': open }]">
+				<ul>
+					<li v-for="link in NAV_LEFT" :key="link.to">
 						<NavLink
 							:to="link.to"
-							class="block rounded-full px-3.5 py-2 text-sm text-muted transition-colors hover:bg-white/5 hover:text-fg aria-[current=page]:bg-white/[0.08] aria-[current=page]:text-fg"
+							class="nav-link aria-[current=page]:text-navbar-current"
+							@navigate="open = false"
 						>
 							{{ link.label }}
 						</NavLink>
 					</li>
 				</ul>
+				<ul>
+					<li v-for="link in NAV_RIGHT" :key="link.label">
+						<NavLink
+							v-if="link.to"
+							:to="link.to"
+							class="nav-link aria-[current=page]:text-navbar-current"
+							@navigate="open = false"
+						>
+							{{ link.label }}
+						</NavLink>
+						<a
+							v-else
+							:href="link.href"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="nav-link"
+							@click="open = false"
+						>
+							<Icon v-if="link.icon" :name="link.icon" class="size-4" />
+							{{ link.label }}
+							<span class="sr-only">(opens in new tab)</span>
+						</a>
+					</li>
+					<li class="fund hidden nav:block">
+						<NavLink :to="DONATE.to" class="nav-donate">
+							<Icon :name="DONATE.icon" class="relative top-px mr-1 inline w-[13px]" />
+							{{ DONATE.label }}
+						</NavLink>
+					</li>
+				</ul>
 			</nav>
-
-			<div class="flex items-center">
-				<Button :href="SITE.links.discord" size="sm" icon="discord" class="max-md:hidden">Join Discord</Button>
-				<MobileMenu />
-			</div>
 		</div>
 	</header>
 </template>

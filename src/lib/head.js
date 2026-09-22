@@ -6,7 +6,7 @@ const OG_IMAGE = {
 	url: `${SITE.url}/og/og-default.jpg`,
 	width: 1200,
 	height: 630,
-	alt: "Four Games — indie games made in Godot",
+	alt: "Four Games: indie games made in Godot",
 };
 
 export function getHead(route) {

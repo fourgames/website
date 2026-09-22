@@ -7,7 +7,7 @@ const props = defineProps({
 	to: { type: [String, Object], default: undefined },
 	href: { type: String, default: undefined },
 	type: { type: String, default: "button" },
-	variant: { type: String, default: "primary" }, // primary | secondary | ghost
+	variant: { type: String, default: "primary" }, // primary | blue | donate | translucent | ghost
 	size: { type: String, default: "md" }, // sm | md | lg
 	icon: { type: String, default: undefined },
 	external: { type: Boolean, default: undefined },
@@ -16,20 +16,24 @@ const props = defineProps({
 const isExternal = computed(() => props.external ?? (Boolean(props.href) && /^https?:\/\//.test(props.href)));
 
 const SIZES = {
-	sm: "h-10 px-4 text-sm",
-	md: "h-11 px-5 text-[0.9375rem]",
-	lg: "h-12 px-6 text-base",
+	sm: "h-9 px-3.5 text-sm",
+	md: "h-11 px-5 text-base",
+	lg: "h-13 px-7 text-base",
+	hero: "h-[54px] px-8 text-lg",
 };
+// Complete literal strings so Tailwind picks them up.
 const VARIANTS = {
-	primary:
-		"border-transparent bg-white text-bg shadow-[0_0_0_1px_rgb(255_255_255/0.08),0_8px_30px_-10px_rgb(255_255_255/0.45)] hover:bg-white/90",
-	secondary: "border-white/10 bg-white/[0.04] text-fg hover:border-white/20 hover:bg-white/[0.08]",
-	ghost: "border-transparent text-muted hover:bg-white/5 hover:text-fg",
+	primary: "bg-btn text-dark shadow-card hover:bg-btn-hover dark:text-fg",
+	blue: "bg-primary text-white shadow-card hover:bg-primary-hover",
+	donate: "bg-donate text-white shadow-card hover:bg-donate-hover",
+	white: "bg-white text-dark shadow-card hover:bg-[#f3f5f9]",
+	translucent: "bg-[rgb(129_129_129/0.66)] text-white shadow-card hover:bg-[rgb(129_129_129/0.8)]",
+	ghost: "text-link hover:bg-black/5 dark:hover:bg-white/10",
 };
 
 const classes = computed(() => [
-	"group/btn inline-flex items-center justify-center gap-2 rounded-full border font-medium whitespace-nowrap",
-	"transition-[background-color,border-color,color,box-shadow,scale] duration-200 active:scale-[.98]",
+	"group/btn inline-flex items-center justify-center gap-2 rounded-btn font-heading font-extrabold whitespace-nowrap",
+	"transition-[background-color,color,transform] duration-150 active:scale-[.98]",
 	"disabled:pointer-events-none disabled:opacity-60",
 	SIZES[props.size],
 	VARIANTS[props.variant],
@@ -56,12 +60,6 @@ const classes = computed(() => [
 	>
 		<Icon v-if="icon" :name="icon" class="size-[1.15em]" />
 		<slot />
-		<template v-if="isExternal">
-			<Icon
-				name="arrow-up-right"
-				class="size-[1em] opacity-60 transition-transform duration-200 group-hover/btn:translate-x-0.5 group-hover/btn:-translate-y-0.5"
-			/>
-			<span class="sr-only">(opens in new tab)</span>
-		</template>
+		<span v-if="isExternal" class="sr-only">(opens in new tab)</span>
 	</component>
 </template>

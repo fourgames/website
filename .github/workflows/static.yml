@@ -32,13 +32,16 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      # Last good API data, so a third-party outage never empties a section.
+      # Last good API data, so a third-party outage never empties a section. The mirrored hero
+      # screenshots ride along, so a rebuild only re-encodes the ones Steam actually changed.
       - name: Restore build-time data
         uses: actions/cache/restore@v6
         with:
-          path: src/data/generated
-          key: site-data-v1-${{ github.run_id }}
-          restore-keys: site-data-v1-
+          path: |
+            src/data/generated
+            public/images/hero
+          key: site-data-v2-${{ github.run_id }}
+          restore-keys: site-data-v2-
 
       - name: Fetch build-time data
         run: npm run data
@@ -49,8 +52,10 @@ jobs:
       - name: Save build-time data
         uses: actions/cache/save@v6
         with:
-          path: src/data/generated
-          key: site-data-v1-${{ github.run_id }}
+          path: |
+            src/data/generated
+            public/images/hero
+          key: site-data-v2-${{ github.run_id }}
 
       - name: Build and prerender
         run: npm run build

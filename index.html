@@ -4,15 +4,20 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<!--head:start--><title>Four Games</title><!--head:end-->
-		<meta name="color-scheme" content="dark" />
-		<meta name="theme-color" content="#0f0f0f" />
+		<meta name="color-scheme" content="light dark" />
+		<meta name="theme-color" content="#eff1f5" media="(prefers-color-scheme: light)" />
+		<meta name="theme-color" content="#25282b" media="(prefers-color-scheme: dark)" />
 		<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
-		<link rel="preload" href="/fonts/inter-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+		<link rel="preload" href="/fonts/montserrat-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+		<!-- Steam serves every game image on the site; on home the hero script below preloads one outright. -->
+		<link rel="preconnect" href="https://shared.akamai.steamstatic.com" crossorigin />
 		<!--preload-links-->
+		<!--hero-head-->
 	</head>
 	<body>
 		<div id="app"><!--app-html--></div>
+		<!--hero-body-->
 		<script type="module" src="/src/entry-client.js"></script>
 	</body>
 </html>

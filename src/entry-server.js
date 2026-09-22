@@ -8,6 +8,9 @@ import { renderHeadTags } from "./lib/head.js";
 
 export { prerenderTargets } from "./router/routes.js";
 export { SITE } from "./data/site.js";
+// Read by scripts/prerender.mjs to build the home page's inline hero script.
+export { getHeroSlides } from "./lib/games.js";
+export { HERO_MOBILE_QUERY } from "./lib/hero.js";
 
 export async function render(url, manifest) {
 	const router = createAppRouter();

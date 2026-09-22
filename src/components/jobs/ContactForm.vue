@@ -37,13 +37,13 @@ async function submit(event) {
 }
 
 const fieldClass =
-	"block w-full rounded-[0.625rem] border border-line-strong/60 bg-bg/60 px-3.5 text-[0.9375rem] text-fg placeholder:text-subtle transition-colors hover:border-line-strong focus:border-accent-2 focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-accent-2/40 user-invalid:border-danger disabled:opacity-60";
+	"block w-full rounded-btn border border-line-strong bg-surface px-3.5 text-base text-fg placeholder:text-date transition-colors focus:border-primary focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary/40 user-invalid:border-danger disabled:opacity-60";
 </script>
 
 <template>
-	<form :action="SITE.formspree" method="POST" class="surface-card flex h-full flex-col p-6 sm:p-8" @submit.prevent="submit">
-		<h3 class="text-xl font-semibold tracking-tight">Send us a message</h3>
-		<p class="mt-1 text-sm text-muted">Tell us about your project or partnership idea.</p>
+	<form :action="SITE.formspree" method="POST" class="card flex h-full flex-col p-6 sm:p-8" @submit.prevent="submit">
+		<h3 class="text-xl">Send us a message</h3>
+		<p class="mt-1 text-sm text-date">Tell us about your project or partnership idea.</p>
 
 		<input type="hidden" name="_subject" value="New message from fourgames.se" />
 		<!-- Honeypot for bots: hidden from people and assistive tech. -->
@@ -53,7 +53,7 @@ const fieldClass =
 
 		<div class="mt-6 space-y-5">
 			<div>
-				<label :for="emailId" class="mb-2 block text-sm font-medium text-fg">Email</label>
+				<label :for="emailId" class="mb-2 block text-sm font-semibold">Email</label>
 				<input
 					:id="emailId"
 					v-model="email"
@@ -68,7 +68,7 @@ const fieldClass =
 				/>
 			</div>
 			<div>
-				<label :for="messageId" class="mb-2 block text-sm font-medium text-fg">Message</label>
+				<label :for="messageId" class="mb-2 block text-sm font-semibold">Message</label>
 				<textarea
 					:id="messageId"
 					v-model="message"
@@ -83,18 +83,18 @@ const fieldClass =
 		</div>
 
 		<div class="mt-6 flex flex-wrap items-center gap-x-4 gap-y-3">
-			<Button type="submit" :disabled="isSubmitting" :icon="isSubmitting ? undefined : 'send'">
+			<Button type="submit" variant="blue" :disabled="isSubmitting" :icon="isSubmitting ? undefined : 'send'">
 				<Icon v-if="isSubmitting" name="loader" class="size-4 motion-safe:animate-spin" />
 				{{ isSubmitting ? "Sending…" : "Send message" }}
 			</Button>
-			<p class="text-xs text-subtle">Prefer a quicker reply? Ask us on Discord.</p>
+			<p class="text-xs text-date">Prefer a quicker reply? Ask us on Discord.</p>
 		</div>
 
 		<!-- Always present so screen readers pick up changes. -->
 		<div class="mt-5 min-h-6 text-sm" role="status" aria-live="polite">
 			<p v-if="status === 'success'" class="flex items-center gap-2 text-success">
 				<Icon name="check-circle" class="size-4" />
-				Thanks! Your message has been sent — we'll get back to you soon.
+				Thanks! Your message has been sent. We'll get back to you soon.
 			</p>
 		</div>
 		<p v-if="status === 'error'" role="alert" class="flex items-start gap-2 text-sm text-danger">

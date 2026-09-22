@@ -1,66 +1,118 @@
 @import "tailwindcss";
 
 /* ---------------------------------------------------------------------------
-   Fonts — Inter (OFL, self-hosted) + a metric-matched fallback so the swap
-   doesn't shift layout.
+   Fonts — Montserrat (OFL, self-hosted) for headings, nav and buttons; the body
+   uses the system UI stack, like godotengine.org.
 --------------------------------------------------------------------------- */
 @font-face {
-	font-family: "Inter Variable";
+	font-family: "Montserrat Variable";
 	font-style: normal;
 	font-weight: 100 900;
 	font-display: swap;
-	src: url("/fonts/inter-latin-wght-normal.woff2") format("woff2");
+	src: url("/fonts/montserrat-latin-wght-normal.woff2") format("woff2");
 	unicode-range:
 		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
 		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
 }
 
-@font-face {
-	font-family: "Inter Fallback";
-	src: local("Arial"), local("Helvetica Neue"), local("Helvetica"), local("Roboto");
-	size-adjust: 107.12%;
-	ascent-override: 90.44%;
-	descent-override: 22.52%;
-	line-gap-override: 0%;
+/* ---------------------------------------------------------------------------
+   Palette — follows the OS colour scheme (no toggle). Values mirror
+   godotengine.org, nudged where its weakest colours fall under WCAG AA.
+--------------------------------------------------------------------------- */
+:root {
+	color-scheme: light dark;
+	--base-color: #eff1f5;
+	--background-color: #d5daea;
+	--text-color: #4a5365;
+	--title-color: #546b99;
+	--subtitle-color: #5f6f97;
+	--date-color: #66748f;
+	--primary-color: hsl(206 58% 52%);
+	--primary-hover: hsl(206 58% 44%);
+	--link-color: hsl(206 58% 42%);
+	--accent-color: #f57389;
+	--dark-color: #333f67;
+	--card-color: #ffffff;
+	--card-hover: #f7f8fb;
+	--button-color: #ffffff;
+	--button-hover: #f3f5f9;
+	--navbar-bg: #ffffff;
+	--navbar-link: #333f67;
+	--navbar-current: var(--primary-color);
+	--line-color: rgb(0 0 0 / 0.08);
+	--line-strong: #8b93a7;
+	--shadow: 0 0 4px rgb(0 0 0 / 0.2);
+	--hero-tint: rgb(51 63 103 / 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--base-color: #25282b;
+		--background-color: #202326;
+		--text-color: hsl(0 0% 100% / 0.9);
+		--title-color: hsl(200 0% 100% / 0.85);
+		--subtitle-color: hsl(0 0% 100% / 0.7);
+		--date-color: hsl(0 0% 100% / 0.62);
+		--primary-color: #4d9fdc;
+		--primary-hover: #6ab1e6;
+		--link-color: hsl(200 60% 70%);
+		--accent-color: #5b5491;
+		--dark-color: #263256;
+		--card-color: #333639;
+		--card-hover: #3b3e42;
+		--button-color: #333639;
+		--button-hover: #3e4145;
+		--navbar-bg: #333639;
+		--navbar-link: hsl(0 0% 100% / 0.9);
+		--navbar-current: hsl(200 100% 80%);
+		--line-color: rgb(255 255 255 / 0.1);
+		--line-strong: #8f9398;
+		--shadow: 0 0 4px rgb(0 0 0 / 0.4);
+	}
 }
 
 /* ---------------------------------------------------------------------------
    Design tokens
 --------------------------------------------------------------------------- */
 @theme {
-	--color-bg: #0f0f0f;
-	--color-surface: #181818;
-	--color-card: #1f1f1f;
-	--color-elevated: #262626;
-	--color-line: #2a2a2a; /* decorative only */
-	--color-line-strong: #737373; /* form controls: ≥3:1 on every surface */
-	--color-fg: #ededed;
-	--color-muted: #a1a1a1;
-	--color-subtle: #8a8a8a; /* lowest allowed text colour (≥4.7:1 on card) */
-	--color-accent: #4a90e2;
-	--color-accent-2: #48baff;
-	--color-success: #3ecf8e;
-	--color-warning: #f5a524;
-	--color-danger: #f87171;
-
-	--font-sans: "Inter Variable", "Inter Fallback", ui-sans-serif, system-ui, sans-serif;
+	--font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	--font-heading: "Montserrat Variable", Montserrat, var(--font-sans);
 	--font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
-	--container-pill: 60rem;
-	--container-page: 72rem;
+	--breakpoint-nav: 75rem; /* nav collapses below 1200px, like godotengine.org */
+	--container-page: 75rem;
 
-	--radius-card: 1rem;
+	--aspect-capsule: 92/43; /* Steam header capsule, 460x215 - show it uncropped */
 
-	--text-display: clamp(2.5rem, 1.5rem + 4.2vw, 4.5rem);
-	--text-display--line-height: 1.04;
-	--text-display--letter-spacing: -0.035em;
+	--radius-card: 0.5rem;
+	--radius-btn: 0.75rem;
 
-	--shadow-card: inset 0 1px 0 0 rgb(255 255 255 / 0.04), 0 1px 2px rgb(0 0 0 / 0.4);
+	--text-hero: 3.75rem;
+	--text-hero--line-height: 1.22;
+	--text-hero-sm: 2.5rem; /* godotengine.org drops the hero title to 40px at <=900px */
+	--text-hero-sm--line-height: 1.22;
+	--text-h1: 2.625rem;
+	--text-h1--line-height: 1.2;
+	--text-h2: 2.25rem;
+	--text-h2--line-height: 1.2;
+	--text-h3: 1.75rem;
+	--text-h3--line-height: 1.25;
+	--text-body: 1.125rem;
+	--text-body--line-height: 1.5;
+
+	--color-white: #fff;
+	--color-black: #000;
+	--color-footer: #111111;
+	--color-footer-fg: #898989;
+	--color-donate: #f35774;
+	--color-donate-hover: #d8365a;
+	--color-success: #2f9e6a;
+	--color-warning: #c9860f;
+	--color-danger: #d64545;
+	--color-new: #fb923c;
 
 	--ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
-
 	--animate-pulse-dot: pulse-dot 2s var(--ease-out-soft) infinite;
-	--animate-glow-drift: glow-drift 18s ease-in-out infinite alternate;
 
 	@keyframes pulse-dot {
 		0% {
@@ -73,24 +125,54 @@
 			opacity: 0;
 		}
 	}
+}
 
-	@keyframes glow-drift {
-		from {
-			transform: translate3d(-4%, 0, 0) scale(1);
-		}
-		to {
-			transform: translate3d(4%, 3%, 0) scale(1.08);
-		}
+/* Colour utilities that follow the OS scheme (bg-card, text-title, …) */
+@theme inline {
+	--color-surface: var(--base-color);
+	--color-bg: var(--background-color);
+	--color-fg: var(--text-color);
+	--color-title: var(--title-color);
+	--color-subtitle: var(--subtitle-color);
+	--color-date: var(--date-color);
+	--color-primary: var(--primary-color);
+	--color-primary-hover: var(--primary-hover);
+	--color-link: var(--link-color);
+	--color-accent: var(--accent-color);
+	--color-dark: var(--dark-color);
+	--color-card: var(--card-color);
+	--color-card-hover: var(--card-hover);
+	--color-btn: var(--button-color);
+	--color-btn-hover: var(--button-hover);
+	--color-navbar: var(--navbar-bg);
+	--color-navbar-link: var(--navbar-link);
+	--color-navbar-current: var(--navbar-current);
+	--color-line: var(--line-color);
+	--color-line-strong: var(--line-strong);
+	--shadow-card: var(--shadow);
+}
+
+/* Page column and vertical rhythm, ported from godotengine.org:
+   .container is a fixed 1200px column that goes edge-to-edge with a 16px gutter
+   below the breakpoint, and .padded adds an extra 8px side gutter on phones.
+   `padded` must stay declared AFTER `container-page` — Section.vue puts both on
+   the same element, and the phone gutter depends on that source order. */
+@utility container-page {
+	margin-inline: auto;
+	width: var(--container-page);
+	max-width: var(--container-page);
+	padding-inline: 0;
+	@media (width < 75rem) {
+		width: auto;
+		padding-inline: 1rem;
 	}
 }
 
-@utility container-page {
-	margin-inline: auto;
-	width: 100%;
-	max-width: var(--container-page);
-	padding-inline: 1.25rem;
-	@media (width >= 48rem) {
-		padding-inline: 2rem;
+@utility padded {
+	padding-block: 4rem;
+	@media (width < 56.25rem) {
+		padding-block: 2rem;
+		padding-inline: 0.5rem;
 	}
 }
 
@@ -99,29 +181,52 @@
 --------------------------------------------------------------------------- */
 @layer base {
 	html {
-		color-scheme: dark;
 		background-color: var(--color-bg);
 		color: var(--color-fg);
 		font-family: var(--font-sans);
-		font-feature-settings: "cv11", "ss01";
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
 		-webkit-tap-highlight-color: transparent;
-		scroll-padding-top: 6rem;
+		scroll-padding-top: 1rem;
 	}
 
 	body {
 		min-height: 100dvh;
 		overflow-x: clip;
-		line-height: 1.6;
-		/* Faint film grain, tiled so it rasterises once. */
-		background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+		font-size: var(--text-body);
+		line-height: var(--text-body--line-height);
 	}
 
 	h1,
 	h2,
+	h3,
+	h4 {
+		font-family: var(--font-heading);
+		font-weight: 800;
+		color: var(--color-title);
+	}
+	h1 {
+		font-size: var(--text-h1);
+		line-height: var(--text-h1--line-height);
+	}
+	h2 {
+		font-size: var(--text-h2);
+		line-height: var(--text-h2--line-height);
+	}
 	h3 {
-		text-wrap: balance;
+		font-size: var(--text-h3);
+		line-height: var(--text-h3--line-height);
+	}
+	@media (width < 48rem) {
+		h1 {
+			font-size: 2.25rem;
+		}
+		h2 {
+			font-size: 1.875rem;
+		}
+		h3 {
+			font-size: 1.375rem;
+		}
 	}
 
 	p {
@@ -129,7 +234,7 @@
 	}
 
 	:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
-		outline: 2px solid var(--color-accent-2);
+		outline: 2px solid var(--color-primary);
 		outline-offset: 2px;
 	}
 
@@ -138,8 +243,7 @@
 	}
 
 	::selection {
-		background: rgb(74 144 226 / 0.35);
-		color: #fff;
+		background: color-mix(in srgb, var(--color-primary) 35%, transparent);
 	}
 
 	html:has(dialog[open]) {
@@ -147,8 +251,7 @@
 	}
 
 	dialog::backdrop {
-		background: rgb(0 0 0 / 0.6);
-		backdrop-filter: blur(4px);
+		background: rgb(0 0 0 / 0.5);
 	}
 }
 
@@ -158,9 +261,9 @@
 @layer components {
 	/* Inline text link */
 	.link {
-		color: var(--color-accent-2);
+		color: var(--color-link);
 		text-decoration-line: underline;
-		text-decoration-color: rgb(72 186 255 / 0.4);
+		text-decoration-color: color-mix(in srgb, var(--color-link) 35%, transparent);
 		text-underline-offset: 3px;
 		transition: text-decoration-color 150ms;
 	}
@@ -168,155 +271,236 @@
 		text-decoration-color: currentColor;
 	}
 
-	/* Heading gradient — stays well above AA at both ends */
-	.text-gradient {
-		background: linear-gradient(180deg, #fafafa 20%, #b4b4b4 100%);
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
+	/* Link contents brighten on hover, like godotengine.org (`body a > :not(.no-filter)`). */
+	:where(main) a > :not(.no-filter) {
+		filter: brightness(100%);
+		transition: filter 0.5s;
+	}
+	:where(main) a:hover > :not(.no-filter) {
+		filter: brightness(117.5%);
+	}
+	:where(main) a:active > :not(.no-filter) {
+		filter: brightness(82.5%);
 	}
 
-	.text-accent-gradient {
-		background: linear-gradient(90deg, var(--color-accent) 0%, var(--color-accent-2) 100%);
-		-webkit-background-clip: text;
-		background-clip: text;
-		color: transparent;
-	}
-
-	/* Card surface */
-	.surface-card {
+	/* Card surface (godotengine.org: flat card, 8px radius, faint shadow) */
+	.card {
 		position: relative;
-		border: 1px solid var(--color-line);
-		border-radius: var(--radius-card);
 		background-color: var(--color-card);
+		border-radius: var(--radius-card);
 		box-shadow: var(--shadow-card);
+		transition:
+			transform 200ms ease-in-out,
+			background-color 150ms;
+	}
+	.card-hover:hover {
+		transform: translateY(-2px);
 	}
 
-	/* Cursor spotlight — driven by --mx/--my from the v-spotlight directive */
-	.spotlight {
-		isolation: isolate;
+	/* ---------------------------------------------------------------------
+	   Site header — a literal port of godotengine.org's navbar. Every number
+	   below was measured off their computed styles, so please don't "tidy"
+	   them: 0.2/0.4rem bar padding, 26px nav offset, 14px between links,
+	   12px link padding on a 10px radius, 13px on the donate pill.
+	--------------------------------------------------------------------- */
+
+	/* Their header pins itself to 1rem so the bar's metrics don't ride on the
+	   page's larger body type. */
+	.site-header {
+		font-size: 1rem;
 	}
-	.spotlight::before,
-	.spotlight::after {
-		content: "";
-		position: absolute;
-		inset: -1px;
-		border-radius: inherit;
-		pointer-events: none;
-		opacity: 0;
-		transition: opacity 300ms var(--ease-out-soft);
+
+	/* header .container — the frosted bar itself. Column below the breakpoint
+	   so the open menu stacks underneath the logo row, like theirs. */
+	.site-bar {
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		max-width: var(--container-page);
+		margin-inline: auto;
+		padding: 0.2rem 0.4rem;
+		background-color: rgb(134 144 154 / 0.15);
+		backdrop-filter: blur(4px);
 	}
-	.spotlight::before {
-		z-index: -1;
-		background: radial-gradient(
-			420px circle at var(--mx, 50%) var(--my, 50%),
-			rgb(74 144 226 / 0.1),
-			transparent 60%
-		);
+
+	/* #logo-link — their logo is a 136x48 image nudged 3px down. */
+	.site-logo {
+		position: relative;
+		top: 3px;
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		height: 48px;
+		padding-right: 8px;
+		border-radius: 10px;
+		font-family: var(--font-heading);
+		font-weight: 800;
+		text-transform: uppercase;
+		white-space: nowrap;
 	}
-	.spotlight::after {
-		padding: 1px;
-		background: radial-gradient(
-			300px circle at var(--mx, 50%) var(--my, 50%),
-			rgb(72 186 255 / 0.55),
-			transparent 60%
-		);
-		-webkit-mask:
-			linear-gradient(#000 0 0) content-box,
-			linear-gradient(#000 0 0);
-		-webkit-mask-composite: xor;
-		mask-composite: exclude;
+	.site-logo:hover {
+		background-color: rgb(128 128 128 / 0.1);
 	}
-	@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
-		.spotlight:hover::before,
-		.spotlight:hover::after {
-			opacity: 1;
+
+	/* #nav */
+	.site-nav {
+		display: none;
+		width: 100%;
+	}
+	.site-nav ul {
+		list-style: none;
+		margin: 0;
+		padding-left: 0;
+	}
+
+	/* #nav a */
+	.nav-link {
+		font-family: var(--font-heading);
+		font-size: 16px;
+		font-weight: 400;
+		padding: 12px;
+		margin-left: 14px;
+		border-radius: 10px;
+		transition: background-color 0.1s;
+	}
+	.nav-link:hover {
+		background-color: rgb(128 128 128 / 0.1);
+	}
+	/* Ours carry icons; godotengine.org's don't. */
+	.nav-link:has(svg) {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	/* .fund a — sits inside #nav, so it inherits the nav link's 16px/400
+	   Montserrat rather than the heavier .btn type. The 2px inset ring is
+	   theirs too; it makes the pill read a shade crisper than a flat fill. */
+	.nav-donate {
+		padding: 13px;
+		border-radius: var(--radius-btn);
+		background-color: var(--color-donate);
+		box-shadow: inset 0 0 0 2px var(--color-donate);
+		color: #fff;
+		font-size: 16px;
+		font-weight: 400;
+		white-space: nowrap;
+	}
+	.site-nav .nav-donate {
+		font-family: var(--font-heading);
+		margin-left: 14px;
+	}
+
+	/* #nav_toggle_btn */
+	.nav-toggle {
+		line-height: 0;
+		padding: 0.8rem;
+		border-radius: 100%;
+		transition: background-color 0.1s;
+	}
+	.nav-toggle:hover {
+		background-color: rgb(128 128 128 / 0.15);
+	}
+	.nav-toggle:active {
+		background-color: rgb(128 128 128 / 0.25);
+	}
+
+	@media (width >= 75rem) {
+		.site-bar {
+			flex-direction: row;
+			align-items: center;
+			height: 58px;
+			border-radius: 16px;
+		}
+		.site-nav {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding-left: 26px;
+		}
+		.site-nav > ul {
+			display: flex;
+			align-items: center;
+			height: 100%;
+		}
+		.site-nav > ul > li {
+			padding-left: 1rem;
+			margin-inline: -1rem;
+		}
+		.site-nav > ul > li:first-child {
+			padding-left: 0;
+		}
+		/* .fund — the donate pill opts out of the list's negative margins. */
+		.site-nav > ul > li.fund {
+			padding-left: 7px;
+			margin-inline: 0;
 		}
 	}
 
-	/* Gradient hairline border (membership card, hero frame) */
-	.gradient-border {
-		position: relative;
-		isolation: isolate;
-	}
-	.gradient-border::after {
-		content: "";
-		position: absolute;
-		inset: 0;
-		z-index: 1;
-		border-radius: inherit;
-		padding: 1px;
-		pointer-events: none;
-		background: linear-gradient(
-			135deg,
-			rgb(72 186 255 / 0.7),
-			rgb(74 144 226 / 0.15) 40%,
-			rgb(255 255 255 / 0.06) 70%,
-			rgb(72 186 255 / 0.4)
-		);
-		-webkit-mask:
-			linear-gradient(#000 0 0) content-box,
-			linear-gradient(#000 0 0);
-		-webkit-mask-composite: xor;
-		mask-composite: exclude;
+	/* Open menu: the nav unrolls inside the bar and the header goes opaque
+	   behind it. No backdrop, no scroll lock — same as theirs. */
+	@media (width < 75rem) {
+		.site-header.is-open {
+			background-color: var(--color-navbar);
+		}
+		.site-nav.is-open {
+			display: block;
+		}
+		.site-nav > ul {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			margin-bottom: 16px;
+		}
+		.site-nav > ul > li {
+			width: 100%;
+			padding-top: 16px;
+			margin-inline: -16px;
+		}
+		.site-nav .nav-link {
+			display: block;
+			padding: 0.75rem 1.5rem;
+			margin-block: -0.4375rem;
+		}
+		.site-nav .nav-link:has(svg) {
+			display: flex;
+		}
 	}
 
-	/* Placeholder art for unannounced games — tinted by --hue, with a faint blueprint grid */
+	/* Recently published — godotengine.org .date.post-recent-highlight */
+	.is-new {
+		color: var(--color-new);
+		opacity: 1;
+	}
+	.is-new::after {
+		content: "NEW";
+		font-size: 80%;
+		border: 1px solid;
+		border-radius: 3px;
+		padding: 2px 3px;
+		margin-left: 8px;
+	}
+
+	/* Placeholder art for unannounced games — tinted by --hue */
 	.teaser-art {
 		background:
-			radial-gradient(120% 90% at 18% 0%, hsl(var(--hue, 212) 80% 60% / 0.34), transparent 55%),
-			radial-gradient(90% 90% at 100% 100%, hsl(calc(var(--hue, 212) + 45) 75% 55% / 0.24), transparent 60%),
-			linear-gradient(180deg, #171717, #111);
-	}
-	.teaser-art::before {
-		content: "";
-		position: absolute;
-		inset: 0;
-		background-image:
-			linear-gradient(rgb(255 255 255 / 0.05) 1px, transparent 1px),
-			linear-gradient(90deg, rgb(255 255 255 / 0.05) 1px, transparent 1px);
-		background-size: 22px 22px;
-		mask-image: radial-gradient(ellipse 70% 80% at 50% 50%, #000 20%, transparent 80%);
-	}
-
-	/* Soft dot grid used behind headers */
-	.bg-dot-grid {
-		background-image: radial-gradient(rgb(255 255 255 / 0.07) 1px, transparent 1px);
-		background-size: 22px 22px;
-		mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, #000 30%, transparent 75%);
+			radial-gradient(120% 90% at 18% 0%, hsl(var(--hue, 212) 70% 60% / 0.7), transparent 60%),
+			linear-gradient(135deg, hsl(var(--hue, 212) 45% 38%), hsl(calc(var(--hue, 212) + 40) 45% 26%));
 	}
 
 	/* Scroll reveal — only armed by JS for elements below the fold */
 	[data-reveal="armed"] {
 		opacity: 0;
-		transform: translate3d(0, 14px, 0);
+		transform: translate3d(0, 8px, 0);
 	}
 	[data-reveal="shown"] {
 		opacity: 1;
 		transform: none;
 		transition:
-			opacity 700ms var(--ease-out-soft),
-			transform 700ms var(--ease-out-soft);
+			opacity 500ms var(--ease-out-soft),
+			transform 500ms var(--ease-out-soft);
 		transition-delay: var(--reveal-delay, 0ms);
-	}
-
-	/* Header pill gets a touch more solid once the page scrolls */
-	.header-pill {
-		background-color: rgb(24 24 24 / 0.72);
-		transition:
-			background-color 300ms,
-			border-color 300ms,
-			box-shadow 300ms;
-	}
-	@supports not (backdrop-filter: blur(1px)) {
-		.header-pill {
-			background-color: var(--color-surface);
-		}
-	}
-	[data-scrolled="true"] .header-pill {
-		background-color: rgb(24 24 24 / 0.86);
-		border-color: rgb(255 255 255 / 0.1);
-		box-shadow: 0 10px 40px -10px rgb(0 0 0 / 0.7);
 	}
 }
 
@@ -325,7 +509,7 @@
 --------------------------------------------------------------------------- */
 ::view-transition-old(root),
 ::view-transition-new(root) {
-	animation-duration: 220ms;
+	animation-duration: 150ms;
 	animation-timing-function: var(--ease-out-soft);
 }
 

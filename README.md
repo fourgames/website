@@ -4,7 +4,7 @@
 
 The website of **Four Games**, an indie studio making games in Godot, sharing free tutorials and open-sourcing the tools we use.
 
-Vue 3 + Vite + Tailwind CSS v4, prerendered to static HTML and hosted on GitHub Pages.
+Vue 3 + Vite + Tailwind CSS v4, prerendered to static HTML and hosted on GitHub Pages. The look and layout follow [godotengine.org](https://godotengine.org): light/dark follows the OS setting, Montserrat for headings, system font for body text.
 
 ## Development
 
@@ -26,18 +26,21 @@ Most content lives in small data files — no component changes needed:
 
 | File | What it controls |
 |---|---|
-| `src/data/games.js` | Steam app IDs, plus name/tagline/image for games whose store page isn't public yet |
+| `src/data/games.js` | Unannounced games and per-game overrides — published games are discovered from Steam automatically |
 | `src/data/roadmap.js` | "Our contributions to Godot" timeline on /code |
 | `src/data/partners.js` | Collaboration cards on /jobs |
-| `src/data/membership.js` | Membership card text and optional perks |
-| `src/data/site.js` | Links, socials, YouTube channel, Discord server, GitHub org, Formspree form |
+| `src/data/membership.js` | Membership tier, pitch and perks (feature cards + the navy band on the home page) |
+| `src/data/nav.js` | Header links (left/right groups) and the pink "Donate" pill |
+| `src/data/footer.js` | The four footer columns |
+| `src/data/involve.js` | "Get involved" columns on the home page |
+| `src/data/site.js` | Links, socials, hero headline, YouTube channel, Discord server, GitHub org, Formspree form |
 | `src/router/routes.js` | Page titles and meta descriptions |
 
 ## Build-time data
 
 `scripts/fetch-data.mjs` fetches live data at build time and writes it to `src/data/generated/` (gitignored):
 
-- **Steam** — game name, art, description, price and release date. Games without a public store page show a "Coming soon" card and switch over automatically once the page goes live.
+- **Steam** — app IDs are discovered from the public store search, filtered by `SITE.steam.publisher` / `.developer`, so a new store page appears on the site within a day without a code change (no API key or login needed). Each app then supplies name, art, description, genres, price and release date. Unannounced games can't be discovered publicly, so they stay listed in `src/data/games.js` and show a "Coming soon" card until their page goes live.
 - **YouTube** — the all-time most popular video and the latest uploads (Shorts and livestreams excluded).
 - **GitHub** — all public repositories in the `fourgames` org, sorted by stars.
 - **Discord** — server name, online count and a few avatars (the card also refreshes live in the browser).
@@ -67,4 +70,4 @@ A daily build uses about 10 of the 10,000 free quota units. The key is only read
 
 ## License
 
-MIT — see [LICENSE.md](LICENSE.md). Inter is licensed under the SIL Open Font License (`public/fonts/LICENSE-Inter.txt`). The clover icon is "Clover" by [Lorc](https://game-icons.net/), CC BY 3.0.
+MIT — see [LICENSE.md](LICENSE.md). Montserrat is licensed under the SIL Open Font License (`public/fonts/LICENSE-Montserrat.txt`). The clover icon is "Clover" by [Lorc](https://game-icons.net/), CC BY 3.0. Interface and illustration icons follow [Lucide](https://lucide.dev/) (ISC); platform icons are from godotengine.org.

@@ -1,4 +1,5 @@
 <script setup>
+import { onMounted, onUnmounted, ref } from "vue";
 import Button from "@/components/ui/Button.vue";
 import PageHeader from "@/components/layout/PageHeader.vue";
 import VideoCard from "@/components/videos/VideoCard.vue";
@@ -13,11 +14,29 @@ import youtube from "@/data/generated/youtube.json";
 const videos = sortVideos(catalogue.videos?.length ? catalogue.videos : [youtube.popular, ...(youtube.latest ?? [])]);
 const years = groupByYear(videos);
 
-// Only the two newest years render open. The rest are in <details>, so the markup is still in the
-// prerendered HTML for search and Ctrl-F, but the browser lays out and decodes far less of it —
-// which is what keeps this page cheap as the channel grows.
+// Every year is a <details>, so the markup is always in the prerendered HTML for search and Ctrl-F
+// while the browser lays out and decodes only what's open — which is what keeps this page cheap as
+// the channel grows. OPEN_YEARS only decides which years *start* expanded; all of them collapse.
 const OPEN_YEARS = 2;
-const isOpen = (index) => index < OPEN_YEARS;
+const open = ref(years.map((_, index) => index < OPEN_YEARS));
+
+function openYear(year) {
+	const index = years.findIndex((group) => group.year === year);
+	if (index !== -1) open.value[index] = true;
+}
+
+// A shared deep link like /videos#y2023 — or a jump-nav click — should land on an open year. The
+// browser's own anchor scroll stays correct: expanding a year never moves anything above it.
+function openFromHash() {
+	const match = /^#y(\d+)$/.exec(location.hash);
+	if (match) openYear(Number(match[1]));
+}
+
+onMounted(() => {
+	openFromHash();
+	window.addEventListener("hashchange", openFromHash);
+});
+onUnmounted(() => window.removeEventListener("hashchange", openFromHash));
 </script>
 
 <template>
@@ -32,7 +51,14 @@ const isOpen = (index) => index < OPEN_YEARS;
 		<div class="container-page padded">
 			<nav v-if="years.length > 1" aria-label="Jump to year" class="mb-10 flex flex-wrap items-center gap-x-3 gap-y-2">
 				<span class="text-subtitle">{{ videos.length }} videos</span>
-				<a v-for="group in years" :key="group.year" :href="`#y${group.year}`" class="link tabular-nums">{{ group.year }}</a>
+				<a
+					v-for="group in years"
+					:key="group.year"
+					:href="`#y${group.year}`"
+					class="link tabular-nums"
+					@click="openYear(group.year)"
+					>{{ group.year }}</a
+				>
 			</nav>
 
 			<section
@@ -42,14 +68,7 @@ const isOpen = (index) => index < OPEN_YEARS;
 				:aria-label="`Videos from ${group.year}`"
 				class="mb-12 scroll-mt-24 last:mb-0"
 			>
-				<template v-if="isOpen(index)">
-					<h2 class="mb-6 tabular-nums">{{ group.year }}</h2>
-					<ul class="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-						<li v-for="video in group.videos" :key="video.id"><VideoCard :video="video" /></li>
-					</ul>
-				</template>
-
-				<details v-else class="group">
+				<details class="group" :open="open[index]" @toggle="open[index] = $event.target.open">
 					<summary class="cursor-pointer list-none">
 						<h2 class="flex items-baseline gap-3 tabular-nums">
 							{{ group.year }}

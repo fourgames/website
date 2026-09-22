@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from "vue";
+import OnlinePill from "@/components/ui/OnlinePill.vue";
 
 // Art for the "Discord role" perk card: a stack of members who are online right now (from the public
 // Discord widget), the live online count and the gold member role. No usernames, only avatars.
@@ -43,13 +44,7 @@ function hideAvatar(event) {
 				:class="['-ml-3 size-11 rounded-full border-[3px] bg-card first:ml-0', frameClass]"
 			></span>
 		</div>
-		<p class="inline-flex items-center gap-2 text-sm">
-			<span class="relative flex size-2.5" aria-hidden="true">
-				<span v-if="live" class="absolute inset-0 rounded-full bg-[#23a559] motion-safe:animate-pulse-dot"></span>
-				<span class="relative size-2.5 rounded-full bg-[#23a559]"></span>
-			</span>
-			<span class="font-semibold tabular-nums">{{ online }}</span> online now
-		</p>
+		<OnlinePill :count="online" :live="live" />
 		<span v-if="tier" class="inline-flex items-center rounded-full bg-[#f2c94c]/20 px-3 py-1 text-xs font-semibold text-[#b8860b] dark:text-[#f2c94c]">
 			{{ tier }}
 		</span>

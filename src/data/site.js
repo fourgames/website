@@ -3,10 +3,10 @@
 export const SITE = {
 	name: "Four Games",
 	url: "https://fourgames.se",
-	tagline: "Indie games made in Godot, plus free tutorials and open-source tools.",
+	tagline: "Indie games made in Godot, free tutorials and open-source tools.",
 	hero: {
 		title: "We make games in Godot and teach you how.",
-		subtitle: "Indie games, free tutorials and open-source tools from Four Games.",
+		subtitle: "Indie games, free tutorials and open-source tools!",
 	},
 	links: {
 		// discord.fourgames.se currently has a broken HTTPS certificate, so link straight to the invite.

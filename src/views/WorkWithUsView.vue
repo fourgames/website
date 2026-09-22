@@ -26,13 +26,11 @@ import PartnerGrid from "@/components/jobs/PartnerGrid.vue";
 		description="The fastest way to reach us is Discord. Prefer email? Send us a message and we'll reply there."
 	>
 		<div class="grid gap-5 lg:grid-cols-2">
-			<div>
-				<CommunityCard
-					title="Chat with us on Discord"
-					text="Drop a message in the server. It's where we answer fastest."
-				/>
-			</div>
-			<div><ContactForm /></div>
+			<CommunityCard
+				title="Chat with us on Discord"
+				text="Drop a message in the server. It's where we answer fastest."
+			/>
+			<ContactForm />
 		</div>
 	</Section>
 </template>

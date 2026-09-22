@@ -37,7 +37,7 @@ async function submit(event) {
 }
 
 const fieldClass =
-	"block w-full rounded-btn border border-line-strong bg-surface px-3.5 text-base text-fg placeholder:text-date transition-colors focus:border-primary focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary/40 user-invalid:border-danger disabled:opacity-60";
+	"block w-full rounded-btn border border-line bg-bg px-4 text-base text-fg placeholder:text-date transition-colors focus:border-primary focus:outline-none focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-primary/40 user-invalid:border-danger disabled:opacity-60";
 </script>
 
 <template>
@@ -64,7 +64,7 @@ const fieldClass =
 					required
 					placeholder="you@studio.com"
 					:disabled="isSubmitting"
-					:class="[fieldClass, 'h-11']"
+					:class="[fieldClass, 'h-12']"
 				/>
 			</div>
 			<div>
@@ -77,7 +77,7 @@ const fieldClass =
 					required
 					placeholder="Hi Four Games, we'd love to…"
 					:disabled="isSubmitting"
-					:class="[fieldClass, 'min-h-32 resize-y py-3']"
+					:class="[fieldClass, 'min-h-36 resize-y py-3']"
 				></textarea>
 			</div>
 		</div>

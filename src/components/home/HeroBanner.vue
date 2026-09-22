@@ -140,14 +140,13 @@ onBeforeUnmount(() => {
 					<span class="flex items-center bg-primary px-4 text-white">{{ latest.name }}</span>
 					<span class="sr-only">(opens in new tab)</span>
 				</a>
-				<Button
-					:href="SITE.links.youtubeJoin"
-					variant="translucent"
-					size="hero"
-					icon="youtube"
-					class="w-full min-[901px]:w-auto"
-				>
-					Join on YouTube
+				<!-- godotengine.org's "What's new" button: translucent grey on the screenshot, so the white
+				     "Play latest" stays the one primary action in the hero. -->
+				<!-- No online count up here on purpose: the server is small enough that the bare number
+				     sets the scale of the studio before a visitor has seen anything. It keeps its place
+				     further down in DiscordArt, where the member avatars carry it. -->
+				<Button :href="SITE.links.discord" variant="translucent" size="hero" icon="discord" class="w-full min-[901px]:w-auto">
+					Join our Discord
 				</Button>
 			</div>
 

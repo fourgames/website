@@ -34,6 +34,9 @@ const HERO_SIZES = { thumb: 960, full: 1920 };
 const SCHEMA_VERSION = 3;
 const DAY = 86_400_000;
 const IN_ACTIONS = process.env.GITHUB_ACTIONS === "true";
+// Every top-level const must sit above the main block below: that block runs the fetches, so a
+// const declared after it is still in the temporal dead zone when a fetch function reads it.
+const PLAYLIST_PAGES = 20; // 50 uploads per page — 1000 videos before we start truncating.
 
 try {
 	process.loadEnvFile(path.join(ROOT, ".env.local"));
@@ -511,8 +514,6 @@ async function fetchYouTubeRss() {
 		videos,
 	};
 }
-
-const PLAYLIST_PAGES = 20; // 50 items per page — 1000 videos before we start truncating.
 
 async function listPlaylist(api, playlistId) {
 	const ids = [];

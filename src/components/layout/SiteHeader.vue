@@ -49,10 +49,14 @@ function onLogoClick() {
 				</NavLink>
 
 				<div class="flex items-center gap-1 nav:hidden">
-					<NavLink :to="DONATE.to" class="nav-donate" @navigate="open = false">
-						<Icon :name="DONATE.icon" class="relative top-px mr-1 inline w-[13px]" />
-						{{ DONATE.label }}
-					</NavLink>
+					<!-- .fund.mobile: the span keeps the link inline, so the pill hugs the glyphs (45px)
+					     instead of the full 24px line box a flex item would get. -->
+					<span class="relative">
+						<NavLink :to="DONATE.to" class="nav-donate" @navigate="open = false">
+							<Icon :name="DONATE.icon" class="mr-1 inline w-[13px] align-baseline" />
+							{{ DONATE.label }}
+						</NavLink>
+					</span>
 					<button
 						type="button"
 						class="nav-toggle"
@@ -103,7 +107,7 @@ function onLogoClick() {
 					</li>
 					<li class="fund hidden nav:block">
 						<NavLink :to="DONATE.to" class="nav-donate">
-							<Icon :name="DONATE.icon" class="relative top-px mr-1 inline w-[13px]" />
+							<Icon :name="DONATE.icon" class="relative top-px mr-1 inline w-[13px] align-baseline" />
 							{{ DONATE.label }}
 						</NavLink>
 					</li>

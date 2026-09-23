@@ -42,7 +42,7 @@ onUnmounted(() => window.removeEventListener("hashchange", openFromHash));
 <template>
 	<PageHeader title="Videos" description="Free Godot tutorials, from quick tips to full beginner courses. Members watch new videos early.">
 		<div class="flex flex-wrap gap-3">
-			<Button :href="SITE.links.youtube" variant="blue" icon="youtube">Watch on YouTube</Button>
+			<Button :href="SITE.links.youtubeSubscribe" variant="blue" icon="youtube">Follow on YouTube</Button>
 			<Button :href="SITE.links.youtubeJoin" icon="youtube">Join on YouTube</Button>
 		</div>
 	</PageHeader>

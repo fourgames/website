@@ -21,10 +21,10 @@ const status = computed(() => (price.value ? null : gameStatusLabel(props.game))
 		:href="game.storeUrl"
 		target="_blank"
 		rel="noopener noreferrer"
-		class="group block h-full rounded-lg transition-transform duration-100 ease-in-out hover:-translate-y-1 focus-visible:-translate-y-1 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
+		class="group block h-full rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
 	>
 		<article
-			class="flex h-full flex-col gap-2.5 rounded-lg bg-card p-2.5 shadow-[0_5px_10px_-3px_rgb(0_0_0/0.47)] transition-shadow duration-100 group-hover:shadow-[0_10px_18px_-3px_rgb(0_0_0/0.47)]"
+			class="flex h-full flex-col gap-2.5 rounded-lg bg-card p-2.5 shadow-[0_5px_10px_-3px_rgb(0_0_0/0.47)] transition-[box-shadow,transform] duration-100 ease-in-out group-hover:-translate-y-1 group-hover:shadow-[0_10px_18px_-3px_rgb(0_0_0/0.47)] group-focus-visible:-translate-y-1"
 		>
 			<div class="relative aspect-capsule overflow-hidden rounded border border-black/60 bg-surface">
 				<img

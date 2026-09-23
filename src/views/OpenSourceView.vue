@@ -52,7 +52,6 @@ const totalStars = repos.reduce((sum, repo) => sum + repo.stars, 0);
 
 	<Section
 		id="roadmap"
-		tone="surface"
 		title="Our contributions to Godot"
 		description="What we do for the engine that powers our games, and what's next."
 	>

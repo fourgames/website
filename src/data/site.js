@@ -13,6 +13,7 @@ export const SITE = {
 		discord: "https://discord.gg/bQTPTc5Qrt",
 		youtube: "https://www.youtube.com/@FourGamesAB",
 		youtubeJoin: "https://www.youtube.com/@FourGamesAB/join",
+		youtubeSubscribe: "https://www.youtube.com/@FourGamesAB?sub_confirmation=1",
 		github: "https://github.com/fourgames",
 		steam: "https://store.steampowered.com/publisher/fourgamesab",
 		x: "https://x.com/FourGamesAB",

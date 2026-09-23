@@ -49,11 +49,11 @@ const linkFor = (perk) =>
 <template>
 	<Section id="membership" :title="`${SITE.name} ${MEMBERSHIP.tier}`" :description="MEMBERSHIP.pitch">
 		<ul ref="cards" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-			<li v-for="perk in MEMBERSHIP.perks" :key="perk.id" class="flex">
+			<li v-for="perk in MEMBERSHIP.perks" :key="perk.id" class="group flex">
 				<component
 					:is="linkFor(perk).is"
 					v-bind="linkFor(perk)"
-					class="flex flex-1 flex-col overflow-hidden rounded-lg bg-dark text-white shadow-card transition-transform duration-200 ease-in-out hover:-translate-y-0.5"
+					class="flex flex-1 flex-col overflow-hidden rounded-lg bg-dark text-white shadow-card transition-transform duration-200 ease-in-out group-hover:-translate-y-0.5"
 				>
 					<span aria-hidden="true" class="@container relative block h-[250px] shrink-0 overflow-hidden bg-surface">
 						<FanCards v-if="perk.id === 'games' && keyCards.length" :cards="keyCards" />

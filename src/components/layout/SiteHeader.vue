@@ -35,6 +35,8 @@ function onLogoClick() {
 		:class="[
 			'site-header absolute inset-x-0 top-0 z-40 nav:top-2 [view-transition-name:site-header]',
 			isHome ? 'text-white' : 'text-navbar-link',
+			// The open panel is navbar-coloured (white in light mode), so drop the hero's white text.
+			{ 'max-nav:text-navbar-link': open },
 			{ 'is-open': open },
 		]"
 		@keydown.esc="open = false"

@@ -13,8 +13,8 @@ contributing, especially via bug reports or pull requests.
 
 Report bugs [here](https://github.com/fourgames/website/issues/new).
 
-Make sure that the bug you are experiencing is reproducible in the latest Godot
-release.
+Make sure that the bug you are experiencing is reproducible on the live site
+(https://fourgames.se/).
 
 ## Proposing features or improvements
 

@@ -39,7 +39,7 @@ const totalStars = repos.reduce((sum, repo) => sum + repo.stars, 0);
 		<template #actions>
 			<Button :href="SITE.links.github">All repositories</Button>
 		</template>
-		<ul v-if="repos.length" class="grid gap-4 sm:gap-6 md:grid-cols-2 lg:grid-cols-3">
+		<ul v-if="repos.length" class="grid gap-4 sm:gap-6 md:grid-cols-2">
 			<li v-for="repo in repos" :key="repo.name">
 				<RepoCard :repo="repo" />
 			</li>

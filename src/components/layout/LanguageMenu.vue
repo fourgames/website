@@ -49,7 +49,7 @@ function onFocusOut(event) {
 <template>
 	<li ref="root" :class="['lang-menu', { 'is-open': open }]" @keydown.esc="open = false" @focusout="onFocusOut">
 		<button type="button" class="lang-toggle" :aria-expanded="open" :aria-controls="id" @click="open = !open">
-			<Icon name="language" class="h-[26px] w-[33px]" />
+			<Icon name="language" class="h-[34px] w-[42px]" />
 			<span class="sr-only">{{ t("language.button") }}</span>
 		</button>
 		<span class="lang-label" aria-hidden="true">{{ t("language.label") }}</span>

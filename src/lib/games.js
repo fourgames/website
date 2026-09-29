@@ -7,7 +7,7 @@ import steam from "@/data/generated/steam.json";
 // The order comes from the build (published games are discovered from Steam, so they aren't all in
 // games.js); GAMES is the offline fallback. Live Steam data wins; games.js covers the rest.
 // Steam's own translation of the store blurb, genres and release date is used where the build
-// fetched one (`live.i18n[code]`); the game's name stays as it is on the English store page.
+// fetched one (`live.i18n[code]`): name, capsule art, blurb, genres and release date.
 export function getGames(i18n = defaultI18n) {
 	const { t, code } = i18n;
 	const ids = steam.appIds?.length ? steam.appIds : GAMES.map((g) => g.appId);
@@ -22,10 +22,10 @@ export function getGames(i18n = defaultI18n) {
 		return {
 			appId,
 			status: live?.status ?? fallback.status ?? "unlisted",
-			name: live?.name ?? fallback.name ?? t("games.unannounced.name"),
+			name: local.name || (live?.name ?? fallback.name ?? t("games.unannounced.name")),
 			description:
 				translated || live?.shortDescription || (code === "en" && tagline.en) || t("games.unannounced.tagline"),
-			image: live?.headerImage ?? fallback.image ?? null,
+			image: local.headerImage || (live?.headerImage ?? fallback.image ?? null),
 			storeUrl: live?.storeUrl ?? `https://store.steampowered.com/app/${appId}/`,
 			price: live?.price ?? null,
 			isFree: live?.isFree ?? false,
@@ -43,8 +43,9 @@ export function getGames(i18n = defaultI18n) {
 // Full-width hero slides: every screenshot of every announced game (key art as a fallback).
 // Upcoming games are included, so a new store page joins the shuffle the day it's discovered;
 // unlisted ones are skipped because their only art is a local placeholder, not a 1920px shot.
-export function getHeroSlides() {
-	return getGames()
+// The pictures are the same in every language; only the credit's game name is translated.
+export function getHeroSlides(i18n = defaultI18n) {
+	return getGames(i18n)
 		.filter((g) => g.status !== "unlisted")
 		.flatMap((g) => {
 			// Prefer our own AVIF copies (scripts/fetch-data.mjs mirrors them): same picture, a third of

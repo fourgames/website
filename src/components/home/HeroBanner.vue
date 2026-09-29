@@ -22,7 +22,7 @@ import { heroPick, heroReshuffles, heroSrc } from "@/lib/hero.js";
 // same screenshot straight from cache instead of downloading another one behind a dark hero.
 const i18n = useI18n();
 const { t } = i18n;
-const slides = getHeroSlides();
+const slides = getHeroSlides(i18n);
 // The newest game you can actually play. getGames() comes back in build order (the manual entries
 // in games.js lead), so this has to sort, or a launch would never move the button off whatever
 // happens to head that list.

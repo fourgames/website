@@ -16,6 +16,7 @@ export { loadMessages };
 export { redirectScript } from "./i18n/detect.js";
 // Read by scripts/prerender.mjs to build the home page's inline hero script.
 export { getHeroSlides } from "./lib/games.js";
+export { createI18n } from "./i18n/index.js";
 export { HERO_MOBILE_QUERY } from "./lib/hero.js";
 
 export async function render(url, manifest) {

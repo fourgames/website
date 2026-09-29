@@ -454,7 +454,7 @@
 	}
 
 	/* .language-selector — godotengine.org's translate glyph and its frosted
-	   dropdown (their 120px box, 5px radius, rgba(48,48,48,.89) fill). Below
+	   dropdown (their 42px glyph, 120px box, 5px radius, rgba(48,48,48,.89) fill). Below
 	   the breakpoint it becomes their "Language:" row with the options
 	   indented under it, inside the mobile menu. */
 	.lang-menu {
@@ -463,9 +463,9 @@
 	.lang-toggle {
 		display: none;
 		place-items: center;
-		width: 56px;
+		width: 60px;
 		height: 43px;
-		margin-left: 6px;
+		margin-left: 4px;
 		border-radius: 10px;
 		transition: background-color 0.1s;
 	}

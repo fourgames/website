@@ -28,6 +28,7 @@ const {
 	enMessages,
 	loadMessages,
 	redirectScript,
+	createI18n,
 } = await import(pathToFileURL(path.join(DIST_SSR, "entry-server.js")).href);
 
 // Inline the stylesheet: one fewer render-blocking request on every page.
@@ -42,25 +43,28 @@ if (cssLink) {
 // preloads it, so the ~0.5 MB screenshot starts downloading while <body> is still being parsed; the
 // <body> half writes it into the markup that HeroBanner.vue is about to hydrate, so the two agree
 // and the browser never fetches a second one. Keep the mobile rule in step with heroSrc().
-const heroSlides = getHeroSlides();
-const heroHead = heroSlides.length
-	? `<script>${inline(`
-			var S = ${json(heroSlides.map((s) => [s.full, s.thumb, s.game, s.href]))},
-				i = Math.floor(Math.random() * S.length),
-				s = S[i];
-			window.__HERO__ = { i: i, src: matchMedia(${json(HERO_MOBILE_QUERY)}).matches ? s[1] : s[0], game: s[2], href: s[3] };
-			var l = document.createElement("link");
-			l.rel = "preload"; l.as = "image"; l.fetchPriority = "high"; l.href = window.__HERO__.src;
-			document.head.appendChild(l);
-		`)}</script><noscript><style>.hero-backdrop{background:url(${json(heroSlides[0].full)}) center/cover no-repeat}</style></noscript>`
-	: "";
-const heroBody = heroSlides.length
-	? `<script>${inline(`
-			var h = window.__HERO__, img = document.querySelector(".hero-shot"), a = document.querySelector(".hero-credit"),
-				g = document.querySelector(".hero-credit-game");
-			if (h) { if (img) img.src = h.src; if (a) a.href = h.href; if (g) g.textContent = h.game; }
-		`)}</script>`
-	: "";
+// Per language, because the credit carries the game's (possibly translated) name.
+function heroScripts(heroSlides) {
+	const heroHead = heroSlides.length
+		? `<script>${inline(`
+				var S = ${json(heroSlides.map((s) => [s.full, s.thumb, s.game, s.href]))},
+					i = Math.floor(Math.random() * S.length),
+					s = S[i];
+				window.__HERO__ = { i: i, src: matchMedia(${json(HERO_MOBILE_QUERY)}).matches ? s[1] : s[0], game: s[2], href: s[3] };
+				var l = document.createElement("link");
+				l.rel = "preload"; l.as = "image"; l.fetchPriority = "high"; l.href = window.__HERO__.src;
+				document.head.appendChild(l);
+			`)}</script><noscript><style>.hero-backdrop{background:url(${json(heroSlides[0].full)}) center/cover no-repeat}</style></noscript>`
+		: "";
+	const heroBody = heroSlides.length
+		? `<script>${inline(`
+				var h = window.__HERO__, img = document.querySelector(".hero-shot"), a = document.querySelector(".hero-credit"),
+					g = document.querySelector(".hero-credit-game");
+				if (h) { if (img) img.src = h.src; if (a) a.href = h.href; if (g) g.textContent = h.game; }
+			`)}</script>`
+		: "";
+	return { heroHead, heroBody };
+}
 
 // Squeeze the snippets above onto one line, inside a function so their temporaries stay off window,
 // and keep "<" out of the JSON, so nothing in the data can close the <script> tag early.
@@ -97,6 +101,7 @@ for (const { target, locale } of pages) {
 	const isHome = target.url === "/";
 
 	const { appHtml, routeName, headTags, preloadLinks } = await render(url, manifest);
+	const { heroHead, heroBody } = heroScripts(getHeroSlides(createI18n(locale.code, await loadMessages(locale.code))));
 	const html = base
 		.replace('<html lang="en">', () => `<html lang="${locale.htmlLang}">`)
 		.replace(/<!--head:start-->[\s\S]*?<!--head:end-->/, () => headTags)

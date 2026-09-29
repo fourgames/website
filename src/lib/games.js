@@ -7,7 +7,7 @@ import steam from "@/data/generated/steam.json";
 // The order comes from the build (published games are discovered from Steam, so they aren't all in
 // games.js); GAMES is the offline fallback. Live Steam data wins; games.js covers the rest.
 // Steam's own translation of the store blurb, genres and release date is used where the build
-// fetched one (`live.i18n[code]`): name, capsule art, blurb, genres and release date.
+// fetched one (`live.i18n[code]`): name, capsule art, screenshots, blurb, genres and release date.
 export function getGames(i18n = defaultI18n) {
 	const { t, code } = i18n;
 	const ids = steam.appIds?.length ? steam.appIds : GAMES.map((g) => g.appId);
@@ -34,7 +34,7 @@ export function getGames(i18n = defaultI18n) {
 			releaseDateLabel: local.releaseDate || live?.releaseDate || null,
 			platforms: live?.platforms ?? [],
 			genres: local.genres?.length ? local.genres : (live?.genres ?? []),
-			screenshots: live?.screenshots ?? [],
+			screenshots: local.screenshots?.length ? local.screenshots : (live?.screenshots ?? []),
 			hue: fallback.hue ?? 212,
 		};
 	});
@@ -43,7 +43,7 @@ export function getGames(i18n = defaultI18n) {
 // Full-width hero slides: every screenshot of every announced game (key art as a fallback).
 // Upcoming games are included, so a new store page joins the shuffle the day it's discovered;
 // unlisted ones are skipped because their only art is a local placeholder, not a 1920px shot.
-// The pictures are the same in every language; only the credit's game name is translated.
+// In the page's language: a game's localized screenshots when Steam has them, and its translated name.
 export function getHeroSlides(i18n = defaultI18n) {
 	return getGames(i18n)
 		.filter((g) => g.status !== "unlisted")

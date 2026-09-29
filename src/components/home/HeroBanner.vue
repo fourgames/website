@@ -4,7 +4,7 @@ import Button from "@/components/ui/Button.vue";
 import I18nT from "@/components/ui/I18nT.vue";
 import NavLink from "@/components/ui/NavLink.vue";
 import { SITE } from "@/data/site.js";
-import { useI18n } from "@/i18n/index.js";
+import { defaultI18n, useI18n } from "@/i18n/index.js";
 import { byRecency, getGames, getHeroSlides } from "@/lib/games.js";
 import { heroPick, heroReshuffles, heroSrc } from "@/lib/hero.js";
 
@@ -22,6 +22,12 @@ import { heroPick, heroReshuffles, heroSrc } from "@/lib/hero.js";
 // same screenshot straight from cache instead of downloading another one behind a dark hero.
 const i18n = useI18n();
 const { t } = i18n;
+
+// The hero keeps the English shape in every language: an invisible English copy of the copy shares
+// the grid cell with the real text (see .hero-stack), so a translation that wraps to fewer lines —
+// Korean and Chinese titles fit on one — never shrinks the hero, and a longer one can still grow it.
+const en = defaultI18n.t;
+const isEnglish = i18n.code === "en";
 const slides = getHeroSlides(i18n);
 // The newest game you can actually play. getGames() comes back in build order (the manual entries
 // in games.js lead), so this has to sort, or a launch would never move the button off whatever
@@ -122,13 +128,21 @@ onBeforeUnmount(() => {
 		<div
 			class="relative mx-auto box-content max-w-[75rem] px-2.5 pt-[150px] pb-[120px] text-center min-[651px]:px-5 min-[651px]:pt-[180px] min-[651px]:pb-[100px] min-[901px]:text-left"
 		>
-			<h1
-				id="hero-title"
-				class="mb-5 text-hero-sm text-balance text-white [text-shadow:0_0_28px_rgb(0_0_0/0.5)] min-[901px]:text-hero"
-			>
-				{{ t("hero.title") }}
-			</h1>
-			<p class="mb-5 text-[20px]/[1.5] [text-shadow:0_0_28px_rgb(0_0_0/0.5)]">{{ t("hero.subtitle") }}</p>
+			<div class="hero-stack">
+				<div>
+					<h1
+						id="hero-title"
+						class="mb-5 text-hero-sm text-balance text-white [text-shadow:0_0_28px_rgb(0_0_0/0.5)] min-[901px]:text-hero"
+					>
+						{{ t("hero.title") }}
+					</h1>
+					<p class="text-[20px]/[1.5] [text-shadow:0_0_28px_rgb(0_0_0/0.5)]">{{ t("hero.subtitle") }}</p>
+				</div>
+				<div v-if="!isEnglish" aria-hidden="true" lang="en" class="invisible">
+					<p class="mb-5 font-heading text-hero-sm font-extrabold text-balance min-[901px]:text-hero">{{ en("hero.title") }}</p>
+					<p class="text-[20px]/[1.5]">{{ en("hero.subtitle") }}</p>
+				</div>
+			</div>
 
 			<div
 				class="mt-12 flex flex-col items-center gap-3 min-[901px]:flex-row min-[901px]:flex-wrap min-[901px]:items-center min-[901px]:justify-start"
@@ -154,19 +168,24 @@ onBeforeUnmount(() => {
 				</Button>
 			</div>
 
-			<p class="mt-6 text-[15px]/[1.2] font-light text-white/85 [text-shadow:0_0_10px_#000]">
-				<I18nT keypath="hero.lookingFor">
-					<template #videos>
-						<NavLink to="/videos" class="underline decoration-1 underline-offset-2 hover:text-white">{{ t("hero.videos") }}</NavLink>
-					</template>
-					<template #code>
-						<NavLink to="/code" class="underline decoration-1 underline-offset-2 hover:text-white">{{ t("hero.code") }}</NavLink>
-					</template>
-					<template #jobs>
-						<NavLink to="/jobs" class="underline decoration-1 underline-offset-2 hover:text-white">{{ t("hero.jobs") }}</NavLink>
-					</template>
-				</I18nT>
-			</p>
+			<div class="hero-stack mt-6">
+				<p class="text-[15px]/[1.2] font-light text-white/85 [text-shadow:0_0_10px_#000]">
+					<I18nT keypath="hero.lookingFor">
+						<template #videos>
+							<NavLink to="/videos" class="underline decoration-1 underline-offset-2 hover:text-white">{{ t("hero.videos") }}</NavLink>
+						</template>
+						<template #code>
+							<NavLink to="/code" class="underline decoration-1 underline-offset-2 hover:text-white">{{ t("hero.code") }}</NavLink>
+						</template>
+						<template #jobs>
+							<NavLink to="/jobs" class="underline decoration-1 underline-offset-2 hover:text-white">{{ t("hero.jobs") }}</NavLink>
+						</template>
+					</I18nT>
+				</p>
+				<p v-if="!isEnglish" aria-hidden="true" lang="en" class="invisible text-[15px]/[1.2] font-light">
+					{{ en("hero.lookingFor", { videos: en("hero.videos"), code: en("hero.code"), jobs: en("hero.jobs") }) }}
+				</p>
+			</div>
 		</div>
 
 		<a

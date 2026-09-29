@@ -603,6 +603,15 @@
 		}
 	}
 
+	/* Home hero copy stacked on an invisible English twin (HeroBanner.vue): one
+	   grid cell, so the taller of the two sets the height. */
+	.hero-stack {
+		display: grid;
+	}
+	.hero-stack > * {
+		grid-area: 1 / 1;
+	}
+
 	/* Recently published — godotengine.org .date.post-recent-highlight */
 	.is-new {
 		color: var(--color-new);

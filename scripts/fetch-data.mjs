@@ -38,7 +38,7 @@ const IN_ACTIONS = process.env.GITHUB_ACTIONS === "true";
 // const declared after it is still in the temporal dead zone when a fetch function reads it.
 const PLAYLIST_PAGES = 20; // 50 uploads per page — 1000 videos before we start truncating.
 // Steam's own store translations, fetched per site language (src/i18n/locales.js codes → Steam's
-// `l=` names). Name, capsule, blurb, genres and release date; prices stay USD.
+// `l=` names). Name, capsule, screenshots, blurb, genres and release date; prices stay USD.
 const STEAM_LANGUAGES = { ja: "japanese", ko: "koreana", "zh-cn": "schinese", "zh-tw": "tchinese" };
 
 try {
@@ -115,9 +115,14 @@ if (ENSURE) {
 // The mirrored images live outside OUT_DIR, so they can go missing while steam.json still points at
 // them (a cleared workflow cache, a cleaned checkout). Point those screenshots back at Steam rather
 // than shipping a hero that 404s.
+// Every screenshot an app has: the English set plus any language's own set (see fetchSteamTranslations).
+function allScreenshots(app) {
+	return [...(app.screenshots ?? []), ...Object.values(app.i18n ?? {}).flatMap((l) => l?.screenshots ?? [])];
+}
+
 async function dropMissingHeroShots() {
 	const steam = await readFileJson("steam");
-	const shots = Object.values(steam?.apps ?? {}).flatMap((app) => app.screenshots ?? []);
+	const shots = Object.values(steam?.apps ?? {}).flatMap(allScreenshots);
 	let dropped = 0;
 	for (const shot of shots) {
 		if (!shot.localFull) continue;
@@ -304,6 +309,10 @@ async function fetchSteam(previous) {
 // never un-translates.
 async function fetchSteamTranslations(appId, en, previous = {}) {
 	const english = decodeEntities(en.short_description ?? "");
+	const shotsOf = (d) => (d.screenshots ?? []).map((s) => ({ thumb: s.path_thumbnail, full: s.path_full }));
+	// Compared by file, not URL: the ?t= cache-buster changes on every store edit.
+	const shotKey = (shots) => shots.map((s) => s.full.split("?")[0]).join();
+	const englishShots = shotKey(shotsOf(en));
 	const out = {};
 	for (const [code, language] of Object.entries(STEAM_LANGUAGES)) {
 		await sleep(300);
@@ -312,11 +321,15 @@ async function fetchSteamTranslations(appId, en, previous = {}) {
 			const d = json?.[appId]?.data;
 			if (!d) throw new Error("empty response");
 			const blurb = decodeEntities(d.short_description ?? "");
+			const shots = shotsOf(d);
 			out[code] = {
 				name: d.name && d.name !== en.name ? d.name : null,
 				// A localized capsule has its own file (header_japanese.jpg), so compare the path, not the
 				// ?t= cache-buster.
 				headerImage: d.header_image && d.header_image.split("?")[0] !== en.header_image?.split("?")[0] ? d.header_image : null,
+				// Only when this language has its own set (screenshots with translated UI); otherwise the
+				// English ones are used, and mirrorHeroShots doesn't encode the same images twice.
+				screenshots: shots.length && shotKey(shots) !== englishShots ? shots : null,
 				shortDescription: blurb && blurb !== english ? blurb : null,
 				genres: (d.genres ?? []).map((g) => g.description).slice(0, 3),
 				releaseDate: d.release_date?.date || null,
@@ -337,7 +350,7 @@ async function fetchSteamTranslations(appId, en, previous = {}) {
 // whatever the workflow cache restored and only pays for screenshots that are actually new. Any
 // failure here is survivable: the Steam URLs stay in the data and the hero falls back to the CDN.
 async function mirrorHeroShots(apps) {
-	const shots = Object.values(apps).flatMap((app) => app.screenshots ?? []);
+	const shots = Object.values(apps).flatMap(allScreenshots);
 	if (!shots.length) return;
 
 	let sharp;

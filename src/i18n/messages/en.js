@@ -1,0 +1,265 @@
+// English — the source language and the fallback for any key another language is missing.
+// Add a key here first, then to ja.js, ko.js, zh-cn.js and zh-tw.js; the build warns about gaps.
+// {name} is a placeholder (a param, or a slot when rendered through <I18nT>). "Four Games",
+// "Godot", product names and the YouTube tier name "Supporter" stay in English in every language.
+export default {
+	site: {
+		tagline: "Indie games made in Godot, free tutorials and open-source tools.",
+		ogImageAlt: "The Four Games home page: indie games made in Godot",
+	},
+	head: {
+		home: {
+			title: "Four Games: Indie games made in Godot",
+			description:
+				"Four Games makes indie games in Godot, shares free tutorials on YouTube, and open-sources the tools we use.",
+		},
+		games: {
+			title: "Games",
+			description: "Indie games made in Godot by Four Games, out now on Steam and free for members.",
+		},
+		videos: {
+			title: "Videos",
+			description: "Free Godot tutorials from Four Games, from quick tips to full beginner courses.",
+		},
+		code: {
+			title: "Open Source",
+			description: "Godot templates, curated game-dev resources and our contributions to the Godot engine and foundation.",
+		},
+		jobs: {
+			title: "Work with us",
+			description:
+				"Guest series for YouTube creators, co-development and publishing with indie studios, and franchise collaborations. Get in touch with Four Games.",
+		},
+		notFound: {
+			title: "Page not found",
+			description: "This page doesn't exist.",
+		},
+	},
+	a11y: {
+		newTab: "(opens in new tab)",
+		skip: "Skip to content",
+		home: "Four Games, home",
+		mainNav: "Main",
+		openMenu: "Open menu",
+		closeMenu: "Close menu",
+		socialLinks: "Social links",
+		platforms: "Platforms",
+		topics: "Topics",
+		stars: "Stars:",
+		forks: "Forks:",
+		keyArt: "{name} key art",
+	},
+	language: {
+		button: "Language",
+		label: "Language:",
+	},
+	nav: {
+		games: "Games",
+		videos: "Videos",
+		code: "Open Source",
+		jobs: "Work with us",
+		donate: "Donate",
+	},
+	footer: {
+		games: { heading: "Games", all: "All games", steam: "Follow on Steam", members: "Free for members" },
+		studio: { heading: "Studio", home: "Home", code: "Open Source", jobs: "Work with us", contact: "Contact" },
+		resources: {
+			heading: "Resources",
+			videos: "Videos",
+			youtube: "YouTube channel",
+			github: "GitHub",
+			issue: "Report a website issue",
+		},
+		community: { heading: "Community", discord: "Discord", membership: "Membership", steam: "Steam" },
+		copyright: "© {year} {name}. All rights reserved. Clover icon by {author} (CC BY 3.0).",
+	},
+	hero: {
+		title: "We make games in Godot and teach you how.",
+		subtitle: "Indie games, free tutorials and open-source tools!",
+		playLatest: "Play latest",
+		discord: "Join our Discord",
+		lookingFor: "Looking for our {videos}, {code}, or {jobs}?",
+		videos: "videos",
+		code: "open source",
+		jobs: "work with us",
+	},
+	games: {
+		title: "Our games",
+		description: "Made with Godot, made with care. Every game we release is free for members.",
+		released: "Games",
+		upcoming: "Coming soon",
+		viewAll: "View all",
+		followSteam: "Follow on Steam",
+		free: "Free",
+		status: {
+			releasedOn: "Released {date}",
+			outNow: "Out now",
+			comingOn: "Coming {date}",
+			comingSoon: "Coming soon",
+			inDevelopment: "In development",
+		},
+		unannounced: {
+			name: "Unannounced project",
+			tagline: "Something new is in the forge. Join the Discord to be first to see it.",
+		},
+	},
+	videos: {
+		title: "Videos",
+		description: "Free Godot tutorials, from quick tips to full beginner courses. Members watch new videos early.",
+		latest: "Latest videos",
+		more: "More videos",
+		follow: "Follow on YouTube",
+		watch: "Watch on YouTube",
+		channelBlurb: "New Godot tutorials land on our channel regularly.",
+		count: ({ count }) => (count === 1 ? "1 video" : `${count} videos`),
+		views: ({ count }) => (count === "1" ? "1 view" : `${count} views`),
+		jumpToYear: "Jump to year",
+		fromYear: "Videos from {year}",
+		unavailable: "Our latest videos couldn't be loaded right now, so {link}.",
+		unavailableLink: "watch them on YouTube",
+	},
+	membership: {
+		pitch: "Support Four Games on YouTube and get every game we make for free.",
+		join: "Join on YouTube",
+		badge: "Member",
+		perks: {
+			games: { title: "Keys to all our games", text: "Reforge Front and every game we release after it." },
+			early: { title: "Early access to new videos", text: "Watch new Godot tutorials before everyone else." },
+			discord: { title: "Discord role", text: "A members role in our Discord server." },
+			badges: { title: "Member badges", text: "Loyalty badges next to your name in comments and live chat." },
+		},
+		band: {
+			title: "Support {name}",
+			text: "You don't need to be a game developer to help. Become a {tier} on YouTube and keep the games and free tutorials coming.",
+		},
+	},
+	involve: {
+		title: "Get involved",
+		description: "Join the community and help shape the games and tutorials we make.",
+		discord: {
+			title: "Chat",
+			text: "Ask questions, share what you're building and help shape our games on Discord.",
+			cta: "Join Discord",
+		},
+		youtube: {
+			title: "Learn",
+			text: "Free Godot tutorials on our YouTube channel, from quick tips to full beginner courses.",
+			cta: "Watch on YouTube",
+		},
+		jobs: {
+			title: "Collaborate",
+			text: "Creators, studios and brands: let's build something together.",
+			cta: "Work with us",
+		},
+	},
+	discord: {
+		online: "{count} online now",
+		title: "Join our Discord",
+		text: "Chat with us, get help with your Godot projects and be first to hear about new games.",
+		community: "{name} community",
+		join: "Join server",
+	},
+	code: {
+		title: "Open source",
+		description:
+			"Project templates, curated game-dev resources and the code behind this site. Free to use, fork and learn from.",
+		follow: "Follow on GitHub",
+		stars: "{count} stars",
+		repoCount: ({ count }) => (count === 1 ? "{count} public repository" : "{count} public repositories"),
+		repositories: "Repositories",
+		allRepositories: "All repositories",
+		unavailable: "Our repositories couldn't be loaded right now, so {link}.",
+		unavailableLink: "browse them on GitHub",
+		noDescription: "No description yet.",
+		updated: "Updated {time}",
+		roadmap: {
+			title: "Our contributions to Godot",
+			description: "What we do for the engine that powers our games, and what's next.",
+		},
+	},
+	roadmap: {
+		underway: "{done} of {total} milestones underway",
+		since: "Since {year}",
+		next: "Next",
+		planned: "Planned",
+		items: {
+			education: {
+				title: "Free Education & Tutorials",
+				text: "Creating video tutorials on a variety of interesting and useful topics that are freely available.",
+			},
+			qa: {
+				title: "QA & Feature Proposals",
+				text: "Reporting engine bugs and contributing to discussions on GitHub.",
+			},
+			foundation: {
+				title: "Foundation Support",
+				text: "Providing financial contributions to the Godot Foundation to support core development.",
+			},
+			template: {
+				title: "Template & Resources",
+				text: "Developing a Godot project template and curated resources to help developers.",
+			},
+			sponsor: {
+				title: "Corporate Sponsorship",
+				text: "Becoming an official Corporate Sponsor to further back the Godot Foundation.",
+			},
+		},
+	},
+	jobs: {
+		title: "Work with us",
+		description: "We collaborate with creators, studios and brands who care about great games as much as we do.",
+		getInTouch: "Get in touch",
+		ways: "Ways to work with us",
+		contact: {
+			title: "Get in touch",
+			description: "The fastest way to reach us is Discord. Prefer email? Send us a message and we'll reply there.",
+			discordTitle: "Chat with us on Discord",
+			discordText: "Drop a message in the server. It's where we answer fastest.",
+		},
+		licensedIp: "Licensed IP",
+		partners: {
+			series: {
+				audience: "YouTube Creators",
+				title: "Guest Series",
+				text: "Featuring educational series on our channel to provide exposure to your work.",
+				cta: "Pitch a series",
+			},
+			codev: {
+				audience: "Indie Studios",
+				title: "Co-Development & Publishing",
+				text: "We partner with developers to co-develop or publish new titles.",
+				cta: "Talk co-dev",
+			},
+			franchise: {
+				audience: "Brands & IPs",
+				title: "Franchise Collaborations",
+				text: "We aim to develop licensed games for Nintendo, LEGO, and anime properties.",
+				cta: "Start a conversation",
+			},
+			principle: {
+				text: "We have never and will never accept sponsorships or paid brand deals.",
+			},
+		},
+	},
+	form: {
+		title: "Send us a message",
+		subtitle: "Tell us about your project or partnership idea.",
+		honeypot: "Leave this empty",
+		email: "Email",
+		emailPlaceholder: "you@studio.com",
+		message: "Message",
+		messagePlaceholder: "Hi Four Games, we'd love to…",
+		send: "Send message",
+		sending: "Sending…",
+		quicker: "Prefer a quicker reply? Ask us on Discord.",
+		success: "Thanks! Your message has been sent. We'll get back to you soon.",
+		error: "Something went wrong sending your message. Please try again, or reach us on Discord.",
+	},
+	notFound: {
+		title: "404: page not found",
+		description: "The page you're looking for doesn't exist or has moved. Here are some places to go instead.",
+		home: "Back to home",
+		bug: "Think this is a bug? {link}",
+		report: "Report a website issue",
+	},
+};

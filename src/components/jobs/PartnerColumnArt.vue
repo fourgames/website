@@ -1,6 +1,7 @@
 <script setup>
 import FanCards from "@/components/home/FanCards.vue";
 import FranchiseArt from "./FranchiseArt.vue";
+import { useI18n } from "@/i18n/index.js";
 import { getGames } from "@/lib/games.js";
 import { videoThumb } from "@/lib/videos.js";
 import youtube from "@/data/generated/youtube.json";
@@ -20,7 +21,7 @@ const videoCards = [...(youtube.latest ?? [])].slice(0, 3).map((v) => ({
 	iconClass: "text-primary",
 }));
 
-const gameCards = getGames()
+const gameCards = getGames(useI18n())
 	.slice(0, 3)
 	.map((game) => ({
 		image: game.image,

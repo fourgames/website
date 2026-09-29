@@ -5,30 +5,33 @@ import PageHeader from "@/components/layout/PageHeader.vue";
 import CommunityCard from "@/components/shared/CommunityCard.vue";
 import ContactForm from "@/components/jobs/ContactForm.vue";
 import PartnerGrid from "@/components/jobs/PartnerGrid.vue";
+import { useI18n } from "@/i18n/index.js";
+
+const { t } = useI18n();
 </script>
 
 <template>
 	<PageHeader
-		title="Work with us"
-		description="We collaborate with creators, studios and brands who care about great games as much as we do."
+		:title="t('jobs.title')"
+		:description="t('jobs.description')"
 	>
-		<Button to="/jobs#contact" variant="blue" icon="mail">Get in touch</Button>
+		<Button to="/jobs#contact" variant="blue" icon="mail">{{ t("jobs.getInTouch") }}</Button>
 	</PageHeader>
 
-	<Section id="collaborations" title="Ways to work with us">
+	<Section id="collaborations" :title="t('jobs.ways')">
 		<PartnerGrid />
 	</Section>
 
 	<Section
 		id="contact"
 		tone="surface"
-		title="Get in touch"
-		description="The fastest way to reach us is Discord. Prefer email? Send us a message and we'll reply there."
+		:title="t('jobs.contact.title')"
+		:description="t('jobs.contact.description')"
 	>
 		<div class="grid gap-5 lg:grid-cols-2">
 			<CommunityCard
-				title="Chat with us on Discord"
-				text="Drop a message in the server. It's where we answer fastest."
+				:title="t('jobs.contact.discordTitle')"
+				:text="t('jobs.contact.discordText')"
 			/>
 			<ContactForm />
 		</div>

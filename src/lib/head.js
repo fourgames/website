@@ -1,20 +1,43 @@
-// Tiny head manager. Every route is static, so head tags depend only on route.meta.head.
-// Server: renderHeadTags() → HTML string for the prerendered page. Client: installHead() keeps tags in sync.
+// Tiny head manager. Every route is static, so head tags depend only on route.meta.head and the
+// page's language. Server: renderHeadTags() → HTML string for the prerendered page. Client:
+// installHead() keeps tags in sync.
 import { SITE, SOCIALS } from "@/data/site.js";
+import { LOCALES, localizePath, stripLocale } from "@/i18n/locales.js";
 
 const OG_IMAGE = {
 	url: `${SITE.url}/og/og-default.jpg?v=${__BUILD_DATE__}`,
 	width: 1200,
 	height: 630,
-	alt: "The Four Games home page: indie games made in Godot",
 };
 
-export function getHead(route) {
+export function getHead(route, i18n) {
+	const { t, locale } = i18n;
 	const head = route.meta?.head ?? {};
-	const title = head.absoluteTitle ? head.title : `${head.title ?? SITE.name} · ${SITE.name}`;
+	const pageTitle = head.key ? t(`head.${head.key}.title`) : SITE.name;
+	const title = head.absoluteTitle ? pageTitle : `${pageTitle} · ${SITE.name}`;
 	const robots = head.robots ?? "index, follow";
-	const canonical = robots.includes("noindex") ? null : SITE.url + (route.path === "/" ? "/" : route.path);
-	return { title, description: head.description ?? SITE.tagline, robots, canonical, isHome: route.name === "home" };
+	const indexable = !robots.includes("noindex");
+	// Every language version of this page, for hreflang — Google uses them to send each searcher
+	// to their own language, and x-default (English) to everyone else.
+	const englishPath = stripLocale(route.path);
+	const alternates = indexable
+		? [
+				...LOCALES.map((l) => ({ hreflang: l.htmlLang, href: SITE.url + localizePath(englishPath, l.code) })),
+				{ hreflang: "x-default", href: SITE.url + englishPath },
+			]
+		: [];
+	return {
+		title,
+		description: head.key ? t(`head.${head.key}.description`) : t("site.tagline"),
+		robots,
+		canonical: indexable ? SITE.url + localizePath(englishPath, locale.code) : null,
+		alternates,
+		lang: locale.htmlLang,
+		ogLocale: locale.og,
+		ogImageAlt: t("site.ogImageAlt"),
+		tagline: t("site.tagline"),
+		isHome: route.name === "home",
+	};
 }
 
 function metaTags(h) {
@@ -29,8 +52,8 @@ function metaTags(h) {
 		["property", "og:image", OG_IMAGE.url],
 		["property", "og:image:width", String(OG_IMAGE.width)],
 		["property", "og:image:height", String(OG_IMAGE.height)],
-		["property", "og:image:alt", OG_IMAGE.alt],
-		["property", "og:locale", "en_US"],
+		["property", "og:image:alt", h.ogImageAlt],
+		["property", "og:locale", h.ogLocale],
 		["name", "twitter:card", "summary_large_image"],
 		["name", "twitter:title", h.title],
 		["name", "twitter:description", h.description],
@@ -45,18 +68,21 @@ function metaTags(h) {
 const escapeHtml = (value) =>
 	String(value).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
-export function renderHeadTags(route) {
-	const h = getHead(route);
+export function renderHeadTags(route, i18n) {
+	const h = getHead(route, i18n);
 	const tags = [`<title>${escapeHtml(h.title)}</title>`];
 	for (const [attr, key, value] of metaTags(h)) {
 		if (value) tags.push(`<meta ${attr}="${key}" content="${escapeHtml(value)}" />`);
 	}
 	if (h.canonical) tags.push(`<link rel="canonical" href="${escapeHtml(h.canonical)}" />`);
-	if (h.isHome) tags.push(`<script type="application/ld+json">${jsonLd()}</script>`);
+	for (const alt of h.alternates) {
+		tags.push(`<link rel="alternate" hreflang="${alt.hreflang}" href="${escapeHtml(alt.href)}" />`);
+	}
+	if (h.isHome) tags.push(`<script type="application/ld+json">${jsonLd(h)}</script>`);
 	return tags.join("\n\t\t");
 }
 
-function jsonLd() {
+function jsonLd(h) {
 	const data = {
 		"@context": "https://schema.org",
 		"@graph": [
@@ -66,7 +92,7 @@ function jsonLd() {
 				name: SITE.name,
 				url: `${SITE.url}/`,
 				logo: `${SITE.url}/logo-512.png`,
-				description: SITE.tagline,
+				description: h.tagline,
 				sameAs: SOCIALS.map((s) => s.href),
 			},
 			{
@@ -74,6 +100,7 @@ function jsonLd() {
 				"@id": `${SITE.url}/#website`,
 				name: SITE.name,
 				url: `${SITE.url}/`,
+				inLanguage: LOCALES.map((l) => l.htmlLang),
 				publisher: { "@id": `${SITE.url}/#organization` },
 			},
 		],
@@ -85,9 +112,10 @@ function jsonLd() {
 // Client
 // ---------------------------------------------------------------------------
 
-export function applyHead(route) {
-	const h = getHead(route);
+export function applyHead(route, i18n) {
+	const h = getHead(route, i18n);
 	document.title = h.title;
+	document.documentElement.lang = h.lang;
 	for (const [attr, key, value] of metaTags(h)) {
 		let el = document.head.querySelector(`meta[${attr}="${key}"]`);
 		if (!value) {
@@ -111,10 +139,18 @@ export function applyHead(route) {
 		}
 		canonical.href = h.canonical;
 	}
+	for (const el of document.head.querySelectorAll('link[rel="alternate"][hreflang]')) el.remove();
+	for (const alt of h.alternates) {
+		const el = document.createElement("link");
+		el.rel = "alternate";
+		el.hreflang = alt.hreflang;
+		el.href = alt.href;
+		document.head.append(el);
+	}
 }
 
-export function installHead(router) {
+export function installHead(router, i18n) {
 	router.afterEach((to, from, failure) => {
-		if (!failure) applyHead(to);
+		if (!failure) applyHead(to, i18n);
 	});
 }

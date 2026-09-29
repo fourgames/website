@@ -1,8 +1,10 @@
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import Button from "@/components/ui/Button.vue";
+import I18nT from "@/components/ui/I18nT.vue";
 import NavLink from "@/components/ui/NavLink.vue";
 import { SITE } from "@/data/site.js";
+import { useI18n } from "@/i18n/index.js";
 import { byRecency, getGames, getHeroSlides } from "@/lib/games.js";
 import { heroPick, heroReshuffles, heroSrc } from "@/lib/hero.js";
 
@@ -18,12 +20,14 @@ import { heroPick, heroReshuffles, heroSrc } from "@/lib/hero.js";
 //
 // The pick is remembered for the session (`heroPick`), so navigating away and back re-renders the
 // same screenshot straight from cache instead of downloading another one behind a dark hero.
+const i18n = useI18n();
+const { t } = i18n;
 const slides = getHeroSlides();
 // The newest game you can actually play. getGames() comes back in build order (the manual entries
 // in games.js lead), so this has to sort, or a launch would never move the button off whatever
 // happens to head that list.
 const latest =
-	getGames()
+	getGames(i18n)
 		.filter((g) => g.status === "released")
 		.sort(byRecency)[0] ?? null;
 
@@ -122,9 +126,9 @@ onBeforeUnmount(() => {
 				id="hero-title"
 				class="mb-5 text-hero-sm text-balance text-white [text-shadow:0_0_28px_rgb(0_0_0/0.5)] min-[901px]:text-hero"
 			>
-				{{ SITE.hero.title }}
+				{{ t("hero.title") }}
 			</h1>
-			<p class="mb-5 text-[20px]/[1.5] [text-shadow:0_0_28px_rgb(0_0_0/0.5)]">{{ SITE.hero.subtitle }}</p>
+			<p class="mb-5 text-[20px]/[1.5] [text-shadow:0_0_28px_rgb(0_0_0/0.5)]">{{ t("hero.subtitle") }}</p>
 
 			<div
 				class="mt-12 flex flex-col items-center gap-3 min-[901px]:flex-row min-[901px]:flex-wrap min-[901px]:items-center min-[901px]:justify-start"
@@ -136,9 +140,9 @@ onBeforeUnmount(() => {
 					rel="noopener noreferrer"
 					class="inline-flex h-[54px] w-full overflow-hidden rounded-btn font-heading text-lg font-extrabold shadow-[0_0_4px_rgb(0_0_0/0.4)] transition-transform active:scale-[.98] min-[901px]:w-auto"
 				>
-					<span class="flex flex-1 items-center justify-center bg-white px-8 text-dark">Play latest</span>
+					<span class="flex flex-1 items-center justify-center bg-white px-8 text-dark">{{ t("hero.playLatest") }}</span>
 					<span class="flex items-center bg-primary px-4 text-white">{{ latest.name }}</span>
-					<span class="sr-only">(opens in new tab)</span>
+					<span class="sr-only">{{ t("a11y.newTab") }}</span>
 				</a>
 				<!-- godotengine.org's "What's new" button: translucent grey on the screenshot, so the white
 				     "Play latest" stays the one primary action in the hero. -->
@@ -146,15 +150,22 @@ onBeforeUnmount(() => {
 				     sets the scale of the studio before a visitor has seen anything. It keeps its place
 				     further down in DiscordArt, where the member avatars carry it. -->
 				<Button :href="SITE.links.discord" variant="translucent" size="hero" icon="discord" class="w-full min-[901px]:w-auto">
-					Join our Discord
+					{{ t("hero.discord") }}
 				</Button>
 			</div>
 
 			<p class="mt-6 text-[15px]/[1.2] font-light text-white/85 [text-shadow:0_0_10px_#000]">
-				Looking for our
-				<NavLink to="/videos" class="underline decoration-1 underline-offset-2 hover:text-white">videos</NavLink>,
-				<NavLink to="/code" class="underline decoration-1 underline-offset-2 hover:text-white">open source</NavLink>, or
-				<NavLink to="/jobs" class="underline decoration-1 underline-offset-2 hover:text-white">work with us</NavLink>?
+				<I18nT keypath="hero.lookingFor">
+					<template #videos>
+						<NavLink to="/videos" class="underline decoration-1 underline-offset-2 hover:text-white">{{ t("hero.videos") }}</NavLink>
+					</template>
+					<template #code>
+						<NavLink to="/code" class="underline decoration-1 underline-offset-2 hover:text-white">{{ t("hero.code") }}</NavLink>
+					</template>
+					<template #jobs>
+						<NavLink to="/jobs" class="underline decoration-1 underline-offset-2 hover:text-white">{{ t("hero.jobs") }}</NavLink>
+					</template>
+				</I18nT>
 			</p>
 		</div>
 
@@ -167,7 +178,7 @@ onBeforeUnmount(() => {
 		>
 			<span class="hero-credit-game">{{ current.game }}</span
 			><span class="opacity-60"> - {{ current.author }}</span>
-			<span class="sr-only"> (opens in new tab)</span>
+			<span class="sr-only"> {{ t("a11y.newTab") }}</span>
 		</a>
 	</section>
 </template>

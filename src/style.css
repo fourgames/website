@@ -16,6 +16,44 @@
 }
 
 /* ---------------------------------------------------------------------------
+   Japanese, Korean and Chinese. Montserrat and the system UI font carry Latin
+   text; the CJK fonts come straight after "Segoe UI" (which has none), so every
+   OS lands on its native face for the language instead of whatever the browser
+   guesses. <html lang> (src/i18n/locales.js) also picks the right Han glyphs —
+   the same character is drawn differently in ja, zh-Hans and zh-Hant.
+   --font-heading is re-declared because it resolves var(--font-sans) where it
+   is declared, on :root.
+--------------------------------------------------------------------------- */
+:root:lang(ja) {
+	--font-sans: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI",
+		"Noto Sans JP", Meiryo, Roboto, sans-serif;
+	--font-heading: "Montserrat Variable", Montserrat, var(--font-sans);
+}
+:root:lang(ko) {
+	--font-sans: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", Roboto,
+		sans-serif;
+	--font-heading: "Montserrat Variable", Montserrat, var(--font-sans);
+}
+:root:lang(zh-Hans) {
+	--font-sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", Roboto, sans-serif;
+	--font-heading: "Montserrat Variable", Montserrat, var(--font-sans);
+}
+:root:lang(zh-Hant) {
+	--font-sans: system-ui, -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", Roboto,
+		sans-serif;
+	--font-heading: "Montserrat Variable", Montserrat, var(--font-sans);
+}
+/* Line breaks: Korean wraps between words, not inside them; Japanese headings
+   wrap between phrases (Chromium), so a title never strands one kana. */
+:root:lang(ko) {
+	word-break: keep-all;
+	overflow-wrap: break-word;
+}
+:root:lang(ja) :is(h1, h2, h3) {
+	word-break: auto-phrase;
+}
+
+/* ---------------------------------------------------------------------------
    Palette — follows the OS colour scheme (no toggle). Values mirror
    godotengine.org, nudged where its weakest colours fall under WCAG AA.
 --------------------------------------------------------------------------- */
@@ -413,6 +451,94 @@
 	}
 	.nav-toggle:active {
 		background-color: rgb(128 128 128 / 0.25);
+	}
+
+	/* .language-selector — godotengine.org's translate glyph and its frosted
+	   dropdown (their 120px box, 5px radius, rgba(48,48,48,.89) fill). Below
+	   the breakpoint it becomes their "Language:" row with the options
+	   indented under it, inside the mobile menu. */
+	.lang-menu {
+		position: relative;
+	}
+	.lang-toggle {
+		display: none;
+		place-items: center;
+		width: 56px;
+		height: 43px;
+		margin-left: 6px;
+		border-radius: 10px;
+		transition: background-color 0.1s;
+	}
+	.lang-toggle:hover,
+	.lang-menu.is-open .lang-toggle {
+		background-color: rgb(128 128 128 / 0.1);
+	}
+	.lang-label {
+		display: block;
+		padding: 0.75rem 1.5rem;
+		margin: -0.4375rem 0 0 14px;
+		font-family: var(--font-heading);
+		font-size: 16px;
+	}
+	.lang-list {
+		margin-top: 0.5rem;
+		list-style: none;
+		padding: 0;
+	}
+	.lang-option {
+		display: block;
+		padding: 0.4375rem 1.5rem 0.4375rem 3rem;
+		margin-left: 14px;
+		border-radius: 10px;
+		font-family: var(--font-heading);
+		font-size: 15px;
+		white-space: nowrap;
+		transition: background-color 0.1s;
+	}
+	.lang-option:hover {
+		background-color: rgb(128 128 128 / 0.1);
+	}
+	.lang-option[aria-current] {
+		color: var(--color-navbar-current);
+	}
+
+	@media (width >= 75rem) {
+		.lang-toggle {
+			display: grid;
+		}
+		.lang-label {
+			display: none;
+		}
+		.lang-list {
+			display: none;
+			position: absolute;
+			z-index: 10;
+			top: calc(100% + 10px);
+			right: -8px;
+			min-width: 120px;
+			margin: 0;
+			padding: 4px 0;
+			border: 1px solid rgb(255 255 255 / 0.23);
+			border-radius: 5px;
+			background: rgb(48 48 48 / 0.89);
+			box-shadow: 0 8px 16px rgb(0 0 0 / 0.2);
+			backdrop-filter: blur(4px);
+		}
+		.lang-menu.is-open .lang-list {
+			display: block;
+		}
+		.lang-option {
+			padding: 5px 12px;
+			margin: 0;
+			border-radius: 0;
+			color: #fff;
+		}
+		.lang-option:hover {
+			background-color: rgb(255 255 255 / 0.1);
+		}
+		.lang-option[aria-current] {
+			color: hsl(200 100% 80%);
+		}
 	}
 
 	@media (width >= 75rem) {

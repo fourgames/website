@@ -1,90 +1,68 @@
+import { LOCALE_PATTERN, localeFromPath, localizePath } from "@/i18n/locales.js";
+
+// Every page exists once per language: /games, /ja/games, /ko/games… (see src/i18n/locales.js).
+// One route per page with an optional language prefix, so route names stay "games", "videos"….
+const L = `/:locale(${LOCALE_PATTERN})?`;
+
+// A redirect that keeps the language: /ja/games.html → /ja/games.
+const keepLocale = (path) => (to) => localizePath(path, localeFromPath(to.path));
+
 // Every view is lazy; the prerender step adds <link rel="modulepreload"> for each page's own chunk.
+// meta.head.key picks the page's title and description from head.<key> in src/i18n/messages.
 export const routes = [
 	{
-		path: "/",
+		path: L,
 		name: "home",
 		component: () => import("@/views/HomeView.vue"),
-		meta: {
-			head: {
-				title: "Four Games: Indie games made in Godot",
-				absoluteTitle: true,
-				description:
-					"Four Games makes indie games in Godot, shares free tutorials on YouTube, and open-sources the tools we use.",
-			},
-		},
+		meta: { head: { key: "home", absoluteTitle: true } },
 	},
 	{
-		path: "/games",
+		path: `${L}/games`,
 		name: "games",
 		component: () => import("@/views/GamesView.vue"),
-		meta: {
-			head: {
-				title: "Games",
-				description: "Indie games made in Godot by Four Games, out now on Steam and free for members.",
-			},
-		},
+		meta: { head: { key: "games" } },
 	},
 	{
-		path: "/videos",
+		path: `${L}/videos`,
 		name: "videos",
 		component: () => import("@/views/VideosView.vue"),
-		meta: {
-			head: {
-				title: "Videos",
-				description: "Free Godot tutorials from Four Games, from quick tips to full beginner courses.",
-			},
-		},
+		meta: { head: { key: "videos" } },
 	},
 	{
-		path: "/code",
+		path: `${L}/code`,
 		name: "code",
 		component: () => import("@/views/OpenSourceView.vue"),
-		meta: {
-			head: {
-				title: "Open Source",
-				description:
-					"Godot templates, curated game-dev resources and our contributions to the Godot engine and foundation.",
-			},
-		},
+		meta: { head: { key: "code" } },
 	},
 	{
-		path: "/jobs",
+		path: `${L}/jobs`,
 		name: "jobs",
 		component: () => import("@/views/WorkWithUsView.vue"),
-		meta: {
-			head: {
-				title: "Work with us",
-				description:
-					"Guest series for YouTube creators, co-development and publishing with indie studios, and franchise collaborations. Get in touch with Four Games.",
-			},
-		},
+		meta: { head: { key: "jobs" } },
 	},
 	// GitHub Pages also serves the physical files — keep one canonical URL per page.
-	{ path: "/index.html", redirect: "/" },
-	{ path: "/games.html", redirect: "/games" },
-	{ path: "/videos.html", redirect: "/videos" },
-	{ path: "/code.html", redirect: "/code" },
-	{ path: "/jobs.html", redirect: "/jobs" },
+	{ path: `${L}/index.html`, redirect: keepLocale("/") },
+	{ path: `${L}/games.html`, redirect: keepLocale("/games") },
+	{ path: `${L}/videos.html`, redirect: keepLocale("/videos") },
+	{ path: `${L}/code.html`, redirect: keepLocale("/code") },
+	{ path: `${L}/jobs.html`, redirect: keepLocale("/jobs") },
 	{
 		path: "/:pathMatch(.*)*",
 		name: "not-found",
 		component: () => import("@/views/NotFoundView.vue"),
-		meta: {
-			head: {
-				title: "Page not found",
-				description: "This page doesn't exist.",
-				robots: "noindex",
-			},
-		},
+		meta: { head: { key: "notFound", robots: "noindex" } },
 	},
 ];
 
-// Pages written by scripts/prerender.mjs. Flat files so GitHub Pages serves /code without a redirect.
+// Pages written by scripts/prerender.mjs, once per language (English at the root, the rest under
+// their prefix: ja/games.html…). Flat files so GitHub Pages serves /code without a redirect.
+// 404.html is English-only: GitHub Pages serves the root one for every missing path, and the client
+// re-renders it in the language of the URL.
 export const prerenderTargets = [
 	{ url: "/", file: "index.html", sitemap: true },
 	{ url: "/games", file: "games.html", sitemap: true },
 	{ url: "/videos", file: "videos.html", sitemap: true },
 	{ url: "/code", file: "code.html", sitemap: true },
 	{ url: "/jobs", file: "jobs.html", sitemap: true },
-	{ url: "/404", file: "404.html", sitemap: false },
+	{ url: "/404", file: "404.html", sitemap: false, localized: false },
 ];

@@ -1,15 +1,22 @@
-// Formatting helpers. Fixed locale + UTC so the prerendered HTML and the hydrated client always agree.
+// Formatting helpers. Fixed per-language locale + UTC so the prerendered HTML and the hydrated
+// client always agree. `locale` is an Intl locale (see `intl` in src/i18n/locales.js).
 
-const compact = new Intl.NumberFormat("en", { notation: "compact", maximumFractionDigits: 1 });
-const whole = new Intl.NumberFormat("en");
-const monthYear = new Intl.DateTimeFormat("en", { month: "short", year: "numeric", timeZone: "UTC" });
-const fullDate = new Intl.DateTimeFormat("en", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-const relative = new Intl.RelativeTimeFormat("en", { numeric: "auto" });
+const cache = new Map();
+function formatter(Type, locale, options) {
+	const key = `${Type.name}|${locale}|${JSON.stringify(options)}`;
+	if (!cache.has(key)) cache.set(key, new Type(locale, options));
+	return cache.get(key);
+}
 
-export const formatCompact = (n) => compact.format(n);
-export const formatNumber = (n) => whole.format(n);
-export const formatMonthYear = (iso) => monthYear.format(new Date(iso));
-export const formatDate = (iso) => fullDate.format(new Date(iso));
+export const formatCompact = (n, locale = "en") =>
+	formatter(Intl.NumberFormat, locale, { notation: "compact", maximumFractionDigits: 1 }).format(n);
+export const formatNumber = (n, locale = "en") => formatter(Intl.NumberFormat, locale, {}).format(n);
+export const formatMonthYear = (iso, locale = "en") =>
+	formatter(Intl.DateTimeFormat, locale, { month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(iso));
+export const formatDate = (iso, locale = "en") =>
+	formatter(Intl.DateTimeFormat, locale, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(
+		new Date(iso),
+	);
 
 export function formatDuration(seconds) {
 	if (!seconds) return "";
@@ -19,7 +26,8 @@ export function formatDuration(seconds) {
 	return h ? `${h}:${String(m).padStart(2, "0")}:${s}` : `${m}:${s}`;
 }
 
-export function formatRelative(iso, now = Date.now()) {
+export function formatRelative(iso, locale = "en", now = Date.now()) {
+	const relative = formatter(Intl.RelativeTimeFormat, locale, { numeric: "auto" });
 	const seconds = (new Date(iso).getTime() - now) / 1000;
 	const units = [
 		["year", 31_536_000],
@@ -32,5 +40,5 @@ export function formatRelative(iso, now = Date.now()) {
 	for (const [unit, size] of units) {
 		if (Math.abs(seconds) >= size) return relative.format(Math.round(seconds / size), unit);
 	}
-	return "just now";
+	return relative.format(0, "second"); // "now", "今", "지금", "现在"
 }

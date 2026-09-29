@@ -4,16 +4,18 @@ import Badge from "@/components/ui/Badge.vue";
 import Logo from "@/components/ui/Logo.vue";
 import PlatformIcons from "./PlatformIcons.vue";
 import { SITE } from "@/data/site.js";
+import { useI18n } from "@/i18n/index.js";
 import { gameStatusLabel, priceLabel } from "@/lib/games.js";
 
 // Showcase card, godotengine.org/showcase style: capsule art, title + studio, platform icons,
 // then the live Steam genres and price.
 const props = defineProps({ game: { type: Object, required: true } });
 
-const price = computed(() => priceLabel(props.game));
+const { t } = useI18n();
+const price = computed(() => priceLabel(props.game, t));
 
 // Upcoming games have no price yet, so the slot that holds it is free for the release date.
-const status = computed(() => (price.value ? null : gameStatusLabel(props.game)));
+const status = computed(() => (price.value ? null : gameStatusLabel(props.game, t)));
 </script>
 
 <template>
@@ -32,7 +34,7 @@ const status = computed(() => (price.value ? null : gameStatusLabel(props.game))
 					:src="game.image"
 					width="460"
 					height="215"
-					:alt="`${game.name} key art`"
+					:alt="t('a11y.keyArt', { name: game.name })"
 					loading="lazy"
 					decoding="async"
 					class="size-full object-cover"
@@ -62,7 +64,7 @@ const status = computed(() => (price.value ? null : gameStatusLabel(props.game))
 				</span>
 				<span v-else-if="status" class="shrink-0 opacity-65">{{ status }}</span>
 			</div>
-			<span class="sr-only">(opens in new tab)</span>
+			<span class="sr-only">{{ $t("a11y.newTab") }}</span>
 		</article>
 	</a>
 </template>

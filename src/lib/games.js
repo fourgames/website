@@ -1,30 +1,39 @@
 import { GAMES } from "@/data/games.js";
 import { SITE } from "@/data/site.js";
+import { defaultI18n } from "@/i18n/index.js";
 import steam from "@/data/generated/steam.json";
 
-const UNANNOUNCED_TAGLINE = "Something new is in the forge. Join the Discord to be first to see it.";
-
-// Our games, merged from src/data/games.js and the build-time Steam data.
+// Our games, merged from src/data/games.js and the build-time Steam data, in the page's language.
 // The order comes from the build (published games are discovered from Steam, so they aren't all in
 // games.js); GAMES is the offline fallback. Live Steam data wins; games.js covers the rest.
-export function getGames() {
+// Steam's own translation of the store blurb, genres and release date is used where the build
+// fetched one (`live.i18n[code]`); the game's name stays as it is on the English store page.
+export function getGames(i18n = defaultI18n) {
+	const { t, code } = i18n;
 	const ids = steam.appIds?.length ? steam.appIds : GAMES.map((g) => g.appId);
 	const overrides = new Map(GAMES.map((g) => [g.appId, g.fallback ?? {}]));
 	return ids.map((appId) => {
 		const fallback = overrides.get(appId) ?? {};
 		const live = steam.apps?.[appId];
+		const local = live?.i18n?.[code] ?? {};
+		// Our own tagline in this language (games.js), for when Steam has no translated blurb.
+		const tagline = typeof fallback.tagline === "object" ? fallback.tagline : { en: fallback.tagline };
+		const translated = code === "en" ? null : local.shortDescription || tagline[code];
 		return {
 			appId,
 			status: live?.status ?? fallback.status ?? "unlisted",
-			name: live?.name ?? fallback.name ?? "Unannounced project",
-			description: live?.shortDescription || fallback.tagline || UNANNOUNCED_TAGLINE,
+			name: live?.name ?? fallback.name ?? t("games.unannounced.name"),
+			description:
+				translated || live?.shortDescription || (code === "en" && tagline.en) || t("games.unannounced.tagline"),
 			image: live?.headerImage ?? fallback.image ?? null,
 			storeUrl: live?.storeUrl ?? `https://store.steampowered.com/app/${appId}/`,
 			price: live?.price ?? null,
 			isFree: live?.isFree ?? false,
+			// English, for sorting (byRecency parses it); releaseDateLabel is what the page shows.
 			releaseDate: live?.releaseDate ?? null,
+			releaseDateLabel: local.releaseDate || live?.releaseDate || null,
 			platforms: live?.platforms ?? [],
-			genres: live?.genres ?? [],
+			genres: local.genres?.length ? local.genres : (live?.genres ?? []),
 			screenshots: live?.screenshots ?? [],
 			hue: fallback.hue ?? 212,
 		};
@@ -79,8 +88,8 @@ export function isRecent(date, days, since) {
 // Price for a card: a "Free" string, a { final, initial, discountPercent } object, or null when
 // there's nothing to show (upcoming and unannounced games have no price yet).
 // Steam's *_formatted values already carry the currency symbol — the fetch pins cc=us.
-export function priceLabel(game) {
-	if (game.isFree) return "Free";
+export function priceLabel(game, t = defaultI18n.t) {
+	if (game.isFree) return t("games.free");
 	if (!game.price?.final) return null;
 	const { final, initial, discountPercent } = game.price;
 	return { final, initial, discountPercent: discountPercent > 0 && initial ? discountPercent : 0 };
@@ -97,11 +106,14 @@ function upcomingDate(date) {
 	return normalised && !VAGUE_RELEASE_DATES.has(normalised) ? date.trim() : null;
 }
 
-export function gameStatusLabel(game) {
-	if (game.status === "released") return game.releaseDate ? `Released ${game.releaseDate}` : "Out now";
-	if (game.status === "upcoming") {
-		const date = upcomingDate(game.releaseDate);
-		return date ? `Coming ${date}` : "Coming soon";
+// The vague-phrase check reads the English date; the label shows Steam's translation of it.
+export function gameStatusLabel(game, t = defaultI18n.t) {
+	const date = game.releaseDateLabel ?? game.releaseDate;
+	if (game.status === "released") {
+		return game.releaseDate ? t("games.status.releasedOn", { date }) : t("games.status.outNow");
 	}
-	return "In development";
+	if (game.status === "upcoming") {
+		return upcomingDate(game.releaseDate) ? t("games.status.comingOn", { date }) : t("games.status.comingSoon");
+	}
+	return t("games.status.inDevelopment");
 }

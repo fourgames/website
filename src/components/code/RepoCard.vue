@@ -2,10 +2,13 @@
 import Icon from "@/components/ui/Icon.vue";
 import RelativeTime from "@/components/ui/RelativeTime.vue";
 import { LANGUAGE_COLORS } from "@/data/languageColors.js";
+import I18nT from "@/components/ui/I18nT.vue";
 import { SITE } from "@/data/site.js";
+import { useI18n } from "@/i18n/index.js";
 import { formatNumber } from "@/lib/format.js";
 
 defineProps({ repo: { type: Object, required: true } });
+const { t, locale } = useI18n();
 </script>
 
 <template>
@@ -24,16 +27,16 @@ defineProps({ repo: { type: Object, required: true } });
 						class="after:absolute after:inset-0 after:rounded-card focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-2 focus-visible:after:outline-primary"
 					>
 						<span class="font-semibold text-date">{{ SITE.github.org }}/</span>{{ repo.name }}
-						<span class="sr-only">(opens in new tab)</span>
+						<span class="sr-only">{{ $t("a11y.newTab") }}</span>
 					</a>
 				</h3>
 			</div>
 			<Icon name="arrow-up-right" class="size-5 text-date transition-colors group-hover:text-primary" />
 		</div>
 
-		<p class="mt-4 line-clamp-3 text-sm">{{ repo.description || "No description yet." }}</p>
+		<p class="mt-4 line-clamp-3 text-sm">{{ repo.description || t("code.noDescription") }}</p>
 
-		<ul v-if="repo.topics.length" class="mt-4 flex flex-wrap gap-1.5" aria-label="Topics">
+		<ul v-if="repo.topics.length" class="mt-4 flex flex-wrap gap-1.5" :aria-label="t('a11y.topics')">
 			<li v-for="topic in repo.topics.slice(0, 4)" :key="topic" class="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-semibold text-primary">
 				{{ topic }}
 			</li>
@@ -46,15 +49,17 @@ defineProps({ repo: { type: Object, required: true } });
 			</span>
 			<span class="inline-flex items-center gap-1.5">
 				<Icon name="star" class="size-4" />
-				<span class="sr-only">Stars:</span>
-				<span class="tabular-nums">{{ formatNumber(repo.stars) }}</span>
+				<span class="sr-only">{{ t("a11y.stars") }}</span>
+				<span class="tabular-nums">{{ formatNumber(repo.stars, locale.intl) }}</span>
 			</span>
 			<span class="inline-flex items-center gap-1.5">
 				<Icon name="fork" class="size-4" />
-				<span class="sr-only">Forks:</span>
-				<span class="tabular-nums">{{ formatNumber(repo.forks) }}</span>
+				<span class="sr-only">{{ t("a11y.forks") }}</span>
+				<span class="tabular-nums">{{ formatNumber(repo.forks, locale.intl) }}</span>
 			</span>
-			<span>Updated <RelativeTime :datetime="repo.pushedAt" /></span>
+			<span>
+				<I18nT keypath="code.updated"><template #time><RelativeTime :datetime="repo.pushedAt" /></template></I18nT>
+			</span>
 		</div>
 	</article>
 </template>

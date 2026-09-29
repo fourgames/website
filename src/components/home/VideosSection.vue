@@ -4,9 +4,12 @@ import Icon from "@/components/ui/Icon.vue";
 import RelativeTime from "@/components/ui/RelativeTime.vue";
 import Section from "@/components/ui/Section.vue";
 import { SITE } from "@/data/site.js";
+import { useI18n } from "@/i18n/index.js";
 import { isRecent } from "@/lib/games.js";
 import { videoThumb } from "@/lib/videos.js";
 import youtube from "@/data/generated/youtube.json";
+
+const { t } = useI18n();
 
 // "Latest releases" layout from godotengine.org: a stacked list of thumbnail + title + date rows.
 const videos = [...(youtube.latest ?? [])]
@@ -19,7 +22,7 @@ const isNew = (v) => isRecent(v.publishedAt, 14, youtube.fetchedAt);
 </script>
 
 <template>
-	<Section id="videos" title="Latest videos">
+	<Section id="videos" :title="t('videos.latest')">
 		<ul v-if="videos.length" class="grid gap-[18px]">
 			<li v-for="video in videos" :key="video.id">
 				<a
@@ -44,7 +47,7 @@ const isNew = (v) => isRecent(v.publishedAt, 14, youtube.fetchedAt);
 						<span :class="['mt-2.5 block text-[15px]', isNew(video) ? 'is-new' : 'opacity-65']">
 							<RelativeTime v-if="video.publishedAt" :datetime="video.publishedAt" />
 						</span>
-						<span class="sr-only">(opens in new tab)</span>
+						<span class="sr-only">{{ $t("a11y.newTab") }}</span>
 					</span>
 				</a>
 			</li>
@@ -55,13 +58,13 @@ const isNew = (v) => isRecent(v.publishedAt, 14, youtube.fetchedAt);
 				<span class="grid size-12 place-items-center rounded-full bg-surface text-primary">
 					<Icon name="youtube" class="size-6" />
 				</span>
-				<p>New Godot tutorials land on our channel regularly.</p>
+				<p>{{ t("videos.channelBlurb") }}</p>
 			</div>
-			<Button :href="SITE.links.youtube" icon="youtube">Watch on YouTube</Button>
+			<Button :href="SITE.links.youtube" icon="youtube">{{ t("videos.watch") }}</Button>
 		</div>
 
 		<div class="mt-2.5 flex justify-start md:justify-end">
-			<Button to="/videos">More videos</Button>
+			<Button to="/videos">{{ t("videos.more") }}</Button>
 		</div>
 	</Section>
 </template>

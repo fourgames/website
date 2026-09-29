@@ -4,6 +4,7 @@ import Button from "@/components/ui/Button.vue";
 import DiscordArt from "@/components/home/DiscordArt.vue";
 import { useDiscordPresence } from "@/composables/useDiscordPresence.js";
 import { SITE } from "@/data/site.js";
+import { useI18n } from "@/i18n/index.js";
 import discord from "@/data/generated/discord.json";
 
 // Same feature card as the membership perks: a 250px art well over a navy body. The art carries
@@ -11,14 +12,13 @@ import discord from "@/data/generated/discord.json";
 // The well is bg-bg (not bg-surface like the perk cards): this card sits on a surface band, and it
 // has to read as part of the card rather than as a hole in the section.
 const props = defineProps({
-	title: { type: String, default: "Join our Discord" },
-	text: {
-		type: String,
-		default: "Chat with us, get help with your Godot projects and be first to hear about new games.",
-	},
+	// Default to the translated "Join our Discord" card copy.
+	title: { type: String, default: undefined },
+	text: { type: String, default: undefined },
 	headingLevel: { type: String, default: "h3" },
 });
 
+const { t } = useI18n();
 const card = ref(null);
 const presence = useDiscordPresence(discord, card);
 </script>
@@ -30,12 +30,12 @@ const presence = useDiscordPresence(discord, card);
 		</span>
 
 		<div class="flex flex-1 flex-col p-6 sm:p-8">
-			<component :is="props.headingLevel" class="text-xl text-white">{{ title }}</component>
-			<p class="mt-1 text-sm text-white/70">{{ presence.name ?? SITE.name }} community</p>
-			<p class="mt-5 text-white/85">{{ text }}</p>
+			<component :is="props.headingLevel" class="text-xl text-white">{{ title ?? t("discord.title") }}</component>
+			<p class="mt-1 text-sm text-white/70">{{ t("discord.community", { name: presence.name ?? SITE.name }) }}</p>
+			<p class="mt-5 text-white/85">{{ text ?? t("discord.text") }}</p>
 
 			<div class="mt-auto pt-6">
-				<Button :href="SITE.links.discord" variant="blue" icon="discord">Join server</Button>
+				<Button :href="SITE.links.discord" variant="blue" icon="discord">{{ t("discord.join") }}</Button>
 			</div>
 		</div>
 	</article>

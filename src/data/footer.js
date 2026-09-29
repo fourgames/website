@@ -1,39 +1,44 @@
 // Footer columns, godotengine.org style. `to` = internal route, `href` = external link.
+// Headings and labels are message keys (src/i18n/messages).
 import { SITE } from "./site.js";
 
 export const FOOTER_COLUMNS = [
 	{
-		heading: "Games",
+		id: "games",
+		heading: "footer.games.heading",
 		links: [
-			{ label: "All games", to: "/games" },
-			{ label: "Follow on Steam", href: SITE.links.steam },
-			{ label: "Free for members", to: "/#membership" },
+			{ label: "footer.games.all", to: "/games" },
+			{ label: "footer.games.steam", href: SITE.links.steam },
+			{ label: "footer.games.members", to: "/#membership" },
 		],
 	},
 	{
-		heading: "Studio",
+		id: "studio",
+		heading: "footer.studio.heading",
 		links: [
-			{ label: "Home", to: "/" },
-			{ label: "Open Source", to: "/code" },
-			{ label: "Work with us", to: "/jobs" },
-			{ label: "Contact", to: "/jobs#contact" },
+			{ label: "footer.studio.home", to: "/" },
+			{ label: "footer.studio.code", to: "/code" },
+			{ label: "footer.studio.jobs", to: "/jobs" },
+			{ label: "footer.studio.contact", to: "/jobs#contact" },
 		],
 	},
 	{
-		heading: "Resources",
+		id: "resources",
+		heading: "footer.resources.heading",
 		links: [
-			{ label: "Videos", to: "/videos" },
-			{ label: "YouTube channel", href: SITE.links.youtube },
-			{ label: "GitHub", href: SITE.links.github },
-			{ label: "Report a website issue", href: SITE.links.issues },
+			{ label: "footer.resources.videos", to: "/videos" },
+			{ label: "footer.resources.youtube", href: SITE.links.youtube },
+			{ label: "footer.resources.github", href: SITE.links.github },
+			{ label: "footer.resources.issue", href: SITE.links.issues },
 		],
 	},
 	{
-		heading: "Community",
+		id: "community",
+		heading: "footer.community.heading",
 		links: [
-			{ label: "Discord", href: SITE.links.discord },
-			{ label: "Membership", href: SITE.links.youtubeJoin },
-			{ label: "Steam", href: SITE.links.steam },
+			{ label: "footer.community.discord", href: SITE.links.discord },
+			{ label: "footer.community.membership", href: SITE.links.youtubeJoin },
+			{ label: "footer.community.steam", href: SITE.links.steam },
 		],
 	},
 ];

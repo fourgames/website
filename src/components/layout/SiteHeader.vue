@@ -4,13 +4,16 @@ import { useRoute } from "vue-router";
 import Icon from "@/components/ui/Icon.vue";
 import LogoMark from "@/components/ui/LogoMark.vue";
 import NavLink from "@/components/ui/NavLink.vue";
+import LanguageMenu from "./LanguageMenu.vue";
 import { DONATE, NAV_LEFT, NAV_RIGHT } from "@/data/nav.js";
+import { useI18n } from "@/i18n/index.js";
 import { reshuffleHero } from "@/lib/hero.js";
 
 // A literal port of godotengine.org's navbar: one absolute, frosted bar on every page, one <nav>
 // that the breakpoint restyles from a row into the mobile panel. Only the text colour adapts —
 // white over the hero image, navbar colour elsewhere. Geometry lives in style.css (.site-bar etc).
 const route = useRoute();
+const { t } = useI18n();
 const isHome = computed(() => route.name === "home");
 
 // Their menu is a CSS checkbox, so every tap reloads the page and resets it. We're an SPA, so close
@@ -45,7 +48,7 @@ function onLogoClick() {
 			<!-- #nav_head: the logo row. Below the breakpoint it also carries the donate pill and
 			     the menu toggle, and the nav unrolls underneath it. -->
 			<div class="flex h-[51.5px] w-full items-center justify-between nav:w-auto">
-				<NavLink to="/" class="site-logo text-lg sm:text-xl" aria-label="Four Games, home" @navigate="onLogoClick">
+				<NavLink to="/" class="site-logo text-lg sm:text-xl" :aria-label="t('a11y.home')" @navigate="onLogoClick">
 					<LogoMark class="size-12" />
 					<span>Four Games</span>
 				</NavLink>
@@ -56,7 +59,7 @@ function onLogoClick() {
 					<span class="relative">
 						<NavLink :to="DONATE.to" class="nav-donate" @navigate="open = false">
 							<Icon :name="DONATE.icon" class="mr-1 inline w-[13px] align-baseline" />
-							{{ DONATE.label }}
+							{{ t(DONATE.label) }}
 						</NavLink>
 					</span>
 					<button
@@ -67,12 +70,12 @@ function onLogoClick() {
 						@click="open = !open"
 					>
 						<Icon name="menu" class="size-6" :stroke-width="2.25" />
-						<span class="sr-only">{{ open ? "Close menu" : "Open menu" }}</span>
+						<span class="sr-only">{{ open ? t("a11y.closeMenu") : t("a11y.openMenu") }}</span>
 					</button>
 				</div>
 			</div>
 
-			<nav id="site-nav" aria-label="Main" :class="['site-nav', { 'is-open': open }]">
+			<nav id="site-nav" :aria-label="t('a11y.mainNav')" :class="['site-nav', { 'is-open': open }]">
 				<ul>
 					<li v-for="link in NAV_LEFT" :key="link.to">
 						<NavLink
@@ -80,7 +83,7 @@ function onLogoClick() {
 							class="nav-link aria-[current=page]:text-navbar-current"
 							@navigate="open = false"
 						>
-							{{ link.label }}
+							{{ t(link.label) }}
 						</NavLink>
 					</li>
 				</ul>
@@ -92,7 +95,7 @@ function onLogoClick() {
 							class="nav-link aria-[current=page]:text-navbar-current"
 							@navigate="open = false"
 						>
-							{{ link.label }}
+							{{ t(link.label) }}
 						</NavLink>
 						<a
 							v-else
@@ -103,14 +106,15 @@ function onLogoClick() {
 							@click="open = false"
 						>
 							<Icon v-if="link.icon" :name="link.icon" class="size-4" />
-							{{ link.label }}
-							<span class="sr-only">(opens in new tab)</span>
+							{{ t(link.label) }}
+							<span class="sr-only">{{ t("a11y.newTab") }}</span>
 						</a>
 					</li>
+					<LanguageMenu />
 					<li class="fund hidden nav:block">
 						<NavLink :to="DONATE.to" class="nav-donate">
 							<Icon :name="DONATE.icon" class="relative top-px mr-1 inline w-[13px] align-baseline" />
-							{{ DONATE.label }}
+							{{ t(DONATE.label) }}
 						</NavLink>
 					</li>
 				</ul>

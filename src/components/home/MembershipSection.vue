@@ -9,6 +9,7 @@ import FanCards from "./FanCards.vue";
 import { useDiscordPresence } from "@/composables/useDiscordPresence.js";
 import { MEMBERSHIP } from "@/data/membership.js";
 import { SITE } from "@/data/site.js";
+import { useI18n } from "@/i18n/index.js";
 import { getGames } from "@/lib/games.js";
 import { videoThumb } from "@/lib/videos.js";
 import discord from "@/data/generated/discord.json";
@@ -16,7 +17,9 @@ import youtube from "@/data/generated/youtube.json";
 
 // Feature cards like "A different way to make games" on godotengine.org: 250px art, navy body,
 // and the whole card is a link.
-const games = getGames();
+const i18n = useI18n();
+const { t } = i18n;
+const games = getGames(i18n);
 
 // Live Discord members for the role card (fetched once the cards scroll into view).
 const cards = ref(null);
@@ -43,11 +46,11 @@ const videoCards = [...(youtube.latest ?? [])].slice(0, 3).map((v) => ({
 
 // Internal perks route, external ones open in a new tab.
 const linkFor = (perk) =>
-	perk.to ? { is: RouterLink, to: perk.to } : { is: "a", href: perk.href, target: "_blank", rel: "noopener noreferrer" };
+	perk.to ? { is: RouterLink, to: i18n.path(perk.to) } : { is: "a", href: perk.href, target: "_blank", rel: "noopener noreferrer" };
 </script>
 
 <template>
-	<Section id="membership" :title="`${SITE.name} ${MEMBERSHIP.tier}`" :description="MEMBERSHIP.pitch">
+	<Section id="membership" :title="`${SITE.name} ${MEMBERSHIP.tier}`" :description="t('membership.pitch')">
 		<ul ref="cards" class="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
 			<li v-for="perk in MEMBERSHIP.perks" :key="perk.id" class="group flex">
 				<component
@@ -63,16 +66,16 @@ const linkFor = (perk) =>
 					</span>
 
 					<span class="block flex-1 p-6">
-						<h3 class="text-xl text-white">{{ perk.title }}</h3>
-						<span class="mt-3 block text-white/85">{{ perk.text }}</span>
-						<span v-if="perk.href" class="sr-only"> (opens in new tab)</span>
+						<h3 class="text-xl text-white">{{ t(`membership.perks.${perk.id}.title`) }}</h3>
+						<span class="mt-3 block text-white/85">{{ t(`membership.perks.${perk.id}.text`) }}</span>
+						<span v-if="perk.href" class="sr-only"> {{ $t("a11y.newTab") }}</span>
 					</span>
 				</component>
 			</li>
 		</ul>
 
 		<div class="mt-10 flex flex-col items-center gap-4 text-center">
-			<Button :href="SITE.links.youtubeJoin" variant="blue" size="lg" icon="youtube">Join on YouTube</Button>
+			<Button :href="SITE.links.youtubeJoin" variant="blue" size="lg" icon="youtube">{{ t("membership.join") }}</Button>
 		</div>
 	</Section>
 </template>

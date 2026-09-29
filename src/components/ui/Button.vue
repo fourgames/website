@@ -1,6 +1,7 @@
 <script setup>
 import { computed } from "vue";
 import { RouterLink } from "vue-router";
+import { useI18n } from "@/i18n/index.js";
 import Icon from "./Icon.vue";
 
 const props = defineProps({
@@ -12,6 +13,10 @@ const props = defineProps({
 	icon: { type: String, default: undefined },
 	external: { type: Boolean, default: undefined },
 });
+
+// Internal links stay in the page's language: to="/games" → "/ja/games".
+const { t, path } = useI18n();
+const target = computed(() => (typeof props.to === "string" ? path(props.to) : props.to));
 
 const isExternal = computed(() => props.external ?? (Boolean(props.href) && /^https?:\/\//.test(props.href)));
 
@@ -42,7 +47,7 @@ const classes = computed(() => [
 
 <template>
 	<!-- Internal link: a real <a href> (crawlable, middle-clickable) with client-side navigation. -->
-	<RouterLink v-if="to" v-slot="{ href: linkHref, navigate }" :to="to" custom>
+	<RouterLink v-if="to" v-slot="{ href: linkHref, navigate }" :to="target" custom>
 		<a :href="linkHref" :class="classes" @click="navigate">
 			<Icon v-if="icon" :name="icon" class="size-[1.15em]" />
 			<slot />
@@ -60,6 +65,6 @@ const classes = computed(() => [
 	>
 		<Icon v-if="icon" :name="icon" class="size-[1.15em]" />
 		<slot />
-		<span v-if="isExternal" class="sr-only">(opens in new tab)</span>
+		<span v-if="isExternal" class="sr-only">{{ t("a11y.newTab") }}</span>
 	</component>
 </template>

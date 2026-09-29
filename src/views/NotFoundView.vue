@@ -1,24 +1,31 @@
 <script setup>
 import Button from "@/components/ui/Button.vue";
 import PageHeader from "@/components/layout/PageHeader.vue";
+import I18nT from "@/components/ui/I18nT.vue";
 import { SITE } from "@/data/site.js";
+import { useI18n } from "@/i18n/index.js";
+
+const { t } = useI18n();
 </script>
 
 <template>
 	<PageHeader
-		title="404: page not found"
-		description="The page you're looking for doesn't exist or has moved. Here are some places to go instead."
+		:title="t('notFound.title')"
+		:description="t('notFound.description')"
 	>
 		<div class="flex flex-wrap gap-3">
-			<Button to="/" variant="blue">Back to home</Button>
-			<Button to="/games">Games</Button>
-			<Button to="/videos">Videos</Button>
+			<Button to="/" variant="blue">{{ t("notFound.home") }}</Button>
+			<Button to="/games">{{ t("nav.games") }}</Button>
+			<Button to="/videos">{{ t("nav.videos") }}</Button>
 		</div>
 		<p class="mt-8 text-sm text-date">
-			Think this is a bug?
-			<a :href="SITE.links.issues" target="_blank" rel="noopener noreferrer" class="link">
-				Report a website issue<span class="sr-only"> (opens in new tab)</span>
-			</a>
+			<I18nT keypath="notFound.bug">
+				<template #link>
+					<a :href="SITE.links.issues" target="_blank" rel="noopener noreferrer" class="link">
+						{{ t("notFound.report") }}<span class="sr-only"> {{ t("a11y.newTab") }}</span>
+					</a>
+				</template>
+			</I18nT>
 		</p>
 	</PageHeader>
 	<div class="h-24 sm:h-32"></div>

@@ -16,11 +16,12 @@ export function createAppRouter() {
 		},
 	});
 
-	// One URL per page: /code/ → /code (GitHub Pages serves 404.html for the slash version).
+	// One URL per page: /code/ → /code (GitHub Pages serves 404.html for the slash version). Language
+	// homes are the exception, the other way round: they're ja/index.html, so /ja/ is the real URL.
 	router.beforeEach((to) => {
-		if (to.path.length > 1 && to.path.endsWith("/")) {
-			return { path: to.path.replace(/\/+$/, ""), query: to.query, hash: to.hash, replace: true };
-		}
+		const isLanguageHome = to.name === "home" && to.path.length > 1;
+		const path = isLanguageHome ? `${to.path.replace(/\/+$/, "")}/` : to.path.replace(/(.)\/+$/, "$1");
+		if (path !== to.path) return { path, query: to.query, hash: to.hash, replace: true };
 	});
 
 	return router;

@@ -4,13 +4,16 @@ import Button from "@/components/ui/Button.vue";
 import Logo from "@/components/ui/Logo.vue";
 import PlatformIcons from "@/components/games/PlatformIcons.vue";
 import Section from "@/components/ui/Section.vue";
+import { useI18n } from "@/i18n/index.js";
 import { byRecency, gameStatusLabel, getGames, isRecent, priceLabel } from "@/lib/games.js";
 import steam from "@/data/generated/steam.json";
 
 // "Latest news" layout from godotengine.org: one big featured card, compact rows beside it.
 // One timeline (byRecency) fills both: the newest game takes the big card, the next three drop
 // into the rows beside it, and anything older is left to the "View all" page.
-const ordered = getGames().sort(byRecency);
+const i18n = useI18n();
+const { t } = i18n;
+const ordered = getGames(i18n).sort(byRecency);
 const featured = ordered[0];
 const rows = ordered.slice(1, 4);
 
@@ -18,14 +21,14 @@ const rows = ordered.slice(1, 4);
 const isNew = (game) => game.status === "released" && isRecent(game.releaseDate, 30, steam.fetchedAt);
 
 // Live Steam price, shown on the featured card only — the compact rows are too tight for it.
-const featuredPrice = featured ? priceLabel(featured) : null;
+const featuredPrice = featured ? priceLabel(featured, t) : null;
 
 // Every card shows the Steam capsule in its native 460x215 box, so nothing is cropped and the
 // featured card matches the rows. Screenshots stay with the hero (getHeroSlides).
 </script>
 
 <template>
-	<Section id="games" title="Our games">
+	<Section id="games" :title="t('games.title')">
 		<div class="grid gap-[30px] min-[900px]:grid-cols-2">
 			<a
 				v-if="featured"
@@ -41,7 +44,7 @@ const featuredPrice = featured ? priceLabel(featured) : null;
 							:src="featured.image"
 							width="460"
 							height="215"
-							:alt="`${featured.name} key art`"
+							:alt="t('a11y.keyArt', { name: featured.name })"
 							loading="lazy"
 							decoding="async"
 							class="aspect-capsule w-full object-cover"
@@ -54,7 +57,7 @@ const featuredPrice = featured ? priceLabel(featured) : null;
 						<h3 class="text-[22px] leading-snug">{{ featured.name }}</h3>
 						<p class="mt-2 text-base opacity-80">{{ featured.description }}</p>
 						<div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[15px]">
-							<p :class="isNew(featured) ? 'is-new' : 'opacity-65'">{{ gameStatusLabel(featured) }}</p>
+							<p :class="isNew(featured) ? 'is-new' : 'opacity-65'">{{ gameStatusLabel(featured, t) }}</p>
 							<p v-if="featured.genres.length" class="opacity-65">{{ featured.genres.join(" · ") }}</p>
 							<PlatformIcons :platforms="featured.platforms" />
 							<p v-if="featuredPrice" class="flex items-center gap-1.5">
@@ -69,7 +72,7 @@ const featuredPrice = featured ? priceLabel(featured) : null;
 							</p>
 						</div>
 					</div>
-					<span class="sr-only">(opens in new tab)</span>
+					<span class="sr-only">{{ $t("a11y.newTab") }}</span>
 				</article>
 			</a>
 
@@ -96,17 +99,17 @@ const featuredPrice = featured ? priceLabel(featured) : null;
 								<h3 class="text-[19px] leading-snug md:text-[22px]">{{ game.name }}</h3>
 								<span class="mt-1.5 hidden text-base opacity-80 md:line-clamp-2">{{ game.description }}</span>
 								<span class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[15px]">
-									<span :class="isNew(game) ? 'is-new' : 'opacity-65'">{{ gameStatusLabel(game) }}</span>
+									<span :class="isNew(game) ? 'is-new' : 'opacity-65'">{{ gameStatusLabel(game, t) }}</span>
 									<span v-if="game.genres.length" class="opacity-65">{{ game.genres.join(" · ") }}</span>
 								</span>
-								<span class="sr-only">(opens in new tab)</span>
+								<span class="sr-only">{{ $t("a11y.newTab") }}</span>
 							</span>
 						</a>
 					</li>
 				</ul>
 
 				<div class="mt-auto flex justify-start md:justify-end">
-					<Button to="/games">View all</Button>
+					<Button to="/games">{{ t("games.viewAll") }}</Button>
 				</div>
 			</div>
 		</div>

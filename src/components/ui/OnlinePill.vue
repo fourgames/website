@@ -2,6 +2,8 @@
 // The Discord live-presence row: a green dot that pulses once the public widget has answered, and
 // the number of people online right now. Shared so the hero CTA and the art wells (DiscordArt)
 // can't drift apart — they are the same pulse, on different backgrounds.
+import I18nT from "./I18nT.vue";
+
 defineProps({
 	count: { type: Number, default: null },
 	live: { type: Boolean, default: false },
@@ -22,6 +24,10 @@ const TONES = {
 			<span v-if="live" class="absolute inset-0 rounded-full bg-[#23a559] motion-safe:animate-pulse-dot"></span>
 			<span class="relative size-2.5 rounded-full bg-[#23a559]"></span>
 		</span>
-		<span class="font-semibold tabular-nums">{{ count }}</span> online now
+		<span>
+			<I18nT keypath="discord.online">
+				<template #count><span class="font-semibold tabular-nums">{{ count }}</span></template>
+			</I18nT>
+		</span>
 	</span>
 </template>

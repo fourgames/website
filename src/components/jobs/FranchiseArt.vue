@@ -20,6 +20,6 @@ import LogoMark from "@/components/ui/LogoMark.vue";
 				<LogoMark class="size-14" />
 			</span>
 		</div>
-		<span class="rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">Licensed IP</span>
+		<span class="rounded-full bg-primary/15 px-3 py-1 text-xs font-semibold text-primary">{{ $t("jobs.licensedIp") }}</span>
 	</div>
 </template>

@@ -1,13 +1,17 @@
 <script setup>
 import { onMounted, onUnmounted, ref } from "vue";
 import Button from "@/components/ui/Button.vue";
+import I18nT from "@/components/ui/I18nT.vue";
 import PageHeader from "@/components/layout/PageHeader.vue";
 import VideoCard from "@/components/videos/VideoCard.vue";
 import { SITE } from "@/data/site.js";
+import { useI18n } from "@/i18n/index.js";
 import { groupByYear, sortVideos } from "@/lib/videos.js";
 // This view is the only importer of the catalogue, which keeps it out of every other page's bundle.
 import catalogue from "@/data/generated/youtube-videos.json";
 import youtube from "@/data/generated/youtube.json";
+
+const { t } = useI18n();
 
 // The full long-form catalogue (no Shorts), newest first, split into years. `videos` is empty only
 // when the build had no YOUTUBE_API_KEY and no cached data — then show the handful we always have.
@@ -40,17 +44,17 @@ onUnmounted(() => window.removeEventListener("hashchange", openFromHash));
 </script>
 
 <template>
-	<PageHeader title="Videos" description="Free Godot tutorials, from quick tips to full beginner courses. Members watch new videos early.">
+	<PageHeader :title="t('videos.title')" :description="t('videos.description')">
 		<div class="flex flex-wrap gap-3">
-			<Button :href="SITE.links.youtubeSubscribe" variant="blue" icon="youtube">Follow on YouTube</Button>
-			<Button :href="SITE.links.youtubeJoin" icon="youtube">Join on YouTube</Button>
+			<Button :href="SITE.links.youtubeSubscribe" variant="blue" icon="youtube">{{ t("videos.follow") }}</Button>
+			<Button :href="SITE.links.youtubeJoin" icon="youtube">{{ t("membership.join") }}</Button>
 		</div>
 	</PageHeader>
 
 	<div v-if="years.length" class="bg-bg">
 		<div class="container-page padded">
-			<nav v-if="years.length > 1" aria-label="Jump to year" class="mb-10 flex flex-wrap items-center gap-x-3 gap-y-2">
-				<span class="text-subtitle">{{ videos.length }} videos</span>
+			<nav v-if="years.length > 1" :aria-label="t('videos.jumpToYear')" class="mb-10 flex flex-wrap items-center gap-x-3 gap-y-2">
+				<span class="text-subtitle">{{ t("videos.count", { count: videos.length }) }}</span>
 				<a
 					v-for="group in years"
 					:key="group.year"
@@ -65,14 +69,14 @@ onUnmounted(() => window.removeEventListener("hashchange", openFromHash));
 				v-for="(group, index) in years"
 				:key="group.year"
 				:id="`y${group.year}`"
-				:aria-label="`Videos from ${group.year}`"
+				:aria-label="t('videos.fromYear', { year: group.year })"
 				class="mb-12 scroll-mt-24 last:mb-0"
 			>
 				<details class="group" :open="open[index]" @toggle="open[index] = $event.target.open">
 					<summary class="cursor-pointer list-none">
 						<h2 class="flex items-baseline gap-3 tabular-nums">
 							{{ group.year }}
-							<span class="text-subtitle">{{ group.videos.length }} videos</span>
+							<span class="text-subtitle">{{ t("videos.count", { count: group.videos.length }) }}</span>
 							<span aria-hidden="true" class="text-subtitle transition-transform group-open:rotate-90">›</span>
 						</h2>
 					</summary>
@@ -87,8 +91,13 @@ onUnmounted(() => window.removeEventListener("hashchange", openFromHash));
 	<div v-else class="bg-bg">
 		<div class="container-page padded">
 			<p class="card p-8">
-				Our latest videos couldn't be loaded right now, so
-				<a :href="SITE.links.youtube" class="link" target="_blank" rel="noopener noreferrer">watch them on YouTube<span class="sr-only"> (opens in new tab)</span></a>.
+				<I18nT keypath="videos.unavailable">
+					<template #link>
+						<a :href="SITE.links.youtube" class="link" target="_blank" rel="noopener noreferrer"
+							>{{ t("videos.unavailableLink") }}<span class="sr-only"> {{ t("a11y.newTab") }}</span></a
+						>
+					</template>
+				</I18nT>
 			</p>
 		</div>
 	</div>

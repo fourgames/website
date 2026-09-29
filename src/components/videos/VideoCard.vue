@@ -1,10 +1,12 @@
 <script setup>
 import RelativeTime from "@/components/ui/RelativeTime.vue";
+import { useI18n } from "@/i18n/index.js";
 import { formatCompact, formatDuration } from "@/lib/format.js";
 import { videoThumb } from "@/lib/videos.js";
 
 const props = defineProps({ video: { type: Object, required: true } });
 const thumb = videoThumb(props.video, 640);
+const { t, locale } = useI18n();
 </script>
 
 <template>
@@ -26,11 +28,11 @@ const thumb = videoThumb(props.video, 640);
 		</span>
 		<span class="flex flex-1 flex-col p-4">
 			<span class="text-sm text-date">
-				<template v-if="video.viewCount !== null && video.viewCount !== undefined">{{ formatCompact(video.viewCount) }} views · </template>
+				<template v-if="video.viewCount !== null && video.viewCount !== undefined">{{ t("videos.views", { count: formatCompact(video.viewCount, locale.intl) }) }} · </template>
 				<RelativeTime v-if="video.publishedAt" :datetime="video.publishedAt" />
 			</span>
 			<h3 class="mt-1.5 line-clamp-3 text-lg">{{ video.title }}</h3>
-			<span class="sr-only">(opens in new tab)</span>
+			<span class="sr-only">{{ $t("a11y.newTab") }}</span>
 		</span>
 	</a>
 </template>

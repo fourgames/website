@@ -1,15 +1,17 @@
 <script setup>
 import { onMounted, ref } from "vue";
+import { useI18n } from "@/i18n/index.js";
 import { formatDate, formatRelative } from "@/lib/format.js";
 
 // Prerendered HTML shows a fixed date (so hydration matches); the browser then switches to "3 days ago".
 const props = defineProps({ datetime: { type: String, required: true } });
-const label = ref(formatDate(props.datetime));
+const { locale } = useI18n();
+const label = ref(formatDate(props.datetime, locale.intl));
 onMounted(() => {
-	label.value = formatRelative(props.datetime);
+	label.value = formatRelative(props.datetime, locale.intl);
 });
 </script>
 
 <template>
-	<time :datetime="datetime" :title="formatDate(datetime)">{{ label }}</time>
+	<time :datetime="datetime" :title="formatDate(datetime, locale.intl)">{{ label }}</time>
 </template>

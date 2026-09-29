@@ -7,7 +7,7 @@ const ICONS = { windows: "/images/platforms/windows.svg", mac: "/images/platform
 </script>
 
 <template>
-	<ul v-if="platforms.length" class="flex items-center gap-2" aria-label="Platforms">
+	<ul v-if="platforms.length" class="flex items-center gap-2" :aria-label="$t('a11y.platforms')">
 		<li v-for="platform in platforms" :key="platform">
 			<img
 				v-if="ICONS[platform]"

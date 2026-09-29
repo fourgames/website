@@ -37,6 +37,9 @@ const IN_ACTIONS = process.env.GITHUB_ACTIONS === "true";
 // Every top-level const must sit above the main block below: that block runs the fetches, so a
 // const declared after it is still in the temporal dead zone when a fetch function reads it.
 const PLAYLIST_PAGES = 20; // 50 uploads per page — 1000 videos before we start truncating.
+// Steam's own store translations, fetched per site language (src/i18n/locales.js codes → Steam's
+// `l=` names). Only the blurb, genres and release date are kept; names and prices stay English/USD.
+const STEAM_LANGUAGES = { ja: "japanese", ko: "koreana", "zh-cn": "schinese", "zh-tw": "tchinese" };
 
 try {
 	process.loadEnvFile(path.join(ROOT, ".env.local"));
@@ -276,6 +279,7 @@ async function fetchSteam(previous) {
 				// All of them: the hero shuffles across every screenshot of every game, and only two
 				// are ever put in the DOM (see HeroBanner.vue), so a long list costs nothing.
 				screenshots: (d.screenshots ?? []).map((s) => ({ thumb: s.path_thumbnail, full: s.path_full })),
+				i18n: await fetchSteamTranslations(appId, d.short_description, previous?.apps?.[appId]?.i18n),
 			};
 		} catch (error) {
 			failures++;
@@ -292,6 +296,32 @@ async function fetchSteam(previous) {
 
 	await mirrorHeroShots(apps);
 	return { appIds: kept, apps };
+}
+
+// The store page in each of the site's other languages. Steam falls back to English for anything a
+// developer hasn't translated, so a blurb identical to the English one is dropped rather than stored
+// as a "translation". A failed language keeps what the last build had, so a blip never un-translates.
+async function fetchSteamTranslations(appId, englishBlurb, previous = {}) {
+	const english = decodeEntities(englishBlurb ?? "");
+	const out = {};
+	for (const [code, language] of Object.entries(STEAM_LANGUAGES)) {
+		await sleep(300);
+		try {
+			const json = await fetchJson(`https://store.steampowered.com/api/appdetails?appids=${appId}&cc=us&l=${language}`);
+			const d = json?.[appId]?.data;
+			if (!d) throw new Error("empty response");
+			const blurb = decodeEntities(d.short_description ?? "");
+			out[code] = {
+				shortDescription: blurb && blurb !== english ? blurb : null,
+				genres: (d.genres ?? []).map((g) => g.description).slice(0, 3),
+				releaseDate: d.release_date?.date || null,
+			};
+		} catch (error) {
+			if (previous[code]) out[code] = previous[code];
+			warn("steam", `app ${appId} (${language}): ${error.message}`);
+		}
+	}
+	return out;
 }
 
 // Pull every hero screenshot down and re-encode it as AVIF at both the sizes the hero asks for.

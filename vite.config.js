@@ -11,6 +11,8 @@ export default defineConfig({
 	},
 	define: {
 		__BUILD_YEAR__: JSON.stringify(new Date().getUTCFullYear()),
+		// Busts link-preview caches (Discord keys them on the image URL) when the daily rebuild re-shoots og-default.jpg.
+		__BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
 	},
 	build: {
 		// One CSS file, so the prerender step can inline it into every page.

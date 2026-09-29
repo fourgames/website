@@ -3,10 +3,10 @@
 import { SITE, SOCIALS } from "@/data/site.js";
 
 const OG_IMAGE = {
-	url: `${SITE.url}/og/og-default.jpg`,
+	url: `${SITE.url}/og/og-default.jpg?v=${__BUILD_DATE__}`,
 	width: 1200,
 	height: 630,
-	alt: "Four Games: indie games made in Godot",
+	alt: "The Four Games home page: indie games made in Godot",
 };
 
 export function getHead(route) {

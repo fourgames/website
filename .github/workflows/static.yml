@@ -57,6 +57,10 @@ jobs:
             public/images/hero
           key: site-data-v2-${{ github.run_id }}
 
+      # Headless Chromium for scripts/og-image.mjs, which screenshots the home page as the link-preview image.
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
       - name: Build and prerender
         run: npm run build
 

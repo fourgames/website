@@ -2,6 +2,9 @@ import { GAMES } from "@/data/games.js";
 import { SITE } from "@/data/site.js";
 import { defaultI18n } from "@/i18n/index.js";
 import steam from "@/data/generated/steam.json";
+import { byRecency, heroGame, latestReleased } from "@/lib/recency.js";
+
+export { byRecency, latestReleased };
 
 // Our games, merged from src/data/games.js and the build-time Steam data, in the page's language.
 // The order comes from the build (published games are discovered from Steam, so they aren't all in
@@ -40,37 +43,20 @@ export function getGames(i18n = defaultI18n) {
 	});
 }
 
-// Full-width hero slides: every screenshot of every announced game (key art as a fallback).
-// Upcoming games are included, so a new store page joins the shuffle the day it's discovered;
-// unlisted ones are skipped because their only art is a local placeholder, not a 1920px shot.
-// In the page's language: a game's localized screenshots when Steam has them, and its translated name.
+// Full-width hero slides: every screenshot of the "Play latest" game (see heroGame), key art as a
+// fallback. Only that game's screenshots are mirrored as AVIF (scripts/fetch-data.mjs), so the
+// hero never picks a picture from another game.
+// In the page's language: the game's localized screenshots when Steam has them, and its translated name.
 export function getHeroSlides(i18n = defaultI18n) {
-	return getGames(i18n)
-		.filter((g) => g.status !== "unlisted")
-		.flatMap((g) => {
-			// Prefer our own AVIF copies (scripts/fetch-data.mjs mirrors them): same picture, a third of
-			// the bytes, and no second origin to connect to before the LCP image can start. `thumb` is
-			// the narrow cut phones get — the hero is a dark-tinted backdrop, so it reads the same there.
-			const sources = g.screenshots.length
-				? g.screenshots.map((s) => ({ full: s.localFull || s.full, thumb: s.localThumb || s.thumb || s.full }))
-				: [g.image].filter(Boolean).map((src) => ({ full: src, thumb: src }));
-			return sources.map((s) => ({ ...s, game: g.name, author: SITE.name, href: g.storeUrl }));
-		});
-}
-
-// Our games as one timeline, newest first: the furthest-out thing leads (the home page gives it the
-// big card), and each game slides down the list as it announces, launches and ages out.
-// Steam's releaseDate is a display string, not a date ("Nov 20, 2024", "Q1 2026", "Coming soon"),
-// so Date.parse is expected to fail here: an undated announcement ranks above a dated one, and an
-// unparseable release date sinks to the bottom. Sort is stable, so ties keep the build's order.
-const STATUS_RANK = { unlisted: 0, upcoming: 1, released: 2 };
-const releaseKey = (game) => Date.parse(game.releaseDate) || (game.status === "upcoming" ? Infinity : 0);
-
-export function byRecency(a, b) {
-	const rank = (STATUS_RANK[a.status] ?? 3) - (STATUS_RANK[b.status] ?? 3);
-	if (rank !== 0) return rank;
-	const [keyA, keyB] = [releaseKey(a), releaseKey(b)];
-	return keyA === keyB ? 0 : keyB - keyA;
+	const g = heroGame(getGames(i18n));
+	if (!g) return [];
+	// Prefer our own AVIF copies (scripts/fetch-data.mjs mirrors them): same picture, a third of
+	// the bytes, and no second origin to connect to before the LCP image can start. `thumb` is
+	// the narrow cut phones get — the hero is a dark-tinted backdrop, so it reads the same there.
+	const sources = g.screenshots.length
+		? g.screenshots.map((s) => ({ full: s.localFull || s.full, thumb: s.localThumb || s.thumb || s.full }))
+		: [g.image].filter(Boolean).map((src) => ({ full: src, thumb: src }));
+	return sources.map((s) => ({ ...s, game: g.name, author: SITE.name, href: g.storeUrl }));
 }
 
 export const PLATFORM_NAMES = { windows: "Windows", mac: "macOS", linux: "Linux" };

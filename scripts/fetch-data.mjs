@@ -6,8 +6,9 @@
  *   node scripts/fetch-data.mjs youtube    fetch only the named source(s)
  *   node scripts/fetch-data.mjs --ensure   no network: create empty defaults for missing/invalid files
  *
- * Steam's hero screenshots are also mirrored into public/images/hero as AVIF, so the home page's
- * LCP image comes off our own origin in a third of the bytes instead of Steam's CDN.
+ * The hero game's screenshots (the "Play latest" one) are also mirrored into public/images/hero as
+ * AVIF, so the home page's LCP image comes off our own origin in a third of the bytes instead of
+ * Steam's CDN.
  *   node scripts/fetch-data.mjs --strict   exit non-zero if any source fails (debugging)
  *
  * Each source falls back to: fresh data → the existing file (if valid and not too old) → empty
@@ -21,6 +22,7 @@ import { createHash } from "node:crypto";
 import path from "node:path";
 import { SITE } from "../src/data/site.js";
 import { GAMES } from "../src/data/games.js";
+import { heroGame } from "../src/lib/recency.js";
 
 const ROOT = path.resolve(import.meta.dirname, "..");
 const OUT_DIR = path.join(ROOT, "src/data/generated");
@@ -281,8 +283,8 @@ async function fetchSteam(previous) {
 					.filter(([, supported]) => supported)
 					.map(([platform]) => platform),
 				genres: (d.genres ?? []).map((g) => g.description).slice(0, 3),
-				// All of them: the hero shuffles across every screenshot of every game, and only two
-				// are ever put in the DOM (see HeroBanner.vue), so a long list costs nothing.
+				// All of them: the hero shuffles across every screenshot of the latest game, and only one
+				// is ever put in the DOM (see HeroBanner.vue), so a long list costs nothing.
 				screenshots: (d.screenshots ?? []).map((s) => ({ thumb: s.path_thumbnail, full: s.path_full })),
 				i18n: await fetchSteamTranslations(appId, d, previous?.apps?.[appId]?.i18n),
 			};
@@ -342,7 +344,9 @@ async function fetchSteamTranslations(appId, en, previous = {}) {
 	return out;
 }
 
-// Pull every hero screenshot down and re-encode it as AVIF at both the sizes the hero asks for.
+// Pull the hero game's screenshots down and re-encode them as AVIF at both the sizes the hero asks
+// for. Only that one game (heroGame — the same pick getHeroSlides makes), so the site carries a
+// handful of images rather than every screenshot of every game; the rest are pruned below.
 // The home page's LCP is one of these, and serving it ourselves drops a cross-origin DNS + TLS
 // handshake off the critical path on top of the bytes saved (206 KB JPEG → ~69 KB AVIF).
 //
@@ -350,8 +354,17 @@ async function fetchSteamTranslations(appId, en, previous = {}) {
 // whatever the workflow cache restored and only pays for screenshots that are actually new. Any
 // failure here is survivable: the Steam URLs stay in the data and the hero falls back to the CDN.
 async function mirrorHeroShots(apps) {
-	const shots = Object.values(apps).flatMap(allScreenshots);
-	if (!shots.length) return;
+	const hero = heroGame(Object.values(apps));
+	// Local copies only mean anything for the hero game; an app carried over from the last build
+	// could still point at files that are about to be pruned.
+	for (const app of Object.values(apps)) {
+		if (app === hero) continue;
+		for (const shot of allScreenshots(app)) {
+			delete shot.localFull;
+			delete shot.localThumb;
+		}
+	}
+	const shots = hero ? allScreenshots(hero) : [];
 
 	let sharp;
 	try {

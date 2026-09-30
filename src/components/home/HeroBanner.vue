@@ -5,7 +5,7 @@ import I18nT from "@/components/ui/I18nT.vue";
 import NavLink from "@/components/ui/NavLink.vue";
 import { SITE } from "@/data/site.js";
 import { defaultI18n, useI18n } from "@/i18n/index.js";
-import { byRecency, getGames, getHeroSlides } from "@/lib/games.js";
+import { getGames, getHeroSlides, latestReleased } from "@/lib/games.js";
 import { heroPick, heroReshuffles, heroSrc } from "@/lib/hero.js";
 
 // Full-bleed screenshot hero, godotengine.org style. Like Godot, a random screenshot is shown on
@@ -29,13 +29,9 @@ const { t } = i18n;
 const en = defaultI18n.t;
 const isEnglish = i18n.code === "en";
 const slides = getHeroSlides(i18n);
-// The newest game you can actually play. getGames() comes back in build order (the manual entries
-// in games.js lead), so this has to sort, or a launch would never move the button off whatever
-// happens to head that list.
-const latest =
-	getGames(i18n)
-		.filter((g) => g.status === "released")
-		.sort(byRecency)[0] ?? null;
+// The newest game you can actually play. The slides above are its screenshots, so the backdrop
+// always matches the name on the button.
+const latest = latestReleased(getGames(i18n));
 
 // Adopt the <head> script's roll, unless this session already picked one (came back to the home
 // page, or asked for a reshuffle) — that one wins, because its screenshot is the cached one.

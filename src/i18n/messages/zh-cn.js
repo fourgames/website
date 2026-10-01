@@ -3,6 +3,7 @@
 export default {
 	site: {
 		tagline: "用 Godot 制作的独立游戏、免费教程和开源工具。",
+		newBadge: "新",
 		ogImageAlt: "Four Games 首页：用 Godot 制作的独立游戏",
 	},
 	head: {

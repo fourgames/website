@@ -44,7 +44,7 @@ const isNew = (v) => isRecent(v.publishedAt, 14, youtube.fetchedAt);
 					</span>
 					<span class="min-w-0">
 						<h3 class="line-clamp-2 text-[19px] leading-snug md:text-[22px]">{{ video.title }}</h3>
-						<span :class="['mt-2.5 block text-[15px]', isNew(video) ? 'is-new' : 'opacity-65']">
+						<span :class="['mt-2.5 block text-[15px]', isNew(video) ? 'is-new' : 'opacity-65']" :data-new="isNew(video) ? t('site.newBadge') : null">
 							<RelativeTime v-if="video.publishedAt" :datetime="video.publishedAt" />
 						</span>
 						<span class="sr-only">{{ $t("a11y.newTab") }}</span>

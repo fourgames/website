@@ -4,6 +4,7 @@
 export default {
 	site: {
 		tagline: "用 Godot 製作的獨立遊戲、免費教學和開源工具。",
+		newBadge: "新",
 		ogImageAlt: "Four Games 首頁：用 Godot 製作的獨立遊戲",
 	},
 	head: {

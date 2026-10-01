@@ -4,6 +4,7 @@
 export default {
 	site: {
 		tagline: "Godot로 만든 인디 게임, 무료 튜토리얼, 오픈 소스 도구.",
+		newBadge: "신규",
 		ogImageAlt: "Four Games 홈페이지: Godot로 만든 인디 게임",
 	},
 	head: {

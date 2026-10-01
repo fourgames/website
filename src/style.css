@@ -618,7 +618,7 @@
 		opacity: 1;
 	}
 	.is-new::after {
-		content: "NEW";
+		content: attr(data-new);
 		font-size: 80%;
 		border: 1px solid;
 		border-radius: 3px;

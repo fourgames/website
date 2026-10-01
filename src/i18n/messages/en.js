@@ -5,6 +5,7 @@
 export default {
 	site: {
 		tagline: "Indie games made in Godot, free tutorials and open-source tools.",
+		newBadge: "NEW",
 		ogImageAlt: "The Four Games home page: indie games made in Godot",
 	},
 	head: {

@@ -57,7 +57,7 @@ const featuredPrice = featured ? priceLabel(featured, t) : null;
 						<h3 class="text-[22px] leading-snug">{{ featured.name }}</h3>
 						<p class="mt-2 text-base opacity-80">{{ featured.description }}</p>
 						<div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[15px]">
-							<p :class="isNew(featured) ? 'is-new' : 'opacity-65'">{{ gameStatusLabel(featured, t) }}</p>
+							<p :class="isNew(featured) ? 'is-new' : 'opacity-65'" :data-new="isNew(featured) ? t('site.newBadge') : null">{{ gameStatusLabel(featured, t) }}</p>
 							<p v-if="featured.genres.length" class="opacity-65">{{ featured.genres.join(" · ") }}</p>
 							<PlatformIcons :platforms="featured.platforms" />
 							<p v-if="featuredPrice" class="flex items-center gap-1.5">
@@ -99,7 +99,7 @@ const featuredPrice = featured ? priceLabel(featured, t) : null;
 								<h3 class="text-[19px] leading-snug md:text-[22px]">{{ game.name }}</h3>
 								<span class="mt-1.5 hidden text-base opacity-80 md:line-clamp-2">{{ game.description }}</span>
 								<span class="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[15px]">
-									<span :class="isNew(game) ? 'is-new' : 'opacity-65'">{{ gameStatusLabel(game, t) }}</span>
+									<span :class="isNew(game) ? 'is-new' : 'opacity-65'" :data-new="isNew(game) ? t('site.newBadge') : null">{{ gameStatusLabel(game, t) }}</span>
 									<span v-if="game.genres.length" class="opacity-65">{{ game.genres.join(" · ") }}</span>
 								</span>
 								<span class="sr-only">{{ $t("a11y.newTab") }}</span>

@@ -3,6 +3,7 @@
 export default {
 	site: {
 		tagline: "Godot製のインディーゲーム、無料チュートリアル、オープンソースツール。",
+		newBadge: "新着",
 		ogImageAlt: "Four Gamesのホームページ：Godot製のインディーゲーム",
 	},
 	head: {

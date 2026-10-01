@@ -2,8 +2,8 @@
 import DiscordArt from "./DiscordArt.vue";
 import FanCards from "./FanCards.vue";
 import { useI18n } from "@/i18n/index.js";
-import { getGames } from "@/lib/games.js";
-import { videoThumb } from "@/lib/videos.js";
+import { fanGames, getGames } from "@/lib/games.js";
+import { sortVideos, videoThumb } from "@/lib/videos.js";
 import youtube from "@/data/generated/youtube.json";
 
 // Art for the "Get involved" columns, reusing the membership perk-card art so the two sections
@@ -17,15 +17,14 @@ defineProps({
 
 // mqdefault (320x180): the wider sizes are either 4:3 letterboxed or a 1280x720 file for a
 // ~140px card. Same reasoning as MembershipSection.vue.
-const videoCards = [...(youtube.latest ?? [])].slice(0, 3).map((v) => ({
+const videoCards = sortVideos(youtube.latest ?? []).slice(0, 3).map((v) => ({
 	image: videoThumb(v, 320),
 	label: v.title,
 	icon: "play",
 	iconClass: "text-primary",
 }));
 
-const gameCards = getGames(useI18n())
-	.slice(0, 3)
+const gameCards = fanGames(getGames(useI18n()))
 	.map((game) => ({
 		image: game.image,
 		hue: game.hue,

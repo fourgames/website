@@ -1,9 +1,10 @@
 <script setup>
-import { computed } from "vue";
 import Icon from "@/components/ui/Icon.vue";
 import Logo from "@/components/ui/Logo.vue";
 
 // Three fanned cards with an image and a small caption row; shared by the perk cards so they match.
+// `cards` is newest first: the first one sits in the middle, on top and labelled, the next two
+// fan out to its left and right.
 // Cards without art fall back to the same tinted placeholder the game teasers use.
 // `ratio` follows the source art — Steam capsules are 460x215, YouTube stills are 16/9 — so
 // `object-cover` never has anything to crop.
@@ -14,12 +15,10 @@ const props = defineProps({
 	ratio: { type: String, default: "460/215" },
 });
 const TILT = [
-	"-rotate-6 -translate-x-[18cqw] translate-y-3 opacity-80",
 	"z-10",
+	"-rotate-6 -translate-x-[18cqw] translate-y-3 opacity-80",
 	"rotate-6 translate-x-[18cqw] translate-y-3 opacity-80",
 ];
-// Only the card on top is labelled; at this size the side captions are all ellipsis.
-const front = computed(() => Math.min(1, props.cards.length - 1));
 </script>
 
 <template>
@@ -41,8 +40,9 @@ const front = computed(() => Math.min(1, props.cards.length - 1));
 			<span v-else class="teaser-art grid w-full place-items-center text-white/40" :style="{ '--hue': card.hue, aspectRatio: ratio }">
 				<Logo class="size-8" />
 			</span>
+			<!-- Only the card on top is labelled; at this size the side captions are all ellipsis. -->
 			<div
-				v-if="i === front"
+				v-if="i === 0"
 				class="flex items-center justify-between gap-2 px-2.5 py-1.5 text-[0.6875rem] font-semibold text-fg"
 			>
 				<span class="truncate">{{ card.label }}</span>

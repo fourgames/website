@@ -59,6 +59,13 @@ export function getHeroSlides(i18n = defaultI18n) {
 	return sources.map((s) => ({ ...s, game: g.name, author: SITE.name, href: g.storeUrl }));
 }
 
+// The games a card fan shows, lead card first: the "Play latest" game (see heroGame), then the
+// rest newest first.
+export function fanGames(games, count = 3) {
+	const lead = heroGame(games);
+	return [lead, ...[...games].sort(byRecency).filter((g) => g !== lead)].filter(Boolean).slice(0, count);
+}
+
 export const PLATFORM_NAMES = { windows: "Windows", mac: "macOS", linux: "Linux" };
 
 // Fresh enough to flag with a "NEW" marker, like godotengine.org does on recent posts.

@@ -10,8 +10,8 @@ import { useDiscordPresence } from "@/composables/useDiscordPresence.js";
 import { MEMBERSHIP } from "@/data/membership.js";
 import { SITE } from "@/data/site.js";
 import { useI18n } from "@/i18n/index.js";
-import { getGames } from "@/lib/games.js";
-import { videoThumb } from "@/lib/videos.js";
+import { fanGames, getGames } from "@/lib/games.js";
+import { sortVideos, videoThumb } from "@/lib/videos.js";
 import discord from "@/data/generated/discord.json";
 import youtube from "@/data/generated/youtube.json";
 
@@ -28,7 +28,7 @@ const presence = useDiscordPresence(discord, cards);
 // Card fans for the "keys" and "early access" perks (same component, so they match).
 // One card per game we actually have — the perk is "all our games", so showing the same one
 // three times undersells it.
-const keyCards = games.slice(0, 3).map((game) => ({
+const keyCards = fanGames(games).map((game) => ({
 	image: game.image,
 	hue: game.hue,
 	label: game.name,
@@ -37,7 +37,7 @@ const keyCards = games.slice(0, 3).map((game) => ({
 }));
 // mqdefault (320x180): the wider ones are either 4:3 letterboxed (hq/sd) or a 1280x720 file
 // for a ~140px card.
-const videoCards = [...(youtube.latest ?? [])].slice(0, 3).map((v) => ({
+const videoCards = sortVideos(youtube.latest ?? []).slice(0, 3).map((v) => ({
 	image: videoThumb(v, 320),
 	label: v.title,
 	icon: "clock",

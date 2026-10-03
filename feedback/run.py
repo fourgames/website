@@ -13,6 +13,7 @@ None of them is ever written to feedback/data/. FEEDBACK_DRY_RUN=1 skips Claude 
 """
 
 import argparse
+import hashlib
 import json
 import math
 import os
@@ -269,19 +270,56 @@ def thread_context(state, item):
 def add_profiles(state):
     """The player's Steam name, picture and profile link for each post (from their public profile),
     looked up once per post so the dashboard can show who wrote it."""
+    looked_up = {}
     for item in state["items"].values():
         author = item.get("author") or {}
-        if item.get("dev") or not author.get("id"):
+        if not author.get("id"):
             continue
         if "profile" not in author:
-            profile = steam.profile(author["id"])
+            if author["id"] not in looked_up:
+                looked_up[author["id"]] = steam.profile(author["id"])
+            profile = looked_up[author["id"]]
             author["profile"] = profile["url"] if profile else None
             if profile:
                 author.update(name=profile["name"], avatar=profile["avatar"])
-        # Reviewers also get the size of their library, like Steam shows on a review.
-        if item["kind"] == "review" and "games" not in author:
-            author["games"] = steam.games_owned(author["id"])
+        # The size of their library too, like Steam shows on a review.
+        if "games" not in author:
+            if ("games", author["id"]) not in looked_up:
+                looked_up[("games", author["id"])] = steam.games_owned(author["id"])
+            author["games"] = looked_up[("games", author["id"])]
         item["author"] = author
+
+
+def translate_own(state, budget):
+    """Your own posts and replies aren't triaged (they're not feedback), but they get an English
+    translation and their language like everyone else's. Done again if you edit them."""
+    import triage
+
+    for item in state["items"].values():
+        jobs = []
+        if item.get("dev") and not (item["kind"] == "topic" and item.get("forum") == "Events & Announcements"):
+            jobs.append(("text", item.get("text") or ""))
+        if item.get("devResponse"):
+            jobs.append(("devResponse", item["devResponse"]))
+        for field, text in jobs:
+            key = hashlib.sha1(text.encode()).hexdigest()[:12]
+            done = item.get("translatedOwn") or {}
+            if not text.strip() or done.get(field) == key or budget["left"] <= 0:
+                continue
+            try:
+                result = triage.translate(text)
+            except Exception as error:  # noqa: BLE001 - try again next run
+                print(f"[translate] {item['id']}: {type(error).__name__}: {error}")
+                status.fail("claude", f"{triage.describe_error(error)[0]} Your own posts wait to be translated.")
+                return
+            budget["left"] -= 1
+            english = result.english.strip()
+            if field == "text":
+                item["triage"] = {"language": result.language, "english": english}
+            else:
+                item["devResponseLanguage"] = result.language
+                item["devResponseEnglish"] = english or None
+            item["translatedOwn"] = {**done, field: key}
 
 
 def fallback_points(t):
@@ -767,6 +805,7 @@ def full_run():
         process_in_order(state, game, run, budget, events)
         add_tone(state, game, budget)
         add_profiles(state)
+        translate_own(state, budget)
         refresh_issues(state, game)
         draft_all_fix_replies(state, game)
         refresh_issues(state, game)

@@ -702,7 +702,8 @@ function postParts(item, focus = null) {
       translated ? h("details", h("summary", `Original (${t.language})`), textRow(item.text)) : null,
       (item.versions || []).length ? h("details", h("summary", `Earlier versions (${item.versions.length})`),
         ...item.versions.slice().reverse().map((v) => h("div.text", `${fmtDate(v.at)}${v.votedUp == null ? "" : v.votedUp ? " · 👍" : " · 👎"}\n${v.title ? v.title + "\n" : ""}${v.text}`))) : null,
-      item.devResponse ? h("details", h("summary", "Your reply on Steam"), h("div.text", item.devResponse)) : null,
+      item.devResponse ? h("details", h("summary", "Your reply on Steam"), textRow(item.devResponseEnglish || item.devResponse),
+        item.devResponseEnglish ? h("details", h("summary", `Original (${item.devResponseLanguage})`), textRow(item.devResponse)) : null) : null,
     ].filter(Boolean),
   };
 }
@@ -761,11 +762,11 @@ function postView(item, focus = null) {
       h("div.pc-aside",
         h("div.pc-block",
           h("div.pc-block-main",
-            item.author?.name && !item.dev ? h("a.pc-player", { href: item.author.profile || item.url, target: "_blank", rel: "noopener", title: "Steam profile" },
+            item.author?.name ? h("a.pc-player", { href: item.author.profile || item.url, target: "_blank", rel: "noopener", title: "Steam profile" },
               item.author.avatar ? h("img.avatar", { src: item.author.avatar, alt: "", loading: "lazy" }) : null, item.author.name) : h("span", p.who || "Steam user")),
           h("div.pc-block-sub", [
             p.flag || p.language ? `${p.flag ? p.flag + " " : ""}${p.language}` : null,
-            item.kind === "review" && item.author?.games != null ? `${item.author.games.toLocaleString("en-US")} games` : null,
+            item.author?.games != null ? `${item.author.games.toLocaleString("en-US")} games` : null,
             item.kind === "review" && item.author?.reviews != null ? plural(item.author.reviews, "review") : null,
           ].filter(Boolean).join(" · "))),
         h("div.pc-block",

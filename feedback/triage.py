@@ -295,3 +295,25 @@ def find_duplicates(game_name, issues):
         if len(ids) >= 2 and len({known[i] == "praise" for i in ids}) == 1:
             groups.append({"ids": ids, "title": g.title})
     return groups
+
+
+class Translation(BaseModel):
+    language: str = Field(description="Language the text is written in, as an English name, e.g. 'German'.")
+    english: str = Field(description="The text translated to English, or an empty string if it is already in English.")
+
+
+def translate(text):
+    """Just a translation, for the developer's own posts and replies (they aren't triaged)."""
+    if DRY_RUN:
+        return Translation(language="English", english="")
+    response = client().messages.parse(
+        model=MODEL,
+        max_tokens=4000,
+        system="Translate the developer's post on Steam to English, keeping its meaning and tone. If it is already "
+        "in English, leave english empty: don't copy it.",
+        messages=[{"role": "user", "content": f"<post>\n{text[:12000]}\n</post>"}],
+        output_format=Translation,
+    )
+    if response.stop_reason != "end_turn" or response.parsed_output is None:
+        raise RuntimeError(f"translation stopped with {response.stop_reason}")
+    return response.parsed_output

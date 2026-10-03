@@ -20,8 +20,9 @@ REVIEWS_URL = (
     if STEAM_KEY
     else "https://api.steampowered.com/IUserReviewsService/GetAppReviews/v1/"
 )
-# Steam event types that mean a new build: 12 small update / patch notes, 13 regular update, 14 major update.
-UPDATE_EVENT_TYPES = {12, 13, 14}
+# Steam event types that mean a new build: 10 game release, 12 small update / patch notes, 13 regular
+# update, 14 major update. Each starts the 48 hours of 20-minute runs, so launch-day peaks are caught too.
+UPDATE_EVENT_TYPES = {10, 12, 13, 14}
 
 
 class HttpError(Exception):

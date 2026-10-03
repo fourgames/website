@@ -933,3 +933,204 @@
 	stroke-dasharray: none;
 	opacity: 0.9;
 }
+
+/* Post card designs (temporary, see CARD_DESIGNS in dashboard.js) */
+.fb .card-picker {
+	position: fixed;
+	bottom: 16px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 40;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	background: #0b0b0b;
+	color: #fff;
+	border-radius: 99px;
+	padding: 6px 6px 6px 14px;
+	box-shadow: 0 8px 30px rgb(0 0 0 / 0.35);
+	font-size: 0.8125rem;
+	max-width: calc(100vw - 32px);
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+.fb .card-picker span {
+	white-space: nowrap;
+	margin-right: 4px;
+}
+.fb .card-picker button {
+	border: 0;
+	border-radius: 99px;
+	padding: 6px 12px;
+	background: #262626;
+	color: #ddd;
+	white-space: nowrap;
+}
+.fb .card-picker button[aria-pressed="true"] {
+	background: #fff;
+	color: #000;
+	font-weight: 600;
+}
+
+/* 1 · Chips */
+.fb .pv1-chips {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-bottom: 6px;
+}
+.fb .pv1-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	background: var(--fb-card-2);
+	border-radius: 99px;
+	padding: 4px 12px;
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--fb-title);
+}
+.fb .pv1-big {
+	font-size: 1.15rem;
+	line-height: 1;
+}
+
+/* 2 · Side panel */
+.fb .pv2 {
+	display: grid;
+	grid-template-columns: 6.5rem minmax(0, 1fr);
+	gap: 14px;
+}
+.fb .pv2-side {
+	background: var(--fb-card-2);
+	border-radius: var(--radius-card);
+	padding: 10px 8px;
+	text-align: center;
+	align-self: start;
+}
+.fb .pv2-flag {
+	font-size: 2rem;
+	line-height: 1.1;
+}
+.fb .pv2-lang {
+	font-weight: 600;
+	color: var(--fb-title);
+	font-size: 0.8125rem;
+}
+.fb .pv2-hours {
+	margin-top: 8px;
+	display: flex;
+	flex-direction: column;
+	color: var(--fb-muted);
+	font-size: 0.7rem;
+}
+.fb .pv2-hours b {
+	font-family: var(--font-heading);
+	font-size: 1.25rem;
+	color: var(--fb-title);
+}
+.fb .pv2-verdict {
+	margin-top: 6px;
+	font-size: 1.4rem;
+}
+
+/* 3 · Steam style */
+.fb .pv3-head {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin: -2px 0 8px;
+	padding: 8px 12px;
+	border-radius: var(--radius-card);
+	background: var(--fb-card-2);
+}
+.fb .pv3-head.is-up {
+	background: color-mix(in srgb, var(--fb-positive) 18%, var(--fb-card-2));
+}
+.fb .pv3-head.is-down {
+	background: color-mix(in srgb, var(--fb-negative) 18%, var(--fb-card-2));
+}
+.fb .pv3-icon {
+	font-size: 1.8rem;
+	line-height: 1;
+}
+.fb .pv3-title {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	color: var(--fb-ink-2);
+	font-size: 0.8125rem;
+}
+.fb .pv3-title b {
+	font-family: var(--font-heading);
+	font-size: 1.05rem;
+	color: var(--fb-title);
+}
+.fb .pv3-lang {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-weight: 600;
+	color: var(--fb-title);
+}
+.fb .pv3-flag {
+	font-size: 1.5rem;
+	line-height: 1;
+}
+
+/* 4 · Labelled facts */
+.fb .pv4-facts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 22px;
+	padding-bottom: 8px;
+	margin-bottom: 4px;
+	border-bottom: 1px solid var(--fb-line);
+}
+.fb .pv4-fact {
+	display: flex;
+	flex-direction: column;
+}
+.fb .pv4-label {
+	font-size: 0.65rem;
+	font-weight: 700;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--fb-muted);
+}
+.fb .pv4-value {
+	font-weight: 600;
+	color: var(--fb-title);
+}
+.fb .pv4-fact.vote-up .pv4-value {
+	color: var(--fb-positive);
+}
+.fb .pv4-fact.vote-down .pv4-value {
+	color: var(--fb-negative);
+}
+
+/* 5 · Stripe */
+.fb .pv5 {
+	border-left: 4px solid var(--fb-line);
+	padding-left: 12px;
+}
+.fb .pv5.is-up {
+	border-left-color: var(--fb-positive);
+}
+.fb .pv5.is-down {
+	border-left-color: var(--fb-negative);
+}
+.fb .pv5-line {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 1rem;
+	color: var(--fb-title);
+}
+.fb .pv5-flag {
+	font-size: 1.4rem;
+	line-height: 1;
+}
+.fb .pv5-hours {
+	color: var(--fb-ink-2);
+}

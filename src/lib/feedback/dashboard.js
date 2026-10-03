@@ -358,6 +358,7 @@ function render() {
   document.getElementById("fb-nav-side").replaceChildren(...buttons());
   document.getElementById("fb-nav-top").replaceChildren(...buttons());
   setHash();
+  renderCardPicker();
   const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), replies: repliesView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
@@ -456,7 +457,7 @@ function withSpeak(text) {
   return [el, " ", speakButton(el)];
 }
 
-function postView(item) {
+function postViewCurrent(item) {
   const t = item.triage || {};
   const parent = item.topic ? state.game.items[item.topic] : null;
   const translated = t.english && t.english.trim() !== (item.text || "").trim();
@@ -485,6 +486,122 @@ function postView(item) {
       ...item.versions.slice().reverse().map((v) => h("div.text", `${fmtDate(v.at)}${v.votedUp == null ? "" : v.votedUp ? " · 👍" : " · 👎"}\n${v.title ? v.title + "\n" : ""}${v.text}`))) : null,
     item.devResponse ? h("details", h("summary", "Your reply on Steam"), h("div.text", item.devResponse)) : null,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Post card designs (temporary: pick one with the bar at the bottom, shown on /fb-dash?cards).
+// Each makes the player's language and playtime easier to see; 0 is the current card.
+// ---------------------------------------------------------------------------
+
+const CARD_DESIGNS = [[0, "Current"], [1, "Chips"], [2, "Side panel"], [3, "Steam style"], [4, "Labelled facts"], [5, "Stripe"]];
+const cardDesign = () => Number(store.get("cardDesign") || 0);
+
+// Pieces every design shares.
+function postParts(item) {
+  const t = item.triage || {};
+  const translated = t.english && t.english.trim() !== (item.text || "").trim();
+  const flipped = (item.flips || []).at(-1);
+  const parent = item.topic ? state.game.items[item.topic] : null;
+  const review = item.kind === "review";
+  return {
+    t, review,
+    flag: t.language ? langFlag(t.language, item.lang) || "🌐" : item.dev ? "🛠️" : "🌐",
+    language: t.language || (item.dev ? "Your post" : "Not triaged yet"),
+    hours: review && item.playtime != null ? `${item.playtime} h` : null,
+    verdict: review ? (item.votedUp ? ["vote-up", "👍", "Recommended"] : ["vote-down", "👎", "Not recommended"]) : null,
+    who: item.author?.name || null,
+    when: fmtDate(item.created),
+    kind: KIND[item.kind] + (item.forum ? ` · ${item.forum}` : ""),
+    link: h("a", { href: item.url, target: "_blank", rel: "noopener" }, "Open on Steam ↗"),
+    // What happened to the post, and what triage made of it.
+    flags: [
+      item.edited ? h("span.badge", { title: `Edited · ${(item.versions || []).length} earlier version(s) kept` }, "edited") : null,
+      flipped ? h("span.badge", { class: flipped.to === "negative" ? "s-still" : "s-fixed" }, `flipped ${flipped.to} ${fmtShort(flipped.at)}`) : null,
+      item.deleted ? h("span.badge.s-still", "deleted on Steam") : null,
+      item.dev ? h("span.badge", "Your post") : null,
+    ].filter(Boolean),
+    tags: [t.category ? h("span.badge", t.category) : null, t.urgency ? urgencyBadge(t.urgency) : null].filter(Boolean),
+    body: [
+      parent ? h("div.meta", "in “", parent.title || "thread", "”") : null,
+      item.title ? h("div", h("b", item.title)) : null,
+      textRow(english(item)),
+      translated ? h("details", h("summary", `Original (${t.language})`), textRow(item.text)) : null,
+      (item.versions || []).length ? h("details", h("summary", `Earlier versions (${item.versions.length})`),
+        ...item.versions.slice().reverse().map((v) => h("div.text", `${fmtDate(v.at)}${v.votedUp == null ? "" : v.votedUp ? " · 👍" : " · 👎"}\n${v.title ? v.title + "\n" : ""}${v.text}`))) : null,
+      item.devResponse ? h("details", h("summary", "Your reply on Steam"), h("div.text", item.devResponse)) : null,
+    ].filter(Boolean),
+  };
+}
+
+function postView(item) {
+  const d = cardDesign();
+  if (!d) return postViewCurrent(item);
+  const p = postParts(item);
+  // 1 · Chips: language, playtime and verdict as big labelled chips on top.
+  if (d === 1) return h("div.post.pv1",
+    h("div.pv1-chips",
+      h("span.pv1-chip", h("span.pv1-big", p.flag), p.language),
+      p.hours ? h("span.pv1-chip", "⏱ ", h("b", p.hours), " played") : p.who ? h("span.pv1-chip", "👤 ", p.who) : null,
+      p.verdict ? h(`span.pv1-chip.${p.verdict[0]}`, p.verdict[1], " ", p.verdict[2]) : h("span.pv1-chip", p.kind)),
+    ...p.body,
+    h("div.meta", ...p.flags, ...p.tags, h("span", p.when), p.review ? h("span", p.kind) : null, p.link));
+  // 2 · Side panel: a column with a big flag, language and hours beside the text.
+  if (d === 2) return h("div.post.pv2",
+    h("div.pv2-side",
+      h("div.pv2-flag", p.flag),
+      h("div.pv2-lang", p.language),
+      p.hours ? h("div.pv2-hours", h("b", p.hours), h("span", "played")) : null,
+      p.verdict ? h(`div.pv2-verdict.${p.verdict[0]}`, p.verdict[1]) : null),
+    h("div.pv2-main",
+      h("div.meta", h("b", p.kind), p.who ? h("span", p.who) : null, h("span", p.when), ...p.flags, ...p.tags, p.link),
+      ...p.body));
+  // 3 · Steam style: a header like Steam's own review box (verdict and hours left, language right).
+  if (d === 3) return h("div.post.pv3",
+    h(`div.pv3-head.${p.verdict ? p.verdict[0].replace("vote-", "is-") : "neutral"}`,
+      h("div.pv3-icon", p.verdict ? p.verdict[1] : "💬"),
+      h("div.pv3-title",
+        h("b", p.verdict ? p.verdict[2] : p.kind),
+        h("span", p.hours ? `${p.hours} on record` : p.who || "")),
+      h("div.pv3-lang", h("span.pv3-flag", p.flag), p.language)),
+    ...p.body,
+    h("div.meta", h("span", `Posted ${p.when}`), ...p.flags, ...p.tags, p.link));
+  // 4 · Labelled facts: every fact with a small label above it, in one row.
+  if (d === 4) {
+    const fact = (label, value, cls) => h(`div.pv4-fact${cls ? "." + cls : ""}`, h("span.pv4-label", label), h("span.pv4-value", value));
+    return h("div.post.pv4",
+      h("div.pv4-facts",
+        fact("Language", `${p.flag} ${p.language}`),
+        p.hours ? fact("Played", p.hours) : p.who ? fact("Player", p.who) : null,
+        p.verdict ? fact("Verdict", `${p.verdict[1]} ${p.verdict[2]}`, p.verdict[0]) : fact("Post", p.kind),
+        fact("Posted", p.when),
+        p.t.category ? fact("Type", p.t.category) : null,
+        p.t.urgency ? fact("Priority", URGENCY[p.t.urgency]) : null),
+      ...p.body,
+      h("div.meta", ...p.flags, p.link));
+  }
+  // 5 · Stripe: a coloured edge for the verdict; language and hours lead the first line.
+  return h(`div.post.pv5.${p.verdict ? p.verdict[0].replace("vote-", "is-") : "neutral"}`,
+    h("div.pv5-line",
+      h("span.pv5-flag", p.flag), h("b", p.language),
+      p.hours ? h("span.pv5-hours", "· ", h("b", p.hours), " played") : p.who ? h("span.pv5-hours", "· ", p.who) : null),
+    h("div.meta", h("span", p.verdict ? `${p.verdict[1]} ${p.verdict[2]}` : p.kind), h("span", p.when), ...p.flags, ...p.tags, p.link),
+    ...p.body);
+}
+
+function renderCardPicker() {
+  if (!new URLSearchParams(location.search).has("cards")) return;
+  let bar = document.getElementById("fb-card-picker");
+  if (!bar) {
+    bar = h("div.card-picker", { id: "fb-card-picker", role: "group", "aria-label": "Card design" });
+    document.querySelector(".fb").append(bar);
+  }
+  bar.replaceChildren(h("span", "Card design"),
+    ...CARD_DESIGNS.map(([n, name]) => h("button", { type: "button", "aria-pressed": String(cardDesign() === n), onclick: () => {
+      store.set("cardDesign", n);
+      const y = window.scrollY;
+      render();
+      window.scrollTo(0, y);
+    } }, `${n} · ${name}`)));
 }
 
 // Posts worth a reply: a negative review or a thread about something a later update fixed (Steam's

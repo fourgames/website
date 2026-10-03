@@ -140,7 +140,12 @@
      "english": "Thanks for the feedback! We'll keep in mind the short playtime."
     },
     "tone": "sincere",
-    "points": []
+    "points": [
+     {
+      "kind": "complaint",
+      "text": "Game can be completed in just 40 minutes."
+     }
+    ]
    },
    "issue": "I2",
    "playtimeForever": 0.7,
@@ -182,8 +187,13 @@
      "english": "Thank you for the feedback! We're really sorry you didn't enjoy the game."
     },
     "tone": "joke",
-    "note": "Korean meme: \"도망쳐\" (run away) is a playful warning that a game is dangerously addictive or engaging, not a genuine warning to avoid it. The recommended rating confirms this is praise.",
-    "points": []
+    "note": "\"도망쳐\" (run away) is a common Korean meme praising addictive or compelling games, not a genuine warning.",
+    "points": [
+     {
+      "kind": "praise",
+      "text": "The game is engaging enough to warrant a humorous warning to stay away."
+     }
+    ]
    },
    "issue": null,
    "playtimeForever": 1.7,
@@ -336,7 +346,16 @@
      "english": "Thank you for playing. We'll consider adding more content so players can enjoy it longer."
     },
     "tone": "sincere",
-    "points": []
+    "points": [
+     {
+      "kind": "complaint",
+      "text": "Game takes less than 1 hour even when playing slowly."
+     },
+     {
+      "kind": "suggestion",
+      "text": "Game should take 3-4 hours to provide enough content and enjoyment."
+     }
+    ]
    },
    "issue": "I2",
    "playtimeForever": 0.6,

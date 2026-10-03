@@ -1,0 +1,115 @@
+{
+ "schemaVersion": 1,
+ "appId": 2807130,
+ "initialized": false,
+ "watermarks": {
+  "reviews": 1751640136,
+  "forums": {
+   "0": 0
+  }
+ },
+ "items": {
+  "r198931298": {
+   "id": "r198931298",
+   "kind": "review",
+   "url": "https://steamcommunity.com/profiles/76561197995186543/recommended/2807130/",
+   "author": {
+    "id": "76561197995186543"
+   },
+   "lang": "english",
+   "created": 1751640136,
+   "updated": 1751640136,
+   "text": "i saw this on the dev's yt and gave it a go\n\nPROS\npretty good torbjorn simulator td game i rate it higher than pve in overwatch\n3d is a nice change from usual bird eye view td format\nthe pop gun and hammer feels smooth\ncute lil gobbos come to take ur forge\n\nCONS\nneeds option to turn off the recoil head bob effect\nat the time of playing hp meter was bugged\ni think if the pop gun had a close quarters secondary mode that would be nice\nswitching to the hammer is too slow",
+   "votedUp": true,
+   "playtime": 0.3,
+   "earlyAccess": false,
+   "votesUp": 2,
+   "devResponse": "Thanks for the review! I've updated the game based on your feedback:\n\nHead-bob: Reduced by 50%.\nSwap Speed: 33% faster.\nHammer: New icon instead of heart and clearer melee/AoE functionality.\nThanks for helping me improve the game!",
+   "versions": [],
+   "flips": [],
+   "pending": true
+  }
+ },
+ "issues": {},
+ "nextIssue": 1,
+ "players": [
+  [
+   1791016905,
+   0
+  ]
+ ],
+ "reviewTotals": {
+  "2026-10-03": {
+   "positive": 1,
+   "negative": 0,
+   "desc": "1 user reviews"
+  }
+ },
+ "releases": [
+  {
+   "gid": "7081438768274849107",
+   "name": "Forge Front New Demo Available! + Roadmap",
+   "version": null,
+   "time": 1728661860,
+   "url": "https://store.steampowered.com/news/app/2807130/view/7081438768274849107",
+   "matched": []
+  },
+  {
+   "gid": "4524520259786639017",
+   "name": "Forge Front Hammer Update!",
+   "version": null,
+   "time": 1728918120,
+   "url": "https://store.steampowered.com/news/app/2807130/view/4524520259786639017",
+   "matched": []
+  },
+  {
+   "gid": "4517765223387783650",
+   "name": "Forg Now Available!",
+   "version": null,
+   "time": 1732104000,
+   "url": "https://store.steampowered.com/news/app/2807130/view/4517765223387783650",
+   "matched": []
+  },
+  {
+   "gid": "509567431915603800",
+   "name": "Forg QoL Update! + New Level",
+   "version": null,
+   "time": 1736092080,
+   "url": "https://store.steampowered.com/news/app/2807130/view/509567431915603800",
+   "matched": []
+  },
+  {
+   "gid": "690882175138005309",
+   "name": "Reforge Front Update",
+   "version": null,
+   "time": 1777578540,
+   "url": "https://store.steampowered.com/news/app/2807130/view/690882175138005309",
+   "matched": []
+  },
+  {
+   "gid": "684140727200907388",
+   "name": "Update 1.01",
+   "version": "1.01",
+   "time": 1790805660,
+   "url": "https://store.steampowered.com/news/app/2807130/view/684140727200907388",
+   "matched": []
+  },
+  {
+   "gid": "684140727200908131",
+   "name": "Update 1.02",
+   "version": "1.02",
+   "time": 1790891760,
+   "url": "https://store.steampowered.com/news/app/2807130/view/684140727200908131",
+   "matched": []
+  },
+  {
+   "gid": "684140727200908155",
+   "name": "Update 1.03",
+   "version": "1.03",
+   "time": 1790893020,
+   "url": "https://store.steampowered.com/news/app/2807130/view/684140727200908155",
+   "matched": []
+  }
+ ],
+ "threads": {}
+}

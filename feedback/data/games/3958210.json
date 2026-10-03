@@ -39,12 +39,9 @@
    "receivedForFree": false,
    "issues": [
     "I52",
-    "I53",
     "I49",
     "I54",
     "I55",
-    "I56",
-    "I57",
     "I58",
     "I59",
     "I60",
@@ -75,7 +72,7 @@
       "text": "Chainsaw upgrades only increase radius slightly with no visual change or progression from other tools.",
       "urgency": "medium",
       "quote": "The digging tool has no real upgrade path.  It starts as a chainsaw and upgrading it just slightly increases the digging radius.  You don't start with some sort of pickaxe and go to a chainsaw.  The chainsaw doesn't visually change.",
-      "issue": "I53"
+      "issue": "I52"
      },
      {
       "kind": "complaint",
@@ -103,14 +100,14 @@
       "text": "Backpack upgrades only double size with no other improvements.",
       "urgency": "low",
       "quote": "The backpack upgrades are always just a flat \"double the size\".",
-      "issue": "I56"
+      "issue": "I52"
      },
      {
       "kind": "complaint",
       "text": "New items found only increase pack space, giving no sense of discovery.",
       "urgency": "medium",
       "quote": "Items that you pickup just adds a larger amount of pack space.  So there's no real good feeling when you start finding new items.",
-      "issue": "I57"
+      "issue": "I52"
      },
      {
       "kind": "complaint",
@@ -425,8 +422,7 @@
    "steamPurchase": true,
    "receivedForFree": false,
    "issues": [
-    "I47",
-    "I48"
+    "I47"
    ],
    "issue": "I47",
    "triage": {
@@ -451,7 +447,7 @@
       "text": "Game should take 3-4 hours to have fun and have enough content.",
       "urgency": "medium",
       "quote": "3~4시간 정도 걸려야 재미도 보고 할 건데",
-      "issue": "I48"
+      "issue": "I47"
      }
     ],
     "note": null
@@ -486,7 +482,6 @@
    "receivedForFree": false,
    "issues": [
     "I44",
-    "I45",
     "I46"
    ],
    "issue": "I44",
@@ -512,7 +507,7 @@
       "text": "It took 5 minutes of digging before realizing you need to sell ice.",
       "urgency": "medium",
       "quote": "So habe ich bestimmt 5min gegraben und erst dann gemerkt das ich verkaufen gehen muss",
-      "issue": "I45"
+      "issue": "I44"
      },
      {
       "kind": "praise",
@@ -890,7 +885,7 @@
   "I44": {
    "id": "I44",
    "kind": "suggestion",
-   "title": "Missing tutorial or initial explanation",
+   "title": "Tutorial and onboarding are insufficient",
    "area": "tutorial, onboarding",
    "summary": "The game needs an explanation at the start.",
    "status": "open",
@@ -919,37 +914,7 @@
      "in": "v1.4",
      "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382299",
      "reason": "Improvements to depth counter readability provide better feedback, but don't add the tutorial or initial explanation players requested"
-    }
-   ]
-  },
-  "I45": {
-   "id": "I45",
-   "kind": "suggestion",
-   "title": "Unclear that ice must be sold to progress",
-   "area": "tutorial, onboarding",
-   "summary": "It took 5 minutes of digging before realizing you need to sell ice.",
-   "status": "open",
-   "created": 1791044034,
-   "items": [
-    "r236542076"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "German"
-   ],
-   "firstSeen": 1790771780,
-   "lastSeen": 1790771780,
-   "urgency": "medium",
-   "negativeReviews": 0,
-   "firstSession": 1,
-   "details": [],
-   "priority": 2.0,
-   "fixPrompt": null,
-   "partly": [
+    },
     {
      "in": "v1.2",
      "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382442",
@@ -994,7 +959,7 @@
   "I47": {
    "id": "I47",
    "kind": "suggestion",
-   "title": "Game content is too short",
+   "title": "Game is too short and needs more content",
    "area": "content, game length",
    "summary": "Game takes less than 1 hour to complete even when playing leisurely.",
    "status": "open",
@@ -1034,46 +999,6 @@
      "in": "v1.2",
      "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382442",
      "reason": "Pit depth increased to 500m so \"you have time to get every upgrade,\" extending playtime but not necessarily adding new content to discover"
-    }
-   ]
-  },
-  "I48": {
-   "id": "I48",
-   "kind": "suggestion",
-   "title": "Need more content or gameplay length",
-   "area": "content, game length",
-   "summary": "Game should take 3-4 hours to have fun and have enough content.",
-   "status": "open",
-   "created": 1791044037,
-   "items": [
-    "r236545405"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "Korean"
-   ],
-   "firstSeen": 1790775236,
-   "lastSeen": 1790775236,
-   "urgency": "medium",
-   "negativeReviews": 1,
-   "firstSession": 1,
-   "details": [],
-   "priority": 2.5,
-   "fixPrompt": null,
-   "partly": [
-    {
-     "in": "v1.1",
-     "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382419",
-     "reason": "\"The last three upgrade tiers are much cheaper, so you can max everything in a normal playthrough\" makes upgrades more accessible, but doesn't address the core request for 3-4 hours of content and gameplay."
-    },
-    {
-     "in": "v1.2",
-     "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382442",
-     "reason": "Deeper pit gives \"time to get every upgrade,\" extending gameplay length but unclear if it reaches the 3-4 hour target"
     }
    ]
   },
@@ -1184,37 +1109,9 @@
   "I52": {
    "id": "I52",
    "kind": "suggestion",
-   "title": "Jetpack lacks meaningful upgrade path",
+   "title": "Upgrades lack meaningful progression and purpose",
    "area": "game design, progression, mechanics",
    "summary": "Jetpack has no fuel cost, making upgrades pointless after a few.",
-   "status": "open",
-   "created": 1791044085,
-   "items": [
-    "r236634124"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1790875183,
-   "lastSeen": 1790875183,
-   "urgency": "medium",
-   "negativeReviews": 1,
-   "firstSession": 1,
-   "details": [],
-   "priority": 2.5,
-   "fixPrompt": null
-  },
-  "I53": {
-   "id": "I53",
-   "kind": "suggestion",
-   "title": "Chainsaw upgrades feel meaningless",
-   "area": "game design, progression, mechanics",
-   "summary": "Chainsaw upgrades only increase radius slightly with no visual change or progression from other tools.",
    "status": "open",
    "created": 1791044085,
    "items": [
@@ -1291,62 +1188,6 @@
    "firstSession": 1,
    "details": [],
    "priority": 1.25,
-   "fixPrompt": null
-  },
-  "I56": {
-   "id": "I56",
-   "kind": "suggestion",
-   "title": "Backpack upgrades lack variety",
-   "area": "game design, progression, mechanics",
-   "summary": "Backpack upgrades only double size with no other improvements.",
-   "status": "open",
-   "created": 1791044085,
-   "items": [
-    "r236634124"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1790875183,
-   "lastSeen": 1790875183,
-   "urgency": "low",
-   "negativeReviews": 1,
-   "firstSession": 1,
-   "details": [],
-   "priority": 1.25,
-   "fixPrompt": null
-  },
-  "I57": {
-   "id": "I57",
-   "kind": "suggestion",
-   "title": "New items lack distinct purpose",
-   "area": "game design, progression, mechanics",
-   "summary": "New items found only increase pack space, giving no sense of discovery.",
-   "status": "open",
-   "created": 1791044085,
-   "items": [
-    "r236634124"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1790875183,
-   "lastSeen": 1790875183,
-   "urgency": "medium",
-   "negativeReviews": 1,
-   "firstSession": 1,
-   "details": [],
-   "priority": 2.5,
    "fixPrompt": null
   },
   "I58": {
@@ -1578,8 +1419,7 @@
    "matched": [],
    "checked": true,
    "partly": [
-    "I47",
-    "I48"
+    "I47"
    ]
   },
   {
@@ -1592,9 +1432,8 @@
    "matched": [],
    "checked": true,
    "partly": [
-    "I45",
-    "I47",
-    "I48"
+    "I44",
+    "I47"
    ]
   },
   {
@@ -1713,5 +1552,6 @@
    1791031773,
    40
   ]
- ]
+ ],
+ "mergedAt": 64
 }

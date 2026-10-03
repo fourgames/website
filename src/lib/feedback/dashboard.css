@@ -1214,3 +1214,47 @@
 	font-size: 11px;
 	font-weight: 700;
 }
+
+/* SteamDB-style numbers above an opened chart */
+.fb .expand.chart-card {
+	padding: 0 0 0.25rem;
+	background: none;
+	box-shadow: none;
+}
+.fb .stat-header {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+	gap: 8px;
+	background: var(--fb-card);
+	box-shadow: var(--fb-shadow);
+	border-radius: var(--radius-card);
+	padding: 14px 10px;
+	margin-bottom: 12px;
+	text-align: center;
+}
+.fb .sh-value {
+	font-family: var(--font-heading);
+	font-size: 2rem;
+	font-weight: 800;
+	line-height: 1.15;
+	color: var(--fb-title);
+}
+.fb .sh-label {
+	font-size: 0.8125rem;
+	color: var(--fb-ink-2);
+}
+.fb .sh-stat.tone-good .sh-value { color: var(--fb-positive); }
+.fb .sh-stat.tone-bad .sh-value { color: var(--fb-negative); }
+.fb .sh-stat.tone-mixed .sh-value { color: #d79b00; }
+.fb .sh-stat:first-child.tone-good .sh-value,
+.fb .sh-stat:first-child.tone-mixed .sh-value,
+.fb .sh-stat:first-child.tone-bad .sh-value {
+	font-size: 1.25rem;
+	padding-top: 0.5rem;
+}
+.fb .sh-stat:first-child.tone-good .sh-value { color: #66c0f4; }
+.fb .zoom-label {
+	font-size: 0.8125rem;
+	color: var(--fb-ink-2);
+	font-weight: 600;
+}

@@ -290,14 +290,8 @@ function renderStats() {
   const series = g.players || [];
   const t = now();
   const current = series.length ? series[series.length - 1][1] : null;
-  const inDay = series.filter(([ts]) => ts >= t - DAY).map(([, n]) => n);
-  const peak = Math.max(...inDay, playersAt(series, t - DAY) ?? 0, current ?? 0);
-  // All-time since recording started (Steam keeps no older player counts).
-  const allTime = Math.max(0, ...series.map(([, n]) => n));
-  const peaks = daily(14, (d) => Math.max(playersAt(series, d) ?? 0, ...series.filter(([ts]) => ts >= d && ts < d + DAY).map(([, n]) => n)));
   const totalsKey = Object.keys(g.reviewTotals || {}).sort().pop();
   const totals = totalsKey ? g.reviewTotals[totalsKey] : null;
-  const reviewsPerDay = daily(14, (d) => items().filter((i) => i.kind === "review" && i.created >= d && i.created < d + DAY).length);
   const postsPerDay = daily(14, (d) => items().filter((i) => !i.dev && i.created >= d && i.created < d + DAY).length);
   const bugs = issues("bug").filter(isActive);
   const urgent = bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high");
@@ -311,20 +305,60 @@ function renderStats() {
       renderStats();
     } }, ...body);
   };
-  const pct = totals && totals.positive + totals.negative ? Math.round((100 * totals.positive) / (totals.positive + totals.negative)) + "%" : "–";
+  const score = reviewScore(totals);
+  // The two chart cards stay minimal, like SteamDB's: the number and what it is. Their details
+  // (peaks, positive and negative counts) are in the panel that opens below.
   document.getElementById("fb-stats").replaceChildren(...[
-    tile("Players now", current ?? "–", current != null ? [`${peak} peak today${peak && peak >= allTime ? " 🔥" : ""}`, `${allTime} all-time peak 🔥`] : "not released", peaks, undefined, "players"),
-    tile("Positive reviews", pct, totals ? `${totals.positive} 👍 · ${totals.negative} 👎` : "no reviews yet", reviewsPerDay, "var(--fb-positive)", "reviews"),
+    tile("Players", current ?? "–", current != null ? "In-Game" : "not released", null, undefined, "players"),
+    tile("Reviews", score ? `${score.rating.toFixed(2)}%` : "–", score ? plural(score.total, "review") : "no reviews yet", null, undefined, "reviews"),
     tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent"),
     tile("New posts", fresh.length, "last 24 h", postsPerDay),
   ].filter(Boolean));
   document.getElementById("fb-expand").replaceChildren(...(state.expanded ? [chartPanel(state.expanded)] : []));
 }
 
+// SteamDB's rating: the positive share pulled towards 50% when there are few reviews,
+// rating = p − (p − 0.5)·2^(−log10(n + 1)); and Steam's own summary words for the share.
+function reviewScore(totals) {
+  const pos = totals?.positive || 0, neg = totals?.negative || 0, n = pos + neg;
+  if (!n) return null;
+  const p = pos / n;
+  const rating = (p - (p - 0.5) * 2 ** -Math.log10(n + 1)) * 100;
+  const share = p * 100;
+  const label = share >= 95 && n >= 500 ? "Overwhelmingly Positive" : share >= 80 && n >= 50 ? "Very Positive" : share >= 80 ? "Positive"
+    : share >= 70 ? "Mostly Positive" : share >= 40 ? "Mixed" : share >= 20 ? "Mostly Negative"
+    : n >= 500 ? "Overwhelmingly Negative" : n >= 50 ? "Very Negative" : "Negative";
+  const tone = share >= 70 ? "good" : share >= 40 ? "mixed" : "bad";
+  return { pos, neg, total: n, share, rating, label, tone };
+}
+
+// The big numbers above an opened chart, SteamDB-style.
+function statHeader(which) {
+  const g = state.game, series = g.players || [], t = now();
+  const stat = (value, label, cls) => h(`div.sh-stat${cls ? "." + cls : ""}`, h("div.sh-value", value), h("div.sh-label", label));
+  if (which === "players") {
+    const current = series.length ? series[series.length - 1][1] : 0;
+    const day = Math.max(current, playersAt(series, t - DAY) ?? 0, ...series.filter(([ts]) => ts >= t - DAY).map(([, n]) => n));
+    const best = series.reduce((b, s) => (s[1] > b[1] ? s : b), [0, 0]);
+    return h("div.stat-header",
+      stat(current, "players right now"),
+      stat(`${day}${day && day >= best[1] ? " 🔥" : ""}`, "24-hour peak"),
+      stat(`${best[1]} 🔥`, best[0] ? `all-time peak ${ago(best[0])}` : "all-time peak"));
+  }
+  const totalsKey = Object.keys(g.reviewTotals || {}).sort().pop();
+  const score = reviewScore(totalsKey ? g.reviewTotals[totalsKey] : null);
+  if (!score) return h("div.stat-header", stat("–", "no reviews yet"));
+  return h("div.stat-header",
+    stat(score.label, "Steam's summary", `tone-${score.tone}`),
+    stat(`${score.rating.toFixed(2)}%`, "rating (SteamDB's formula)"),
+    stat(score.pos, `${score.share.toFixed(1)}% positive reviews`, "tone-good"),
+    stat(score.neg, `${(100 - score.share).toFixed(1)}% negative reviews`, "tone-bad"));
+}
+
 // The chart behind an opened stat card, with its own time range.
 function chartPanel(which) {
   const f = state.filters.stats;
-  const wrap = h("div.expand");
+  const wrap = h("div.expand.chart-card", statHeader(which));
   const body = h("div");
   const draw = () => {
     const end = now();
@@ -336,8 +370,8 @@ function chartPanel(which) {
     const releases = markers(start, end);
     body.replaceChildren(which === "players" ? playersChart(start, end, releases) : reviewsChart(start, end, releases));
   };
-  const range = chips([[7, "7D"], [30, "30D"], [90, "90D"], [365, "1Y"], [0, "All"]], f.range, (v) => { f.range = v; draw(); }, "Time range");
-  wrap.append(h("div.filters", range), body);
+  const range = chips([[2, "48h"], [7, "1w"], [30, "1m"], [90, "3m"], [180, "6m"], [365, "1y"], [0, "max"]], f.range, (v) => { f.range = v; draw(); }, "Zoom");
+  wrap.append(h("div.filters", h("span.zoom-label", "Zoom"), range), body);
   draw();
   return wrap;
 }

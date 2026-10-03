@@ -39,6 +39,7 @@ jobs:
         run: python3 feedback/run.py --gate
         env:
           FEEDBACK_FORCE: ${{ inputs.force }}
+          FEEDBACK_HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
 
       - name: Set up Python
         if: steps.gate.outputs.run == 'true'

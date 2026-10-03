@@ -453,8 +453,8 @@ def daily_report(index, states):
         new_reviews = [i for i in items if i["kind"] == "review" and i["created"] >= since]
         up = sum(1 for i in new_reviews if i["votedUp"])
         flips = sum(1 for i in items for f in i.get("flips", []) if f["at"] >= since)
-        threads = sum(1 for i in items if i["kind"] == "topic" and i["created"] >= since)
-        replies = sum(1 for i in items if i["kind"] == "reply" and i["created"] >= since)
+        threads = sum(1 for i in items if i["kind"] == "topic" and i["created"] >= since and not i.get("dev"))
+        replies = sum(1 for i in items if i["kind"] == "reply" and i["created"] >= since and not i.get("dev"))
         new_issues = [i for i in state["issues"].values() if i["created"] >= since]
         open_bugs = [i for i in state["issues"].values() if i["kind"] == "bug" and i["status"] != "likely_fixed"]
         still = [i for i in state["issues"].values() if i["status"] == "still_happening"]
@@ -515,6 +515,9 @@ def full_run():
             except steam.HttpError as error:
                 print(f"[steam] {game['name']} reviews: {error}")
             record_players(state, game)
+        import discussions
+
+        discussions.ingest(state, game, run)
         triage_pending(state, game, run, budget)
         refresh_issues(state, game)
         check_releases(state, game, events)
@@ -550,6 +553,10 @@ def main():
     args = parser.parse_args()
     force = args.force or os.environ.get("FEEDBACK_FORCE") == "true"
     if args.gate:
+        if os.environ.get("FEEDBACK_HAS_KEY") == "false":
+            print("::warning::Player feedback is paused: add the ANTHROPIC_API_KEY secret (see feedback/README.md)")
+            output("run", "false")
+            return
         due, reason = (True, "forced") if force else gate()
         print(f"[gate] {reason}")
         output("run", "true" if due else "false")

@@ -168,7 +168,10 @@ def upsert_review(state, game, r, run):
             "updated": updated,
             "text": text,
             "votedUp": voted_up,
-            "playtime": round(minutes / 60, 1),
+            "playtime": round(minutes / 60, 1),  # at the time of the review
+            "playtimeForever": round((author.get("playtime_forever") or 0) / 60, 1),
+            "steamPurchase": bool(r.get("steam_purchase")),
+            "receivedForFree": bool(r.get("received_for_free")),
             "earlyAccess": bool(r.get("written_during_early_access")),
             "votesUp": r.get("votes_up", 0),
             "devResponse": r.get("developer_response") or None,
@@ -179,6 +182,9 @@ def upsert_review(state, game, r, run):
         run["new"].append(rid)
         return
     item["votesUp"] = r.get("votes_up", 0)
+    item["playtimeForever"] = round((author.get("playtime_forever") or 0) / 60, 1)
+    item["steamPurchase"] = bool(r.get("steam_purchase"))
+    item["receivedForFree"] = bool(r.get("received_for_free"))
     item["devResponse"] = r.get("developer_response") or None
     if text == item["text"] and voted_up == item["votedUp"]:
         item["updated"] = max(item["updated"], updated)

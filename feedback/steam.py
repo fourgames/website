@@ -205,6 +205,34 @@ def parse_release_date(text):
     return None
 
 
+STEAM64_BASE = 76561197960265728
+_profiles = {}
+
+
+def profile(author_id):
+    """{name, avatar, url} from a player's public Steam profile (no key needed), or None. Reviews
+    carry a 64-bit Steam ID, forum posts an account ID or a profile URL."""
+    if not author_id:
+        return None
+    author_id = str(author_id)
+    if author_id.startswith("http"):
+        url = author_id.rstrip("/")
+    elif author_id.isdigit():
+        n = int(author_id)
+        url = f"https://steamcommunity.com/profiles/{n if n >= STEAM64_BASE else n + STEAM64_BASE}"
+    else:
+        return None
+    if url not in _profiles:
+        try:
+            xml = request(f"{url}/", params={"xml": 1}, as_json=False, retries=2)
+            name = re.search(r"<steamID><!\[CDATA\[(.*?)\]\]></steamID>", xml, re.S)
+            avatar = re.search(r"<avatarMedium><!\[CDATA\[(.*?)\]\]></avatarMedium>", xml)
+            _profiles[url] = {"name": name.group(1), "avatar": avatar.group(1) if avatar else None, "url": url} if name else None
+        except HttpError:
+            _profiles[url] = None
+    return _profiles[url]
+
+
 def bbcode_to_text(text):
     text = re.sub(r"\[\*\]", "\n- ", text)
     text = re.sub(r"\[/?(?:p|h\d|list|olist|br)\]", "\n", text)

@@ -10,6 +10,7 @@ import urllib.error
 import urllib.request
 
 import status
+import steam
 
 WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
 # A Discord user or role to ping: "<@123>", "<@&456>", or a bare user ID.
@@ -98,13 +99,35 @@ def _quote(item):
 
 
 def _post_fields(item):
+    """Language, purchase and hours (as on the review itself), then the game area from triage."""
     t = item.get("triage") or {}
-    fields = [{"name": "Area", "value": _clip(t.get("area") or "-", 100), "inline": True}]
-    if t.get("language") and t["language"] != "English":
+    fields = []
+    if t.get("language"):
         fields.append({"name": "Language", "value": _flag(t["language"]), "inline": True})
     if item["kind"] == "review":
-        fields.append({"name": "Played", "value": f"{item.get('playtime', 0)} h", "inline": True})
+        if "steamPurchase" in item:
+            bought = "Free key" if item.get("receivedForFree") else "Yes" if item["steamPurchase"] else "No"
+            fields.append({"name": "Steam purchase", "value": bought, "inline": True})
+        hours = item.get("playtimeForever") or item.get("playtime") or 0
+        at_review = item.get("playtime")
+        value = f"{hours} h" + (f" ({at_review} h at review)" if at_review and at_review != hours else "")
+        fields.append({"name": "Hours on record", "value": value, "inline": True})
+    fields.append({"name": "Area", "value": _clip(t.get("area") or "-", 100), "inline": True})
     return fields
+
+
+def _author(item):
+    """The player's Steam name and picture, linked to their profile, like on Steam itself."""
+    p = steam.profile((item.get("author") or {}).get("id"))
+    if not p:
+        name = (item.get("author") or {}).get("name")
+        return {"name": name} if name else None
+    return {"name": p["name"], "url": p["url"], "icon_url": p["avatar"]}
+
+
+def _footer(game, item):
+    kind = {"review": "Review", "topic": "Discussion thread", "reply": "Discussion reply"}[item["kind"]]
+    return {"text": f"{kind} · {game['name']}"}
 
 
 def urgent(game, item, issue):
@@ -114,8 +137,10 @@ def urgent(game, item, issue):
         "url": item["url"],
         "description": _clip(f"> {_quote(item)}\n\n[Open the post]({item['url']}) · [Dashboard]({DASHBOARD_URL})", 4000),
         "color": COLORS["urgent"],
+        "author": _author(item),
         "fields": _post_fields(item),
-        "timestamp": _iso(item.get("updated") or item.get("created")),
+        "footer": _footer(game, item),
+        "timestamp": _iso(item.get("created")),
     }
 
 
@@ -125,8 +150,10 @@ def flip(game, item):
         "url": item["url"],
         "description": _clip(f"> {_quote(item)}\n\n[Open the review]({item['url']}) · [Dashboard]({DASHBOARD_URL})", 4000),
         "color": COLORS["flip"],
+        "author": _author(item),
         "fields": _post_fields(item),
-        "timestamp": _iso(item.get("updated")),
+        "footer": {"text": f"Flipped · {game['name']}"},
+        "timestamp": _iso(((item.get("flips") or [{}])[-1]).get("at") or item.get("updated")),
     }
 
 
@@ -147,6 +174,8 @@ def cluster(game, issue, items):
             {"name": "Area", "value": _clip(issue.get("area") or "-", 100), "inline": True},
             {"name": "Languages", "value": _clip(langs or "-", 1000), "inline": True},
         ],
+        "footer": {"text": f"Latest report · {game['name']}"},
+        "timestamp": _iso(items[0]["created"]) if items else None,
     }
 
 
@@ -156,6 +185,7 @@ def daily(lines):
         "url": DASHBOARD_URL,
         "description": _clip("\n".join(lines), 4000),
         "color": COLORS["daily"],
+        "timestamp": _iso(time.time()),
     }
 
 

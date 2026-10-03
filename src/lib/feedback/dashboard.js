@@ -397,6 +397,7 @@ function chartPanel(which) {
 // ---------------------------------------------------------------------------
 
 function render() {
+  state.drawn = DATA; // what's on screen, so a refresh only redraws for new data
   renderGames();
   renderHeader();
   renderStats();
@@ -1207,9 +1208,9 @@ async function refresh() {
   if (!document.getElementById("fb-view")) return clearInterval(refreshTimer); // left the page
   if (!state.game) return;
   if (Date.now() - loadedAt > FULL_RELOAD_MS && !window.getSelection().toString()) return location.reload();
-  const before = DATA;
+  const loaded = DATA;
   await dataBase();
-  if (DATA !== before) {
+  if (DATA !== loaded) {
     try {
       const index = await getJson("index.json");
       const appId = state.game.appId;
@@ -1218,12 +1219,18 @@ async function refresh() {
       state.games = { [appId]: game }; // other games reload when picked
       state.game = { ...game, meta: index.games.find((g) => g.appId === appId) };
     } catch {
+      DATA = loaded;
       return; // try again next time
     }
   }
-  // Not while typing in a search box: a redraw would wipe it. Next round.
-  if (document.activeElement?.matches?.(".fb input")) return;
-  // Redraw either way, so "x min ago" stays true; keep the reader's place.
+  // Nothing new since the last redraw: only the header's times and check status change, so open
+  // posts stay open. Not while typing in a search box either (a redraw would wipe it); next round.
+  if (DATA === state.drawn || document.activeElement?.matches?.(".fb input")) {
+    renderStatus();
+    renderHeader();
+    return;
+  }
+  // New data: redraw, keeping the reader's place.
   const y = window.scrollY;
   renderStatus();
   render();

@@ -576,6 +576,16 @@ function postParts(item) {
   };
 }
 
+// The game version live when something was posted: the newest numbered update released before it
+// (or the launch build, before the first one). An estimate from the update dates, since Steam
+// doesn't record the version a player was on.
+function versionAt(time) {
+  const before = (state.game.releases || []).filter((r) => r.time <= time).sort((a, b) => a.time - b.time);
+  const numbered = before.filter((r) => r.version).at(-1);
+  if (numbered) return `v${numbered.version}`;
+  return before.length || (state.game.meta?.released && state.game.meta.released <= time) ? "launch build" : null;
+}
+
 // Priority as signal bars, one to four.
 const PRIORITY_BARS = { low: 1, medium: 2, high: 3, urgent: 4 };
 // Steam's own review thumbs, and line icons for the types (Steam has none of its own for those).
@@ -623,7 +633,8 @@ function postView(item) {
         h("div.pc-aside-row",
           p.verdict ? h(`span.${p.verdict[0]}`, h("img.thumb", { src: up ? STEAM_THUMB.up : STEAM_THUMB.down, alt: "" }), p.verdict[2]) : item.kind !== "review" ? h("span", KIND[item.kind]) : null,
           p.hours ? h("span", `${p.hours} on record`, p.atReview ? ` (${p.atReview})` : "") : null,
-          h("span", p.when)))),
+          h("span", p.when),
+          versionAt(item.created) ? h("span.pc-version", { title: "The version that was live when this was posted (from the update dates)" }, `on ${versionAt(item.created)}`) : null))),
     ...p.body,
     h("div.meta", ...p.flags, item.forum && item.kind !== "review" ? h("span", item.forum) : null, p.link));
 }

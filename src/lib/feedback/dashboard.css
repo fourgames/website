@@ -1250,3 +1250,10 @@
 .fb .selectable {
 	cursor: text;
 }
+.fb .pc-version {
+	font-weight: 700;
+	color: var(--fb-ink-2);
+	background: var(--fb-card-2);
+	border-radius: 99px;
+	padding: 0 7px;
+}

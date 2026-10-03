@@ -98,6 +98,10 @@ function onLogoClick() {
 							{{ t(link.label) }}
 						</NavLink>
 					</li>
+					<!-- Private and English-only, so not translated. -->
+					<li v-if="showFeedback">
+						<a href="/fb-dash" class="nav-link" @click="open = false">Feedback</a>
+					</li>
 				</ul>
 				<ul>
 					<li v-for="link in NAV_RIGHT" :key="link.label">
@@ -121,10 +125,6 @@ function onLogoClick() {
 							{{ t(link.label) }}
 							<span class="sr-only">{{ t("a11y.newTab") }}</span>
 						</a>
-					</li>
-					<!-- Private and English-only, so not translated. -->
-					<li v-if="showFeedback">
-						<a href="/fb-dash" class="nav-link" @click="open = false">Feedback</a>
 					</li>
 					<LanguageMenu />
 					<li class="fund hidden nav:block">

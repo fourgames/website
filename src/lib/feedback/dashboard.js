@@ -510,7 +510,8 @@ function statusBadge(issue) {
 
 // A post as its own card: click to open the whole post (selecting it for the Speak Selection key),
 // click again to fold it; not when using a link, button or toggle inside, or after a drag.
-function postCard(item, { clamp = true } = {}) {
+// With `focus` (an issue ID), only the points about that issue are listed.
+function postCard(item, { clamp = true, focus = null } = {}) {
   return h(`div.card.post-card${clamp ? ".clamp" : ""}`, { onmousedown: (e) => { e.currentTarget.dataset.down = `${e.clientX},${e.clientY}`; }, onclick: (e) => {
     const [dx, dy] = (e.currentTarget.dataset.down || "0,0").split(",").map(Number);
     if (e.target.closest("a, button, summary") || Math.abs(e.clientX - dx) + Math.abs(e.clientY - dy) > 4) return;
@@ -521,7 +522,7 @@ function postCard(item, { clamp = true } = {}) {
     card.querySelectorAll("details.full").forEach((d) => { d.open = open; });
     if (open) selectText(card.querySelector("details.full .text") || card.querySelector(".post .text"));
     else window.getSelection().removeAllRanges();
-  } }, postView(item));
+  } }, postView(item, focus));
 }
 
 function thumbImg(up) {
@@ -535,7 +536,7 @@ function issueCard(issue) {
   let filled = false;
   const toggle = h("button.btn", { onclick: () => {
     if (!filled) {
-      postList.append(...posts.map((p) => postCard(p, { clamp: false })));
+      postList.append(...posts.map((p) => postCard(p, { clamp: false, focus: issue.id })));
       filled = true;
     }
     postList.hidden = !postList.hidden;
@@ -633,8 +634,10 @@ const POINT_ORDER = ["bug", "complaint", "suggestion", "question", "praise"];
 const POINT_LABEL = { bug: "Bug", complaint: "Complaint", suggestion: "Suggestion", question: "Question", praise: "Praise" };
 
 // The parts of a post the card shows.
-function postParts(item) {
+function postParts(item, focus = null) {
   const t = item.triage || {};
+  const points = (t.points || []).filter((pt) => !focus || pt.issue === focus);
+  const others = (t.points || []).length - points.length;
   const translated = t.english && t.english.trim() !== (item.text || "").trim();
   const flipped = (item.flips || []).at(-1);
   const parent = item.topic ? state.game.items[item.topic] : null;
@@ -665,8 +668,8 @@ function postParts(item) {
         parent.forum === "Events & Announcements" ? "” announcement" : "”") : null,
       item.title ? h("div", h("b", item.title)) : null,
       // Every post leads with its points (what kind of thing it says), most actionable first.
-      ...(t.points?.length ? [
-        h("ul.pc-points", ...[...t.points].sort((a, b) => POINT_ORDER.indexOf(a.kind) - POINT_ORDER.indexOf(b.kind))
+      ...(points.length ? [
+        h("ul.pc-points", ...[...points].sort((a, b) => POINT_ORDER.indexOf(a.kind) - POINT_ORDER.indexOf(b.kind))
           .map((pt) => {
             // Clicking the label selects the sentence, ready for the Speak Selection key.
             const sentence = h("span", pt.text);
@@ -680,6 +683,7 @@ function postParts(item) {
             });
             return h("li", label, sentence);
           })),
+        others ? h("div.meta", `+ ${plural(others, "other point")} about other things, in the full post`) : null,
         // Long posts fold away under their points; short ones stay readable as they are.
         english(item).length > 280 ? fullPost(textRow(english(item))) : textRow(english(item)),
       ] : [textRow(english(item))]),
@@ -725,8 +729,8 @@ function typeIcon(cat) {
 // priority (signal bars), with the player's language at the far right; the second line has
 // Steam's verdict, hours and date. The card's left edge is blue for a recommending review, red
 // for a negative one and grey for everything else.
-function postView(item) {
-  const p = postParts(item);
+function postView(item, focus = null) {
+  const p = postParts(item, focus);
   const cat = p.t.category;
   const kind = (CATEGORY[cat] || [])[1];
   const u = p.t.urgency;
@@ -855,12 +859,16 @@ function overviewView() {
   const go = (tab, label) => h("button.btn", { onclick: () => { state.tab = tab; render(); window.scrollTo({ top: 0 }); } }, label, " →");
   const section = (title, count, ...body) => h("section.ov-section", h("h3", title, count != null ? h("span.ov-count", count) : null), ...body);
   const urgent = attention();
+  const costly = Object.values(state.game.issues || {}).filter((i) => i.kind !== "praise" && isActive(i) && i.negativeReviews)
+    .sort((a, b) => b.negativeReviews - a.negativeReviews || b.mentions - a.mentions).slice(0, 3);
   const replies = toReply();
   const latest = items().filter((i) => !i.dev).sort((a, b) => b.created - a.created).slice(0, 5);
   return h("div",
     urgent.length
       ? section("Needs attention", urgent.length, ...urgent.slice(0, 5).map((i) => issueCard(i)), urgent.length > 5 || issues("bug").filter(isActive).length > urgent.length ? go("issues", "All bugs") : null)
-      : section("Needs attention", null, h("p.ov-calm", "Nothing urgent: no high-priority bugs, and nothing came back after a fix.")),
+      : costly.length
+        ? section("Costing you reviews", costly.length, h("p.ov-calm", "Nothing urgent. These open complaints come up most in negative reviews."), ...costly.map((i) => issueCard(i)), go("suggestions", "All ideas"))
+        : section("Needs attention", null, h("p.ov-calm", "Nothing urgent: no high-priority bugs, and nothing came back after a fix.")),
     replies.length
       ? section("Worth a reply", replies.length, h("p.ov-calm", `${plural(replies.length, "post")} about something an update has since fixed. `, go("replies", "Replies")))
       : null,

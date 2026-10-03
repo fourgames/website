@@ -92,7 +92,9 @@ bugs and popular requests; "low" for everything else.
 - Issues: the user message lists the game's open issues (bugs and ideas). Every bug, complaint and suggestion \
 point belongs to one: if it is the same underlying problem or request as a listed issue, in any language, set its \
 existing_issue to that ID; otherwise give new_issue_title, a short, general title that other players' posts about \
-the same thing would also fit (e.g. "Chainsaw upgrades feel meaningless", not a quote). Points in one post that are \
+the same thing would also fit (e.g. "Chainsaw upgrades feel meaningless", not a quote). A point about a different \
+item, tool or feature never joins an issue just because the complaint sounds alike (a chainsaw upgrade complaint \
+doesn't join a dynamite one): start a new issue instead. Points in one post that are \
 about the same thing share one title. A reply such as "same here" in a thread whose opening post belongs to issues \
 repeats them. Praise points likewise join a "what players love" item (listed with kind "praise"), e.g. "Satisfying \
 chainsaw digging"; questions join nothing. Each point also gets its own urgency, on the scale above.

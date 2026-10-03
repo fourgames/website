@@ -457,6 +457,14 @@ function withSpeak(text) {
   return [el, " ", speakButton(el)];
 }
 
+// Steam's "0.4 hrs on record (0.2 hrs at review time)": total hours now, and the hours when the
+// review was written if they've played more since.
+function playtime(item) {
+  if (item.kind !== "review" || item.playtime == null) return null;
+  const now = Math.max(item.playtimeForever || 0, item.playtime);
+  return { total: `${now} h`, atReview: now > item.playtime ? `${item.playtime} h at review` : null };
+}
+
 function postViewCurrent(item) {
   const t = item.triage || {};
   const parent = item.topic ? state.game.items[item.topic] : null;
@@ -466,7 +474,7 @@ function postViewCurrent(item) {
     h("div.meta",
       h("b", KIND[item.kind]),
       item.kind === "review" ? h(item.votedUp ? "span.vote-up" : "span.vote-down", item.votedUp ? "👍 Recommended" : "👎 Not recommended") : null,
-      item.kind === "review" && item.playtime != null ? h("span", `${item.playtime} h played`) : null,
+      playtime(item) ? h("span", `${playtime(item).total} on record`, playtime(item).atReview ? ` (${playtime(item).atReview})` : "") : null,
       item.author?.name ? h("span", item.author.name) : null,
       t.language ? h("span", withFlag(t.language, item.lang)) : null,
       h("span", fmtDate(item.created)),
@@ -507,7 +515,8 @@ function postParts(item) {
     t, review,
     flag: t.language ? langFlag(t.language, item.lang) || "🌐" : item.dev ? "🛠️" : "🌐",
     language: t.language || (item.dev ? "Your post" : "Not triaged yet"),
-    hours: review && item.playtime != null ? `${item.playtime} h` : null,
+    hours: playtime(item)?.total || null,
+    atReview: playtime(item)?.atReview || null,
     verdict: review ? (item.votedUp ? ["vote-up", "👍", "Recommended"] : ["vote-down", "👎", "Not recommended"]) : null,
     who: item.author?.name || null,
     when: fmtDate(item.created),
@@ -541,7 +550,7 @@ function postView(item) {
   if (d === 1) return h("div.post.pv1",
     h("div.pv1-chips",
       h("span.pv1-chip", h("span.pv1-big", p.flag), p.language),
-      p.hours ? h("span.pv1-chip", "⏱ ", h("b", p.hours), " played") : p.who ? h("span.pv1-chip", "👤 ", p.who) : null,
+      p.hours ? h("span.pv1-chip", "⏱ ", h("b", p.hours), " on record", p.atReview ? h("span.pv-note", ` (${p.atReview})`) : null) : p.who ? h("span.pv1-chip", "👤 ", p.who) : null,
       p.verdict ? h(`span.pv1-chip.${p.verdict[0]}`, p.verdict[1], " ", p.verdict[2]) : h("span.pv1-chip", p.kind)),
     ...p.body,
     h("div.meta", ...p.flags, ...p.tags, h("span", p.when), p.review ? h("span", p.kind) : null, p.link));
@@ -550,7 +559,7 @@ function postView(item) {
     h("div.pv2-side",
       h("div.pv2-flag", p.flag),
       h("div.pv2-lang", p.language),
-      p.hours ? h("div.pv2-hours", h("b", p.hours), h("span", "played")) : null,
+      p.hours ? h("div.pv2-hours", h("b", p.hours), h("span", "on record"), p.atReview ? h("span", `(${p.atReview})`) : null) : null,
       p.verdict ? h(`div.pv2-verdict.${p.verdict[0]}`, p.verdict[1]) : null),
     h("div.pv2-main",
       h("div.meta", h("b", p.kind), p.who ? h("span", p.who) : null, h("span", p.when), ...p.flags, ...p.tags, p.link),
@@ -561,7 +570,7 @@ function postView(item) {
       h("div.pv3-icon", p.verdict ? p.verdict[1] : "💬"),
       h("div.pv3-title",
         h("b", p.verdict ? p.verdict[2] : p.kind),
-        h("span", p.hours ? `${p.hours} on record` : p.who || "")),
+        h("span", p.hours ? `${p.hours} on record${p.atReview ? ` (${p.atReview})` : ""}` : p.who || "")),
       h("div.pv3-lang", h("span.pv3-flag", p.flag), p.language)),
     ...p.body,
     h("div.meta", h("span", `Posted ${p.when}`), ...p.flags, ...p.tags, p.link));
@@ -571,7 +580,7 @@ function postView(item) {
     return h("div.post.pv4",
       h("div.pv4-facts",
         fact("Language", `${p.flag} ${p.language}`),
-        p.hours ? fact("Played", p.hours) : p.who ? fact("Player", p.who) : null,
+        p.hours ? fact("Played", p.atReview ? `${p.hours} (${p.atReview})` : p.hours) : p.who ? fact("Player", p.who) : null,
         p.verdict ? fact("Verdict", `${p.verdict[1]} ${p.verdict[2]}`, p.verdict[0]) : fact("Post", p.kind),
         fact("Posted", p.when),
         p.t.category ? fact("Type", p.t.category) : null,
@@ -583,7 +592,7 @@ function postView(item) {
   return h(`div.post.pv5.${p.verdict ? p.verdict[0].replace("vote-", "is-") : "neutral"}`,
     h("div.pv5-line",
       h("span.pv5-flag", p.flag), h("b", p.language),
-      p.hours ? h("span.pv5-hours", "· ", h("b", p.hours), " played") : p.who ? h("span.pv5-hours", "· ", p.who) : null),
+      p.hours ? h("span.pv5-hours", "· ", h("b", p.hours), " on record", p.atReview ? ` (${p.atReview})` : "") : p.who ? h("span.pv5-hours", "· ", p.who) : null),
     h("div.meta", h("span", p.verdict ? `${p.verdict[1]} ${p.verdict[2]}` : p.kind), h("span", p.when), ...p.flags, ...p.tags, p.link),
     ...p.body);
 }

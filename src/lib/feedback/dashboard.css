@@ -1134,3 +1134,7 @@
 .fb .pv5-hours {
 	color: var(--fb-ink-2);
 }
+.fb .pv-note {
+	font-weight: 400;
+	color: var(--fb-muted);
+}

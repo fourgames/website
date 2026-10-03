@@ -1417,3 +1417,17 @@
 	color: var(--fb-good-text);
 	text-decoration: none;
 }
+
+/* "New" for the last 48 hours, in the site's new colour and outlined like its .is-new tag */
+.fb .pc-new {
+	display: inline-flex;
+	align-items: center;
+	padding: 1px 5px;
+	border: 1px solid;
+	border-radius: 3px;
+	font-size: 0.6875rem;
+	font-weight: 600;
+	line-height: 1.4;
+	color: #fb923c;
+	white-space: nowrap;
+}

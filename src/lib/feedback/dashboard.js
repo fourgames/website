@@ -46,6 +46,8 @@ function ago(t) {
   if (s < 30 * DAY) return Math.round(s / DAY) + " d ago";
   return fmtDate(t);
 }
+// Posted or reported in the last 48 hours: tagged "New", like recent posts on the rest of the site.
+const isRecent = (t) => t && now() - t < 2 * DAY;
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
 
 function toast(msg) {
@@ -592,7 +594,9 @@ function issueCard(issue) {
         h("div.pc-main",
           h(`span.pc-type.tt-text-${issue.kind}`, typeIcon(issue.kind), kind),
           u ? h("span.pc-prio", bars, `${URGENCY[u]} priority`) : null,
-          statusBadge(issue)),
+          statusBadge(issue),
+          isRecent(issue.firstSeen) ? h("span.pc-new", { title: `First reported ${ago(issue.firstSeen)}` }, "New")
+            : isRecent(issue.lastSeen) ? h("span.pc-new", { title: `Last reported ${ago(issue.lastSeen)}` }, "New report") : null),
         // The impact, big: how many players reported it and how many negative reviews it's in.
         h("div.pc-aside.impact",
           h("div.impact-stat", h("b", issue.mentions), h("span", issue.kind === "praise" ? (issue.mentions === 1 ? "player loves it" : "players love it")
@@ -782,7 +786,8 @@ function postView(item, focus = null) {
       h("div.pc-main",
         kind ? h(`span.pc-type.tt-text-${cat}`, typeIcon(cat), kind) : h("span.pc-type.pc-kind", p.kind),
         u ? h("span.pc-prio", bars, `${URGENCY[u]} priority`) : null,
-        p.t.tone && p.t.tone !== "sincere" ? h("span.pc-tone", { title: "How the post is meant" }, { joke: "Joke", sarcastic: "Sarcastic", mixed: "Partly joking" }[p.t.tone]) : null),
+        p.t.tone && p.t.tone !== "sincere" ? h("span.pc-tone", { title: "How the post is meant" }, { joke: "Joke", sarcastic: "Sarcastic", mixed: "Partly joking" }[p.t.tone]) : null,
+        isRecent(item.created) ? h("span.pc-new", { title: `Posted ${ago(item.created)}` }, "New") : null),
       // Two tidy blocks: who wrote it (name; language, library, reviews) and what it is (verdict or
       // kind; hours, date, version).
       h("div.pc-aside",

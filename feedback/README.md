@@ -30,12 +30,12 @@ Every post's text is stored, so a post deleted on Steam isn't lost here. A file 
 
 ## Schedule
 
-The workflow fires every 20 minutes. `run.py --gate` is stdlib-only and finishes in seconds. It starts a full run when one of these is true:
+Each workflow run checks every 20 minutes for about 4 hours (`loop.sh`), then starts the next run; the schedule starts one if none is going. Each check runs `run.py --gate`, which is stdlib-only and finishes in seconds. It starts a full run when one of these is true:
 
 - 4 hours have passed since the last full run;
-- a game published an update less than 48 hours ago, so every tick is a full run;
+- a game published an update less than 48 hours ago, so every check is a full run;
 - a game has an update the data doesn't know yet;
-- someone started the workflow by hand (*Run workflow*).
+- someone started the workflow by hand (*Run workflow*); that run replaces the current one.
 
 The time of the last full run lives in the Actions cache (`feedback/.cache/`), not in git.
 

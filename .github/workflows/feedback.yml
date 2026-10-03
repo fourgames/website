@@ -1,11 +1,11 @@
 name: Player feedback
 
-# Every 20 minutes a cheap gate decides whether a full run is due: every 4 hours normally, every tick
-# for 48 hours after a game publishes an update or patch notes (which /ship does). See feedback/README.md.
+# Each run checks every 20 minutes for about 4 hours, then starts the next run. A cheap gate decides
+# whether a check is a full run (every 4 hours normally, every check for 48 hours after a game
+# publishes an update). The schedule starts a run if none is going. See feedback/README.md.
 on:
   schedule:
-    # Off the busy :00/:20/:40 marks, where GitHub delays or drops scheduled runs.
-    - cron: "7,27,47 * * * *"
+    - cron: "7 */2 * * *"
   workflow_dispatch:
     inputs:
       force:
@@ -19,15 +19,17 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
+# One run at a time: a scheduled run waits for the current one, a forced run replaces it.
 concurrency:
   group: feedback
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' && inputs.force && !inputs.test_discord }}
 
 jobs:
   feedback:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 280
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -46,16 +48,8 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_MENTION: ${{ secrets.DISCORD_MENTION }}
 
-      - name: Is a full run due?
-        id: gate
-        if: ${{ !inputs.test_discord }}
-        run: python3 feedback/run.py --gate
-        env:
-          FEEDBACK_FORCE: ${{ inputs.force }}
-          FEEDBACK_HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
-
       - name: Set up Python
-        if: steps.gate.outputs.run == 'true'
+        if: ${{ !inputs.test_discord }}
         uses: actions/setup-python@v6
         with:
           python-version: "3.13"
@@ -63,40 +57,34 @@ jobs:
           cache-dependency-path: feedback/requirements.txt
 
       - name: Install dependencies
-        if: steps.gate.outputs.run == 'true'
+        if: ${{ !inputs.test_discord }}
         run: pip install -r feedback/requirements.txt
 
-      - name: Collect and triage feedback
-        if: steps.gate.outputs.run == 'true'
-        run: python feedback/run.py
+      # Commits made with the workflow token don't trigger other workflows, so this never redeploys the
+      # site; the dashboard reads feedback/data straight from the repo.
+      - name: Check every 20 minutes for 4 hours
+        if: ${{ !inputs.test_discord }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          feedback/loop.sh
         env:
+          FEEDBACK_FORCE: ${{ inputs.force }}
+          FEEDBACK_HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
           STEAM_PUBLISHER_KEY: ${{ secrets.STEAM_PUBLISHER_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_MENTION: ${{ secrets.DISCORD_MENTION }}
 
       - name: Save run state
-        if: steps.gate.outputs.run == 'true'
+        if: ${{ !inputs.test_discord && !cancelled() }}
         uses: actions/cache/save@v6
         with:
           path: feedback/.cache
           key: feedback-run-${{ github.run_id }}
 
-      # Commits made with the workflow token don't trigger other workflows, so this never redeploys the
-      # site; the dashboard reads feedback/data straight from the repo.
-      - name: Commit changes
-        if: steps.gate.outputs.run == 'true'
-        run: |
-          git add feedback/data
-          if git diff --cached --quiet; then
-            echo "Nothing changed."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -q -m "Update player feedback"
-          for attempt in 1 2 3; do
-            git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0
-            sleep 5
-          done
-          exit 1
+      - name: Start the next run
+        if: ${{ !inputs.test_discord && !cancelled() }}
+        run: gh workflow run feedback.yml --ref main -f force=false
+        env:
+          GH_TOKEN: ${{ github.token }}

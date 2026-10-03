@@ -20,9 +20,10 @@ permissions:
   contents: write
   actions: write
 
-# One run at a time: a scheduled run waits for the current one, a forced run replaces it.
+# One collecting run at a time: a scheduled run waits for the current one, a forced run replaces
+# it. A Discord test runs on its own.
 concurrency:
-  group: feedback
+  group: ${{ inputs.test_discord && 'feedback-discord-test' || 'feedback' }}
   cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' && inputs.force && !inputs.test_discord }}
 
 jobs:

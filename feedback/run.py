@@ -797,6 +797,10 @@ def full_run():
     elif not last:
         index["dailyReportAt"] = now()  # first ever run: start counting from here
     index["status"] = status.merge(index.get("status"))
+    # When anything last changed, for the dashboard's "last change" (it needs no GitHub API call).
+    without_time = lambda i: {k: v for k, v in i.items() if k != "changedAt"}
+    if changed or without_time(index) != without_time(load(DATA / "index.json", {})):
+        index["changedAt"] = now()
     save(DATA / "index.json", index)
     print(f"[run] changed: {', '.join(changed) or 'nothing'}")
 

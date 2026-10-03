@@ -199,7 +199,8 @@ function renderStatus() {
   const checks = state.checks;
   const run = [
     checks ? (checks.running ? "Collecting every 10 min" : checks.ok ? `Last collected ${ago(checks.at)}` : "Collecting stopped") : null,
-    state.dataChanged ? `last change ${ago(state.dataChanged)}` : null,
+    // From the data itself, or the newest data commit when the data is older than that field.
+    (state.index.changedAt || state.dataChanged) ? `last change ${ago(Math.max(state.index.changedAt || 0, state.dataChanged || 0))}` : null,
   ].filter(Boolean);
   const card = ([key, [name, what, href, action]]) => {
     const s = status[key];

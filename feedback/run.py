@@ -13,7 +13,6 @@ None of them is ever written to feedback/data/. FEEDBACK_DRY_RUN=1 skips Claude 
 """
 
 import argparse
-import hashlib
 import json
 import math
 import os
@@ -176,7 +175,6 @@ def upsert_review(state, game, r, run):
             "earlyAccess": bool(r.get("written_during_early_access")),
             "votesUp": r.get("votes_up", 0),
             "devResponse": r.get("developer_response") or None,
-            "devResponseAt": r.get("timestamp_dev_responded") or None,
             "versions": [],
             "flips": [],
             "pending": True,
@@ -189,7 +187,6 @@ def upsert_review(state, game, r, run):
     item["steamPurchase"] = bool(r.get("steam_purchase"))
     item["receivedForFree"] = bool(r.get("received_for_free"))
     item["devResponse"] = r.get("developer_response") or None
-    item["devResponseAt"] = r.get("timestamp_dev_responded") or None
     if text == item["text"] and voted_up == item["votedUp"]:
         item["updated"] = max(item["updated"], updated)
         return
@@ -544,63 +541,6 @@ def match_release(state, game, release):
     return True
 
 
-def hash_text(text):
-    return hashlib.sha1(text.encode()).hexdigest()[:12]
-
-
-def dev_replies(state):
-    """Your replies on Steam, each with the posts it answers: a review's developer response, or a
-    reply of yours in a thread (answering the players' posts before it there)."""
-    items = state["items"]
-    for item in items.values():
-        if item["kind"] == "review" and item.get("devResponse") and not item.get("dev"):
-            yield item, item["devResponse"], item.get("devResponseAt") or item["updated"], [item]
-        elif item.get("dev") and item["kind"] == "reply" and item.get("topic"):
-            thread = item["topic"]
-            answered = [i for i in items.values() if not i.get("dev") and (i["id"] == thread or i.get("topic") == thread)
-                        and i["created"] < item["created"]]
-            yield item, item.get("text") or "", item["created"], answered
-
-
-def check_dev_replies(state, game):
-    """When you tell players on Steam that something is fixed or changed, that counts like a patch
-    note: patch notes often leave small fixes out. Credited to the update live when you replied.
-    Each reply is checked once (again if you edit it)."""
-    import triage
-
-    for holder, reply, at, posts in dev_replies(state):
-        key = f"{hash_text(reply)}:{len(posts)}"
-        if not reply.strip() or holder.get("devChecked") == key or any(p.get("pending") for p in posts):
-            continue
-        ids = list(dict.fromkeys(pt["issue"] for p in posts for pt in ((p.get("triage") or {}).get("points") or []) if pt.get("issue")))
-        issues = [state["issues"][i] for i in ids if i in state["issues"] and state["issues"][i]["kind"] != "praise"]
-        if issues:
-            said = "\n\n".join(f"{p.get('title') or ''}\n{(p.get('triage') or {}).get('english') or p.get('text') or ''}"[:3000] for p in posts[-5:])
-            try:
-                matches = triage.match_dev_reply(game["name"], said, reply, issue_digest(issues, state))
-            except Exception as error:  # noqa: BLE001 - try again next run
-                print(f"[dev reply] {holder['id']}: {type(error).__name__}: {error}")
-                status.fail("claude", f"{triage.describe_error(error)[0]} Your replies wait to be checked for fixes.")
-                return
-            # A reply on an update's day (just before or after it) is usually about that update.
-            near = [r for r in state["releases"] if abs(r["time"] - at) <= 2 * 86400]
-            live = [r for r in state["releases"] if r["time"] <= at]
-            release = (min(near, key=lambda r: abs(r["time"] - at)) if near
-                       else max(live, key=lambda r: r["time"]) if live else None)
-            label = (f"v{release['version']}" if release["version"] else release["name"]) if release else "your reply"
-            for m in matches:
-                issue = state["issues"][m["issue"]]
-                reason = f"Your reply: {m['reason']}"
-                if m.get("fit", "direct") == "direct":
-                    if issue["status"] != "likely_fixed" or (issue.get("fixedAt") or 0) < (release["time"] if release else at):
-                        issue.update(status="likely_fixed", fixedIn=label, fixedAt=release["time"] if release else at,
-                                     fixedUrl=holder["url"], fixReason=reason)
-                elif not any(p.get("in") == label for p in issue.get("partly", [])):
-                    issue.setdefault("partly", []).append({"in": label, "url": holder["url"], "reason": reason})
-            print(f"[dev reply] {game['name']} {holder['id']}: {len(matches)} issue(s) addressed")
-        holder["devChecked"] = key
-
-
 def draft_all_fix_replies(state, game):
     for issue in state["issues"].values():
         if issue["status"] == "likely_fixed":
@@ -774,8 +714,6 @@ def full_run():
 
         discussions.ingest(state, game, run)
         process_in_order(state, game, run, budget, events)
-        refresh_issues(state, game)
-        check_dev_replies(state, game)
         add_tone(state, game, budget)
         add_profiles(state)
         refresh_issues(state, game)

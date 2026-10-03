@@ -362,6 +362,8 @@ def assign_issues(state, item, result, run):
     links, new_titles, points = [], {}, []
     for point in result.get("points") or []:
         stored = {"kind": point["kind"], "text": point["text"], "urgency": point.get("urgency", "low")}
+        if point.get("quote"):
+            stored["quote"] = point["quote"]
         if point.get("still_after_fix"):
             stored["still"] = True
         if point["kind"] in ("bug", "complaint", "suggestion", "praise"):

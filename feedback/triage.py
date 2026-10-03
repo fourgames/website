@@ -42,7 +42,8 @@ def describe_error(error):
 
 class Point(BaseModel):
     kind: Literal["bug", "complaint", "suggestion", "question", "praise"]
-    text: str = Field(description="The point in one short English sentence, as a developer would note it.")
+    quote: str = Field(description="The player's own words this point comes from: a short exact excerpt of the post, in its original language.")
+    text: str = Field(description="The point in one short English sentence, as a developer would note it, saying only what the quote says.")
     urgency: Literal["low", "medium", "high", "urgent"]
     existing_issue: Optional[str] = Field(description="For a bug, complaint, suggestion or praise: the ID of the listed issue it repeats, or null.")
     new_issue_title: Optional[str] = Field(
@@ -109,7 +110,9 @@ warning. Set tone accordingly and triage what the player actually means.
 reference). Leave it null otherwise; most posts need none. Don't use it to summarise, judge or interpret the post.
 - points: break a long post into the separate things it says, for the developer reading it (not a buyer's TL;DR): \
 each bug, complaint, suggestion, question and bit of praise as its own short line, most actionable first. Keep the \
-player's specifics (numbers, places, items). Every post gets at least one point, a one-liner included, so the \
+player's specifics (numbers, places, items). Each point quotes the words it comes from and says only what they say: \
+never attach a complaint to an item the player didn't name in it (if they complain about the sound, and separately \
+call the dynamite a rip-off, that's two points: sound, and dynamite value). Every post gets at least one point, a one-liner included, so the \
 developer can see at a glance whether it's a bug, complaint, suggestion, question or praise."""
 
 
@@ -158,7 +161,7 @@ def _dry_triage(item):
         area="general",
         details=None,
         tone="sincere",
-        points=[Point(kind=kind, text=text[:120], urgency="high" if bug else "low", existing_issue=None,
+        points=[Point(kind=kind, quote=text[:80], text=text[:120], urgency="high" if bug else "low", existing_issue=None,
                       new_issue_title="Dry-run issue: " + text[:60], still_after_fix=False)],
         note=None,
     )

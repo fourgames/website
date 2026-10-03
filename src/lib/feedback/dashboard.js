@@ -673,7 +673,8 @@ function postParts(item, focus = null) {
         h("ul.pc-points", ...[...points].sort((a, b) => POINT_ORDER.indexOf(a.kind) - POINT_ORDER.indexOf(b.kind))
           .map((pt) => {
             // Clicking the label selects the sentence, ready for the Speak Selection key.
-            const sentence = h("span", pt.text);
+            // Hover shows the player's own words the point comes from.
+            const sentence = h("span", pt.quote ? { title: `“${pt.quote}”` } : {}, pt.text);
             const label = h(`button.pk.pk-${pt.kind}`, { type: "button", title: "Select this point" }, POINT_LABEL[pt.kind]);
             label.addEventListener("click", (e) => {
               e.stopPropagation();

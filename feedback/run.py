@@ -598,6 +598,8 @@ def full_run():
             f"{len(run['flips'])} flipped negative, {len(state['issues'])} issues"
         )
         states[game["appId"]] = state
+        # The dashboard lists games by their newest player post.
+        game["lastPost"] = max((i["created"] for i in state["items"].values() if not i.get("dev")), default=None)
         if save(path, state):
             changed.append(game["name"])
 

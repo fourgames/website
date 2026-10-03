@@ -12,7 +12,7 @@ let DATA = DATA_OVERRIDE || `${RAW}/main/feedback/data`;
 const DAY = 86400;
 const URGENCY = { urgent: "Urgent", high: "High", medium: "Medium", low: "Low" };
 const KIND = { review: "Review", topic: "Thread", reply: "Reply" };
-const state = { index: null, games: {}, game: null, tab: "overview", filters: { issues: { status: "active", q: "" }, suggestions: { status: "active", q: "" }, feed: { kind: "all", category: "all", q: "", shown: 50 }, stats: { range: 90 } } };
+const state = { index: null, games: {}, game: null, tab: "overview", filters: { issues: { status: "active", q: "" }, suggestions: { status: "active", q: "" }, feed: { kind: "all", category: "all", q: "", shown: 50 }, stats: { range: 0 } } };
 
 const store = {
   get(k) { try { return localStorage.getItem("fb-dash:" + k); } catch { return null; } },
@@ -102,8 +102,8 @@ const ICONS = {
   issues: "M8 2l1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3 3 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4",
   suggestions: "M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4",
   feed: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
-  stats: "M3 3v18h18M18 17V9M13 17V5M8 17v-3",
   overview: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z",
+  replies: "M9 17H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M14 19l2 2 5-5",
 };
 function icon(name) {
   const svg = svgEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", class: "icon", "aria-hidden": "true" });
@@ -170,10 +170,8 @@ async function init() {
   const games = state.index.games || [];
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = Number(hash.get("app") || store.get("app"));
-  state.tab = ["overview", "issues", "suggestions", "feed", "stats"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
-  const { released, upcoming } = orderedGames();
-  const first = released[0] || upcoming[0];
-  if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : first.appId);
+  state.tab = ["overview", "issues", "suggestions", "replies", "feed"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
+  if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : orderedGames()[0].appId);
 }
 
 // What the last runs could and couldn't reach (feedback/status.py), with the fix for each problem.
@@ -205,23 +203,19 @@ function renderStatus() {
 }
 
 // Released games first, newest release on top; then coming-soon games, soonest first.
+// One list: the game with the newest player post on top (newest release breaks ties).
 function orderedGames() {
-  const games = state.index.games || [];
-  const released = games.filter((g) => g.status !== "upcoming").sort((a, b) => (b.released || 0) - (a.released || 0));
-  const upcoming = games.filter((g) => g.status === "upcoming").sort((a, b) => (a.released || Infinity) - (b.released || Infinity));
-  return { released, upcoming };
+  return [...(state.index.games || [])].sort((a, b) => (b.lastPost || 0) - (a.lastPost || 0) || (b.released || 0) - (a.released || 0));
 }
 
 function renderGames() {
-  const { released, upcoming } = orderedGames();
+  const games = orderedGames();
+  const sub = (g) => g.lastPost ? `last post ${ago(g.lastPost)}` : g.status === "upcoming" ? "coming soon, no posts yet" : "no posts yet";
   const item = (g) => h("button.g-item", { type: "button", title: g.name, "aria-current": String(state.game?.appId === g.appId), onclick: () => pickGame(g.appId) },
     g.capsule ? h("img.g-thumb", { src: g.capsule, alt: "", loading: "lazy" }) : h("span.g-thumb"),
-    h("span.g-name", g.name, g.released ? h("span.g-sub", fmtDate(g.released)) : null));
-  document.getElementById("fb-games-side").replaceChildren(...[
-    released.length ? h("div.side-label", "Released") : null, ...released.map(item),
-    upcoming.length ? h("div.side-label", "Coming soon") : null, ...upcoming.map(item),
-  ].filter(Boolean));
-  document.getElementById("fb-games-strip").replaceChildren(...[...released, ...upcoming].map(item));
+    h("span.g-name", g.name, h("span.g-sub", sub(g))));
+  document.getElementById("fb-games-side").replaceChildren(h("div.side-label", "Games"), ...games.map(item));
+  document.getElementById("fb-games-strip").replaceChildren(...games.map(item));
 }
 
 async function pickGame(appId) {
@@ -305,16 +299,41 @@ function renderStats() {
   const postsPerDay = daily(14, (d) => items().filter((i) => !i.dev && i.created >= d && i.created < d + DAY).length);
   const bugs = issues("bug").filter(isActive);
   const urgent = bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high");
-  const still = Object.values(g.issues || {}).filter((i) => i.status === "still_happening");
+  const still = bugs.filter((i) => i.status === "still_happening");
   const fresh = items().filter((i) => !i.dev && i.created >= t - DAY);
-  const tile = (label, value, sub, trend, color) => h("div.kpi", h("div.label", label), h("div.value", value), sub ? h("div.sub", sub) : null, trend ? spark(trend, color) : null);
+  const tile = (label, value, sub, trend, color, chart) => {
+    const body = [h("div.label", label, chart ? h("span.kpi-more", state.expanded === chart ? "Hide chart ▴" : "Chart ▾") : null), h("div.value", value), sub ? h("div.sub", sub) : null, trend ? spark(trend, color) : null];
+    if (!chart) return h("div.kpi", ...body);
+    return h("button.kpi.kpi-open", { type: "button", "aria-expanded": String(state.expanded === chart), onclick: () => {
+      state.expanded = state.expanded === chart ? null : chart;
+      renderStats();
+    } }, ...body);
+  };
   const pct = totals && totals.positive + totals.negative ? Math.round((100 * totals.positive) / (totals.positive + totals.negative)) + "%" : "–";
   document.getElementById("fb-stats").replaceChildren(...[
-    tile("Players now", current ?? "–", current != null ? `${peak} peak today` : "not released", peaks),
-    tile("Positive reviews", pct, totals ? `${totals.positive} 👍 · ${totals.negative} 👎` : "no reviews yet", reviewsPerDay, "var(--fb-positive)"),
+    tile("Players now", current ?? "–", current != null ? `${peak} peak today` : "not released", peaks, undefined, "players"),
+    tile("Positive reviews", pct, totals ? `${totals.positive} 👍 · ${totals.negative} 👎` : "no reviews yet", reviewsPerDay, "var(--fb-positive)", "reviews"),
     tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent"),
     tile("New posts", fresh.length, "last 24 h", postsPerDay),
   ].filter(Boolean));
+  document.getElementById("fb-expand").replaceChildren(...(state.expanded ? [chartPanel(state.expanded)] : []));
+}
+
+// The chart behind an opened stat card, with its own time range.
+function chartPanel(which) {
+  const f = state.filters.stats;
+  const wrap = h("div.expand");
+  const body = h("div");
+  const draw = () => {
+    const end = now();
+    const start = f.range ? end - f.range * DAY : Math.min(end - 7 * DAY, ...[...(state.game.players || []).map((p) => p[0]), ...items().map((i) => i.created)]);
+    const releases = (state.game.releases || []).filter((r) => r.time >= start && r.time <= end);
+    body.replaceChildren(which === "players" ? playersChart(start, end, releases) : reviewsChart(start, end, releases));
+  };
+  const range = chips([[7, "7D"], [30, "30D"], [90, "90D"], [365, "1Y"], [0, "All"]], f.range, (v) => { f.range = v; draw(); }, "Time range");
+  wrap.append(h("div.filters", range), body);
+  draw();
+  return wrap;
 }
 
 // ---------------------------------------------------------------------------
@@ -329,16 +348,17 @@ function render() {
     issues: issues("bug").filter(isActive).length,
     suggestions: issues("suggestion").filter(isActive).length,
     feed: items().filter((i) => !i.dev).length,
-    overview: attention().length + toReply().length || null,
+    replies: toReply().length,
+    overview: attention().length || null,
   };
-  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["feed", "All posts"], ["stats", "Charts"]];
+  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["replies", "Replies"], ["feed", "All posts"]];
   const buttons = () => tabs.map(([id, label]) =>
     h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
       icon(id), h("span", label), counts[id] != null ? h("span.count", counts[id]) : null));
   document.getElementById("fb-nav-side").replaceChildren(...buttons());
   document.getElementById("fb-nav-top").replaceChildren(...buttons());
   setHash();
-  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), feed: feedView, stats: statsView }[state.tab]();
+  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), replies: repliesView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
 
@@ -474,6 +494,13 @@ function replyCard(item) {
     postView(item));
 }
 
+function repliesView() {
+  const list = toReply();
+  const intro = h("p.updated", { style: "margin:0 0 12px" },
+    "Negative reviews and threads about something an update has since fixed. Steam suggests replying in cases like these, briefly: say what was fixed. Each one leaves this list once you've replied on Steam.");
+  return h("div", intro, ...(list.length ? list.map(replyCard) : [h("p.empty", "Nothing to reply to right now.")]));
+}
+
 // Bugs that need you now: reported again after a fix, or high/urgent and still open.
 function attention() {
   return Object.values(state.game.issues || {})
@@ -487,14 +514,23 @@ function overviewView() {
   const urgent = attention();
   const replies = toReply();
   const latest = items().filter((i) => !i.dev).sort((a, b) => b.created - a.created).slice(0, 5);
+  // The week in one sentence.
+  const week = items().filter((i) => !i.dev && i.created >= now() - 7 * DAY);
+  const reviews = week.filter((i) => i.kind === "review");
+  const up = reviews.filter((i) => i.votedUp).length;
+  const summary = [
+    week.length ? `${plural(week.length, "new post")} this week` : "No new posts this week",
+    reviews.length ? `${plural(reviews.length, "review")} (${up} 👍, ${reviews.length - up} 👎)` : null,
+    urgent.length ? `${urgent.length} need${urgent.length === 1 ? "s" : ""} attention` : "nothing urgent",
+    replies.length ? `${plural(replies.length, "post")} worth a reply` : null,
+  ].filter(Boolean).join(" · ") + ".";
   return h("div",
+    h("p.ov-summary", summary),
     urgent.length
       ? section("Needs attention", urgent.length, ...urgent.slice(0, 5).map((i) => issueCard(i)), urgent.length > 5 || issues("bug").filter(isActive).length > urgent.length ? go("issues", "All bugs") : null)
-      : section("Needs attention", null, h("p.ov-calm", "Nothing urgent. No bugs are high priority or back after a fix.")),
+      : section("Needs attention", null, h("p.ov-calm", "Nothing urgent: no high-priority bugs, and nothing came back after a fix.")),
     replies.length
-      ? section("Worth a reply", replies.length,
-          h("p.updated", { style: "margin:0 0 10px" }, "Negative reviews and threads about something an update has since fixed. Steam suggests replying in cases like these, briefly. Each one leaves this list once you've replied on Steam."),
-          ...replies.map(replyCard))
+      ? section("Worth a reply", replies.length, h("p.ov-calm", `${plural(replies.length, "post")} about something an update has since fixed. `, go("replies", "Replies")))
       : null,
     section("Latest posts", null,
       // Long reviews are cut to a few lines here; a click shows the whole post.
@@ -533,26 +569,6 @@ function feedView() {
 // ---------------------------------------------------------------------------
 // Stats
 // ---------------------------------------------------------------------------
-
-function statsView() {
-  const f = state.filters.stats;
-  const wrap = h("div");
-  const body = h("div");
-  const draw = () => {
-    const end = now();
-    const start = f.range ? end - f.range * DAY : Math.min(end - 7 * DAY, ...[...(state.game.players || []).map((p) => p[0]), ...items().map((i) => i.created)]);
-    const releases = (state.game.releases || []).filter((r) => r.time >= start && r.time <= end);
-    body.replaceChildren(
-      playersChart(start, end, releases),
-      reviewsChart(start, end, releases),
-      h("div.grid-2", breakdown("Posts by category", start, (i) => i.triage?.category), breakdown("Posts by language", start, (i) => i.triage?.language && withFlag(i.triage.language, i.lang))),
-    );
-  };
-  const range = chips([[7, "7D"], [30, "30D"], [90, "90D"], [365, "1Y"], [0, "All"]], f.range, (v) => { f.range = v; draw(); }, "Time range");
-  wrap.append(h("div.filters", range), body);
-  draw();
-  return wrap;
-}
 
 const W = 760, H = 220, M = { top: 18, right: 12, bottom: 24, left: 40 };
 
@@ -724,18 +740,6 @@ function reviewsChart(start, end, releases) {
   return card;
 }
 
-function breakdown(title, start, key) {
-  const counts = new Map();
-  for (const i of items()) {
-    if (i.dev || i.created < start) continue;
-    const k = key(i) || "not triaged yet";
-    counts.set(k, (counts.get(k) || 0) + 1);
-  }
-  const rows = [...counts].sort((a, b) => b[1] - a[1]).slice(0, 10);
-  const max = Math.max(1, ...rows.map((r) => r[1]));
-  return h("div.chart-card", h("h3", title), h("div.sub", rows.length ? "Posts in this range" : "No posts in this range."),
-    h("div.bars", ...rows.flatMap(([k, v]) => [h("span", k), h("div", h("div.bar", { style: `width:${(100 * v) / max}%` })), h("span.n", v)])));
-}
 
 // ---------------------------------------------------------------------------
 // Mount (called by src/views/FeedbackView.vue once the page is in the browser)
@@ -757,6 +761,7 @@ const SHELL = `
       <div class="steam-links" id="fb-links"></div>
     </header>
     <section class="kpis" id="fb-stats" aria-label="Summary"></section>
+    <div id="fb-expand"></div>
     <nav class="nav-top" id="fb-nav-top" aria-label="Views"></nav>
     <div id="fb-view"></div>
   </div>

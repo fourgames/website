@@ -68,12 +68,12 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 
 - **Status bar:** which services the last run could and couldn't reach (Claude, Steam, discussions, Discord), each with a button to the fix. "Out of Anthropic API credit" links straight to billing. It's recorded in `data/index.json` → `status` only when something changes.
 - **Steam links:** buttons for the store page, reviews, discussions, news, Steamworks and the Steamworks sales report (sales aren't mirrored here).
-- **Top bar:** players now, review score, open bugs, issues still happening, new posts, and the latest update.
+- **Stat cards:** players now, positive reviews, open bugs and new posts. Players and reviews open their chart (with update dates marked) when clicked.
 - **Issues:** bug issues sorted by priority. Each has *Copy fix prompt* and the original posts with their translations and Steam links.
 - **Suggestions:** the same view for suggestions.
+- **Overview:** the week in one line, what needs attention, and the latest posts.
 - **Replies:** negative reviews and threads about something an update has since fixed, each with a drafted reply (Copy reply, Reply on Steam, Done).
 - **Feed:** every post, newest first, with filters and search.
-- **Stats:** concurrent players and new reviews over time, with every update marked, plus posts by category and by language.
 
 To point it at another copy of the data, add `?data=<base url>`, e.g. a local test run served by the dev server.
 

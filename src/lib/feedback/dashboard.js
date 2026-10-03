@@ -476,30 +476,29 @@ function suggestionText(issue, posts) {
   ].join("\n");
 }
 
-// "Select" highlights a text, so you can have macOS read it with your own voice (Siri included,
-// which web pages can't use themselves) by pressing your Speak Selection key. A page can't start
-// macOS speech itself, and running a Shortcut from a link always brings the Shortcuts app forward.
-function speakButton(target) {
-  const button = h("button.speak", { type: "button", title: "Select the text, then press your Speak Selection key to listen" }, "Select");
-  button.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const selection = window.getSelection();
-    selection.removeAllRanges();
-    const range = document.createRange();
-    range.selectNodeContents(target);
-    selection.addRange(range);
-  });
-  return button;
+// Opening a post selects its text, so pressing the Speak Selection key reads it with your own Mac
+// voice (Siri included, which web pages can't use themselves). Reply texts select on a click.
+function fullPost(text) {
+  const details = h("details.full", h("summary", "Full post"), text);
+  details.addEventListener("toggle", () => { if (details.open) selectText(text); });
+  return details;
 }
 
-// A text with its Select button beside it.
+function selectText(el) {
+  if (!el) return;
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  window.getSelection().removeAllRanges();
+  window.getSelection().addRange(range);
+}
+
 function textRow(text) {
-  const el = h("div.text", text);
-  return h("div.text-row", el, speakButton(el));
+  return h("div.text", text);
 }
 function withSpeak(text) {
-  const el = h("span", text);
-  return [el, " ", speakButton(el)];
+  const el = h("span.selectable", { title: "Click to select" }, text);
+  el.addEventListener("click", (e) => { e.stopPropagation(); selectText(el); });
+  return [el];
 }
 
 // Steam's "0.4 hrs on record (0.2 hrs at review time)": total hours now, and the hours when the
@@ -566,7 +565,7 @@ function postParts(item) {
             return h("li", label, sentence);
           })),
         // Long posts fold away under their points; short ones stay readable as they are.
-        english(item).length > 280 ? h("details.full", h("summary", "Full post"), textRow(english(item))) : textRow(english(item)),
+        english(item).length > 280 ? fullPost(textRow(english(item))) : textRow(english(item)),
       ] : [textRow(english(item))]),
       t.note ? h("div.pc-note", h("b", "Note "), t.note) : null,
       translated ? h("details", h("summary", `Original (${t.language})`), textRow(item.text)) : null,
@@ -741,13 +740,17 @@ function overviewView() {
       : null,
     section("Latest posts", null,
       // Long reviews are cut to a few lines here; a click shows the whole post.
-      ...(latest.length ? latest.map((i) => h("div.card.clamp", { onclick: (e) => {
+      ...(latest.length ? latest.map((i) => h("div.card.clamp", { onmousedown: (e) => { e.currentTarget.dataset.down = `${e.clientX},${e.clientY}`; }, onclick: (e) => {
         // Click to open the whole post, click again to fold it; not when using a link, button or
-        // toggle inside it, or when selecting text.
-        if (e.target.closest("a, button, summary") || window.getSelection().toString()) return;
+        // toggle inside it, or after dragging to select text.
+        const [dx, dy] = (e.currentTarget.dataset.down || "0,0").split(",").map(Number);
+        const dragged = Math.abs(e.clientX - dx) + Math.abs(e.clientY - dy) > 4;
+        if (e.target.closest("a, button, summary") || dragged) return;
         const card = e.currentTarget;
         const open = card.classList.toggle("clamp") === false;
         card.querySelectorAll("details.full").forEach((d) => { d.open = open; });
+        if (open) selectText(card.querySelector("details.full .text") || card.querySelector(".post .text"));
+        else window.getSelection().removeAllRanges();
       } }, postView(i))) : [h("p.ov-calm", "No posts yet.")]),
       latest.length ? go("feed", "All posts") : null),
   );

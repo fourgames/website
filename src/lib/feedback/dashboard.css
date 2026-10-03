@@ -906,27 +906,6 @@
 	flex: 1;
 	min-width: 0;
 }
-.fb .speak {
-	flex: none;
-	background: var(--fb-card-2);
-	border: 0;
-	border-radius: 99px;
-	padding: 3px 10px;
-	font-family: var(--font-heading);
-	font-size: 0.7rem;
-	font-weight: 700;
-	color: var(--fb-ink-2);
-	cursor: pointer;
-	margin-top: 4px;
-}
-.fb .speak:hover {
-	opacity: 1;
-	background: var(--fb-hover);
-}
-.fb .reply .speak {
-	margin: 0;
-	vertical-align: middle;
-}
 
 /* Chart extras: sale periods and the launch marker */
 .fb .band {
@@ -1267,4 +1246,7 @@
 	font-size: 0.8125rem;
 	color: var(--fb-ink-2);
 	font-weight: 600;
+}
+.fb .selectable {
+	cursor: text;
 }

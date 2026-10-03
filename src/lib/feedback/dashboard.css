@@ -1257,3 +1257,32 @@
 	border-radius: 99px;
 	padding: 0 7px;
 }
+.fb .issue-card .post.pc {
+	margin: 0;
+	padding-top: 0;
+}
+.fb .issue-title {
+	font-size: 1.05rem;
+	margin: 6px 0 2px;
+}
+.fb .pc-players b {
+	color: var(--fb-title);
+	font-size: 0.875rem;
+}
+.fb .thumb-inline {
+	display: inline-block; /* the site's base styles make images blocks */
+	width: 16px;
+	height: 16px;
+	vertical-align: -3px;
+	border-radius: 3px;
+}
+.fb .post-card {
+	cursor: pointer;
+}
+.fb .post-card .post {
+	cursor: auto;
+}
+.fb .post-card.clamp .post,
+.fb .post-card .post .pc-top {
+	cursor: pointer;
+}

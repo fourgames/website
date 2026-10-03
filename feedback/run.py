@@ -162,7 +162,7 @@ def upsert_review(state, game, r, run):
             "id": rid,
             "kind": "review",
             "url": f"https://steamcommunity.com/profiles/{author.get('steamid')}/recommended/{game['appId']}/",
-            "author": {"id": author.get("steamid")},
+            "author": {"id": author.get("steamid"), "reviews": author.get("num_reviews")},
             "lang": r.get("language"),
             "created": int(r.get("timestamp_created") or updated),
             "updated": updated,
@@ -182,6 +182,7 @@ def upsert_review(state, game, r, run):
         run["new"].append(rid)
         return
     item["votesUp"] = r.get("votes_up", 0)
+    item["author"]["reviews"] = author.get("num_reviews")
     item["playtimeForever"] = round((author.get("playtime_forever") or 0) / 60, 1)
     item["steamPurchase"] = bool(r.get("steam_purchase"))
     item["receivedForFree"] = bool(r.get("received_for_free"))
@@ -262,12 +263,16 @@ def add_profiles(state):
     looked up once per post so the dashboard can show who wrote it."""
     for item in state["items"].values():
         author = item.get("author") or {}
-        if item.get("dev") or not author.get("id") or "profile" in author:
+        if item.get("dev") or not author.get("id"):
             continue
-        profile = steam.profile(author["id"])
-        author["profile"] = profile["url"] if profile else None
-        if profile:
-            author.update(name=profile["name"], avatar=profile["avatar"])
+        if "profile" not in author:
+            profile = steam.profile(author["id"])
+            author["profile"] = profile["url"] if profile else None
+            if profile:
+                author.update(name=profile["name"], avatar=profile["avatar"])
+        # Reviewers also get the size of their library, like Steam shows on a review.
+        if item["kind"] == "review" and "games" not in author:
+            author["games"] = steam.games_owned(author["id"])
         item["author"] = author
 
 

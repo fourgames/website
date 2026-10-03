@@ -439,14 +439,34 @@ function statusBadge(issue) {
   return null;
 }
 
+// A post as its own card: click to open the whole post (selecting it for the Speak Selection key),
+// click again to fold it; not when using a link, button or toggle inside, or after a drag.
+function postCard(item, { clamp = true } = {}) {
+  return h(`div.card.post-card${clamp ? ".clamp" : ""}`, { onmousedown: (e) => { e.currentTarget.dataset.down = `${e.clientX},${e.clientY}`; }, onclick: (e) => {
+    const [dx, dy] = (e.currentTarget.dataset.down || "0,0").split(",").map(Number);
+    if (e.target.closest("a, button, summary") || Math.abs(e.clientX - dx) + Math.abs(e.clientY - dy) > 4) return;
+    const card = e.currentTarget;
+    const open = !card.classList.contains("is-open");
+    card.classList.toggle("is-open", open);
+    card.classList.toggle("clamp", clamp && !open);
+    card.querySelectorAll("details.full").forEach((d) => { d.open = open; });
+    if (open) selectText(card.querySelector("details.full .text") || card.querySelector(".post .text"));
+    else window.getSelection().removeAllRanges();
+  } }, postView(item));
+}
+
+function thumbImg(up) {
+  return h("img.thumb.thumb-inline", { src: up ? STEAM_THUMB.up : STEAM_THUMB.down, alt: up ? "positive" : "negative" });
+}
+
+// A bug or idea in the post cards' style: type and priority on the left, the rest to the right.
 function issueCard(issue) {
   const posts = issue.items.map((id) => state.game.items[id]).filter(Boolean).sort((a, b) => b.created - a.created);
   const postList = h("div", { hidden: true });
   let filled = false;
   const toggle = h("button.btn", { onclick: () => {
     if (!filled) {
-      postList.append(...posts.map(postView));
-      postList.querySelectorAll("details.full").forEach((d) => { d.open = true; });
+      postList.append(...posts.map((p) => postCard(p, { clamp: false })));
       filled = true;
     }
     postList.hidden = !postList.hidden;
@@ -455,15 +475,30 @@ function issueCard(issue) {
   const copyText = issue.kind === "bug" ? issue.fixPrompt : suggestionText(issue, posts);
   const copyBtn = h("button.btn.primary", { onclick: (e) => copy(copyText, e.currentTarget) }, issue.kind === "bug" ? "Copy fix prompt" : "Copy summary");
   const linkBtn = h("button.btn", { onclick: (e) => copy(posts.map((p) => p.url).join("\n"), e.currentTarget) }, "Copy links");
-  return h("article.card",
-    h("div.card-head",
-      h("div.main-col",
-        h("h3", issue.title),
-        h("div.meta", urgencyBadge(issue.urgency), statusBadge(issue), h("span", issue.area), h("span", (issue.languages || []).map((l) => withFlag(l)).join(", ")),
-          h("span", `last ${ago(issue.lastSeen)}`), issue.negativeReviews ? h("span.vote-down", `${issue.negativeReviews} 👎 review${issue.negativeReviews === 1 ? "" : "s"}`) : null)),
-      h("div.mentions", h("b", issue.mentions), h("span", issue.mentions === 1 ? "player" : "players"))),
-    issue.summary ? h("p", { style: "margin:6px 0 0;color:var(--fb-ink-2)" }, issue.summary) : null,
-    h("div.actions", copyBtn, toggle, linkBtn),
+  const [, kind] = CATEGORY[issue.kind] || [];
+  const u = issue.urgency;
+  const bars = u ? h(`span.bars4.pt-${u}`, ...[1, 2, 3, 4].map((n) => h(n <= PRIORITY_BARS[u] ? "i.on" : "i"))) : null;
+  const summary = issue.summary ? h("span", issue.summary) : null;
+  const summaryLabel = summary ? h(`button.pk.pk-${issue.kind}`, { type: "button", title: "Select this sentence" }, POINT_LABEL[issue.kind] || kind) : null;
+  summaryLabel?.addEventListener("click", (e) => { e.stopPropagation(); selectText(summary); });
+  return h("article.card.issue-card",
+    h("div.post.pc.neutral",
+      h("div.pc-top",
+        h("div.pc-main",
+          h(`span.pc-type.tt-text-${issue.kind}`, typeIcon(issue.kind), kind),
+          u ? h("span.pc-prio", bars, `${URGENCY[u]} priority`) : null,
+          statusBadge(issue)),
+        h("div.pc-aside",
+          h("div.pc-aside-row",
+            h("span.pc-players", h("b", issue.mentions), issue.mentions === 1 ? " player" : " players"),
+            h("span.pc-lang", (issue.languages || []).map((l) => langFlag(l)).filter(Boolean).join(" ") || "", " ", (issue.languages || []).join(", "))),
+          h("div.pc-aside-row",
+            issue.negativeReviews ? h("span.vote-down", thumbImg(false), `${issue.negativeReviews} negative`) : null,
+            h("span", `last ${ago(issue.lastSeen)}`),
+            h("span", issue.area)))),
+      h("h3.issue-title", issue.title),
+      summary ? h("ul.pc-points", h("li", summaryLabel, summary)) : null,
+      h("div.actions", copyBtn, toggle, linkBtn)),
     postList);
 }
 
@@ -633,6 +668,10 @@ function postView(item) {
           item.author?.name && !item.dev ? h("a.pc-player", { href: item.author.profile || item.url, target: "_blank", rel: "noopener", title: "Steam profile" },
             item.author.avatar ? h("img.avatar", { src: item.author.avatar, alt: "", loading: "lazy" }) : null, item.author.name) : p.who ? h("span", p.who) : null,
           p.flag || p.language ? h("span.pc-lang", p.flag ? h("span.pv3-flag", p.flag) : null, p.language) : null),
+        // Like Steam's review sidebar: the reviewer's library size and how many reviews they've written.
+        item.kind === "review" && (item.author?.games != null || item.author?.reviews != null) ? h("div.pc-aside-row.pc-reviewer",
+          item.author.games != null ? h("span", `${item.author.games.toLocaleString("en-US")} games owned`) : null,
+          item.author.reviews != null ? h("span", plural(item.author.reviews, "review")) : null) : null,
         h("div.pc-aside-row",
           p.verdict ? h(`span.${p.verdict[0]}`, h("img.thumb", { src: up ? STEAM_THUMB.up : STEAM_THUMB.down, alt: "" }), p.verdict[2]) : item.kind !== "review" ? h("span", KIND[item.kind]) : null,
           p.hours ? h("span", `${p.hours} on record`, p.atReview ? ` (${p.atReview})` : "") : null,
@@ -738,14 +777,15 @@ function overviewView() {
   const week = items().filter((i) => !i.dev && i.created >= now() - 7 * DAY);
   const reviews = week.filter((i) => i.kind === "review");
   const up = reviews.filter((i) => i.votedUp).length;
-  const summary = [
-    week.length ? `${plural(week.length, "new post")} this week` : "No new posts this week",
-    reviews.length ? `${plural(reviews.length, "review")} (${up} 👍, ${reviews.length - up} 👎)` : null,
-    urgent.length ? `${urgent.length} need${urgent.length === 1 ? "s" : ""} attention` : "nothing urgent",
-    replies.length ? `${plural(replies.length, "post")} worth a reply` : null,
-  ].filter(Boolean).join(" · ") + ".";
+  const parts = [
+    [week.length ? `${plural(week.length, "new post")} this week` : "No new posts this week"],
+    reviews.length ? [`${plural(reviews.length, "review")} (`, thumbImg(true), ` ${up}  `, thumbImg(false), ` ${reviews.length - up})`] : null,
+    [urgent.length ? `${urgent.length} need${urgent.length === 1 ? "s" : ""} attention` : "nothing urgent"],
+    replies.length ? [`${plural(replies.length, "post")} worth a reply`] : null,
+  ].filter(Boolean);
+  const summary = parts.flatMap((part, i) => (i ? [" · ", ...part] : part)).concat(".");
   return h("div",
-    h("p.ov-summary", summary),
+    h("p.ov-summary", ...summary),
     urgent.length
       ? section("Needs attention", urgent.length, ...urgent.slice(0, 5).map((i) => issueCard(i)), urgent.length > 5 || issues("bug").filter(isActive).length > urgent.length ? go("issues", "All bugs") : null)
       : section("Needs attention", null, h("p.ov-calm", "Nothing urgent: no high-priority bugs, and nothing came back after a fix.")),
@@ -754,18 +794,7 @@ function overviewView() {
       : null,
     section("Latest posts", null,
       // Long reviews are cut to a few lines here; a click shows the whole post.
-      ...(latest.length ? latest.map((i) => h("div.card.clamp", { onmousedown: (e) => { e.currentTarget.dataset.down = `${e.clientX},${e.clientY}`; }, onclick: (e) => {
-        // Click to open the whole post, click again to fold it; not when using a link, button or
-        // toggle inside it, or after dragging to select text.
-        const [dx, dy] = (e.currentTarget.dataset.down || "0,0").split(",").map(Number);
-        const dragged = Math.abs(e.clientX - dx) + Math.abs(e.clientY - dy) > 4;
-        if (e.target.closest("a, button, summary") || dragged) return;
-        const card = e.currentTarget;
-        const open = card.classList.toggle("clamp") === false;
-        card.querySelectorAll("details.full").forEach((d) => { d.open = open; });
-        if (open) selectText(card.querySelector("details.full .text") || card.querySelector(".post .text"));
-        else window.getSelection().removeAllRanges();
-      } }, postView(i))) : [h("p.ov-calm", "No posts yet.")]),
+      ...(latest.length ? latest.map((i) => postCard(i)) : [h("p.ov-calm", "No posts yet.")]),
       latest.length ? go("feed", "All posts") : null),
   );
 }

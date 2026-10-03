@@ -208,6 +208,19 @@ def parse_release_date(text):
     return None
 
 
+def games_owned(steamid):
+    """How many games a reviewer owns (as Steam shows on reviews), or None for a private library.
+    Needs the publisher key; this isn't part of the review data itself."""
+    if not STEAM_KEY:
+        return None
+    try:
+        res = request("https://partner.steam-api.com/IPlayerService/GetOwnedGames/v1/",
+                      params={"key": STEAM_KEY, "steamid": steamid, "include_played_free_games": 1}, retries=2)
+    except HttpError:
+        return None
+    return (res.get("response") or {}).get("game_count")
+
+
 STEAM64_BASE = 76561197960265728
 _profiles = {}
 

@@ -497,6 +497,11 @@ def send_alerts(state, game, run, first_run):
 def daily_report(index, states):
     import notify
 
+    lines = daily_lines(index, states)
+    return bool(lines) and notify.send([notify.daily(lines)])
+
+
+def daily_lines(index, states):
     since = max(index.get("dailyReportAt") or 0, now() - 36 * 3600) or now() - DAY
     lines = []
     for game in index["games"]:
@@ -538,9 +543,7 @@ def daily_report(index, states):
         for issue in sorted(new_issues, key=lambda i: i["priority"], reverse=True)[:3]:
             line += f"\n• New {issue['kind']}: {issue['title']} ({issue['mentions']})"
         lines.append(line)
-    if not lines:
-        return False
-    return notify.send([notify.daily(lines)])
+    return lines
 
 
 # ---------------------------------------------------------------------------
@@ -612,11 +615,44 @@ def full_run():
     print(f"[run] changed: {', '.join(changed) or 'nothing'}")
 
 
+def test_discord():
+    """One example of each alert, from the real data and marked as a test, so you can see the webhook
+    works and what the alerts look like. Nothing is saved."""
+    import notify
+
+    if not notify.WEBHOOK:
+        sys.exit("DISCORD_WEBHOOK_URL is not set (add it as a GitHub secret)")
+    index = load(DATA / "index.json", {"games": []})
+    states = {g["appId"]: load(game_path(g["appId"]), None) for g in index["games"]}
+    states = {k: v for k, v in states.items() if v}
+    games = {g["appId"]: g for g in index["games"]}
+    pool = [(games[a], s, i) for a, s in states.items() for i in s["issues"].values()]
+    if not pool:
+        sys.exit("No issues in the data yet to build examples from")
+    game, state, issue = max(pool, key=lambda p: p[2].get("priority", 0))
+    posts = sorted((state["items"][i] for i in issue["items"] if i in state["items"]), key=lambda p: p["created"], reverse=True)
+    negative = next((i for _, s, _ in pool for i in s["items"].values() if i["kind"] == "review" and not i.get("votedUp")), None)
+    test = "🧪 **Test** of the player feedback alerts: one of each kind, made from real posts. Nothing is wrong."
+    sent = [notify.send([notify.urgent(game, posts[0], issue)], ping=True, note=test + "\n**1. Urgent issue** (pings you):")]
+    sent.append(notify.send([notify.cluster(game, issue, posts)], ping=True, note="**2. Repeated reports** (pings you):"))
+    if negative:
+        owner = next(games[a] for a, s in states.items() if negative["id"] in s["items"])
+        sent.append(notify.send([notify.flip(owner, negative)], note="**3. Review flipped to negative** (no ping):"))
+    sent.append(notify.send([notify.daily(daily_lines(index, states))], note="**4. Daily report** (no ping):"))
+    print(f"[discord] test: {sum(sent)} of {len(sent)} messages accepted")
+    if not all(sent):
+        sys.exit(1)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--gate", action="store_true")
     parser.add_argument("--force", action="store_true")
+    parser.add_argument("--test-discord", action="store_true")
     args = parser.parse_args()
+    if args.test_discord:
+        test_discord()
+        return
     force = args.force or os.environ.get("FEEDBACK_FORCE") == "true"
     if args.gate:
         if os.environ.get("FEEDBACK_HAS_KEY") == "false":

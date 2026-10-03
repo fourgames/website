@@ -12,6 +12,10 @@ on:
         description: Run now, whatever the schedule says
         type: boolean
         default: true
+      test_discord:
+        description: Only send a test of each Discord alert (no run)
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -35,8 +39,16 @@ jobs:
           key: feedback-run-${{ github.run_id }}
           restore-keys: feedback-run-
 
+      - name: Send a test to Discord
+        if: inputs.test_discord
+        run: python3 feedback/run.py --test-discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_MENTION: ${{ secrets.DISCORD_MENTION }}
+
       - name: Is a full run due?
         id: gate
+        if: ${{ !inputs.test_discord }}
         run: python3 feedback/run.py --gate
         env:
           FEEDBACK_FORCE: ${{ inputs.force }}

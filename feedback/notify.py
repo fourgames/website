@@ -52,13 +52,15 @@ def _clip(text, limit):
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
-def send(embeds, ping=False):
-    """Posts up to 10 embeds in one message. Returns True when Discord accepted it (or no webhook is set)."""
+def send(embeds, ping=False, note=None):
+    """Posts up to 10 embeds in one message, with an optional line of text above them. Returns True
+    when Discord accepted it (or no webhook is set)."""
     mention, allowed = _mention() if ping else ("", {"parse": []})
     embeds = [{k: v for k, v in e.items() if v is not None} for e in embeds[:10]]
     payload = {"username": "Player feedback", "embeds": embeds, "allowed_mentions": allowed}
-    if mention:
-        payload["content"] = mention
+    content = " ".join(part for part in (mention, note) if part)
+    if content:
+        payload["content"] = content
     if not WEBHOOK:
         print("[discord] (no webhook) " + json.dumps(payload, ensure_ascii=False)[:2000])
         status.fail("discord", "No DISCORD_WEBHOOK_URL secret is set, so alerts aren't sent.")

@@ -292,6 +292,8 @@ function renderStats() {
   const current = series.length ? series[series.length - 1][1] : null;
   const inDay = series.filter(([ts]) => ts >= t - DAY).map(([, n]) => n);
   const peak = Math.max(...inDay, playersAt(series, t - DAY) ?? 0, current ?? 0);
+  // All-time since recording started (Steam keeps no older player counts).
+  const allTime = Math.max(0, ...series.map(([, n]) => n));
   const peaks = daily(14, (d) => Math.max(playersAt(series, d) ?? 0, ...series.filter(([ts]) => ts >= d && ts < d + DAY).map(([, n]) => n)));
   const totalsKey = Object.keys(g.reviewTotals || {}).sort().pop();
   const totals = totalsKey ? g.reviewTotals[totalsKey] : null;
@@ -302,7 +304,7 @@ function renderStats() {
   const still = bugs.filter((i) => i.status === "still_happening");
   const fresh = items().filter((i) => !i.dev && i.created >= t - DAY);
   const tile = (label, value, sub, trend, color, chart) => {
-    const body = [h("div.label", label, chart ? h("span.kpi-more", state.expanded === chart ? "Hide chart ▴" : "Chart ▾") : null), h("div.value", value), sub ? h("div.sub", sub) : null, trend ? spark(trend, color) : null];
+    const body = [h("div.label", label, chart ? h("span.kpi-more", state.expanded === chart ? "Hide chart ▴" : "Chart ▾") : null), h("div.value", value), ...(Array.isArray(sub) ? sub : [sub]).filter(Boolean).map((line) => h("div.sub", line)), trend ? spark(trend, color) : null];
     if (!chart) return h("div.kpi", ...body);
     return h("button.kpi.kpi-open", { type: "button", "aria-expanded": String(state.expanded === chart), onclick: () => {
       state.expanded = state.expanded === chart ? null : chart;
@@ -311,7 +313,7 @@ function renderStats() {
   };
   const pct = totals && totals.positive + totals.negative ? Math.round((100 * totals.positive) / (totals.positive + totals.negative)) + "%" : "–";
   document.getElementById("fb-stats").replaceChildren(...[
-    tile("Players now", current ?? "–", current != null ? `${peak} peak today` : "not released", peaks, undefined, "players"),
+    tile("Players now", current ?? "–", current != null ? [`${peak} peak today${peak && peak >= allTime ? " 🔥" : ""}`, `${allTime} all-time peak 🔥`] : "not released", peaks, undefined, "players"),
     tile("Positive reviews", pct, totals ? `${totals.positive} 👍 · ${totals.negative} 👎` : "no reviews yet", reviewsPerDay, "var(--fb-positive)", "reviews"),
     tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent"),
     tile("New posts", fresh.length, "last 24 h", postsPerDay),
@@ -326,7 +328,11 @@ function chartPanel(which) {
   const body = h("div");
   const draw = () => {
     const end = now();
-    const start = f.range ? end - f.range * DAY : Math.min(end - 7 * DAY, ...[...(state.game.players || []).map((p) => p[0]), ...items().map((i) => i.created)]);
+    // Never before the game's release (nothing to show there): "All" starts at the oldest data or
+    // the release, whichever is later; the fixed ranges are cut at the release too.
+    const released = state.game.meta?.released || 0;
+    const oldest = Math.min(end - DAY, ...[...(state.game.players || []).map((p) => p[0]), ...items().map((i) => i.created)]);
+    const start = Math.min(end - DAY, Math.max(released, f.range ? end - f.range * DAY : oldest));
     const releases = markers(start, end);
     body.replaceChildren(which === "players" ? playersChart(start, end, releases) : reviewsChart(start, end, releases));
   };
@@ -398,7 +404,11 @@ function issueCard(issue) {
   const postList = h("div", { hidden: true });
   let filled = false;
   const toggle = h("button.btn", { onclick: () => {
-    if (!filled) { postList.append(...posts.map(postView)); filled = true; }
+    if (!filled) {
+      postList.append(...posts.map(postView));
+      postList.querySelectorAll("details.full").forEach((d) => { d.open = true; });
+      filled = true;
+    }
     postList.hidden = !postList.hidden;
     toggle.textContent = postList.hidden ? `Show ${plural(posts.length, "post")}` : "Hide posts";
   } }, `Show ${plural(posts.length, "post")}`);
@@ -502,9 +512,21 @@ function postParts(item) {
       // Every post leads with its points (what kind of thing it says), most actionable first.
       ...(t.points?.length ? [
         h("ul.pc-points", ...[...t.points].sort((a, b) => POINT_ORDER.indexOf(a.kind) - POINT_ORDER.indexOf(b.kind))
-          .map((pt) => h("li", h(`span.pk.pk-${pt.kind}`, POINT_LABEL[pt.kind]), h("span", pt.text)))),
+          .map((pt) => {
+            // Clicking the label selects the sentence, ready for the Speak Selection key.
+            const sentence = h("span", pt.text);
+            const label = h(`button.pk.pk-${pt.kind}`, { type: "button", title: "Select this point" }, POINT_LABEL[pt.kind]);
+            label.addEventListener("click", (e) => {
+              e.stopPropagation();
+              const range = document.createRange();
+              range.selectNodeContents(sentence);
+              window.getSelection().removeAllRanges();
+              window.getSelection().addRange(range);
+            });
+            return h("li", label, sentence);
+          })),
         // Long posts fold away under their points; short ones stay readable as they are.
-        english(item).length > 280 ? h("details", h("summary", "Full post"), textRow(english(item))) : textRow(english(item)),
+        english(item).length > 280 ? h("details.full", h("summary", "Full post"), textRow(english(item))) : textRow(english(item)),
       ] : [textRow(english(item))]),
       t.note ? h("div.pc-note", h("b", "Note "), t.note) : null,
       translated ? h("details", h("summary", `Original (${t.language})`), textRow(item.text)) : null,
@@ -679,7 +701,11 @@ function overviewView() {
       : null,
     section("Latest posts", null,
       // Long reviews are cut to a few lines here; a click shows the whole post.
-      ...(latest.length ? latest.map((i) => h("div.card.clamp", { onclick: (e) => e.currentTarget.classList.remove("clamp") }, postView(i))) : [h("p.ov-calm", "No posts yet.")]),
+      ...(latest.length ? latest.map((i) => h("div.card.clamp", { onclick: (e) => {
+        if (!e.currentTarget.classList.contains("clamp")) return;
+        e.currentTarget.classList.remove("clamp");
+        e.currentTarget.querySelectorAll("details.full").forEach((d) => { d.open = true; });
+      } }, postView(i))) : [h("p.ov-calm", "No posts yet.")]),
       latest.length ? go("feed", "All posts") : null),
   );
 }

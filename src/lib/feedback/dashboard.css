@@ -1110,6 +1110,11 @@
 	align-items: baseline;
 }
 .fb .pk {
+	background: none;
+	border: 0;
+	padding: 0;
+	cursor: pointer;
+	text-align: left;
 	flex: none;
 	width: 6.5rem;
 	font-family: var(--font-heading);
@@ -1200,4 +1205,7 @@
 	.fb .pc-aside-row {
 		justify-content: flex-start;
 	}
+}
+.fb button.pk:hover {
+	text-decoration: underline;
 }

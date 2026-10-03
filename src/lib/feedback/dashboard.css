@@ -1086,3 +1086,28 @@
 .fb .bars4.pt-high { color: var(--fb-serious); }
 .fb .bars4.pt-medium { color: #d79b00; }
 .fb .bars4.pt-low { color: var(--fb-muted); }
+.fb .pc-tone {
+	font-size: 0.75rem;
+	font-weight: 700;
+	padding: 1px 8px;
+	border-radius: 99px;
+	border: 1px solid var(--fb-line);
+	color: var(--fb-ink-2);
+	font-style: italic;
+}
+.fb .pc-note {
+	font-size: 0.8125rem;
+	color: var(--fb-ink-2);
+	background: var(--fb-card-2);
+	border-radius: 6px;
+	padding: 6px 10px;
+	margin: 2px 0 6px;
+}
+.fb .pc-note b {
+	font-family: var(--font-heading);
+	font-size: 0.7rem;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	color: var(--fb-muted);
+	margin-right: 4px;
+}

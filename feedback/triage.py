@@ -54,6 +54,13 @@ class Triage(BaseModel):
     details: Optional[str] = Field(
         description="For a bug: what a developer needs to reproduce it (steps, hardware, settings, when it happens). Else null."
     )
+    tone: Literal["sincere", "joke", "sarcastic", "mixed"] = Field(
+        description="How the post is meant: a joke or meme, sarcasm (the words mean the opposite), or sincere."
+    )
+    note: Optional[str] = Field(
+        description="One short English sentence on what a reader of the translation would miss: slang, memes, sarcasm "
+        "or cultural context. Null when there is nothing to add."
+    )
 
 
 TRIAGE_SYSTEM = """You triage player feedback for an indie game studio's Steam games. Each message is one post: \
@@ -70,7 +77,11 @@ bugs and popular requests; "low" for everything else.
 - Duplicates: the user message lists the game's open issues. If the post reports the same underlying problem or \
 request as one of them, in any language, set existing_issue to that issue's ID. A reply such as "same here" or \
 "me too" in a thread whose opening post belongs to an issue repeats that issue. Otherwise, for a bug or \
-suggestion, give new_issue_title. Questions and praise get neither."""
+suggestion, give new_issue_title. Questions and praise get neither.
+- Read the post the way a native speaker and Steam regular would. Steam reviews are full of memes and irony: a \
+recommended review that only says "run away" (Korean "도망쳐") jokes that the game is addictive or hard, not a \
+warning. Set tone accordingly, triage what the player actually means, and put the context the literal translation \
+loses in note."""
 
 
 def triage(game_name, item, issues, context=None):
@@ -109,6 +120,8 @@ def _dry_triage(item):
         english=text,
         summary=text[:120],
         category="bug" if bug else ("praise" if item.get("votedUp", True) else "suggestion"),
+        tone="sincere",
+        note=None,
         urgency="high" if bug else "low",
         area="general",
         existing_issue=None,

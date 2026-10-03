@@ -257,6 +257,27 @@ def thread_context(state, item):
     return ctx
 
 
+def add_tone(state, game, budget):
+    """Posts triaged before triage had tone and note get just those two filled in, once; their
+    category, issue and alerts stay as they are."""
+    import triage
+
+    for item in state["items"].values():
+        t = item.get("triage")
+        if not t or "tone" in t or item.get("dev") or budget["left"] <= 0:
+            continue
+        try:
+            result = triage.triage(game["name"], item, [], thread_context(state, item))
+        except Exception as error:  # noqa: BLE001 - try again next run
+            print(f"[tone] {item['id']}: {type(error).__name__}: {error}")
+            status.fail("claude", f"{triage.describe_error(error)[0]} Some posts still lack a tone.")
+            return
+        budget["left"] -= 1
+        t["tone"] = result.tone
+        if result.note:
+            t["note"] = result.note
+
+
 def triage_pending(state, game, run, budget):
     import triage
 
@@ -605,6 +626,7 @@ def full_run():
 
         discussions.ingest(state, game, run)
         triage_pending(state, game, run, budget)
+        add_tone(state, game, budget)
         refresh_issues(state, game)
         check_releases(state, game, events)
         refresh_issues(state, game)

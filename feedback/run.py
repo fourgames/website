@@ -184,7 +184,7 @@ def record_players(state, game):
     # Store changes only: the dashboard draws it as a step line, and an unchanged count isn't a commit.
     if not series or series[-1][1] != count:
         series.append([now(), count])
-        status.active("steam", "player count changed")
+        status.active("steam", "players changed")
 
 
 # ---------------------------------------------------------------------------

@@ -800,80 +800,74 @@
 	background: var(--fb-critical);
 }
 .fb .svc-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+	gap: 10px;
+}
+/* A card per service; the last-activity line sits at the bottom so the cards line up */
+.fb .svc {
+	display: flex;
+	flex-direction: column;
 	background: var(--fb-card);
 	box-shadow: var(--fb-shadow);
 	border-radius: var(--radius-card);
-	padding: 2px 14px;
-}
-/* One aligned row per service: name, what it does, last activity, state */
-.fb .svc {
-	display: grid;
-	grid-template-columns: 8.5rem minmax(0, 1fr) 12rem 7.5rem;
-	column-gap: 16px;
-	align-items: center;
-	padding: 9px 0;
-	border-top: 1px solid var(--fb-line);
+	padding: 11px 12px;
 	font-size: 0.8125rem;
 }
-.fb .svc:first-child {
-	border-top: 0;
+.fb .svc-bad {
+	box-shadow: var(--fb-shadow), inset 3px 0 0 var(--fb-critical);
 }
-.fb .svc-name {
+.fb .svc-head {
 	display: flex;
 	align-items: center;
-	gap: 8px;
+	gap: 7px;
 	font-size: 0.875rem;
 }
-.fb .svc-what {
-	color: var(--fb-muted);
-}
-.fb .svc-last {
-	color: var(--fb-muted);
-}
-.fb .svc-ok .svc-last {
-	color: #23a559;
+.fb .svc-mark {
+	width: 16px;
+	height: 16px;
+	flex: none;
+	color: var(--fb-ink);
 }
 .fb .svc-state {
-	text-align: right;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	margin-left: auto;
+	font-size: 0.75rem;
 	color: var(--fb-muted);
+	white-space: nowrap;
 }
 .fb .svc-bad .svc-state {
 	color: var(--fb-critical);
 	font-weight: 600;
 }
-.fb .svc-msg,
-.fb .svc-fix {
-	grid-column: 2 / -1;
+.fb .svc-what {
+	margin-top: 6px;
+	margin-bottom: 8px;
+	color: var(--fb-muted);
+}
+.fb .svc-last {
+	margin-top: auto;
+	font-size: 0.75rem;
+	color: var(--fb-muted);
+}
+.fb .svc-ok .svc-last {
+	color: #23a559;
 }
 .fb .svc-msg {
-	margin-top: 6px;
+	margin-top: 8px;
 	color: var(--fb-ink);
 }
 .fb .svc-since {
 	color: var(--fb-muted);
 }
 .fb .svc-fix {
-	justify-self: start;
+	align-self: flex-start;
 	margin-top: 8px;
 	text-decoration: none;
 	display: inline-flex;
 	align-items: center;
-}
-@media (max-width: 720px) {
-	.fb .svc {
-		grid-template-columns: minmax(0, 1fr) auto;
-		row-gap: 2px;
-	}
-	.fb .svc-what,
-	.fb .svc-last,
-	.fb .svc-msg,
-	.fb .svc-fix {
-		grid-column: 1 / -1;
-	}
-	.fb .svc-state {
-		grid-row: 1;
-		grid-column: 2;
-	}
 }
 
 /* A drafted reply to a player (Replies view) */

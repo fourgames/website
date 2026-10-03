@@ -742,9 +742,12 @@ function overviewView() {
     section("Latest posts", null,
       // Long reviews are cut to a few lines here; a click shows the whole post.
       ...(latest.length ? latest.map((i) => h("div.card.clamp", { onclick: (e) => {
-        if (!e.currentTarget.classList.contains("clamp")) return;
-        e.currentTarget.classList.remove("clamp");
-        e.currentTarget.querySelectorAll("details.full").forEach((d) => { d.open = true; });
+        // Click to open the whole post, click again to fold it; not when using a link, button or
+        // toggle inside it, or when selecting text.
+        if (e.target.closest("a, button, summary") || window.getSelection().toString()) return;
+        const card = e.currentTarget;
+        const open = card.classList.toggle("clamp") === false;
+        card.querySelectorAll("details.full").forEach((d) => { d.open = open; });
       } }, postView(i))) : [h("p.ov-calm", "No posts yet.")]),
       latest.length ? go("feed", "All posts") : null),
   );

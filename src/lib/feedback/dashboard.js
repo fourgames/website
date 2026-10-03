@@ -426,53 +426,30 @@ function suggestionText(issue, posts) {
   ].join("\n");
 }
 
-// 🔊 Read a text aloud with the browser's own voices (the system voices on a Mac). The language
-// picks a matching voice, so a Korean original is read by a Korean voice. Pressing it again stops.
-const SPEECH_LANG = {
-  english: "en-US", korean: "ko-KR", japanese: "ja-JP", "simplified chinese": "zh-CN", chinese: "zh-CN",
-  "chinese (simplified)": "zh-CN", "traditional chinese": "zh-TW", "chinese (traditional)": "zh-TW", german: "de-DE",
-  french: "fr-FR", spanish: "es-ES", "latin american spanish": "es-MX", portuguese: "pt-PT", "brazilian portuguese": "pt-BR",
-  "portuguese (brazil)": "pt-BR", russian: "ru-RU", polish: "pl-PL", italian: "it-IT", turkish: "tr-TR", ukrainian: "uk-UA",
-  dutch: "nl-NL", swedish: "sv-SE", danish: "da-DK", norwegian: "nb-NO", finnish: "fi-FI", czech: "cs-CZ", hungarian: "hu-HU",
-  romanian: "ro-RO", thai: "th-TH", vietnamese: "vi-VN", indonesian: "id-ID", greek: "el-GR", arabic: "ar-SA",
-};
-// The browser lists every voice the Mac has, novelty ones (Albert, Fred, Zarvox…) included, and the
-// first match for a language is often one of those. Rank them instead: downloaded Premium and
-// Enhanced voices first, then the system's default voice, never the novelty ones. (Siri voices
-// aren't available to web pages at all.)
-const NOVELTY = /^(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Fred|Junior|Ralph|Kathy|Grandma|Grandpa|Eddy|Flo|Reed|Rocko|Sandy|Shelley)\b/i;
-function bestVoice(lang) {
-  const base = lang.slice(0, 2).toLowerCase();
-  const score = (v) => {
-    const vl = v.lang.replace("_", "-").toLowerCase();
-    if (NOVELTY.test(v.name)) return -100;
-    return (vl === lang.toLowerCase() ? 4 : 0) + (/premium/i.test(v.name) ? 20 : 0) + (/enhanced/i.test(v.name) ? 15 : 0)
-      + (v.default ? 8 : 0) + (v.localService ? 2 : 0) + (/^Google/.test(v.name) ? -1 : 0);
-  };
-  const voices = speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith(base));
-  return voices.sort((a, b) => score(b) - score(a))[0] || null;
-}
-// Chrome fills the voice list asynchronously; ask early so it's ready by the first click.
-if ("speechSynthesis" in window) speechSynthesis.getVoices();
-
-function speakButton(text, language) {
-  if (!("speechSynthesis" in window) || !text) return null;
-  const button = h("button.speak", { type: "button", title: "Listen", "aria-label": "Listen" }, "🔊");
+// 🔊 Selects a text so macOS reads it with your own voice (Siri included, which web pages can't
+// use themselves): press the Speak Selection shortcut (⌥ Esc unless you changed it) afterwards.
+function speakButton(target) {
+  const button = h("button.speak", { type: "button", title: "Select the text to listen with your Mac's voice", "aria-label": "Select to listen" }, "🔊");
   button.addEventListener("click", (e) => {
     e.stopPropagation();
-    const playing = button.classList.contains("on");
-    speechSynthesis.cancel();
-    document.querySelectorAll(".fb .speak.on").forEach((b) => b.classList.remove("on"));
-    if (playing) return;
-    const say = new SpeechSynthesisUtterance(text);
-    say.lang = SPEECH_LANG[(language || "english").toLowerCase()] || "en-US";
-    const voice = bestVoice(say.lang);
-    if (voice) say.voice = voice;
-    say.onend = say.onerror = () => button.classList.remove("on");
-    button.classList.add("on");
-    speechSynthesis.speak(say);
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    const range = document.createRange();
+    range.selectNodeContents(target);
+    selection.addRange(range);
+    toast("Selected: press ⌥ Esc (your Speak Selection shortcut) to listen");
   });
   return button;
+}
+
+// A text with its 🔊 button beside it.
+function textRow(text) {
+  const el = h("div.text", text);
+  return h("div.text-row", el, speakButton(el));
+}
+function withSpeak(text) {
+  const el = h("span", text);
+  return [el, " ", speakButton(el)];
 }
 
 function postView(item) {
@@ -498,8 +475,8 @@ function postView(item) {
       h("a", { href: item.url, target: "_blank", rel: "noopener" }, "Open on Steam ↗")),
     parent ? h("div.meta", "in “", parent.title || "thread", "”") : null,
     item.title ? h("div", h("b", item.title)) : null,
-    h("div.text-row", h("div.text", english(item)), speakButton([item.title, english(item)].filter(Boolean).join(". "), "english")),
-    translated ? h("details", h("summary", `Original (${t.language})`), h("div.text-row", h("div.text", item.text), speakButton(item.text, t.language))) : null,
+    textRow(english(item)),
+    translated ? h("details", h("summary", `Original (${t.language})`), textRow(item.text)) : null,
     (item.versions || []).length ? h("details", h("summary", `Earlier versions (${item.versions.length})`),
       ...item.versions.slice().reverse().map((v) => h("div.text", `${fmtDate(v.at)}${v.votedUp == null ? "" : v.votedUp ? " · 👍" : " · 👎"}\n${v.title ? v.title + "\n" : ""}${v.text}`))) : null,
     item.devResponse ? h("details", h("summary", "Your reply on Steam"), h("div.text", item.devResponse)) : null,
@@ -535,7 +512,7 @@ function replyCard(item) {
     h("div.meta", h("span.badge.s-fixed", `✓ Fixed in ${r.version}`), h("b", issue?.title || "")),
     h("div.reply",
       h("div.reply-row",
-        h("div", h("div", "💬 ", r.text, " ", speakButton(r.text, item.triage?.language)), r.text !== r.english ? h("div.en", r.english) : null),
+        h("div", h("div", "💬 ", ...withSpeak(r.text)), r.text !== r.english ? h("div.en", r.english) : null),
         h("div.actions", { style: "margin:0;flex:none" },
           h("button.btn.primary", { onclick: (e) => copy(r.text, e.currentTarget) }, "Copy reply"),
           h("a.btn.link-btn", { href: item.url, target: "_blank", rel: "noopener" }, item.kind === "review" ? "Reply on Steam ↗" : "Open thread ↗"),
@@ -558,7 +535,7 @@ function repliedCard(item) {
   return h("div.card",
     h("div.meta", h("span.badge.s-fixed", "✓ Replied"), mine?.at ? h("span", fmtDate(mine.at)) : null,
       !mine ? h("span", "marked done here") : null),
-    mine ? h("div.reply", h("div.reply-row", h("div", h("div.en", "Your reply"), h("div", mine.text, " ", speakButton(mine.text, item.triage?.language))))) : null,
+    mine ? h("div.reply", h("div.reply-row", h("div", h("div.en", "Your reply"), h("div", ...withSpeak(mine.text))))) : null,
     postView(item));
 }
 

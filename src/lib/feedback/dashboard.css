@@ -913,20 +913,10 @@
 	opacity: 1;
 	background: var(--fb-hover);
 }
-.fb .speak.on {
-	opacity: 1;
-	background: var(--fb-accent);
-	animation: fb-pulse 1.2s ease-in-out infinite;
-}
 .fb .reply .speak {
 	width: 24px;
 	height: 24px;
 	margin: 0;
 	vertical-align: middle;
 	font-size: 0.75rem;
-}
-@keyframes fb-pulse {
-	50% {
-		opacity: 0.6;
-	}
 }

@@ -540,7 +540,7 @@ function issueCard(issue) {
   const patchBtn = issue.kind === "praise" ? null : h("button.btn", { onclick: (e) => copy(patchLine, e.currentTarget) }, "Copy patch-note line");
   const linkBtn = h("button.btn", { onclick: (e) => copy(posts.map((p) => p.url).join("\n"), e.currentTarget) }, "Copy links");
   const [, kind] = CATEGORY[issue.kind] || [];
-  const u = issue.urgency;
+  const u = issue.kind === "praise" ? null : issue.urgency; // praise has no priority
   const bars = u ? h(`span.bars4.pt-${u}`, ...[1, 2, 3, 4].map((n) => h(n <= PRIORITY_BARS[u] ? "i.on" : "i"))) : null;
   const summary = issue.summary ? h("span", issue.summary) : null;
   const summaryLabel = summary ? h(`button.pk.pk-${issue.kind}`, { type: "button", title: "Select this sentence" }, POINT_LABEL[issue.kind] || kind) : null;

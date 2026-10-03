@@ -1,5 +1,6 @@
 """Steam data: our games, reviews, player counts and update events. Stdlib only."""
 
+import hashlib
 import json
 import os
 import re
@@ -92,6 +93,20 @@ def discover_app_ids(config):
     return ids
 
 
+def store_fingerprint(d):
+    """A short hash of the English store data the website shows (scripts/fetch-data.mjs), so a change
+    to any of it can start a site rebuild. Images compare by file, not by their ?t= cache-buster."""
+    file = lambda url: (url or "").split("?")[0]
+    price = d.get("price_overview") or {}
+    shown = [
+        d.get("name"), d.get("short_description"), file(d.get("header_image")), bool(d.get("is_free")),
+        price.get("final_formatted"), price.get("initial_formatted"), price.get("discount_percent"),
+        (d.get("release_date") or {}).get("date"), sorted(k for k, v in (d.get("platforms") or {}).items() if v),
+        [g.get("description") for g in d.get("genres") or []][:3], [file(s.get("path_full")) for s in d.get("screenshots") or []],
+    ]
+    return hashlib.sha1(json.dumps(shown).encode()).hexdigest()[:12]
+
+
 def fetch_games(previous):
     """[{appId, name, status, type, capsule}] for every game on our publisher page plus games.js.
     Falls back to the previous list if Steam can't be reached, so a hiccup never drops a game."""
@@ -128,6 +143,7 @@ def fetch_games(previous):
                 "capsule": d.get("header_image"),
                 # The store's current discount; each run records it, so sale periods build up over time.
                 "discount": (d.get("price_overview") or {}).get("discount_percent", 0),
+                "store": store_fingerprint(d),
             }
         )
         time.sleep(0.3)

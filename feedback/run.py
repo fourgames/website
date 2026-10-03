@@ -733,15 +733,17 @@ def full_run():
     if not notify.WEBHOOK:
         status.fail("discord", "No DISCORD_WEBHOOK_URL secret is set, so alerts aren't sent.")
     index = load(DATA / "index.json", {"schemaVersion": SCHEMA_VERSION, "games": [], "dailyReportAt": None})
-    # What the website shows about each game; when it changes (a new store page, a release, a sale),
-    # loop.sh starts a site rebuild instead of waiting for the daily one.
-    site_view = lambda games: sorted((g["appId"], g["name"], g["status"], g.get("released"), g.get("discount")) for g in games)
+    # The store data the website shows about each game; when any of it changes (a new store page, a
+    # release, a sale, new screenshots or text), loop.sh starts a site rebuild instead of waiting for
+    # the daily one. Games from before the fingerprint existed don't count as changed.
+    site_view = lambda games: {g["appId"]: g.get("store") for g in games}
     before = site_view(index["games"])
     index["games"] = steam.fetch_games(index["games"])
-    if before and site_view(index["games"]) != before:
+    after = site_view(index["games"])
+    if before and (after.keys() != before.keys() or any(before[a] and after[a] != before[a] for a in after)):
         (HERE / ".cache").mkdir(exist_ok=True)
         (HERE / ".cache" / "rebuild-site").touch()
-        print("[site] game list changed: the website will be rebuilt")
+        print("[site] store data changed: the website will be rebuilt")
     budget = {"left": MAX_TRIAGE_PER_RUN}
     states, changed = {}, []
     for game in index["games"]:

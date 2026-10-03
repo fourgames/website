@@ -17,7 +17,7 @@ WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
 MENTION = os.environ.get("DISCORD_MENTION", "").strip()
 DASHBOARD_URL = "https://fourgames.se/fb-dash/"
 
-COLORS = {"urgent": 0xE5484D, "flip": 0xF76B15, "cluster": 0xFFC53D, "still": 0xD6409F}
+COLORS = {"urgent": 0xE5484D, "flip": 0xF76B15, "cluster": 0xFFC53D, "still": 0xD6409F, "negative": 0xF76B15, "bug": 0xE5484D}
 
 
 def _mention():
@@ -156,6 +156,29 @@ def urgent(game, item, issue):
         "url": item["url"],
         "description": _clip(f"> {_quote(item)}\n\n[Open the post]({item['url']}) · [Dashboard]({DASHBOARD_URL})", 4000),
         "color": COLORS["urgent"],
+        "author": _author(item),
+        "fields": _post_fields(item),
+        "footer": _footer(game, item),
+        "timestamp": _iso(item.get("created")),
+    }
+
+
+def new_post(game, item, negative, bugs):
+    """A new negative review, or a new post reporting a bug (listing the bugs it reports)."""
+    if negative:
+        title = f"👎 New negative review · {game['name']}"
+    else:
+        title = f"🐛 New bug report · {game['name']}: {bugs[0]['text']}"
+    lines = "".join(f"\n• {b['text']}" for b in bugs)
+    return {
+        "title": _clip(title, 256),
+        "url": item["url"],
+        "description": _clip(
+            (f"**Bugs reported:**{lines}\n\n" if bugs and (negative or len(bugs) > 1) else "")
+            + f"> {_quote(item)}\n\n[Open the post]({item['url']}) · [Dashboard]({DASHBOARD_URL})",
+            4000,
+        ),
+        "color": COLORS["negative" if negative else "bug"],
         "author": _author(item),
         "fields": _post_fields(item),
         "footer": _footer(game, item),

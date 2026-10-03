@@ -20,6 +20,7 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
    - For every negative review and every thread in an issue that a release fixed, Claude drafts a one- or two-sentence reply in the player's language, saying what was fixed and in which version. Steam's moderation guide suggests replying only in cases like that. The drafts show in the dashboard's **Replies** view until you reply on Steam.
 8. **Discord.** It posts webhook embeds that link to the original post for:
    - urgent issues;
+   - every new negative review, and every new post that reports a bug;
    - reviews flipped to negative;
    - repeated reports, at 3, 5, 10, 25… players.
 

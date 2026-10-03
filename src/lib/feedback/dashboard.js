@@ -200,7 +200,7 @@ const SERVICES = {
   steam: ["Steam", "Reviews, players in game, store pages and update posts", "no new data yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
   forums: ["Discussions", "Threads, replies and comments on your announcements", "no new posts yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
   claude: ["Claude", "Translates posts, sorts them into bugs and ideas, matches patch notes", "nothing sorted yet", "https://platform.claude.com/settings/billing", "Add credit"],
-  discord: ["Discord", "Pings you for urgent bugs, reviews flipped to negative and complaints many players share", "no alerts sent yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
+  discord: ["Discord", "Pings you for new negative reviews and bug reports, urgent issues, flipped reviews and shared complaints", "no alerts sent yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
   github: ["GitHub", "Runs it all every 10 min, saves the data, rebuilds the site on store changes", "no changes yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
 };
 

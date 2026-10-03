@@ -346,6 +346,7 @@ def triage_pending(state, game, run, budget, until=None):
         assign_issues(state, item, result, run)
         item["triage"] = result
         item["pending"] = False
+        run["triaged"].append(item["id"])
         if t.urgency == "urgent":
             run["urgent"].append(item["id"])
 
@@ -641,7 +642,8 @@ def draft_fix_replies(state, game, issue):
 
 
 def send_alerts(state, game, run, first_run):
-    """Urgent issues, flips to negative and clusters. A game's first run only sets the baseline."""
+    """Urgent issues, new negative reviews and bug reports, flips to negative and clusters, each
+    pinging you. A game's first run only sets the baseline."""
     import notify
 
     items, issues = state["items"], state["issues"]
@@ -667,8 +669,21 @@ def send_alerts(state, game, run, first_run):
             if not first_run:
                 posts = sorted((items[i] for i in issue["items"]), key=lambda p: p["created"], reverse=True)
                 clusters.append(notify.cluster(game, issue, posts))
-    # Urgent issues and clusters @mention; flips arrive quietly.
-    for batch in (urgent, clusters, flips):
+    # Every new negative review and every new post reporting a bug, once, when it has been sorted
+    # (posts from before these alerts existed don't count). Urgent ones were already sent above.
+    state.setdefault("newPostAlertsFrom", now())
+    posts = []
+    for item_id in dict.fromkeys(run["triaged"]):
+        item = items[item_id]
+        if item.get("dev") or item.get("alertedNew") or item["created"] < state["newPostAlertsFrom"]:
+            continue
+        item["alertedNew"] = True
+        negative = item["kind"] == "review" and not item.get("votedUp")
+        bugs = [pt for pt in (item.get("triage") or {}).get("points") or [] if pt["kind"] == "bug"]
+        if first_run or item_id in run["urgent"] or not (negative or bugs):
+            continue
+        posts.append(notify.new_post(game, item, negative, bugs))
+    for batch in (urgent, posts, clusters, flips):
         for start in range(0, len(batch), 10):
             notify.send(batch[start : start + 10], ping=True)
 
@@ -699,7 +714,7 @@ def full_run():
         path = game_path(game["appId"])
         state = load(path, None) or new_state(game)
         first_run = not state["initialized"]
-        run = {"new": [], "edited": [], "flips": [], "urgent": [], "touched": set()}
+        run = {"new": [], "edited": [], "flips": [], "urgent": [], "triaged": [], "touched": set()}
         try:
             events = steam.update_events(game["appId"])
         except steam.HttpError as error:
@@ -762,13 +777,20 @@ def test_discord():
         sys.exit("No issues in the data yet to build examples from")
     game, state, issue = max(pool, key=lambda p: p[2].get("priority", 0))
     posts = sorted((state["items"][i] for i in issue["items"] if i in state["items"]), key=lambda p: p["created"], reverse=True)
-    negative = next((i for _, s, _ in pool for i in s["items"].values() if i["kind"] == "review" and not i.get("votedUp")), None)
+    all_items = [i for _, s, _ in pool for i in s["items"].values()]
+    negative = next((i for i in all_items if i["kind"] == "review" and not i.get("votedUp")), None)
+    bug_points = lambda i: [pt for pt in (i.get("triage") or {}).get("points") or [] if pt["kind"] == "bug"]
+    bug_post = next((i for i in all_items if not i.get("dev") and bug_points(i) and not (i["kind"] == "review" and not i.get("votedUp"))), None)
+    owner = lambda item: next(games[a] for a, s in states.items() if item["id"] in s["items"])
     test = "🧪 **Test** of the player feedback alerts: one of each kind, made from real posts. Nothing is wrong."
     sent = [notify.send([notify.urgent(game, posts[0], issue)], ping=True, note=test + "\n**1. Urgent issue** (pings you):")]
     sent.append(notify.send([notify.cluster(game, issue, posts)], ping=True, note="**2. Repeated reports** (pings you):"))
     if negative:
-        owner = next(games[a] for a, s in states.items() if negative["id"] in s["items"])
-        sent.append(notify.send([notify.flip(owner, negative)], ping=True, note="**3. Review flipped to negative** (pings you):"))
+        sent.append(notify.send([notify.new_post(owner(negative), negative, True, bug_points(negative))], ping=True, note="**3. New negative review** (pings you):"))
+    if bug_post:
+        sent.append(notify.send([notify.new_post(owner(bug_post), bug_post, False, bug_points(bug_post))], ping=True, note="**4. New bug report** (pings you):"))
+    if negative:
+        sent.append(notify.send([notify.flip(owner(negative), negative)], ping=True, note="**5. Review flipped to negative** (pings you):"))
     print(f"[discord] test: {sum(sent)} of {len(sent)} messages accepted")
     if not all(sent):
         sys.exit(1)

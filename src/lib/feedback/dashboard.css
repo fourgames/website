@@ -860,8 +860,18 @@
 	font: inherit;
 	color: inherit;
 	cursor: pointer;
-	display: block;
 	width: 100%;
+}
+/* Every card lays out the same way, top-aligned (a button centres its content by default). */
+.fb .kpi {
+	display: flex;
+	flex-direction: column;
+	justify-content: flex-start;
+	align-items: stretch;
+}
+.fb .kpi .spark {
+	margin-top: auto;
+	padding-top: 6px;
 }
 .fb button.kpi:hover {
 	background: var(--fb-hover);

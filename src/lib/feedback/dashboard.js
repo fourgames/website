@@ -470,7 +470,7 @@ function updatesView() {
     const next = all[i + 1]?.time ?? now();
     const before = tally(prev, r.time), after = tally(r.time, next);
     const fixed = (r.matched || []).map((id) => state.game.issues?.[id]).filter(Boolean);
-    const partly = (r.partly || []).map((id) => state.game.issues?.[id]).filter(Boolean);
+    const partly = (r.partly || []).map((id) => state.game.issues?.[id]).filter((x) => x && x.status !== "likely_fixed");
     const since = Object.values(state.game.issues || {}).filter((x) => x.kind !== "praise" && x.firstSeen >= r.time && x.firstSeen < next);
     const reportsAfter = (x) => x.items.map((id) => state.game.items[id]).filter((p) => p && p.created > r.time).length;
     const better = before.n && after.n ? after.neg / after.n < before.neg / before.n : null;

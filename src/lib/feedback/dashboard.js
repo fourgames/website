@@ -499,11 +499,12 @@ function postParts(item) {
     body: [
       parent ? h("div.meta", "in “", parent.title || "thread", "”") : null,
       item.title ? h("div", h("b", item.title)) : null,
-      // A long post leads with its key points, most actionable first; the full text folds away.
+      // Every post leads with its points (what kind of thing it says), most actionable first.
       ...(t.points?.length ? [
         h("ul.pc-points", ...[...t.points].sort((a, b) => POINT_ORDER.indexOf(a.kind) - POINT_ORDER.indexOf(b.kind))
           .map((pt) => h("li", h(`span.pk.pk-${pt.kind}`, POINT_LABEL[pt.kind]), h("span", pt.text)))),
-        h("details", h("summary", "Full post"), textRow(english(item))),
+        // Long posts fold away under their points; short ones stay readable as they are.
+        english(item).length > 280 ? h("details", h("summary", "Full post"), textRow(english(item))) : textRow(english(item)),
       ] : [textRow(english(item))]),
       t.note ? h("div.pc-note", h("b", "Note "), t.note) : null,
       translated ? h("details", h("summary", `Original (${t.language})`), textRow(item.text)) : null,

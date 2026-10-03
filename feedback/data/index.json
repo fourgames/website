@@ -20,5 +20,27 @@
    "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3958210/2ddbceeb0eec5ee1d6aee9ade2a18b16aa89c8fb/header.jpg?t=1790968253"
   }
  ],
- "dailyReportAt": 1791016910
+ "dailyReportAt": 1791016910,
+ "status": {
+  "claude": {
+   "ok": true,
+   "message": null,
+   "since": 1791020758
+  },
+  "forums": {
+   "ok": true,
+   "message": null,
+   "since": 1791020758
+  },
+  "sales": {
+   "ok": false,
+   "message": "Steam returns no sales data for this key: it needs the Financial permission, or a Financial API Group key as STEAM_FINANCIAL_KEY.",
+   "since": 1791020758
+  },
+  "steam": {
+   "ok": true,
+   "message": null,
+   "since": 1791020758
+  }
+ }
 }

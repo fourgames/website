@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "appId": 2807130,
- "initialized": false,
+ "initialized": true,
  "watermarks": {
   "reviews": 1751640136,
   "forums": {
@@ -28,7 +28,20 @@
    "devResponse": "Thanks for the review! I've updated the game based on your feedback:\n\nHead-bob: Reduced by 50%.\nSwap Speed: 33% faster.\nHammer: New icon instead of heart and clearer melee/AoE functionality.\nThanks for helping me improve the game!",
    "versions": [],
    "flips": [],
-   "pending": true
+   "pending": false,
+   "triage": {
+    "language": "English",
+    "summary": "Player enjoys the game but reports a head bob effect they want disabled, a bugged HP meter, desires a close-quarters mode for the pop gun, and finds hammer switching too slow.",
+    "category": "suggestion",
+    "urgency": "medium",
+    "area": "controls, UI, gameplay",
+    "details": null,
+    "reply": {
+     "text": "Thanks so much for playing and for the detailed feedback! We're glad you're enjoying the tower defense gameplay—and we'll definitely look into the head bob toggle, the HP meter issue, and those weapon mechanics.",
+     "english": "Thanks so much for playing and for the detailed feedback! We're glad you're enjoying the tower defense gameplay—and we'll definitely look into the head bob toggle, the HP meter issue, and those weapon mechanics."
+    }
+   },
+   "issue": "I1"
   },
   "t7130962134691875275": {
    "id": "t7130962134691875275",
@@ -184,8 +197,41 @@
    "pending": false
   }
  },
- "issues": {},
- "nextIssue": 1,
+ "issues": {
+  "I1": {
+   "id": "I1",
+   "kind": "suggestion",
+   "title": "Multiple balance and UX improvements: head bob toggle, HP meter bug, hammer switch speed",
+   "area": "controls, UI, gameplay",
+   "summary": "Player enjoys the game but reports a head bob effect they want disabled, a bugged HP meter, desires a close-quarters mode for the pop gun, and finds hammer switching too slow.",
+   "status": "likely_fixed",
+   "created": 1791020710,
+   "items": [
+    "r198931298"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 1,
+   "languages": [
+    "English"
+   ],
+   "firstSeen": 1751640136,
+   "lastSeen": 1751640136,
+   "urgency": "medium",
+   "negativeReviews": 0,
+   "details": [],
+   "priority": 0.12,
+   "fixPrompt": null,
+   "fixedIn": "Reforge Front Update",
+   "fixedAt": 1777578540,
+   "fixedUrl": "https://store.steampowered.com/news/app/2807130/view/690882175138005309",
+   "fixReason": "Reduced headbob by 50% addresses the head bob effect complaint, and Switching equipment is now 33% faster addresses the hammer switch speed concern",
+   "stillSince": null
+  }
+ },
+ "nextIssue": 2,
  "players": [
   [
    1791016905,
@@ -247,8 +293,10 @@
    "time": 1777578540,
    "url": "https://store.steampowered.com/news/app/2807130/view/690882175138005309",
    "notes": "New Features\n\n- \nController Support: Full support added with aim assist.\n\n- \nmacOS: Now officially playable on Mac.\n\n- \nWidescreen: UI and textures now scale correctly.\n\n- \nBlood Moon: New event! Snow and lava levels are now night-only.\n\nGameplay & Audio\n\n- \nSpeed: Switching equipment is now 33% faster.\n\n- \nComfort: Reduced headbob by 50%.\n\n- \nWaves: Press Q to start waves manually.\n\n- \nAudio: Balanced volume and added new button SFX.\n\nFixes & Improvements\n\n- \nBombs: Now properly damage enemies (not just you!).\n\n- \nMenus: Fixed mouse disappearing/getting stuck.\n\n- \nVisuals: Refined lighting and color grading.\n\nupdated pricing using Steam’s new Purchasing Power conversion to ensure the game is accessible to more players. Prices reduced by 20% or more in many regions.Example: Our EU price has been lowered from €4,99 to €3,55.\n\nThanks for playing!",
-   "matched": [],
-   "checked": false
+   "matched": [
+    "I1"
+   ],
+   "checked": true
   },
   {
    "gid": "684140727200907388",
@@ -258,7 +306,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/684140727200907388",
    "notes": "- \nNow in 28 languages, including Japanese, Korean and Chinese. The game follows your Steam language, or pick one in Options\n\n- \nNow playable on Linux\n\n- \nNew lighting in every world: an overcast forest, freezing snow, warm lava, a torchlit hub and a glowing furnace\n\n- \nNew title logo, with its own version in Japanese, Korean and Chinese\n\n- \nThe whole Options menu now works with a controller: LB/RB switch tabs and B goes back, great on Steam Deck\n\n- \nController: hold LT to aim, which is when aim assist kicks in. Sprint is now on L3, crouch on R3 and bomb on View\n\n- \nFive achievements that could not be unlocked before now unlock\n\n- \nSmoother play: no freeze on the first hit, and much steadier frame rates on Mac\n\n- \nCoin, heart and bomb icons now look the same on every system\n\n- \nNew 16:10 resolutions, including Steam Deck's 1280x800\n\n- \nFixed: the 2560x1440 option set 2560x1080, rebinding a key removed its controller button, and the pause menu was empty after pressing Esc in Options\n\n- \nFixed: the lava world's last wave played the wrong music, and the snow music restarted off the beat",
    "matched": [],
-   "checked": false
+   "checked": true
   },
   {
    "gid": "684140727200908131",
@@ -268,7 +316,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/684140727200908131",
    "notes": "- \nMaintenance update: no gameplay changes",
    "matched": [],
-   "checked": false
+   "checked": true
   },
   {
    "gid": "684140727200908155",
@@ -278,7 +326,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/684140727200908155",
    "notes": "- \nMaintenance update: no gameplay changes",
    "matched": [],
-   "checked": false
+   "checked": true
   }
  ],
  "threads": {

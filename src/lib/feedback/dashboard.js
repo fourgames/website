@@ -684,8 +684,9 @@ function postParts(item, focus = null) {
             return h("li", label, sentence);
           })),
         others ? h("div.meta", `+ ${plural(others, "other point")} about other things, in the full post`) : null,
-        // Long posts fold away under their points; short ones stay readable as they are.
-        english(item).length > 280 ? fullPost(textRow(english(item))) : textRow(english(item)),
+        // Long posts fold away under their points; short ones stay readable as they are, except
+        // under an issue, where only its points show.
+        english(item).length > 280 || focus ? fullPost(textRow(english(item))) : textRow(english(item)),
       ] : [textRow(english(item))]),
       t.note ? h("div.pc-note", h("b", "Note "), t.note) : null,
       translated ? h("details", h("summary", `Original (${t.language})`), textRow(item.text)) : null,

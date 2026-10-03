@@ -183,40 +183,43 @@ async function init() {
   if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : orderedGames()[0].appId);
 }
 
-// The services each run uses (feedback/status.py), what they're for, and where a problem is fixed.
+// The services each run uses (feedback/status.py): what they're for, what their "last" time means,
+// and where a problem is fixed. GitHub (collecting and storing the data) is checked from here.
 const SERVICES = {
-  steam: ["Steam", "Reviews, player counts and updates", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
-  forums: ["Steam discussions", "Threads, replies and announcement comments", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
-  claude: ["Claude", "Translates and sorts new posts", "https://platform.claude.com/settings/billing", "Add credit"],
-  discord: ["Discord", "Pings for urgent bugs and flipped reviews", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
+  steam: ["Steam", "Reviews, player counts and updates", "last new data", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
+  forums: ["Steam discussions", "Threads, replies and announcement comments", "last new post", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
+  claude: ["Claude", "Translates and sorts new posts", "last sorted", "https://platform.claude.com/settings/billing", "Add credit"],
+  discord: ["Discord", "Pings for urgent bugs and flipped reviews", "last alert", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
+  github: ["GitHub", "Collects every 10 minutes and stores the data", "last change", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
 };
 
-// In the page header: how often it collects, when something last changed, and a card per service.
+// In the page header: a card per service, saying whether it works and when it last did something.
 function renderStatus() {
   const el = document.getElementById("fb-status");
   if (!el || !state.index) return;
-  const status = state.index.status || {};
+  const status = { ...(state.index.status || {}) };
+  // GitHub's state comes from the workflow runs (unknown when its API limit is used up); its last
+  // change from the data itself, or the newest data commit.
   const checks = state.checks;
-  const run = [
-    checks ? (checks.running ? "Collecting every 10 min" : checks.ok ? `Last collected ${ago(checks.at)}` : "Collecting stopped") : null,
-    // From the data itself, or the newest data commit when the data is older than that field.
-    (state.index.changedAt || state.dataChanged) ? `last change ${ago(Math.max(state.index.changedAt || 0, state.dataChanged || 0))}` : null,
-  ].filter(Boolean);
-  const card = ([key, [name, what, href, action]]) => {
+  status.github = {
+    ok: checks ? checks.running || checks.ok : undefined,
+    message: checks && !checks.running && !checks.ok ? "The collecting workflow stopped with an error." : null,
+    since: checks?.at,
+    active: Math.max(state.index.changedAt || 0, state.dataChanged || 0) || null,
+  };
+  const card = ([key, [name, what, lastLabel, href, action]]) => {
     const s = status[key];
-    const state_ = !s ? "idle" : s.ok ? "ok" : "bad";
+    const kind = !s || s.ok === undefined ? "idle" : s.ok ? "ok" : "bad";
     // Out of credit is the one with a fix behind a button; other services link to where they're fixed.
     const fix = key === "claude" && s && !/credit/i.test(s.message || "") ? ["https://platform.claude.com/settings/keys", "API keys"] : [href, action];
-    return h(`div.svc.svc-${state_}`,
-      h("div.svc-head", h("span.svc-dot"), h("b", name), h("span.svc-state", { ok: "Working", bad: "Needs attention", idle: "Not checked yet" }[state_])),
+    return h(`div.svc.svc-${kind}`,
+      h("div.svc-head", h("span.svc-dot"), h("b", name), h("span.svc-state", { ok: "Working", bad: "Needs attention", idle: key === "github" ? "Checking…" : "Not checked yet" }[kind])),
       h("div.svc-what", what),
-      state_ === "bad" ? h("div.svc-msg", s.message || "Failed.", h("span.svc-since", ` · since ${ago(s.since)}`)) : null,
-      state_ === "bad" ? h("a.btn.primary.svc-fix", { href: fix[0], target: "_blank", rel: "noopener" }, fix[1], " ↗") : null);
+      s?.active ? h("div.svc-last", `${lastLabel} ${ago(s.active)}`) : null,
+      kind === "bad" ? h("div.svc-msg", s.message || "Failed.", s.since ? h("span.svc-since", ` · since ${ago(s.since)}`) : null) : null,
+      kind === "bad" ? h("a.btn.primary.svc-fix", { href: fix[0], target: "_blank", rel: "noopener" }, fix[1], " ↗") : null);
   };
-  el.replaceChildren(...[
-    run.length ? h(`div.svc-run${checks && !checks.running && !checks.ok ? ".svc-run-bad" : ""}`, h("span.svc-dot"), run.join(" · ")) : null,
-    h("div.svc-grid", ...Object.entries(SERVICES).map(card)),
-  ].filter(Boolean));
+  el.replaceChildren(h("div.svc-grid", ...Object.entries(SERVICES).map(card)));
 }
 
 // Released games first, newest release on top; then coming-soon games, soonest first.

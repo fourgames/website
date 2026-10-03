@@ -9,6 +9,7 @@ timestamps) for the same reason.
 import time
 
 _seen = {}  # source → None (worked) or the first failure message of this run
+_active = set()  # sources that brought in or did something new this run
 
 
 def ok(source):
@@ -20,6 +21,13 @@ def fail(source, message):
         _seen[source] = message
 
 
+def active(source):
+    """The source did something new (a new review, a sorted post, a sent alert): the dashboard shows
+    when that last happened. Only marked alongside a data change, so it never makes a commit alone."""
+    _active.add(source)
+    _seen.setdefault(source, None)
+
+
 def merge(previous):
     """The new status block: this run's results on top of the previous run's (for parts it skipped)."""
     out = dict(previous or {})
@@ -28,5 +36,6 @@ def merge(previous):
         entry = {"ok": message is None, "message": message}
         same = old.get("ok") == entry["ok"] and old.get("message") == message
         entry["since"] = old.get("since") if same and old.get("since") else int(time.time())
+        entry["active"] = int(time.time()) if source in _active else old.get("active")
         out[source] = entry
     return dict(sorted(out.items()))

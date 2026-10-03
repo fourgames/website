@@ -759,14 +759,6 @@
 }
 
 /* In the page header: collecting, last change, and a card per service */
-.fb .svc-run {
-	display: inline-flex;
-	align-items: center;
-	gap: 8px;
-	margin-bottom: 12px;
-	color: var(--fb-muted);
-	font-size: 0.8125rem;
-}
 .fb .svc-dot {
 	width: 8px;
 	height: 8px;
@@ -774,13 +766,11 @@
 	border-radius: 50%;
 	background: var(--fb-muted);
 }
-.fb .svc-run .svc-dot,
 .fb .svc-ok .svc-dot {
 	position: relative;
 	background: #23a559;
 }
 /* Working services pulse like the site's Discord "online" dot (pulse-dot in src/style.css). */
-.fb .svc-run:not(.svc-run-bad) .svc-dot::after,
 .fb .svc-ok .svc-dot::after {
 	content: "";
 	position: absolute;
@@ -806,13 +796,12 @@
 		display: none;
 	}
 }
-.fb .svc-run-bad .svc-dot,
 .fb .svc-bad .svc-dot {
 	background: var(--fb-critical);
 }
 .fb .svc-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+	grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
 	gap: 10px;
 }
 .fb .svc {
@@ -841,6 +830,14 @@
 	margin-top: 2px;
 	font-size: 0.8125rem;
 	color: var(--fb-muted);
+}
+.fb .svc-last {
+	margin-top: 6px;
+	font-size: 0.75rem;
+	color: var(--fb-muted);
+}
+.fb .svc-ok .svc-last {
+	color: #23a559;
 }
 .fb .svc-msg {
 	margin-top: 6px;

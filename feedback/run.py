@@ -138,6 +138,7 @@ def upsert_review(state, game, r, run):
             "pending": True,
         }
         run["new"].append(rid)
+        status.active("steam")
         return
     item["votesUp"] = r.get("votes_up", 0)
     item["author"]["reviews"] = author.get("num_reviews")
@@ -156,6 +157,7 @@ def upsert_review(state, game, r, run):
             run["flips"].append(rid)
     item.update(text=text, votedUp=voted_up, updated=updated, edited=True, pending=True)
     run["edited"].append(rid)
+    status.active("steam")
 
 
 def record_discount(state, game):
@@ -182,6 +184,7 @@ def record_players(state, game):
     # Store changes only: the dashboard draws it as a step line, and an unchanged count isn't a commit.
     if not series or series[-1][1] != count:
         series.append([now(), count])
+        status.active("steam")
 
 
 # ---------------------------------------------------------------------------
@@ -269,6 +272,7 @@ def translate_own(state, budget):
                 print(f"[translate] {item['id']}: {type(error).__name__}: {error}")
                 status.fail("claude", f"{triage.describe_error(error)[0]} Your own posts wait to be translated.")
                 return
+            status.active("claude")
             budget["left"] -= 1
             english = result.english.strip()
             if field == "text":
@@ -301,6 +305,7 @@ def add_tone(state, game, budget):
             print(f"[tone] {item['id']}: {type(error).__name__}: {error}")
             status.fail("claude", f"{triage.describe_error(error)[0]} Some posts still lack a tone.")
             return
+        status.active("claude")
         budget["left"] -= 1
         t["tone"] = result.tone
         if result.note:
@@ -333,7 +338,7 @@ def triage_pending(state, game, run, budget, until=None):
                 print("[triage] stopping for this run")
                 break
             continue
-        status.ok("claude")
+        status.active("claude")
         budget["left"] -= 1
         result = t.model_dump()
         result["points"] = result["points"] or fallback_points(result)
@@ -527,6 +532,7 @@ def merge_duplicates(state, game):
         print(f"[merge] {type(error).__name__}: {error}")
         status.fail("claude", f"{triage.describe_error(error)[0]} Duplicate issues wait to be merged.")
         return False
+    status.active("claude")
     number = lambda issue_id: int(issue_id[1:])
     for group in groups:
         keep_id, *others = sorted(group["ids"], key=number)
@@ -574,6 +580,7 @@ def match_release(state, game, release):
         print(f"[release] {release['name']}: {type(error).__name__}: {error}")
         status.fail("claude", f"{triage.describe_error(error)[0]} Patch notes wait to be matched against issues.")
         return False
+    status.active("claude")
     label = f"v{release['version']}" if release["version"] else release["name"]
     direct = [m for m in matches if m.get("fit", "direct") == "direct"]
     for m in matches:
@@ -624,6 +631,7 @@ def draft_fix_replies(state, game, issue):
             print(f"[reply] {item_id}: {type(error).__name__}: {error}")
             status.fail("claude", f"{triage.describe_error(error)[0]} Reply drafts for fixed issues are missing.")
             return False
+        status.active("claude")
         item["fixReply"] = {"issue": issue["id"], "version": issue["fixedIn"], "at": issue["fixedAt"], **reply.model_dump()}
     return True
 

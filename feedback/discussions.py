@@ -213,6 +213,7 @@ def upsert(state, run, item_id, kind, url, post, **extra):
             "pending": not post["dev"],
         }
         run["new"].append(item_id)
+        status.active("forums")
         return
     title = post.get("title", item.get("title"))
     if text != item["text"] or title != item.get("title"):
@@ -222,3 +223,4 @@ def upsert(state, run, item_id, kind, url, post, **extra):
         if kind == "topic":
             item["title"] = title
         run["edited"].append(item_id)
+        status.active("forums")

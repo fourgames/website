@@ -47,12 +47,14 @@
   "forums": {
    "ok": true,
    "message": null,
-   "since": 1791020758
+   "since": 1791020758,
+   "active": 1790848674
   },
   "steam": {
    "ok": true,
    "message": null,
-   "since": 1791020758
+   "since": 1791020758,
+   "active": 1791042656
   }
  },
  "changedAt": 1791057732

@@ -92,7 +92,7 @@ def send(embeds, ping=False, note=None):
         )
         try:
             with urllib.request.urlopen(req, timeout=30):
-                status.ok("discord")
+                status.active("discord")
                 return True
         except urllib.error.HTTPError as error:
             if error.code == 429 and attempt < 4:

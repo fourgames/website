@@ -682,7 +682,11 @@ function postParts(item, focus = null) {
               window.getSelection().removeAllRanges();
               window.getSelection().addRange(range);
             });
-            return h("li", label, sentence);
+            // Struck through once an update fixed the issue it belongs to (for posts from before the fix).
+            const issue = pt.issue ? state.game.issues?.[pt.issue] : null;
+            const fixed = issue?.status === "likely_fixed" && item.created < issue.fixedAt;
+            return h(`li${fixed ? ".pt-fixed" : ""}`, label, sentence,
+              fixed ? h("a.pt-fixed-in", { href: issue.fixedUrl, target: "_blank", rel: "noopener", title: issue.fixReason || "" }, `✓ fixed in ${issue.fixedIn}`) : null);
           })),
         others ? h("div.meta", `+ ${plural(others, "other point")} about other things, in the full post`) : null,
         // Long posts fold away under their points; short ones stay readable as they are, except

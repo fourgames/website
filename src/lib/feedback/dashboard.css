@@ -1371,3 +1371,18 @@
 	font-size: 0.8125rem;
 	color: var(--fb-title);
 }
+.fb .pc-points li.pt-fixed > span {
+	text-decoration: line-through;
+	text-decoration-thickness: 1.5px;
+	color: var(--fb-muted);
+}
+.fb .pc-points li.pt-fixed .pk {
+	opacity: 0.55;
+}
+.fb .pt-fixed-in {
+	margin-left: 8px;
+	font-size: 12px;
+	white-space: nowrap;
+	color: var(--fb-good-text);
+	text-decoration: none;
+}

@@ -309,7 +309,9 @@ function renderStats() {
   // The two chart cards stay minimal, like SteamDB's: the number and what it is. Their details
   // (peaks, positive and negative counts) are in the panel that opens below.
   document.getElementById("fb-stats").replaceChildren(...[
-    tile("Players", current ?? "–", current != null ? "In-Game" : "not released", null, undefined, "players"),
+    // A fire when the players in game right now are the most ever recorded.
+    tile("Players", current == null ? "–" : `${current}${current && current >= Math.max(...series.map(([, n]) => n)) ? " 🔥" : ""}`,
+      current != null ? (current && current >= Math.max(...series.map(([, n]) => n)) ? "In-Game · all-time peak" : "In-Game") : "not released", null, undefined, "players"),
     tile("Reviews", score ? `${score.rating.toFixed(2)}%` : "–", score ? plural(score.total, "review") : "no reviews yet", null, undefined, "reviews"),
     tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent"),
     tile("New posts", fresh.length, "last 24 h", postsPerDay),

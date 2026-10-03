@@ -63,8 +63,8 @@ class Triage(BaseModel):
         description="How the post is meant: a joke or meme, sarcasm (the words mean the opposite), or sincere."
     )
     points: list[Point] = Field(
-        description="For a post that makes more than one point, whatever its length: its separate points, most "
-        "actionable first (bugs, then complaints and suggestions, then questions, then praise). Empty when it makes one."
+        description="Every point the post makes, at least one even for a one-liner, most actionable first (bugs, "
+        "then complaints and suggestions, then questions, then praise)."
     )
     note: Optional[str] = Field(
         description="Usually null. Only when the English would mislead on its own: one short sentence explaining a meme, "
@@ -94,8 +94,8 @@ warning. Set tone accordingly and triage what the player actually means.
 reference). Leave it null otherwise; most posts need none. Don't use it to summarise, judge or interpret the post.
 - points: break a long post into the separate things it says, for the developer reading it (not a buyer's TL;DR): \
 each bug, complaint, suggestion, question and bit of praise as its own short line, most actionable first. Keep the \
-player's specifics (numbers, places, items). Do this for any post that says more than one thing, short or long; \
-leave it empty only when the post makes a single point."""
+player's specifics (numbers, places, items). Every post gets at least one point, a one-liner included, so the \
+developer can see at a glance whether it's a bug, complaint, suggestion, question or praise."""
 
 
 def triage(game_name, item, issues, context=None):

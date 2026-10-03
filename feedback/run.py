@@ -271,17 +271,21 @@ def add_profiles(state):
         item["author"] = author
 
 
+def fallback_points(t):
+    """Every post shows at least one point; if Claude gave none, the summary is that point."""
+    return [{"kind": t.get("category") or "praise", "text": t.get("summary") or ""}]
+
+
 def add_tone(state, game, budget):
     """Posts triaged before triage had tone, note and key points get just those filled in, once;
-    their category, issue and alerts stay as they are. (An empty points list means "checked, one
-    point", so a post is only asked about once.)"""
+    their category, issue and alerts stay as they are."""
     import triage
 
     for item in state["items"].values():
         t = item.get("triage")
         if not t or item.get("dev") or budget["left"] <= 0:
             continue
-        if "tone" in t and "points" in t:
+        if "tone" in t and t.get("points"):
             continue
         try:
             result = triage.triage(game["name"], item, [], thread_context(state, item))
@@ -293,7 +297,7 @@ def add_tone(state, game, budget):
         t["tone"] = result.tone
         if result.note:
             t["note"] = result.note
-        t["points"] = [p.model_dump() for p in result.points]
+        t["points"] = [p.model_dump() for p in result.points] or fallback_points(t)
 
 
 def triage_pending(state, game, run, budget):
@@ -322,6 +326,7 @@ def triage_pending(state, game, run, budget):
         status.ok("claude")
         budget["left"] -= 1
         result = t.model_dump(exclude={"existing_issue", "new_issue_title"})
+        result["points"] = result["points"] or fallback_points(result)
         if not result["english"].strip() or result["english"].strip() == (item.get("text") or "").strip():
             result.pop("english")  # an English post: the dashboard shows its own text
         item["triage"] = result

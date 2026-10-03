@@ -476,7 +476,7 @@ function postParts(item) {
   const review = item.kind === "review";
   return {
     t, review,
-    flag: t.language ? langFlag(t.language, item.lang) || "🌐" : item.dev ? "🛠️" : "🌐",
+    flag: t.language ? langFlag(t.language, item.lang) : "",
     language: t.language || (item.dev ? "Your post" : "Not triaged yet"),
     hours: playtime(item)?.total || null,
     atReview: playtime(item)?.atReview || null,
@@ -507,29 +507,45 @@ function postParts(item) {
 
 // Priority as signal bars, one to four.
 const PRIORITY_BARS = { low: 1, medium: 2, high: 3, urgent: 4 };
+// Steam's own review thumbs, and line icons for the types (Steam has none of its own for those).
+const STEAM_THUMB = {
+  up: "https://community.akamai.steamstatic.com/public/shared/images/userreviews/icon_thumbsUp_v6.png",
+  down: "https://community.akamai.steamstatic.com/public/shared/images/userreviews/icon_thumbsDown_v6.png",
+};
+const TYPE_ICON = {
+  bug: "M8 2l1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3 3 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4",
+  suggestion: "M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4",
+  question: "M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20zM9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3M12 17h.01",
+  praise: "M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z",
+};
+function typeIcon(cat) {
+  const svg = svgEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2.2, "stroke-linecap": "round", "stroke-linejoin": "round", class: "type-icon", "aria-hidden": "true" });
+  svg.append(svgEl("path", { d: TYPE_ICON[cat] }));
+  return svg;
+}
 
-// The card's left edge says how the player feels: blue for a recommending review, red for a
-// negative one, grey for everything else (threads, replies, your own posts). The header keeps
-// Steam's order: verdict, hours and date on the left; language, type (in its colour) and priority
-// (as signal bars) on the right.
+// Read left to right, most important first: the top line is the type (in its colour) and the
+// priority (signal bars), with the player's language at the far right; the second line has
+// Steam's verdict, hours and date. The card's left edge is blue for a recommending review, red
+// for a negative one and grey for everything else.
 function postView(item) {
   const p = postParts(item);
   const cat = p.t.category;
-  const [icon, kind] = CATEGORY[cat] || [];
+  const kind = (CATEGORY[cat] || [])[1];
   const u = p.t.urgency;
   const edge = p.verdict ? p.verdict[0].replace("vote-", "is-") : "neutral";
   const bars = u ? h(`span.bars4.pt-${u}`, ...[1, 2, 3, 4].map((n) => h(n <= PRIORITY_BARS[u] ? "i.on" : "i"))) : null;
+  const up = p.verdict && p.verdict[0] === "vote-up";
   return h(`div.post.pc.${edge}`,
-    h("div.pc-head",
-      h("div.pv3-icon", p.verdict ? p.verdict[1] : "💬"),
-      h("div.pv3-title",
-        h("b", p.verdict ? p.verdict[2] : p.kind),
-        p.hours ? h("span", `${p.hours} on record`, p.atReview ? ` (${p.atReview})` : "") : p.who ? h("span", p.who) : null,
-        h("span", `Posted ${p.when}`)),
-      h("div.pv3-right",
-        h("div.pv3-lang", h("span.pv3-flag", p.flag), p.language),
-        kind ? h(`div.pc-type.tt-text-${cat}`, icon, " ", kind) : null,
-        u ? h("div.pc-prio", bars, `${URGENCY[u]} priority`) : null)),
+    h("div.pc-top",
+      kind ? h(`span.pc-type.tt-text-${cat}`, typeIcon(cat), kind) : h("span.pc-type.pc-kind", p.kind),
+      u ? h("span.pc-prio", bars, `${URGENCY[u]} priority`) : null,
+      h("span.pc-lang", h("span.pv3-flag", p.flag), p.language)),
+    h("div.pc-sub",
+      p.verdict ? h(`span.${p.verdict[0]}`, h("img.thumb", { src: up ? STEAM_THUMB.up : STEAM_THUMB.down, alt: "" }), p.verdict[2]) : null,
+      p.hours ? h("span", `${p.hours} on record`, p.atReview ? ` (${p.atReview})` : "") : p.who ? h("span", p.who) : null,
+      h("span", `Posted ${p.when}`),
+      item.kind !== "review" && kind ? h("span", KIND[item.kind]) : null),
     ...p.body,
     h("div.meta", ...p.flags, item.forum && item.kind !== "review" ? h("span", item.forum) : null, p.link));
 }

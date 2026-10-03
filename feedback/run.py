@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """Player feedback collector, run by .github/workflows/feedback.yml.
 
-    python feedback/run.py --gate    decide whether a full run is due (stdlib only, prints run=true/false)
-    python feedback/run.py           full run: fetch, triage, alert, write feedback/data/
-    python feedback/run.py --force   full run regardless of the schedule
+    python feedback/run.py                  full run: fetch, triage, alert, write feedback/data/
+    python feedback/run.py --test-discord   send one example of each Discord alert
 
-A full run is due every 4 hours, and on every 20-minute tick for 48 hours after a game publishes an
-update or patch-notes event (which /ship does), so reports about a fresh build surface quickly.
+loop.sh runs it every 10 minutes. A run with nothing new only reads from Steam.
 
 Env (GitHub secrets): STEAM_PUBLISHER_KEY, ANTHROPIC_API_KEY, DISCORD_WEBHOOK_URL, DISCORD_MENTION.
 None of them is ever written to feedback/data/. FEEDBACK_DRY_RUN=1 skips Claude (local testing).
@@ -26,12 +24,8 @@ import steam
 
 HERE = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("FEEDBACK_DATA_DIR") or HERE / "data")  # override for local test runs
-RUN_STATE = DATA.parent / ".cache" / "run.json" if os.environ.get("FEEDBACK_DATA_DIR") else HERE / ".cache" / "run.json"  # not committed; kept by the Actions cache
 SCHEMA_VERSION = 1
 
-FULL_INTERVAL = 4 * 3600
-BURST_WINDOW = 48 * 3600
-SLACK = 15 * 60  # cron ticks drift, so "4 hours" means "at least 3h45m"
 DAILY_REPORT_HOUR = 7  # UTC; the first run after this posts the daily report
 MAX_TRIAGE_PER_RUN = 400  # bounds the first backfill; the rest is picked up next run
 CLUSTER_LEVELS = [3, 5, 10, 25, 50, 100, 250, 500]
@@ -65,43 +59,6 @@ def save(path, data):
 
 def game_path(app_id):
     return DATA / "games" / f"{app_id}.json"
-
-
-def output(name, value):
-    if os.environ.get("GITHUB_OUTPUT"):
-        with open(os.environ["GITHUB_OUTPUT"], "a") as f:
-            f.write(f"{name}={value}\n")
-    print(f"{name}={value}")
-
-
-# ---------------------------------------------------------------------------
-# Gate
-# ---------------------------------------------------------------------------
-
-
-def gate():
-    index = load(DATA / "index.json", {"games": []})
-    run_state = load(RUN_STATE, {})
-    if not index["games"]:
-        return True, "no games known yet"
-    for game in index["games"]:
-        try:
-            events = steam.update_events(game["appId"])
-        except steam.HttpError as error:
-            print(f"[gate] {game['name']}: {error}")
-            continue
-        if not events:
-            continue
-        latest = events[0]
-        known = {r["gid"] for r in load(game_path(game["appId"]), {}).get("releases", [])}
-        if latest["gid"] not in known:
-            return True, f"{game['name']}: new update '{latest['name']}'"
-        if now() - latest["time"] < BURST_WINDOW:
-            return True, f"{game['name']}: within 48 h of '{latest['name']}'"
-    since = now() - run_state.get("lastFullRun", 0)
-    if since >= FULL_INTERVAL - SLACK:
-        return True, "scheduled"
-    return False, f"last full run {since // 60} min ago"
 
 
 # ---------------------------------------------------------------------------
@@ -832,7 +789,6 @@ def full_run():
         index["dailyReportAt"] = now()  # first ever run: start counting from here
     index["status"] = status.merge(index.get("status"))
     save(DATA / "index.json", index)
-    save(RUN_STATE, {"lastFullRun": now()})
     print(f"[run] changed: {', '.join(changed) or 'nothing'}")
 
 
@@ -867,22 +823,10 @@ def test_discord():
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--gate", action="store_true")
-    parser.add_argument("--force", action="store_true")
     parser.add_argument("--test-discord", action="store_true")
     args = parser.parse_args()
     if args.test_discord:
         test_discord()
-        return
-    force = args.force or os.environ.get("FEEDBACK_FORCE") == "true"
-    if args.gate:
-        if os.environ.get("FEEDBACK_HAS_KEY") == "false":
-            print("::warning::Player feedback is paused: add the ANTHROPIC_API_KEY secret (see feedback/README.md)")
-            output("run", "false")
-            return
-        due, reason = (True, "forced") if force else gate()
-        print(f"[gate] {reason}")
-        output("run", "true" if due else "false")
         return
     full_run()
 

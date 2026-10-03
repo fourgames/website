@@ -1,15 +1,14 @@
 name: Player feedback
 
-# Each run checks every 10 minutes for about 4 hours, then starts the next run. A cheap gate decides
-# whether a check is a full run (every 4 hours normally, every check for 48 hours after a game
-# publishes an update). The schedule starts a run if none is going. See feedback/README.md.
+# Each run collects and triages new feedback every 10 minutes for about 4 hours, then starts the next
+# run. The schedule starts a run if none is going. See feedback/README.md.
 on:
   schedule:
     - cron: "7 */2 * * *"
   workflow_dispatch:
     inputs:
       force:
-        description: Run now, whatever the schedule says
+        description: Start now, replacing the current run
         type: boolean
         default: true
       test_discord:
@@ -34,13 +33,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Restore run state
-        uses: actions/cache/restore@v6
-        with:
-          path: feedback/.cache
-          key: feedback-run-${{ github.run_id }}
-          restore-keys: feedback-run-
-
       - name: Send a test to Discord
         if: inputs.test_discord
         run: python3 feedback/run.py --test-discord
@@ -62,29 +54,21 @@ jobs:
 
       # Commits made with the workflow token don't trigger other workflows, so this never redeploys the
       # site; the dashboard reads feedback/data straight from the repo.
-      - name: Check every 10 minutes for 4 hours
+      - name: Collect every 10 minutes for 4 hours
         if: ${{ !inputs.test_discord }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           feedback/loop.sh
         env:
-          FEEDBACK_FORCE: ${{ inputs.force }}
           FEEDBACK_HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
           STEAM_PUBLISHER_KEY: ${{ secrets.STEAM_PUBLISHER_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_MENTION: ${{ secrets.DISCORD_MENTION }}
 
-      - name: Save run state
-        if: ${{ !inputs.test_discord && !cancelled() }}
-        uses: actions/cache/save@v6
-        with:
-          path: feedback/.cache
-          key: feedback-run-${{ github.run_id }}
-
       - name: Start the next run
-        if: ${{ !inputs.test_discord && !cancelled() }}
+        if: ${{ !inputs.test_discord && success() }}
         run: gh workflow run feedback.yml --ref main -f force=false
         env:
           GH_TOKEN: ${{ github.token }}

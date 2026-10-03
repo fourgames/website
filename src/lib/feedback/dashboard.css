@@ -1357,6 +1357,9 @@
 		flex-direction: row;
 	}
 }
+.fb .impact-stat.good b {
+	color: var(--fb-good-text);
+}
 .fb .impact-stat.warn b {
 	color: var(--fb-serious);
 }

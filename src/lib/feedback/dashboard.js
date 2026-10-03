@@ -459,27 +459,26 @@ function updatesView() {
     const list = reviews.filter((r) => r.created >= from && r.created < to);
     return { n: list.length, neg: list.filter((r) => !r.votedUp).length };
   };
-  // One plain line per window: the positive share and how many reviews it's from, over how many days.
-  const days = (from, to) => plural(Math.max(1, Math.round((to - from) / DAY)), "day");
-  const windowStat = (w, span, cls) => h(`div.impact-stat${cls}`,
-    h("b", w.n ? `${Math.round((100 * (w.n - w.neg)) / w.n)}%` : "–"),
-    h("span", w.n ? `positive · ${plural(w.n, "review")} ${span}` : `no reviews ${span}`));
+  // How players took the update, from the reviews written after it (until the next update).
+  const reception = (w, last) => {
+    if (!w.n) return h("div.impact-stat", h("b", "–"), h("span", last ? "no reviews since yet" : "no reviews before the next update"));
+    const pos = w.n - w.neg, share = pos / w.n;
+    const [word, cls] = share >= 0.7 ? ["Liked", ".good"] : share >= 0.4 ? ["Mixed", ".warn"] : ["Disliked", ".bad"];
+    return h(`div.impact-stat${cls}`, h("b", word), h("span", w.n === 1 ? `the 1 review since was ${pos ? "positive" : "negative"}` : `${pos} of ${w.n} reviews since were positive`));
+  };
   const cards = all.slice().reverse().map((r) => {
     const i = all.indexOf(r);
-    const prev = all[i - 1]?.time ?? (state.game.meta?.released || r.time - 14 * DAY);
     const next = all[i + 1]?.time ?? now();
-    const before = tally(prev, r.time), after = tally(r.time, next);
+    const after = tally(r.time, next);
     const fixed = (r.matched || []).map((id) => state.game.issues?.[id]).filter(Boolean);
     const partly = (r.partly || []).map((id) => state.game.issues?.[id]).filter((x) => x && x.status !== "likely_fixed");
     const since = Object.values(state.game.issues || {}).filter((x) => x.kind !== "praise" && x.firstSeen >= r.time && x.firstSeen < next);
     const reportsAfter = (x) => x.items.map((id) => state.game.items[id]).filter((p) => p && p.created > r.time).length;
-    const better = before.n && after.n ? after.neg / after.n < before.neg / before.n : null;
     return h("article.card",
       h("div.pc-top",
         h("div.pc-main", h("span.pc-type", isLaunch(r) ? "Launch" : `v${r.version}`), h("span.pc-prio", fmtDate(r.time))),
         h("div.pc-aside.impact",
-          windowStat(before, `in the ${days(prev, r.time)} before`, ""),
-          windowStat(after, all[i + 1] ? `in the ${days(r.time, next)} until the next update` : `in the ${days(r.time, next)} since`, better === false ? ".bad" : ""))),
+          reception(after, !all[i + 1]))),
       fixed.length ? h("div.upd-section", h("b", "Fixed by this update"),
         h("ul.pc-points", ...fixed.map((x) => h("li", h(`span.pk.pk-${x.kind === "bug" ? "bug" : "suggestion"}`, x.kind === "bug" ? "Bug" : "Idea"),
           h("span", x.title, " · ", reportsAfter(x) ? h("span.vote-down", `${plural(reportsAfter(x), "report")} since`) : h("span.s-fixed", "no reports since")))))) : null,
@@ -490,7 +489,7 @@ function updatesView() {
       h("div.meta", h("a", { href: r.url, target: "_blank", rel: "noopener" }, "Patch notes ↗")));
   });
   return h("div",
-    h("p.updated", { style: "margin:0 0 12px" }, "Each update with how positive the reviews were before and after it, what it fixed (and whether those reports stopped), what it only partly addressed, and what came up since."),
+    h("p.updated", { style: "margin:0 0 12px" }, "Each update: how players took it (the reviews written after it), what it fixed (and whether those reports stopped), what it only partly addressed, and what came up since."),
     ...(cards.length ? cards : [h("p.empty", "No updates yet.")]));
 }
 

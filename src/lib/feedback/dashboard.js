@@ -436,6 +436,25 @@ const SPEECH_LANG = {
   dutch: "nl-NL", swedish: "sv-SE", danish: "da-DK", norwegian: "nb-NO", finnish: "fi-FI", czech: "cs-CZ", hungarian: "hu-HU",
   romanian: "ro-RO", thai: "th-TH", vietnamese: "vi-VN", indonesian: "id-ID", greek: "el-GR", arabic: "ar-SA",
 };
+// The browser lists every voice the Mac has, novelty ones (Albert, Fred, Zarvox…) included, and the
+// first match for a language is often one of those. Rank them instead: downloaded Premium and
+// Enhanced voices first, then the system's default voice, never the novelty ones. (Siri voices
+// aren't available to web pages at all.)
+const NOVELTY = /^(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Fred|Junior|Ralph|Kathy|Grandma|Grandpa|Eddy|Flo|Reed|Rocko|Sandy|Shelley)\b/i;
+function bestVoice(lang) {
+  const base = lang.slice(0, 2).toLowerCase();
+  const score = (v) => {
+    const vl = v.lang.replace("_", "-").toLowerCase();
+    if (NOVELTY.test(v.name)) return -100;
+    return (vl === lang.toLowerCase() ? 4 : 0) + (/premium/i.test(v.name) ? 20 : 0) + (/enhanced/i.test(v.name) ? 15 : 0)
+      + (v.default ? 8 : 0) + (v.localService ? 2 : 0) + (/^Google/.test(v.name) ? -1 : 0);
+  };
+  const voices = speechSynthesis.getVoices().filter((v) => v.lang.toLowerCase().startsWith(base));
+  return voices.sort((a, b) => score(b) - score(a))[0] || null;
+}
+// Chrome fills the voice list asynchronously; ask early so it's ready by the first click.
+if ("speechSynthesis" in window) speechSynthesis.getVoices();
+
 function speakButton(text, language) {
   if (!("speechSynthesis" in window) || !text) return null;
   const button = h("button.speak", { type: "button", title: "Listen", "aria-label": "Listen" }, "🔊");
@@ -447,7 +466,7 @@ function speakButton(text, language) {
     if (playing) return;
     const say = new SpeechSynthesisUtterance(text);
     say.lang = SPEECH_LANG[(language || "english").toLowerCase()] || "en-US";
-    const voice = speechSynthesis.getVoices().find((v) => v.lang.replace("_", "-") === say.lang);
+    const voice = bestVoice(say.lang);
     if (voice) say.voice = voice;
     say.onend = say.onerror = () => button.classList.remove("on");
     button.classList.add("on");

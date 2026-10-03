@@ -266,8 +266,8 @@ def triage_pending(state, game, run, budget):
         status.ok("claude")
         budget["left"] -= 1
         result = t.model_dump(exclude={"existing_issue", "new_issue_title"})
-        if result["language"] == "English" and result["english"].strip() == (item.get("text") or "").strip():
-            result.pop("english")  # no need to store the same text twice
+        if not result["english"].strip() or result["english"].strip() == (item.get("text") or "").strip():
+            result.pop("english")  # an English post: the dashboard shows its own text
         item["triage"] = result
         item["pending"] = False
         assign_issue(state, item, t, run)

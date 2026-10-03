@@ -42,7 +42,7 @@ def describe_error(error):
 
 class Triage(BaseModel):
     language: str = Field(description="Language the post is written in, as an English name, e.g. 'Japanese'.")
-    english: str = Field(description="The full post translated to English (unchanged if it already is English).")
+    english: str = Field(description="The full post translated to English, or an empty string if it is already in English.")
     summary: str = Field(description="One short English sentence: what the player is saying.")
     category: Literal["bug", "suggestion", "question", "praise"]
     urgency: Literal["low", "medium", "high", "urgent"]
@@ -59,7 +59,8 @@ class Triage(BaseModel):
 TRIAGE_SYSTEM = """You triage player feedback for an indie game studio's Steam games. Each message is one post: \
 a Steam review, a discussion thread's opening post, or a reply in a thread.
 
-- Translate the whole post to English, keeping the player's meaning and tone.
+- Translate the whole post to English, keeping the player's meaning and tone. If the post is already in English, \
+leave english empty: don't copy it.
 - category: "bug" for anything broken (crashes, errors, glitches, performance problems, things not working as \
 intended); "suggestion" for requests, ideas and complaints about design, balance, price or content; "question" \
 when the player mainly asks something; "praise" for posts that are mostly positive with nothing to act on.

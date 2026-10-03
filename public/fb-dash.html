@@ -12,45 +12,31 @@
   Add ?data=<base url> to read another copy of the data, e.g. a local test run.
 -->
 <style>
-/* Five designs share this page; <html data-v="1…5"> picks one. Tokens first, then layout per design. */
 :root {
   --page: #0f1012; --panel: #16171a; --surface: #1d1e22; --surface-2: #27282d; --hover: #2f3036;
   --ink: #f2f3f5; --ink-2: #b6bac3; --muted: #80858f; --grid: #292b30; --axis: #3a3d44; --ring: rgba(255, 255, 255, 0.07);
-  --accent: #335fff; --accent-ink: #ffffff; --positive: #3987e5; --negative: #e66767;
+  --accent: #335fff; --link: #7d9bff; --positive: #3987e5; --negative: #e66767;
   --good: #0ca30c; --good-text: #2fbf4a; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
   --radius: 14px; --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --side-w: 0px;
   color-scheme: dark;
 }
-[data-v="1"] { --side-w: 264px; }
-[data-v="3"] { --side-w: 76px; --page: #121212; --panel: #181818; --surface: #1e1e1e; --surface-2: #282828; --hover: #303030; --radius: 10px; --accent: #00b06f; }
-[data-v="4"] {
-  --side-w: 264px; color-scheme: light;
-  --page: #f3f4f7; --panel: #ffffff; --surface: #ffffff; --surface-2: #eff1f4; --hover: #e7e9ee;
-  --ink: #111318; --ink-2: #4a4f59; --muted: #7b808a; --grid: #e7e9ed; --axis: #cfd3da; --ring: rgba(16, 24, 40, 0.08);
-  --positive: #2a78d6; --negative: #e34948; --good-text: #006300;
-}
-[data-v="5"] { --page: #0b0c10; --surface: #15161c; --surface-2: #20222a; --hover: #2a2c36; --accent: #7c5cff; --radius: 18px; }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
-[data-v="5"] body { background: radial-gradient(1200px 500px at 10% -10%, rgba(124, 92, 255, 0.18), transparent), var(--page); }
-a { color: var(--accent); }
-[data-v="1"] a, [data-v="2"] a, [data-v="5"] a { color: #7d9bff; }
+a { color: var(--link); }
 button, input { font: inherit; color: inherit; }
 button { cursor: pointer; }
 .icon { width: 18px; height: 18px; flex: none; }
 
-/* Shell */
-.app { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); min-height: 100vh; }
+/* Shell: sidebar with games and views, content on the right */
+.app { display: grid; grid-template-columns: 264px minmax(0, 1fr); min-height: 100vh; }
 .side { position: sticky; top: 0; height: 100vh; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--ring); padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
-[data-v="2"] .side, [data-v="5"] .side { display: none; }
-[data-v="2"] .app, [data-v="5"] .app { grid-template-columns: minmax(0, 1fr); }
 .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; padding: 4px 8px 14px; }
-.brand-mark { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; color: var(--accent-ink); flex: none; }
+.brand-mark { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; color: #fff; flex: none; }
 .side-label { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 12px 8px 6px; }
+.side-foot { margin-top: auto; padding: 12px 8px 0; }
 .main { padding: 20px 28px 64px; max-width: 1240px; width: 100%; margin: 0 auto; min-width: 0; }
 
-/* Game switcher: a list in the sidebar, tiles or chips in the strip */
+/* Games: one click in the sidebar list (or the chip strip on phones) */
 .g-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: none; border: 0; border-radius: 10px; padding: 6px 8px; color: var(--ink-2); position: relative; }
 .g-item:hover { background: var(--hover); color: var(--ink); }
 .g-item[aria-current="true"] { background: var(--surface-2); color: var(--ink); font-weight: 600; }
@@ -58,76 +44,31 @@ button { cursor: pointer; }
 .g-thumb { width: 64px; height: 30px; border-radius: 6px; object-fit: cover; background: var(--surface-2); flex: none; box-shadow: 0 0 0 1px var(--ring); }
 .g-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
 .g-sub { display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
-[data-v="3"] .side { padding: 14px 10px; align-items: center; }
-[data-v="3"] .brand span, [data-v="3"] .side-label, [data-v="3"] .g-name, [data-v="3"] .nav-side, [data-v="3"] .side-foot { display: none; }
-[data-v="3"] .brand { padding: 4px 0 12px; }
-[data-v="3"] .g-item { padding: 4px; justify-content: center; }
-[data-v="3"] .g-item[aria-current="true"]::before { left: -10px; }
-[data-v="3"] .g-thumb { width: 44px; height: 44px; border-radius: 12px; }
-[data-v="3"] .g-item[aria-current="true"] .g-thumb { box-shadow: 0 0 0 2px var(--accent); }
-
-.strip { display: none; gap: 12px; margin-bottom: 20px; }
-[data-v="2"] .strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
-[data-v="2"] .g-item { flex-direction: column; align-items: stretch; padding: 0; background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: 0 0 0 1px var(--ring); transition: transform 0.15s, box-shadow 0.15s; }
-[data-v="2"] .g-item:hover { transform: translateY(-2px); }
-[data-v="2"] .g-item[aria-current="true"] { box-shadow: 0 0 0 2px var(--accent); }
-[data-v="2"] .g-item::before { display: none; }
-[data-v="2"] .g-thumb { width: 100%; height: auto; aspect-ratio: 460 / 215; border-radius: 0; box-shadow: none; }
-[data-v="2"] .g-name { padding: 8px 12px 10px; font-size: 14px; }
-[data-v="5"] .strip { display: flex; flex-wrap: wrap; }
-[data-v="5"] .g-item { width: auto; border-radius: 99px; padding: 4px 14px 4px 4px; background: var(--surface); box-shadow: 0 0 0 1px var(--ring); }
-[data-v="5"] .g-item::before { display: none; }
-[data-v="5"] .g-item[aria-current="true"] { background: var(--accent); color: #fff; box-shadow: none; }
-[data-v="5"] .g-thumb { width: 30px; height: 30px; border-radius: 50%; }
-[data-v="5"] .g-sub { display: none; }
+.strip { display: none; }
 
 /* Header */
 .top { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
 .top img { width: 120px; height: 56px; object-fit: cover; border-radius: 10px; box-shadow: 0 0 0 1px var(--ring); }
-[data-v="2"] .top img, [data-v="5"] .top img { display: none; }
 .top h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
 .updated { color: var(--muted); font-size: 12px; }
 .pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--surface-2); color: var(--ink-2); vertical-align: 4px; margin-left: 8px; }
 
-/* Views nav: a list in the sidebar (1, 4), tabs on top (2, 3, 5) */
+/* Views: listed in the sidebar (tabs on phones) */
 .nav-side { display: flex; flex-direction: column; gap: 2px; }
 .nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; border-radius: 10px; padding: 8px 10px; color: var(--ink-2); font-weight: 500; text-align: left; }
 .nav-btn:hover { background: var(--hover); color: var(--ink); }
 .nav-btn[aria-current="true"] { background: var(--surface-2); color: var(--ink); font-weight: 600; }
 .nav-btn .count { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 600; }
-.side-foot { margin-top: auto; padding: 12px 8px 0; }
-.nav-top { display: none; gap: 6px; margin-bottom: 18px; overflow-x: auto; scrollbar-width: none; }
-[data-v="2"] .nav-top, [data-v="3"] .nav-top, [data-v="5"] .nav-top { display: flex; }
-.nav-top .nav-btn { width: auto; white-space: nowrap; }
-[data-v="2"] .nav-top .nav-btn { border-radius: 99px; padding: 7px 16px; background: var(--surface); box-shadow: 0 0 0 1px var(--ring); }
-[data-v="2"] .nav-top .nav-btn[aria-current="true"] { background: var(--accent); color: #fff; box-shadow: none; }
-[data-v="2"] .nav-top .nav-btn[aria-current="true"] .count { color: rgba(255, 255, 255, 0.8); }
-[data-v="3"] .nav-top { gap: 0; border-bottom: 1px solid var(--grid); }
-[data-v="3"] .nav-top .nav-btn { border-radius: 0; background: none; border-bottom: 2px solid transparent; padding: 10px 14px; }
-[data-v="3"] .nav-top .nav-btn[aria-current="true"] { border-bottom-color: var(--accent); }
-[data-v="5"] .nav-top { display: grid; grid-template-columns: repeat(5, minmax(110px, 1fr)); gap: 10px; }
-[data-v="5"] .nav-top .nav-btn { flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px; border-radius: var(--radius); background: var(--surface); box-shadow: 0 0 0 1px var(--ring); }
-[data-v="5"] .nav-top .nav-btn .count { margin: 0; font-size: 20px; color: var(--ink); }
-[data-v="5"] .nav-top .nav-btn[aria-current="true"] { box-shadow: 0 0 0 2px var(--accent); background: linear-gradient(160deg, rgba(124, 92, 255, 0.22), var(--surface) 70%); }
+.nav-top { display: none; }
 
 /* KPI cards */
 .kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 12px; margin-bottom: 20px; }
-.kpi { background: var(--surface); box-shadow: 0 0 0 1px var(--ring); border-radius: var(--radius); padding: 14px 16px 10px; min-width: 0; position: relative; overflow: hidden; }
-[data-v="4"] .kpi, [data-v="4"] .card, [data-v="4"] .chart-card { box-shadow: 0 0 0 1px var(--ring), 0 1px 3px rgba(16, 24, 40, 0.06); }
-[data-v="5"] .kpi::after { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg, var(--accent), #2fd5ff); }
-[data-v="5"] .kpis { grid-template-columns: repeat(5, minmax(0, 1fr)); }
-[data-v="5"] .kpi:nth-child(6):last-child { grid-column: span 2; }
-[data-v="5"] .kpi:nth-child(5):last-child { grid-column: span 3; }
-[data-v="5"] .kpi:first-child { grid-column: span 2; grid-row: span 2; }
-[data-v="5"] .kpi:first-child .value { font-size: 44px; }
-[data-v="5"] .kpi:first-child .spark { height: 96px; }
+.kpi { background: var(--surface); box-shadow: 0 0 0 1px var(--ring); border-radius: var(--radius); padding: 14px 16px 10px; min-width: 0; }
 .kpi .label { color: var(--ink-2); font-size: 12px; font-weight: 500; }
 .kpi .sub, .kpi .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .kpi .value { font-size: 26px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
 .kpi .sub { color: var(--muted); font-size: 12px; }
 .spark { display: block; width: 100%; height: 34px; margin-top: 6px; }
-[data-v="3"] .kpi { padding: 10px 12px 8px; }
-[data-v="3"] .kpi .value { font-size: 22px; }
 
 /* Buttons and one-click filters */
 .filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; }
@@ -136,7 +77,6 @@ button { cursor: pointer; }
 .chips button { background: none; border: 0; border-radius: 8px; padding: 5px 12px; color: var(--ink-2); font-size: 13px; font-weight: 500; white-space: nowrap; }
 .chips button:hover { color: var(--ink); }
 .chips button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--ring); }
-[data-v="2"] .chips button[aria-pressed="true"], [data-v="5"] .chips button[aria-pressed="true"] { background: var(--accent); color: #fff; }
 .btn { background: var(--surface-2); border: 0; border-radius: 9px; padding: 6px 12px; font-size: 13px; font-weight: 500; min-height: 32px; color: var(--ink); }
 .btn:hover { background: var(--hover); }
 .btn.primary { background: var(--accent); color: #fff; }
@@ -198,32 +138,26 @@ svg.chart .cross { stroke: var(--ink-2); stroke-width: 1; }
 table.data { border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; margin-top: 8px; }
 table.data td, table.data th { padding: 2px 10px 2px 0; text-align: left; }
 .chart-card details { margin-top: 8px; font-size: 12px; color: var(--ink-2); }
-.toast { position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--page); padding: 6px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 20; }
+.toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--page); padding: 6px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 20; }
 .toast.show { opacity: 1; }
 
-/* Design picker (remove once a design is chosen) */
-.picker { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; align-items: center; gap: 6px; background: #0b0b0b; color: #fff; border-radius: 99px; padding: 6px 6px 6px 14px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); font-size: 13px; max-width: calc(100vw - 32px); overflow-x: auto; scrollbar-width: none; }
-.picker span { white-space: nowrap; margin-right: 4px; }
-.picker button { border: 0; border-radius: 99px; padding: 6px 12px; background: #262626; color: #ddd; white-space: nowrap; font-size: 13px; }
-.picker button[aria-pressed="true"] { background: #fff; color: #000; font-weight: 600; }
-
-/* Phones: every design gets the strip as chips and the views as scrolling tabs */
+/* Phones: no sidebar; games and views become scrolling chips */
 @media (max-width: 820px) {
   .app { grid-template-columns: minmax(0, 1fr); }
   .side { display: none; }
-  .main { padding: 16px 16px 80px; }
-  .strip, [data-v] .strip { display: flex; overflow-x: auto; gap: 8px; margin: 0 -16px 16px; padding: 0 16px 4px; }
-  [data-v] .strip .g-item { width: auto; flex: none; flex-direction: row; border-radius: 99px; padding: 4px 14px 4px 4px; background: var(--surface); box-shadow: 0 0 0 1px var(--ring); transform: none; }
-  [data-v] .strip .g-item[aria-current="true"] { background: var(--accent); color: #fff; }
-  [data-v] .strip .g-thumb { width: 30px; height: 30px; aspect-ratio: auto; border-radius: 50%; }
-  [data-v] .strip .g-name { padding: 0; font-size: 13px; }
-  [data-v] .strip .g-sub { display: none; }
-  .nav-top, [data-v] .nav-top { display: flex; grid-template-columns: none; }
-  [data-v] .nav-top .nav-btn { flex-direction: row; align-items: center; padding: 7px 14px; border-radius: 99px; }
-  [data-v] .nav-top .nav-btn .count { font-size: 11px; color: inherit; margin-left: 4px; }
+  .main { padding: 16px 16px 48px; }
+  .strip { display: flex; overflow-x: auto; scrollbar-width: none; gap: 8px; margin: 0 -16px 16px; padding: 0 16px 4px; }
+  .strip .g-item { width: auto; flex: none; border-radius: 99px; padding: 4px 14px 4px 4px; background: var(--surface); box-shadow: 0 0 0 1px var(--ring); }
+  .strip .g-item::before { display: none; }
+  .strip .g-item[aria-current="true"] { background: var(--accent); color: #fff; }
+  .strip .g-thumb { width: 30px; height: 30px; border-radius: 50%; }
+  .strip .g-sub { display: none; }
+  .nav-top { display: flex; gap: 6px; margin-bottom: 18px; overflow-x: auto; scrollbar-width: none; }
+  .nav-top .nav-btn { width: auto; white-space: nowrap; border-radius: 99px; padding: 7px 14px; background: var(--surface); box-shadow: 0 0 0 1px var(--ring); }
+  .nav-top .nav-btn[aria-current="true"] { background: var(--accent); color: #fff; box-shadow: none; }
+  .nav-top .nav-btn .count { margin-left: 4px; color: inherit; }
   .top img { width: 72px; height: 34px; }
   .top h1 { font-size: 20px; }
-  [data-v="5"] .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .kpi .value { font-size: 22px; }
 }
@@ -251,7 +185,6 @@ table.data td, table.data th { padding: 2px 10px 2px 0; text-align: left; }
     <main id="view"></main>
   </div>
 </div>
-<div class="picker" id="picker" role="group" aria-label="Design"></div>
 <div class="toast" id="toast" role="status"></div>
 <script>
 "use strict";
@@ -271,7 +204,8 @@ function h(tag, props, ...kids) {
   const [name, ...classes] = tag.split(".");
   const el = document.createElement(name);
   if (classes.length) el.className = classes.join(" ");
-  if (props && (typeof props !== "object" || props instanceof Node || Array.isArray(props))) { kids.unshift(props); props = null; }
+  // A first argument that isn't a props object (text, a number like 0, a node, a list) is a child.
+  if (props != null && (typeof props !== "object" || props instanceof Node || Array.isArray(props))) { kids.unshift(props); props = null; }
   for (const [k, v] of Object.entries(props || {})) {
     if (v == null || v === false) continue;
     if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
@@ -318,24 +252,6 @@ async function getJson(path) {
   return res.json();
 }
 
-// ---------------------------------------------------------------------------
-// Designs (pick one with the bar at the bottom; ?v=1…5 also works)
-// ---------------------------------------------------------------------------
-
-const DESIGNS = [[1, "Creator Hub"], [2, "Game tiles"], [3, "Icon rail"], [4, "Studio light"], [5, "Bento"]];
-function setDesign(v) {
-  document.documentElement.dataset.v = v;
-  store.set("design", v);
-  document.querySelectorAll(".picker button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === String(v))));
-}
-function renderPicker() {
-  const v = new URLSearchParams(location.search).get("v") || store.get("design") || "1";
-  document.getElementById("picker").replaceChildren(
-    h("span", "Pick a design"),
-    ...DESIGNS.map(([n, name]) => h("button", { "data-v": n, onclick: () => setDesign(n) }, `${n} · ${name}`)),
-  );
-  setDesign(v);
-}
 
 const ICONS = {
   issues: "M8 2l1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3 3 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4",
@@ -385,13 +301,9 @@ function daily(n, valueOf) {
 // ---------------------------------------------------------------------------
 
 async function init() {
-  renderPicker();
   try {
-    if (new URLSearchParams(location.search).has("demo")) Object.assign(state, demoData());
-    else {
-      state.index = await getJson("index.json");
-      state.sales = await getJson("sales.json").catch(() => null); // once the Steam key has the Financial permission
-    }
+    state.index = await getJson("index.json");
+    state.sales = await getJson("sales.json").catch(() => null); // once the Steam key has the Financial permission
   } catch (e) {
     document.getElementById("updated").textContent = "No data yet: the feedback workflow hasn't committed anything. (" + e.message + ")";
     return;
@@ -406,8 +318,7 @@ async function init() {
 
 async function lastCommit() {
   const q = new URLSearchParams(location.search);
-  if (q.has("demo")) document.getElementById("updated").textContent = "Demo data: made up, to compare the designs";
-  if (q.get("data") || q.has("demo")) return;
+  if (q.get("data")) return;
   try {
     const res = await fetch("https://api.github.com/repos/fourgames/website/commits?path=feedback/data&per_page=1");
     const [c] = await res.json();
@@ -492,14 +403,14 @@ function renderStats() {
 
   const tile = (label, value, sub, trend, color) => h("div.kpi", h("div.label", label), h("div.value", value), sub ? h("div.sub", sub) : null, trend ? spark(trend, color) : null);
   const pct = totals && totals.positive + totals.negative ? Math.round((100 * totals.positive) / (totals.positive + totals.negative)) + "%" : "–";
-  document.getElementById("stats").replaceChildren(
+  document.getElementById("stats").replaceChildren(...[
     tile("Players now", current ?? "–", current != null ? `${peak} peak today` : "not released", peaks),
     tile("Positive reviews", pct, totals ? `${totals.positive} 👍 · ${totals.negative} 👎` : "no reviews yet", reviewsPerDay, "var(--positive)"),
     tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent"),
     tile("New posts", fresh.length, "last 24 h", postsPerDay),
     salesDaysList.length ? tile("Revenue, 7 d", usd(revenue.slice(-7).reduce((a, b) => a + b, 0)), "net, after refunds", revenue, "var(--good)") : null,
     tile("Latest update", release ? (release.version ? "v" + release.version : "–") : "–", release ? `${release.version ? "" : release.name + " · "}${ago(release.time)}` : "none yet"),
-  );
+  ].filter(Boolean));
 }
 
 // ---------------------------------------------------------------------------
@@ -971,93 +882,6 @@ function breakdown(title, start, key) {
     h("div.bars", ...rows.flatMap(([k, v]) => [h("span", k), h("div", h("div.bar", { style: `width:${(100 * v) / max}%` })), h("span.n", v)])));
 }
 
-// ---------------------------------------------------------------------------
-// ?demo: made-up data, so the designs can be judged before real feedback piles up
-// ---------------------------------------------------------------------------
-
-function demoData() {
-  let seed = 7;
-  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
-  const pick = (a) => a[Math.floor(rnd() * a.length)];
-  const t = now();
-  const cdn = (id, hash) => `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${id}/${hash}/header.jpg`;
-  const games = [
-    { appId: 2807130, name: "Reforge Front", status: "released", capsule: cdn(2807130, "f709685fb160ba9042b9b5ef18d36fad0b58f5c1") },
-    { appId: 3958210, name: "Digging A Hole In Ice With A Chainsaw", status: "released", capsule: cdn(3958210, "2ddbceeb0eec5ee1d6aee9ade2a18b16aa89c8fb") },
-    { appId: 5207970, name: "Pomo Valley", status: "upcoming", capsule: cdn(5207970, "2d745a298911828330c2c76f8506f2bb3461bad8") },
-  ];
-  const posts = [
-    ["bug", "urgent", "upgrade menu", "Crash when opening the upgrade menu", [["English", "The game crashes every time I open the upgrade menu."], ["Japanese", "アップグレードメニューを開くと毎回クラッシュします。", "The game crashes every time I open the upgrade menu."]]],
-    ["bug", "high", "level 3", "Goblins get stuck in the walls on level 3", [["Schinese", "第三关的哥布林卡在墙里。", "The goblins in level 3 get stuck in the wall."], ["English", "Goblins clip into the wall on level 3 and the wave never ends."]]],
-    ["bug", "medium", "audio", "Music cuts out after alt-tab", [["German", "Nach Alt-Tab ist die Musik weg.", "The music is gone after alt-tab."]]],
-    ["suggestion", "medium", "controls", "Controller support", [["German", "Bitte fügt Controller-Unterstützung hinzu.", "Please add controller support."], ["English", "Would love to play this on the couch with a controller."]]],
-    ["suggestion", "low", "settings", "Option to turn off head bob", [["English", "Please add an option to disable the head bob."]]],
-    ["praise", "low", "general", null, [["Korean", "재미있어요! 망치가 최고예요.", "It's fun! The hammer is the best."], ["English", "Great little tower defense, the hammer feels amazing."]]],
-    ["question", "low", "general", null, [["Brazilian", "Vai ter modo cooperativo?", "Will there be a co-op mode?"]]],
-  ];
-  const out = { index: { games }, games: {}, sales: { days: {}, apps: {} } };
-  for (const g of games) {
-    const state = { appId: g.appId, items: {}, issues: {}, players: [], reviewTotals: {}, releases: [] };
-    if (g.status === "released") {
-      let n = 0, issueN = 1;
-      for (let d = 0; d < 120; d++) {
-        for (let k = 0; k < Math.floor(rnd() * 3.2); k++) {
-          const [category, urgency, area, title, variants] = pick(posts);
-          const [language, text, en] = pick(variants);
-          const kind = rnd() < 0.65 ? "review" : rnd() < 0.5 ? "topic" : "reply";
-          const id = (kind === "review" ? "r" : kind === "topic" ? "t" : "c") + ++n;
-          const item = {
-            id, kind, created: t - d * DAY - Math.floor(rnd() * DAY), author: { id: "a" + n, name: kind === "review" ? null : pick(["Zhain", "mklesmos", "Paranoia", "Horror Heaven", "vikvik"]) },
-            url: `https://store.steampowered.com/app/${g.appId}/`, text, votedUp: category === "praise" || (category === "suggestion" && rnd() < 0.5), playtime: Math.round(rnd() * 200) / 10, versions: [], flips: [],
-            title: kind === "topic" ? en || text : undefined,
-            triage: { language, english: en, summary: en || text, category, urgency, area, details: category === "bug" ? "Happens on Windows 11 right after the action." : null,
-              reply: { text: language === "English" ? "Thanks for the report, we're on it!" : "ありがとうございます！確認中です。", english: "Thanks for the report, we're on it!" } },
-          };
-          item.updated = item.created;
-          if (title) {
-            let issue = Object.values(state.issues).find((i) => i.title === title);
-            if (!issue) {
-              issue = state.issues["I" + issueN] = { id: "I" + issueN++, kind: category, title, area, summary: en || text, status: "open", created: item.created, items: [], languages: [], mentions: 0, urgency, negativeReviews: 0, priority: 0, lastSeen: 0 };
-            }
-            issue.items.push(id);
-            item.issue = issue.id;
-          }
-          state.items[id] = item;
-        }
-      }
-      for (const issue of Object.values(state.issues)) {
-        const its = issue.items.map((i) => state.items[i]);
-        issue.mentions = its.length;
-        issue.languages = [...new Set(its.map((i) => i.triage.language))];
-        issue.lastSeen = Math.max(...its.map((i) => i.created));
-        issue.firstSeen = Math.min(...its.map((i) => i.created));
-        issue.negativeReviews = its.filter((i) => i.kind === "review" && !i.votedUp).length;
-        issue.priority = { urgent: 8, high: 4, medium: 2, low: 1 }[issue.urgency] * (1 + Math.log2(issue.mentions));
-        issue.fixPrompt = `Players of ${g.name} are reporting a bug on Steam: ${issue.title}. (demo)`;
-      }
-      const lvl = Object.values(state.issues).find((i) => i.title.includes("level 3"));
-      if (lvl) Object.assign(lvl, { status: "still_happening", fixedIn: "v1.03", fixedAt: t - 20 * DAY, fixedUrl: "#" });
-      const audio = Object.values(state.issues).find((i) => i.title.includes("Music"));
-      if (audio) Object.assign(audio, { status: "likely_fixed", fixedIn: "v1.03", fixedAt: t - 20 * DAY, fixedUrl: "#" });
-      let v = 40;
-      for (let ts = t - 200 * DAY; ts < t; ts += 3 * 3600) { v = Math.max(0, Math.round(v + (rnd() - 0.48) * 8)); state.players.push([ts, v]); }
-      const reviews = Object.values(state.items).filter((i) => i.kind === "review");
-      state.reviewTotals.today = { positive: reviews.filter((r) => r.votedUp).length, negative: reviews.filter((r) => !r.votedUp).length };
-      state.releases = [[60, "1.01"], [35, "1.02"], [20, "1.03"]].map(([d, version]) => ({ gid: version, name: "Update " + version, version, time: t - d * DAY, url: "#", matched: [] }));
-      for (let d = 0; d < 200; d++) {
-        const date = new Date((t - d * DAY) * 1000).toISOString().slice(0, 10);
-        const sale = (d > 40 && d < 50) || (d > 120 && d < 130);
-        const units = Math.max(0, Math.round((sale ? 18 : 7) + (rnd() - 0.5) * 8));
-        const refunded = Math.floor(rnd() * units * 0.12);
-        const net = Math.round((units * (sale ? 2.99 : 4.99) - refunded * 4) * 0.9 * 100) / 100;
-        const day = (out.sales.days[date] ||= {});
-        day[g.appId] = { net, units, returnedUnits: refunded, discount: sale ? 40 : 0, countries: { US: [net * 0.4, Math.round(units * 0.4)], DE: [net * 0.2, Math.round(units * 0.2)], JP: [net * 0.15, Math.round(units * 0.15)], SE: [net * 0.1, Math.round(units * 0.1)], BR: [net * 0.05, Math.round(units * 0.05)] } };
-      }
-    }
-    out.games[g.appId] = state;
-  }
-  return out;
-}
 
 // Lets the site's header show a "Feedback" link in this browser from now on (SiteHeader.vue).
 store.set("visited", "1");

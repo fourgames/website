@@ -453,7 +453,8 @@ function lovedView() {
 // How each update landed: negative reviews before and after it, what it fixed and whether those
 // reports stopped, and what's new since.
 function updatesView() {
-  const all = (state.game.releases || []).filter((r) => r.version || isLaunch(r)).sort((a, b) => a.time - b.time);
+  // Every update post, numbered or not (older ones are often only named).
+  const all = (state.game.releases || []).slice().sort((a, b) => a.time - b.time);
   const reviews = items().filter((i) => i.kind === "review");
   const tally = (from, to) => {
     const list = reviews.filter((r) => r.created >= from && r.created < to);
@@ -476,7 +477,7 @@ function updatesView() {
     const reportsAfter = (x) => x.items.map((id) => state.game.items[id]).filter((p) => p && p.created > r.time).length;
     return h("article.card",
       h("div.pc-top",
-        h("div.pc-main", h("span.pc-type", isLaunch(r) ? "Launch" : `v${r.version}`), h("span.pc-prio", fmtDate(r.time))),
+        h("div.pc-main", h("span.pc-type", isLaunch(r) ? "Launch" : r.version ? `v${r.version}` : r.name), h("span.pc-prio", fmtDate(r.time))),
         h("div.pc-aside.impact",
           reception(after, !all[i + 1]))),
       fixed.length ? h("div.upd-section", h("b", "Fixed by this update"),
@@ -945,7 +946,7 @@ function yAxis(svg, y, max, fmt = (v) => v) {
 
 // Updates and the launch as dashed lines, every one labelled: labels that would overlap move to
 // the next of three rows above the plot.
-const isLaunch = (r) => r.launch || /\b(out now|available now|launch(ed)?|released?)\b/i.test(r.name || "");
+const isLaunch = (r) => r.launch || /\b(out now|available now|now available|launch(ed)?|released?)\b/i.test(r.name || "");
 function markers(start, end) {
   const list = (state.game.releases || []).filter((r) => r.time >= start && r.time <= end);
   // No launch post: mark the store's release date instead.

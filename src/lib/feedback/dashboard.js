@@ -188,11 +188,11 @@ async function init() {
 // The services each run uses (feedback/status.py): what they're for, what their "last" time means,
 // and where a problem is fixed. GitHub (collecting and storing the data) is checked from here.
 const SERVICES = {
-  steam: ["Steam", "Reviews, player counts and updates", "no new data yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
-  forums: ["Steam discussions", "Threads, replies and announcement comments", "no new posts yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
-  claude: ["Claude", "Translates and sorts new posts", "nothing sorted yet", "https://platform.claude.com/settings/billing", "Add credit"],
-  discord: ["Discord", "Pings for urgent bugs and flipped reviews", "no alerts sent yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
-  github: ["GitHub", "Collects every 10 minutes and stores the data", "no changes yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
+  steam: ["Steam", "Reads new and edited reviews, players in game, store pages and update posts", "no new data yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
+  forums: ["Discussions", "Reads new threads, replies and comments on your announcements", "no new posts yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
+  claude: ["Claude", "Translates new posts, splits them into points, groups them into bugs and ideas, and matches patch notes to them", "nothing sorted yet", "https://platform.claude.com/settings/billing", "Add credit"],
+  discord: ["Discord", "Pings you about urgent bugs, reviews flipped to negative and complaints many share, and sends a daily report", "no alerts sent yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
+  github: ["GitHub", "Runs all of this every 10 minutes, saves the data, and rebuilds the site when a store page changes", "no changes yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
 };
 
 // In the page header: a card per service, saying whether it works and when it last did something.
@@ -220,11 +220,12 @@ function renderStatus() {
     const kind = !s || s.ok === undefined ? "idle" : s.ok ? "ok" : "bad";
     // Out of credit is the one with a fix behind a button; other services link to where they're fixed.
     const fix = key === "claude" && s && !/credit/i.test(s.message || "") ? ["https://platform.claude.com/settings/keys", "API keys"] : [href, action];
+    // One row: name, what it does, what it last did (and when), state. Problems get a line below.
     return h(`div.svc.svc-${kind}`,
-      h("div.svc-head", h("span.svc-dot"), h("b", name), h("span.svc-state", { ok: "Working", bad: "Needs attention", idle: "Unknown" }[kind])),
+      h("div.svc-name", h("span.svc-dot"), h("b", name)),
       h("div.svc-what", what),
-      // What it last brought in or did, and when; every card has this line.
       h("div.svc-last", s?.active ? `${s.activeWhat || "last activity"} ${ago(s.active)}` : none),
+      h("div.svc-state", { ok: "Working", bad: "Needs attention", idle: "Unknown" }[kind]),
       key === "github" && kind === "idle" ? h("div.svc-msg", "GitHub's hourly limit for this connection is used up; this shows again within the hour.") : null,
       kind === "bad" ? h("div.svc-msg", s.message || "Failed.", s.since ? h("span.svc-since", ` · since ${ago(s.since)}`) : null) : null,
       kind === "bad" ? h("a.btn.primary.svc-fix", { href: fix[0], target: "_blank", rel: "noopener" }, fix[1], " ↗") : null);

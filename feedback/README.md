@@ -17,7 +17,7 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
    - drafts an optional one-sentence reply in the player's language, with its English meaning;
    - merges duplicates, across languages, into *issues* with mention counts. A mention is one distinct player.
 6. **Issues.** Every issue gets a priority score. Every bug issue gets a ready-to-paste Claude Code fix prompt.
-7. **Releases.** When a game publishes an update or patch-notes event, which `/ship` does, Claude matches the open issues against the patch notes and marks matches **likely fixed in vX**. If new reports of a likely-fixed issue arrive after that release, the issue becomes **still happening**.
+7. **Releases.** When a game publishes an update or patch-notes event, which `/ship` does, Claude Haiku 4.5 matches the open issues against the patch notes and marks matches **likely fixed in vX**. If new reports of a likely-fixed issue arrive after that release, the issue becomes **still happening**.
 8. **Discord.** It posts webhook embeds that link to the original post for:
    - urgent issues (with an @mention);
    - reviews flipped to negative;

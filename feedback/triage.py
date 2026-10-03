@@ -1,14 +1,14 @@
-"""Claude calls: per-post translation and triage (Haiku 4.5, no extended thinking), and matching open
-issues against a release's patch notes. Set FEEDBACK_DRY_RUN=1 to run without an API key."""
+"""Claude calls: per-post translation and triage, and matching open issues against a release's patch
+notes. Both use Claude Haiku 4.5, the cheapest current model, with no extended thinking (Haiku 4.5
+has no effort setting; leaving out `thinking` is its lowest). Set FEEDBACK_DRY_RUN=1 to run without
+an API key."""
 
-import json
 import os
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
 
-TRIAGE_MODEL = "claude-haiku-4-5"
-RELEASE_MODEL = "claude-opus-5-5"
+MODEL = "claude-haiku-4-5"
 DRY_RUN = os.environ.get("FEEDBACK_DRY_RUN") == "1"
 
 _client = None
@@ -81,7 +81,7 @@ def triage(game_name, item, issues, context=None):
         + f"\n\n<post>\n{text[:12000]}\n</post>"
     )
     response = client().messages.parse(
-        model=TRIAGE_MODEL,
+        model=MODEL,
         max_tokens=4000,
         system=TRIAGE_SYSTEM,
         messages=[{"role": "user", "content": content}],
@@ -109,22 +109,13 @@ def _dry_triage(item):
     )
 
 
-RELEASE_SCHEMA = {
-    "type": "object",
-    "properties": {
-        "fixed": {
-            "type": "array",
-            "items": {
-                "type": "object",
-                "properties": {"issue": {"type": "string"}, "reason": {"type": "string"}},
-                "required": ["issue", "reason"],
-                "additionalProperties": False,
-            },
-        }
-    },
-    "required": ["fixed"],
-    "additionalProperties": False,
-}
+class Fix(BaseModel):
+    issue: str = Field(description="The issue's ID.")
+    reason: str = Field(description="Short reason, quoting the patch-notes line.")
+
+
+class ReleaseMatch(BaseModel):
+    fixed: list[Fix]
 
 
 def match_release(game_name, release, issues):
@@ -143,16 +134,13 @@ def match_release(game_name, release, issues):
         "List the issues that a line in the patch notes most likely fixes or implements, each with a short reason "
         "quoting that line. Only include clear matches; leave out anything the notes don't address."
     )
-    response = client().beta.messages.create(
-        model=RELEASE_MODEL,
-        max_tokens=8000,
-        betas=["server-side-fallback-2026-07-01"],
-        output_config={"effort": "medium", "format": {"type": "json_schema", "schema": RELEASE_SCHEMA}},
+    response = client().messages.parse(
+        model=MODEL,
+        max_tokens=4000,
         messages=[{"role": "user", "content": prompt}],
-        extra_body={"fallbacks": "default"},
+        output_format=ReleaseMatch,
     )
-    if response.stop_reason != "end_turn":
+    if response.stop_reason != "end_turn" or response.parsed_output is None:
         raise RuntimeError(f"release matching stopped with {response.stop_reason}")
-    text = next(b.text for b in response.content if b.type == "text")
     known = {i["id"] for i in issues}
-    return [m for m in json.loads(text)["fixed"] if m["issue"] in known]
+    return [m.model_dump() for m in response.parsed_output.fixed if m.issue in known]

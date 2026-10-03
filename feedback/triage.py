@@ -248,3 +248,33 @@ def match_release(game_name, release, issues):
         raise RuntimeError(f"release matching stopped with {response.stop_reason}")
     known = {i["id"] for i in issues}
     return [m.model_dump() for m in response.parsed_output.fixed if m.issue in known]
+
+
+def match_dev_reply(game_name, posts, reply, issues):
+    """The issues the developer's reply says are already fixed or changed, as {issue, fit, reason}."""
+    if not issues or DRY_RUN:
+        return []
+    issue_lines = "\n".join(
+        f"{i['id']} [{i['kind']}, {i['area']}] {i['title']}"
+        + (f"\n   players said: {' | '.join(i['said'])}" if i.get("said") else "")
+        for i in issues
+    )
+    prompt = (
+        f"A player wrote this about {game_name} on Steam:\n\n<post>\n{posts[:8000]}\n</post>\n\n"
+        f"The developer replied:\n\n<reply>\n{reply[:4000]}\n</reply>\n\n"
+        f"The player-reported issues in that post:\n\n<issues>\n{issue_lines}\n</issues>\n\n"
+        "List the issues the reply says are already fixed or changed in the game, each with a short reason quoting "
+        "the reply. Only count what's done: plans or promises (\"will fix\", \"looking into it\") don't. fit is "
+        "direct when the change does what the players asked or fixes what they reported; partial when it only helps. "
+        "Leave out everything else."
+    )
+    response = client().messages.parse(
+        model=MODEL,
+        max_tokens=2000,
+        messages=[{"role": "user", "content": prompt}],
+        output_format=ReleaseMatch,
+    )
+    if response.stop_reason != "end_turn" or response.parsed_output is None:
+        raise RuntimeError(f"reply matching stopped with {response.stop_reason}")
+    known = {i["id"] for i in issues}
+    return [m.model_dump() for m in response.parsed_output.fixed if m.issue in known]

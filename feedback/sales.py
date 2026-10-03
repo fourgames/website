@@ -1,7 +1,7 @@
 """Steam sales from IPartnerFinancialsService, summed per day and game into data/sales.json.
 
-Needs STEAM_FINANCIAL_KEY: the key of a "Financial API Group" (Steamworks → Users & Permissions →
-Manage Groups). It covers every app on the account. Valve lets partners share their own sales data
+Uses STEAM_FINANCIAL_KEY if set, else STEAM_PUBLISHER_KEY: either way the key needs the Financial
+permission ticked (Steamworks → Users & Permissions → Manage Groups → the group's Web API key). Valve lets partners share their own sales data
 "as they see fit"; this repo is public, so this file is too.
 
 Sync follows Valve's recipe: ask which dates changed since the last high-water mark (late
@@ -14,7 +14,7 @@ from decimal import Decimal
 
 import steam
 
-KEY = os.environ.get("STEAM_FINANCIAL_KEY", "").strip()
+KEY = (os.environ.get("STEAM_FINANCIAL_KEY") or os.environ.get("STEAM_PUBLISHER_KEY") or "").strip()
 BASE = "https://partner.steam-api.com/IPartnerFinancialsService"
 
 

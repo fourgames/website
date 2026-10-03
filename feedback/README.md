@@ -45,10 +45,10 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
 
 | Secret | What it is |
 | --- | --- |
-| `STEAM_PUBLISHER_KEY` | Steamworks Web API publisher key (Users & Permissions → Manage Groups → Web API key) |
+| `STEAM_PUBLISHER_KEY` | Steamworks Web API publisher key (Users & Permissions → Manage Groups → your group → Web API key). Tick *General*, and *Financial* for sales |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `DISCORD_WEBHOOK_URL` | The channel's webhook URL |
-| `STEAM_FINANCIAL_KEY` | Key of a *Financial API Group* (Users & Permissions → Manage Groups → Create New Financial API Group), for sales (optional) |
+| `STEAM_FINANCIAL_KEY` | Only if sales need a different key than `STEAM_PUBLISHER_KEY` (optional) |
 | `DISCORD_MENTION` | Who to ping: `<@USER_ID>`, `<@&ROLE_ID>` or a bare user ID (optional) |
 
 ## Data
@@ -76,7 +76,7 @@ This repo is public, so this data is too. Valve lets developers share their own 
 - **Issues:** bug issues sorted by priority. Each has *Copy fix prompt*, the original posts with their translations and Steam links, and the draft replies with copy buttons.
 - **Suggestions:** the same view for suggestions.
 - **Feed:** every post, newest first, with filters and search.
-- **Sales:** net revenue per day or week, with updates and discounts marked, plus units sold, refund rate, lifetime totals and top countries. It's filled in once `STEAM_FINANCIAL_KEY` is set.
+- **Sales:** net revenue per day or week, with updates and discounts marked, plus units sold, refund rate, lifetime totals and top countries. It's filled in once the Steam key has the *Financial* permission.
 - **Stats:** concurrent players and new reviews over time, with every update marked, plus posts by category and by language.
 
 To point it at another copy of the data, add `?data=<base url>`, e.g. a local test run served by the dev server.

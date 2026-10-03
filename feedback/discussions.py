@@ -12,10 +12,15 @@ import steam
 PAGE_SIZE = 15  # replies per topic page
 MAX_TOPICS_PER_RUN = 120  # bounds a first backfill; the rest follows next run
 MAX_LIST_PAGES = 20  # 50 topics each, per subforum
+# Studio accounts (Steam account IDs) whose posts are ours, not feedback. Steam badges developers in
+# the regular forums (those are learned automatically), but not in announcement comments.
+DEV_ACCOUNTS = {"1029710208"}  # Danny
 
 
 def subforums(app_id):
-    """(owner clan id, {subforum number: name}) from the forum's front page."""
+    """(owner clan id, {watermark key: (forum type, feature, name)}): the discussion subforums plus
+    the comments under announcements and patch notes. Reported posts are moderator-only, and the
+    trading forum isn't feedback."""
     html = steam.request(f"https://steamcommunity.com/app/{app_id}/discussions/", as_json=False)
     owner = re.search(r'"owner":"(\d+)"', html)
     if not owner:
@@ -25,16 +30,24 @@ def subforums(app_id):
     for a in soup.select('a[href*="/discussions/"]'):
         m = re.search(rf"/app/{app_id}/discussions/(\d+)/$", a.get("href", ""))
         if m and m.group(1) not in forums:
-            forums[m.group(1)] = a.get_text(strip=True)
-    return owner.group(1), forums or {"0": "General Discussions"}
+            forums[m.group(1)] = ("General", m.group(1), a.get_text(strip=True))
+    forums = forums or {"0": ("General", "0", "General Discussions")}
+    try:
+        events = steam.request(f"https://steamcommunity.com/app/{app_id}/eventcomments/", as_json=False)
+        feature = re.search(r'"type":"Event","feature":"(\d+)"', events)
+        if feature:
+            forums[f"event:{feature.group(1)}"] = ("Event", feature.group(1), "Events & Announcements")
+    except steam.HttpError as error:
+        print(f"[forum] {app_id} announcement comments: {error}")
+    return owner.group(1), forums
 
 
-def topic_list(owner, forum, since):
+def topic_list(owner, kind, forum, since):
     """Topics with activity after `since`, newest activity first (pinned topics are skipped)."""
     topics = []
     for page in range(MAX_LIST_PAGES):
         res = steam.request(
-            f"https://steamcommunity.com/forum/{owner}/General/render/{forum}/", params={"start": page * 50, "count": 50}
+            f"https://steamcommunity.com/forum/{owner}/{kind}/render/{forum}/", params={"start": page * 50, "count": 50}
         )
         soup = BeautifulSoup(res.get("topics_html") or "", "html.parser")
         rows = soup.select("div.forum_topic")
@@ -129,9 +142,10 @@ def ingest(state, game, run):
     marks = state["watermarks"].setdefault("forums", {})
     threads = state.setdefault("threads", {})
     budget = MAX_TOPICS_PER_RUN
-    for forum, forum_name in forums.items():
+    devs = set(state.setdefault("devAccounts", [])) | DEV_ACCOUNTS
+    for forum, (kind, feature, forum_name) in forums.items():
         try:
-            topics = topic_list(owner, forum, marks.get(forum, 0))
+            topics = topic_list(owner, kind, feature, marks.get(forum, 0))
         except steam.HttpError as error:
             print(f"[forum] {game['name']} / {forum_name}: {error}")
             continue
@@ -154,6 +168,12 @@ def ingest(state, game, run):
                     state["items"][f"t{topic['id']}"]["deleted"] = True
                 threads[topic["id"]] = {"lastPost": topic["lastPost"], "replies": known, "forum": forum_name}
                 continue
+            if kind == "Event":
+                op["dev"] = True  # the announcement itself
+            for post in [op, *replies]:
+                if post["dev"] and post["author"]["id"]:
+                    devs.add(post["author"]["id"])
+                post["dev"] = post["dev"] or post["author"]["id"] in devs
             upsert(state, run, f"t{topic['id']}", "topic", topic["url"], op, forum=forum_name)
             for reply in replies:
                 if reply["id"]:
@@ -161,6 +181,7 @@ def ingest(state, game, run):
                            topic=f"t{topic['id']}", forum=forum_name)
             count = sum(1 for i in state["items"].values() if i.get("topic") == f"t{topic['id']}")
             threads[topic["id"]] = {"lastPost": topic["lastPost"], "replies": max(count, known), "forum": forum_name}
+        state["devAccounts"] = sorted(devs - DEV_ACCOUNTS)
         if done == len(topics):
             marks[forum] = max([marks.get(forum, 0)] + [t["lastPost"] for t in topics])
         elif done:

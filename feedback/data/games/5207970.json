@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "appId": 5207970,
- "initialized": false,
+ "initialized": true,
  "watermarks": {
   "forums": {
    "0": 0,

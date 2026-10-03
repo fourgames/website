@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "appId": 3958210,
- "initialized": false,
+ "initialized": true,
  "watermarks": {
   "reviews": 1790875183,
   "forums": {
@@ -33,10 +33,99 @@
    "devResponse": null,
    "versions": [],
    "flips": [],
-   "pending": true,
+   "pending": false,
    "playtimeForever": 0.7,
    "steamPurchase": true,
-   "receivedForFree": false
+   "receivedForFree": false,
+   "issues": [
+    "I37",
+    "I42",
+    "I36",
+    "I43",
+    "I35",
+    "I31",
+    "I34",
+    "I33"
+   ],
+   "issue": "I37",
+   "triage": {
+    "language": "English",
+    "summary": "The game feels like an unfinished early access product with shallow mechanics, unclear upgrades, and no content depth or exploration to justify continued play.",
+    "category": "suggestion",
+    "urgency": "medium",
+    "area": "game design, progression, content",
+    "details": null,
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "suggestion",
+      "text": "Jetpack has no fuel gauge and no incentive to upgrade beyond a couple times since upgrades only increase speed.",
+      "urgency": "medium",
+      "issue": "I37"
+     },
+     {
+      "kind": "suggestion",
+      "text": "Chainsaw upgrade path is shallow: only increases digging radius, doesn't visually change, and has no fuel or heat mechanic despite the glow effect suggesting one.",
+      "urgency": "medium",
+      "issue": "I42"
+     },
+     {
+      "kind": "suggestion",
+      "text": "Backpack upgrades are repetitive flat doublings with no variety.",
+      "urgency": "low",
+      "issue": "I37"
+     },
+     {
+      "kind": "suggestion",
+      "text": "Items picked up just add pack space rather than providing a rewarding discovery experience.",
+      "urgency": "medium",
+      "issue": "I36"
+     },
+     {
+      "kind": "suggestion",
+      "text": "Lights can be placed but serve no purpose since depth doesn't increase darkness.",
+      "urgency": "low",
+      "issue": "I43"
+     },
+     {
+      "kind": "suggestion",
+      "text": "Dynamite exists but is unnecessary and has no upgrades.",
+      "urgency": "medium",
+      "issue": "I35"
+     },
+     {
+      "kind": "complaint",
+      "text": "Tent at surface provides no notification of what it does, leaving its function unclear.",
+      "urgency": "low",
+      "issue": "I31"
+     },
+     {
+      "kind": "suggestion",
+      "text": "No collectibles, hidden paths, or side content; hole is small enough to see all sides from the center.",
+      "urgency": "high",
+      "issue": "I36"
+     },
+     {
+      "kind": "complaint",
+      "text": "UI lacks clarity on what upgrades do numerically, e.g. no 'digging radius 1 > 2' descriptions.",
+      "urgency": "medium",
+      "issue": "I31"
+     },
+     {
+      "kind": "complaint",
+      "text": "Chainsaw sounds like a dentist drill.",
+      "urgency": "low",
+      "issue": "I34"
+     },
+     {
+      "kind": "suggestion",
+      "text": "Game feels unfinished and like early beta rather than a final product, despite not being marketed as early access.",
+      "urgency": "medium",
+      "issue": "I33"
+     }
+    ],
+    "note": null
+   }
   },
   "r236626239": {
    "id": "r236626239",
@@ -61,10 +150,33 @@
    "devResponse": null,
    "versions": [],
    "flips": [],
-   "pending": true,
+   "pending": false,
    "playtimeForever": 0.7,
    "steamPurchase": false,
-   "receivedForFree": false
+   "receivedForFree": false,
+   "issues": [
+    "I41"
+   ],
+   "issue": "I41",
+   "triage": {
+    "language": "Korean",
+    "english": "You can beat the ending in 40 minutes.",
+    "summary": "The game's ending is reachable too quickly.",
+    "category": "suggestion",
+    "urgency": "medium",
+    "area": "ending, progression",
+    "details": null,
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "complaint",
+      "text": "The ending is reachable in only 40 minutes of playtime.",
+      "urgency": "medium",
+      "issue": "I41"
+     }
+    ],
+    "note": null
+   }
   },
   "r236624465": {
    "id": "r236624465",
@@ -89,10 +201,33 @@
    "devResponse": null,
    "versions": [],
    "flips": [],
-   "pending": true,
+   "pending": false,
    "playtimeForever": 1.7,
    "steamPurchase": true,
-   "receivedForFree": false
+   "receivedForFree": false,
+   "issues": [
+    "I32"
+   ],
+   "issue": "I32",
+   "triage": {
+    "language": "Korean",
+    "english": "Let me be honest: \"Run away.\"",
+    "summary": "The player jokes that the game is so addictive they should escape from it.",
+    "category": "praise",
+    "urgency": "low",
+    "area": "general",
+    "details": null,
+    "tone": "joke",
+    "points": [
+     {
+      "kind": "praise",
+      "text": "The game is so engaging the player jokes about needing to escape from it.",
+      "urgency": "low",
+      "issue": "I32"
+     }
+    ],
+    "note": "\"도망쳐\" (run away) is a Korean meme praising addictive games, similar to English \"don't buy, you'll lose hours to it.\""
+   }
   },
   "r236614813": {
    "id": "r236614813",
@@ -117,10 +252,40 @@
    "devResponse": null,
    "versions": [],
    "flips": [],
-   "pending": true,
+   "pending": false,
    "playtimeForever": 1.1,
    "steamPurchase": true,
-   "receivedForFree": false
+   "receivedForFree": false,
+   "issues": [
+    "I32",
+    "I41"
+   ],
+   "issue": "I32",
+   "triage": {
+    "language": "Korean",
+    "english": "Dopamine all the way to the ending! Dopamine when climbing up and digging down! But the ending itself is not dopamine!",
+    "summary": "The digging loop feels great, but the ending is disappointing.",
+    "category": "suggestion",
+    "urgency": "low",
+    "area": "ending, progression",
+    "details": null,
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "praise",
+      "text": "Climbing and digging progression feels satisfying and rewarding.",
+      "urgency": "low",
+      "issue": "I32"
+     },
+     {
+      "kind": "complaint",
+      "text": "The ending does not feel rewarding or satisfying.",
+      "urgency": "low",
+      "issue": "I41"
+     }
+    ],
+    "note": null
+   }
   },
   "r236561103": {
    "id": "r236561103",
@@ -145,10 +310,61 @@
    "devResponse": null,
    "versions": [],
    "flips": [],
-   "pending": true,
+   "pending": false,
    "playtimeForever": 1.9,
    "steamPurchase": true,
-   "receivedForFree": false
+   "receivedForFree": false,
+   "issues": [
+    "I34",
+    "I35",
+    "I36",
+    "I37",
+    "I38"
+   ],
+   "issue": "I34",
+   "triage": {
+    "language": "German",
+    "english": "For my 2€ I can't really complain. You get what you expect. But what really made me consider giving it a thumbs down was the sound. It's just pure torture. It sounds like you're getting a filling at the dentist while the assistant is beating a bag full of deposit bottles. I muted the sound effects completely. But then something is missing anyway. And the dynamite is just a rip-off. It's worthless with those pathetic holes. I'd rather recommend Meltopia. That's really nice. I give this game a neutral 5/10. And always wear ear protection when working with a chainsaw XD.\n\nEdit: The developer improved the sound right away. I didn't expect that. Updates are being pumped out left and right. But I won't rate it much higher. You just dig straight down here, there's nothing to discover and you've got all the upgrades after not even a quarter of the game. Final 6/10.",
+    "summary": "The game is short and has some audio issues, though the developer responded quickly to criticism.",
+    "category": "suggestion",
+    "urgency": "medium",
+    "area": "sound, content, upgrades",
+    "details": null,
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "complaint",
+      "text": "Chainsaw and dynamite sound effects are unbearably harsh and unpleasant.",
+      "urgency": "medium",
+      "issue": "I34"
+     },
+     {
+      "kind": "suggestion",
+      "text": "Dynamite tool feels underpowered and not worth the cost.",
+      "urgency": "low",
+      "issue": "I35"
+     },
+     {
+      "kind": "complaint",
+      "text": "Game lacks exploration or discovery elements, just digging straight down.",
+      "urgency": "medium",
+      "issue": "I36"
+     },
+     {
+      "kind": "complaint",
+      "text": "All upgrades are unlocked too quickly, within a quarter of playtime.",
+      "urgency": "low",
+      "issue": "I37"
+     },
+     {
+      "kind": "praise",
+      "text": "Developer rapidly fixed the sound issue after the initial review.",
+      "urgency": "low",
+      "issue": "I38"
+     }
+    ],
+    "note": "The reviewer initially gave 5/10, then increased to 6/10 after the sound fix, though still critical of other aspects. The chainsaw safety joke at the end is lighthearted humor, not criticism."
+   }
   },
   "r236545405": {
    "id": "r236545405",
@@ -173,10 +389,33 @@
    "devResponse": "피드백 감사해요! 너무 금방 끝난다는 말씀에 공감해서, 1.02 업데이트에서 구덩이 깊이를 100 m에서 500 m로 늘렸어요. 이제 업그레이드를 전부 얻으면서 훨씬 오래 즐기실 수 있어요. 혼자 개발하다 보니 부족한 점이 많지만, 기회 되실 때 다시 한번 플레이해 주시면 정말 기쁠 것 같아요 ㅎㅎ",
    "versions": [],
    "flips": [],
-   "pending": true,
+   "pending": false,
    "playtimeForever": 0.6,
    "steamPurchase": true,
-   "receivedForFree": false
+   "receivedForFree": false,
+   "issues": [
+    "I33"
+   ],
+   "issue": "I33",
+   "triage": {
+    "language": "Korean",
+    "english": "Even playing leisurely, it took less than 1 hour. It should take 3-4 hours to have fun and have things to do, so I don't recommend it.",
+    "summary": "The game is too short, taking under an hour even when playing leisurely instead of the expected 3-4 hours.",
+    "category": "suggestion",
+    "urgency": "medium",
+    "area": "content length",
+    "details": null,
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "complaint",
+      "text": "Game is too short at under 1 hour, should last 3-4 hours for enjoyable progression.",
+      "urgency": "medium",
+      "issue": "I33"
+     }
+    ],
+    "note": null
+   }
   },
   "r236542076": {
    "id": "r236542076",
@@ -201,10 +440,40 @@
    "devResponse": null,
    "versions": [],
    "flips": [],
-   "pending": true,
+   "pending": false,
    "playtimeForever": 0.3,
    "steamPurchase": true,
-   "receivedForFree": false
+   "receivedForFree": false,
+   "issues": [
+    "I31",
+    "I32"
+   ],
+   "issue": "I31",
+   "triage": {
+    "language": "German",
+    "english": "A nice relaxed digging game, except here you dig with a chainsaw. Unfortunately, there's no explanation at the beginning. So I spent a good 5 minutes digging and only then realized I need to go sell. Here you collect ice and can sell it, then improve the chainsaw, inventory size, etc. It's not a highlight of game art, but I think you can have fun here, even if briefly. If I end up playing 10-15 hours, it will have been worth it!?",
+    "summary": "Enjoyable idle digging game lacking an opening tutorial, but engaging enough for 10-15 hours of play.",
+    "category": "suggestion",
+    "urgency": "medium",
+    "area": "tutorial",
+    "details": null,
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "suggestion",
+      "text": "Add an opening explanation or tutorial for new players.",
+      "urgency": "medium",
+      "issue": "I31"
+     },
+     {
+      "kind": "praise",
+      "text": "Game is relaxing and fun to play, engaging for 10-15 hours of gameplay.",
+      "urgency": "low",
+      "issue": "I32"
+     }
+    ],
+    "note": null
+   }
   },
   "t594068999055121855": {
    "id": "t594068999055121855",
@@ -291,7 +560,26 @@
    "forum": "Events & Announcements",
    "dev": false,
    "versions": [],
-   "pending": true
+   "pending": false,
+   "issues": [],
+   "issue": null,
+   "triage": {
+    "language": "English",
+    "summary": "Player reached 450 m depth and found a floor with a (+) sign, asking if it's a puzzle or how to proceed past it.",
+    "category": "question",
+    "urgency": "medium",
+    "area": "progression, depth 450m",
+    "details": null,
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "question",
+      "text": "What is the (+) sign floor at 450 m depth and how do you get past it?",
+      "urgency": "medium"
+     }
+    ],
+    "note": null
+   }
   },
   "c594068734660962351": {
    "id": "c594068734660962351",
@@ -361,7 +649,52 @@
    "forum": "Events & Announcements",
    "dev": false,
    "versions": [],
-   "pending": true
+   "pending": false,
+   "issues": [
+    "I38",
+    "I40",
+    "I34",
+    "I39"
+   ],
+   "issue": "I38",
+   "triage": {
+    "language": "German",
+    "english": "I think it's really great how quickly feedback is responded to here. The ice destruction itself is now much more pleasant. But honestly, I can't notice a big difference with the chainsaw. At exactly 400m there's unfortunately also a bug with the ice. Instead of removing it, you somehow create new ice with the chainsaw, or pull the old stuff along. Really weird there. Fortunately I found a spot at the edge of the pit where I managed to dig down the last 100m.",
+    "summary": "Developer responds quickly to feedback; ice destruction feels better but chainsaw sounds unchanged; bug at 400m where chainsaw creates or drags ice instead of removing it.",
+    "category": "bug",
+    "urgency": "high",
+    "area": "chainsaw, ice destruction, 400m depth",
+    "details": "At exactly 400m depth, using the chainsaw creates new ice or drags the old ice along instead of removing it. Workaround: dig at the pit's edge. Player managed to progress by avoiding the buggy area.",
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "praise",
+      "text": "Developer responds quickly to feedback.",
+      "urgency": "low",
+      "issue": "I38"
+     },
+     {
+      "kind": "praise",
+      "text": "Ice destruction feels more pleasant after the update.",
+      "urgency": "low",
+      "issue": "I40"
+     },
+     {
+      "kind": "complaint",
+      "text": "Chainsaw sounds show no noticeable improvement.",
+      "urgency": "medium",
+      "still": true,
+      "issue": "I34"
+     },
+     {
+      "kind": "bug",
+      "text": "At 400m depth, chainsaw creates new ice or drags old ice instead of removing it.",
+      "urgency": "high",
+      "issue": "I39"
+     }
+    ],
+    "note": null
+   }
   },
   "c594068734660995171": {
    "id": "c594068734660995171",
@@ -414,7 +747,30 @@
    "forum": "Events & Announcements",
    "dev": false,
    "versions": [],
-   "pending": true
+   "pending": false,
+   "issues": [
+    "I39"
+   ],
+   "issue": "I39",
+   "triage": {
+    "language": "Korean",
+    "english": "From 410m onwards, nothing gets carved away.... Even if I throw 100 dynamite or 100 torches or dig all day, the ice stays the same. I don't know what the bug was, but it worked after I restarted the game.",
+    "summary": "A progression-blocking bug occurs at 410m depth where no tools work, but restarting the game fixes it.",
+    "category": "bug",
+    "urgency": "high",
+    "area": "digging, 410m depth",
+    "details": "At 410m depth, dynamite (100 thrown), torches (100 thrown), and manual digging do not carve ice. Restarting the game resolves the issue.",
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "bug",
+      "text": "Digging, dynamite, and torches fail to carve ice at 410m depth until the game is restarted.",
+      "urgency": "high",
+      "issue": "I39"
+     }
+    ],
+    "note": null
+   }
   },
   "c594068734660995690": {
    "id": "c594068734660995690",
@@ -468,8 +824,441 @@
    "pending": false
   }
  },
- "issues": {},
- "nextIssue": 31,
+ "issues": {
+  "I31": {
+   "id": "I31",
+   "kind": "suggestion",
+   "title": "Missing initial tutorial or explanation",
+   "area": "tutorial",
+   "summary": "Add an opening explanation or tutorial for new players.",
+   "status": "open",
+   "created": 1791042660,
+   "items": [
+    "r236542076",
+    "r236634124"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 2,
+   "languages": [
+    "English",
+    "German"
+   ],
+   "firstSeen": 1790771780,
+   "lastSeen": 1790875183,
+   "urgency": "medium",
+   "negativeReviews": 1,
+   "firstSession": 2,
+   "details": [],
+   "priority": 5.0,
+   "fixPrompt": null,
+   "partly": [
+    {
+     "in": "v1.2",
+     "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382442",
+     "reason": "\"A new hint the first time your bag is full: go up and sell at the pipe\" provides initial guidance but isn't a full tutorial or explanation as requested"
+    },
+    {
+     "in": "v1.4",
+     "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382299",
+     "reason": "Improving the depth counter readability helps with UI clarity mentioned by players, though it doesn't address the broader tutorial or upgrade description requests"
+    }
+   ]
+  },
+  "I32": {
+   "id": "I32",
+   "kind": "praise",
+   "title": "Satisfying idle digging gameplay loop",
+   "area": "tutorial",
+   "summary": "Game is relaxing and fun to play, engaging for 10-15 hours of gameplay.",
+   "status": "open",
+   "created": 1791042660,
+   "items": [
+    "r236542076",
+    "r236614813",
+    "r236624465"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 3,
+   "languages": [
+    "German",
+    "Korean"
+   ],
+   "firstSeen": 1790771780,
+   "lastSeen": 1790866538,
+   "urgency": "low",
+   "negativeReviews": 0,
+   "firstSession": 3,
+   "details": [],
+   "priority": 2.58,
+   "fixPrompt": null
+  },
+  "I33": {
+   "id": "I33",
+   "kind": "suggestion",
+   "title": "Game feels too short",
+   "area": "content length",
+   "summary": "Game is too short at under 1 hour, should last 3-4 hours for enjoyable progression.",
+   "status": "likely_fixed",
+   "created": 1791042663,
+   "items": [
+    "r236545405",
+    "r236634124"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 2,
+   "languages": [
+    "English",
+    "Korean"
+   ],
+   "firstSeen": 1790775236,
+   "lastSeen": 1790875183,
+   "urgency": "medium",
+   "negativeReviews": 2,
+   "firstSession": 2,
+   "details": [],
+   "priority": 1.2,
+   "fixPrompt": null,
+   "fixedIn": "v1.2",
+   "fixedAt": 1790810760,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695399726270382442",
+   "fixReason": "\"The pit is now 500 m deep instead of 100 m, so you have time to get every upgrade\" directly addresses game length by extending playtime for progression",
+   "stillSince": null
+  },
+  "I34": {
+   "id": "I34",
+   "kind": "suggestion",
+   "title": "Sound effects too harsh and grating",
+   "area": "sound, content, upgrades",
+   "summary": "Chainsaw and dynamite sound effects are unbearably harsh and unpleasant.",
+   "status": "still_happening",
+   "created": 1791042670,
+   "items": [
+    "r236561103",
+    "c594068734660970660",
+    "r236634124"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 3
+   },
+   "mentions": 3,
+   "languages": [
+    "English",
+    "German"
+   ],
+   "firstSeen": 1790789172,
+   "lastSeen": 1790875183,
+   "urgency": "medium",
+   "negativeReviews": 1,
+   "firstSession": 2,
+   "details": [
+    "At exactly 400m depth, using the chainsaw creates new ice or drags the old ice along instead of removing it. Workaround: dig at the pit's edge. Player managed to progress by avoiding the buggy area."
+   ],
+   "priority": 9.69,
+   "fixPrompt": null,
+   "fixedIn": "v1.3",
+   "fixedAt": 1790838300,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695399726270382543",
+   "fixReason": "\"softer ice smashes and a less shrill chainsaw\" directly addresses the harsh and grating sound effects complaint",
+   "stillSince": 1790848674
+  },
+  "I35": {
+   "id": "I35",
+   "kind": "suggestion",
+   "title": "Dynamite produces inadequate holes for the cost",
+   "area": "sound, content, upgrades",
+   "summary": "Dynamite tool feels underpowered and not worth the cost.",
+   "status": "open",
+   "created": 1791042670,
+   "items": [
+    "r236561103",
+    "r236634124"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 2,
+   "languages": [
+    "English",
+    "German"
+   ],
+   "firstSeen": 1790789172,
+   "lastSeen": 1790875183,
+   "urgency": "medium",
+   "negativeReviews": 1,
+   "firstSession": 2,
+   "details": [],
+   "priority": 5.0,
+   "fixPrompt": null
+  },
+  "I36": {
+   "id": "I36",
+   "kind": "suggestion",
+   "title": "No exploration or discovery content",
+   "area": "sound, content, upgrades",
+   "summary": "Game lacks exploration or discovery elements, just digging straight down.",
+   "status": "open",
+   "created": 1791042670,
+   "items": [
+    "r236561103",
+    "r236634124"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 2,
+   "languages": [
+    "English",
+    "German"
+   ],
+   "firstSeen": 1790789172,
+   "lastSeen": 1790875183,
+   "urgency": "high",
+   "negativeReviews": 1,
+   "firstSession": 2,
+   "details": [],
+   "priority": 10.0,
+   "fixPrompt": null
+  },
+  "I37": {
+   "id": "I37",
+   "kind": "suggestion",
+   "title": "Upgrades unlock too quickly",
+   "area": "sound, content, upgrades",
+   "summary": "All upgrades are unlocked too quickly, within a quarter of playtime.",
+   "status": "open",
+   "created": 1791042670,
+   "items": [
+    "r236561103",
+    "r236634124"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 2,
+   "languages": [
+    "English",
+    "German"
+   ],
+   "firstSeen": 1790789172,
+   "lastSeen": 1790875183,
+   "urgency": "medium",
+   "negativeReviews": 1,
+   "firstSession": 2,
+   "details": [],
+   "priority": 5.0,
+   "fixPrompt": null,
+   "partly": [
+    {
+     "in": "v1.1",
+     "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382419",
+     "reason": "'The last three upgrade tiers are much cheaper' makes upgrades more accessible but doesn't address the core complaint that upgrades unlock too quickly in the progression timeline"
+    },
+    {
+     "in": "v1.2",
+     "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382442",
+     "reason": "\"you have time to get every upgrade\" suggests longer progression, but doesn't directly slow down upgrade unlocking rates"
+    }
+   ]
+  },
+  "I38": {
+   "id": "I38",
+   "kind": "praise",
+   "title": "Quick developer response to feedback",
+   "area": "sound, content, upgrades",
+   "summary": "Developer rapidly fixed the sound issue after the initial review.",
+   "status": "open",
+   "created": 1791042670,
+   "items": [
+    "r236561103",
+    "c594068734660970660"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 2,
+   "languages": [
+    "German"
+   ],
+   "firstSeen": 1790789172,
+   "lastSeen": 1790848674,
+   "urgency": "low",
+   "negativeReviews": 0,
+   "firstSession": 1,
+   "details": [
+    "At exactly 400m depth, using the chainsaw creates new ice or drags the old ice along instead of removing it. Workaround: dig at the pit's edge. Player managed to progress by avoiding the buggy area."
+   ],
+   "priority": 2.0,
+   "fixPrompt": null
+  },
+  "I39": {
+   "id": "I39",
+   "kind": "bug",
+   "title": "Progression blocked at 410m depth (tools not working)",
+   "area": "digging, 410m depth",
+   "summary": "Digging, dynamite, and torches fail to carve ice at 410m depth until the game is restarted.",
+   "status": "likely_fixed",
+   "created": 1791042680,
+   "items": [
+    "c594068734660964482",
+    "c594068734660970660"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 2,
+   "languages": [
+    "German",
+    "Korean"
+   ],
+   "firstSeen": 1790840407,
+   "lastSeen": 1790848674,
+   "urgency": "high",
+   "negativeReviews": 0,
+   "firstSession": 0,
+   "details": [
+    "At 410m depth, dynamite (100 thrown), torches (100 thrown), and manual digging do not carve ice. Restarting the game resolves the issue.",
+    "At exactly 400m depth, using the chainsaw creates new ice or drags the old ice along instead of removing it. Workaround: dig at the pit's edge. Player managed to progress by avoiding the buggy area."
+   ],
+   "priority": 1.6,
+   "fixPrompt": "Players of Digging A Hole In Ice With A Chainsaw are reporting a bug on Steam. Find the cause in this codebase and fix it.\n\nBug: Progression blocked at 410m depth (tools not working)\nArea of the game: digging, 410m depth\nReported by 2 players (German, Korean), between 2026-10-01 and 2026-10-01.\n\nWhat the reports say about reproducing it:\n- At 410m depth, dynamite (100 thrown), torches (100 thrown), and manual digging do not carve ice. Restarting the game resolves the issue.\n- At exactly 400m depth, using the chainsaw creates new ice or drags the old ice along instead of removing it. Workaround: dig at the pit's edge. Player managed to progress by avoiding the buggy area.\n\nPlayer reports (translated to English):\n- Steam discussion reply (2026-10-01, written in German): \"At 400m depth, chainsaw creates new ice or drags old ice instead of removing it. (from the post: I think it's really great how quickly feedback is responded to here. The ice destruction itself is now much more pleasant. But honestly, I can't notice a big difference with the chainsaw. At exactly 400m there's unfortunately also a bug with the ice. Instead of removing it, you somehow create new ice with the chainsaw, or pull the old stuff along. Really weird there. Fortunately I found a spot at the edge of the pit where I managed to dig down the last 100m.)\"\n  https://steamcommunity.com/app/3958210/eventcomments/594068734660926138/#c594068734660970660\n- Steam discussion reply (2026-10-01, written in Korean): \"Digging, dynamite, and torches fail to carve ice at 410m depth until the game is restarted. (from the post: From 410m onwards, nothing gets carved away.... Even if I throw 100 dynamite or 100 torches or dig all day, the ice stays the same. I don't know what the bug was, but it worked after I restarted the game.)\"\n  https://steamcommunity.com/app/3958210/eventcomments/594068734660962823/#c594068734660964482\n\nWork out the most likely cause from the code, fix it, and tell me what you changed and how to test it. If the reports aren't enough to pin it down, say what to ask the players.",
+   "fixedIn": "v1.4.1",
+   "fixedAt": 1790966220,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695399726270382318",
+   "fixReason": "\"Fixed ice from about 400 m down that sometimes couldn't be broken: the chainsaw and dynamite did nothing\" - directly addresses the bug where tools failed at 410m depth",
+   "stillSince": null
+  },
+  "I40": {
+   "id": "I40",
+   "kind": "praise",
+   "title": "Ice destruction feels more pleasant after the update",
+   "area": "chainsaw, ice destruction, 400m depth",
+   "summary": "Ice destruction feels more pleasant after the update.",
+   "status": "open",
+   "created": 1791042684,
+   "items": [
+    "c594068734660970660"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 1,
+   "languages": [
+    "German"
+   ],
+   "firstSeen": 1790848674,
+   "lastSeen": 1790848674,
+   "urgency": "low",
+   "negativeReviews": 0,
+   "firstSession": 0,
+   "details": [
+    "At exactly 400m depth, using the chainsaw creates new ice or drags the old ice along instead of removing it. Workaround: dig at the pit's edge. Player managed to progress by avoiding the buggy area."
+   ],
+   "priority": 1.0,
+   "fixPrompt": null
+  },
+  "I41": {
+   "id": "I41",
+   "kind": "suggestion",
+   "title": "Ending feels unrewarding",
+   "area": "ending, progression",
+   "summary": "The ending does not feel rewarding or satisfying.",
+   "status": "open",
+   "created": 1791042687,
+   "items": [
+    "r236614813",
+    "r236626239"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 2,
+   "languages": [
+    "Korean"
+   ],
+   "firstSeen": 1790856494,
+   "lastSeen": 1790868149,
+   "urgency": "medium",
+   "negativeReviews": 0,
+   "firstSession": 2,
+   "details": [],
+   "priority": 4.0,
+   "fixPrompt": null
+  },
+  "I42": {
+   "id": "I42",
+   "kind": "suggestion",
+   "title": "Chainsaw upgrades lack meaningful progression",
+   "area": "game design, progression, content",
+   "summary": "Chainsaw upgrade path is shallow: only increases digging radius, doesn't visually change, and has no fuel or heat mechanic despite the glow effect suggesting one.",
+   "status": "open",
+   "created": 1791042702,
+   "items": [
+    "r236634124"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 1,
+   "languages": [
+    "English"
+   ],
+   "firstSeen": 1790875183,
+   "lastSeen": 1790875183,
+   "urgency": "medium",
+   "negativeReviews": 1,
+   "firstSession": 1,
+   "details": [],
+   "priority": 2.5,
+   "fixPrompt": null
+  },
+  "I43": {
+   "id": "I43",
+   "kind": "suggestion",
+   "title": "Lighting system has no functional purpose",
+   "area": "game design, progression, content",
+   "summary": "Lights can be placed but serve no purpose since depth doesn't increase darkness.",
+   "status": "open",
+   "created": 1791042702,
+   "items": [
+    "r236634124"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 1,
+   "languages": [
+    "English"
+   ],
+   "firstSeen": 1790875183,
+   "lastSeen": 1790875183,
+   "urgency": "low",
+   "negativeReviews": 1,
+   "firstSession": 1,
+   "details": [],
+   "priority": 1.25,
+   "fixPrompt": null
+  }
+ },
+ "nextIssue": 44,
  "players": [
   [
    1791016909,
@@ -498,6 +1287,10 @@
   [
    1791041341,
    1
+  ],
+  [
+   1791042656,
+   0
   ]
  ],
  "reviewTotals": {
@@ -516,7 +1309,10 @@
    "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382419",
    "notes": "Thanks for all the feedback on day one! This update makes upgrades cheaper and fixes a few bugs you ran into.\n\nImprovements\n\n- \nThe first jet boots upgrade now costs exactly one full bag ($100), and the first bag and saw upgrades are cheaper\n\n- \nThe last three upgrade tiers are much cheaper, so you can max everything in a normal playthrough\n\nFixes\n\n- \nFixed a rare freeze on the loading screen at startup\n\n- \nFixed the camera lurching when you dig while walking\n\n- \nMinor cleanup and stability fixes\n\nFound a bug or have an idea? Tell us in the Steam discussions.\n\n— Danny",
    "matched": [],
-   "checked": false
+   "checked": true,
+   "partly": [
+    "I37"
+   ]
   },
   {
    "gid": "695399726270382442",
@@ -525,8 +1321,14 @@
    "time": 1790810760,
    "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382442",
    "notes": "You wanted to dig deeper, so the pit is now five times as deep.\n\nNew\n\n- \nThe pit is now 500 m deep instead of 100 m, so you have time to get every upgrade\n\n- \nA new hint the first time your bag is full: go up and sell at the pipe\n\nFixes\n\n- \nFixed dynamite and lanterns disappearing when thrown in a narrow tunnel\n\nFound a bug or have an idea? Tell us in the Steam discussions.\n\n— Danny",
-   "matched": [],
-   "checked": false
+   "matched": [
+    "I33"
+   ],
+   "checked": true,
+   "partly": [
+    "I37",
+    "I31"
+   ]
   },
   {
    "gid": "695399726270382543",
@@ -535,8 +1337,11 @@
    "time": 1790838300,
    "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382543",
    "notes": "A small update for the ending and for your ears.\n\nImprovements\n\n- \nDigging is easier on the ears: softer ice smashes and a less shrill chainsaw\n\nFixes\n\n- \nFixed the ending looking like a sudden cut to black: the camera now turns so you see all of it, on Steam Deck too\n\nFound a bug or have an idea? Tell us in the Steam discussions.\n\n— Danny",
-   "matched": [],
-   "checked": false
+   "matched": [
+    "I34"
+   ],
+   "checked": true,
+   "partly": []
   },
   {
    "gid": "695399726270382652",
@@ -545,8 +1350,11 @@
    "time": 1790863080,
    "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382652",
    "notes": "Sorry! Update 1.2 broke the deeper part of the pit: it had no walls and no loot, so you could dig right out of the level. This hotfix fixes it.\n\nFixes\n\n- \nThe walls and loot in the deeper part of the pit are back\n\n- \nIf your save is outside the walls, you start again at the surface. You keep your money and upgrades\n\n- \nThe bottom of the pit is now sealed, and the thin gaps where the wall sections meet are closed\n\nThanks for reporting it so quickly. If you still find a way out of the pit, tell us in the Steam discussions.\n\n— Danny",
-   "matched": [],
-   "checked": false
+   "matched": [
+    "I39"
+   ],
+   "checked": true,
+   "partly": []
   },
   {
    "gid": "695399726270382299",
@@ -556,7 +1364,10 @@
    "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382299",
    "notes": "A small one: you can now always tell how close you are to the bottom.\n\nImprovements\n\n- \nThe depth counter now stays readable until you're 20 m from the bottom of the pit. Before, it turned into symbols 100 m early, so it was hard to tell how close you were\n\nFound a bug or have an idea? Tell us in the Steam discussions.\n\n— Danny",
    "matched": [],
-   "checked": false
+   "checked": true,
+   "partly": [
+    "I31"
+   ]
   },
   {
    "gid": "695399726270382318",
@@ -565,8 +1376,11 @@
    "time": 1790966220,
    "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382318",
    "notes": "Sorry to everyone who got stuck deep in the pit: from about 400 m down, the ice sometimes couldn't be broken. This hotfix fixes it.\n\nFixes\n\n- \nFixed ice from about 400 m down that sometimes couldn't be broken: the chainsaw and dynamite did nothing, or the ice seemed to grow back, until you restarted the game\n\nThanks for the reports! If anything else gets in your way, tell us in the Steam discussions.\n\n— Danny",
-   "matched": [],
-   "checked": false
+   "matched": [
+    "I39"
+   ],
+   "checked": true,
+   "partly": []
   },
   {
    "gid": "695399726270384006",
@@ -576,7 +1390,8 @@
    "url": "https://store.steampowered.com/news/app/3958210/view/695399726270384006",
    "notes": "It's out! Trapped in a pit with a chainsaw, you dig down through the ice, sell what you haul up, and buy upgrades and dynamite to go deeper, faster.\n\nAbout the game\n\n- \nDig: carve your way down through the ice\n\n- \nSell what you haul up, then buy upgrades and dynamite\n\n- \nA short game you can finish in one sitting\n\n- \nFull controller support, Steam Achievements and Steam Cloud\n\n- \nOh yeah, there's something waiting for you at the bottom\n\nIt's 40% off until October 14. If you enjoy it, a review helps a lot!\n\n— Danny",
    "matched": [],
-   "checked": false
+   "checked": true,
+   "partly": []
   }
  ],
  "threads": {

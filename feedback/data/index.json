@@ -37,24 +37,30 @@
   "claude": {
    "ok": true,
    "message": null,
-   "since": 1791020758
+   "since": 1791020758,
+   "active": 1791046428,
+   "activeWhat": "translated your post"
   },
   "discord": {
    "ok": true,
    "message": null,
-   "since": 1791057732
+   "since": 1791057732,
+   "active": 1791016910,
+   "activeWhat": "sent the daily report"
   },
   "forums": {
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1790848674
+   "active": 1790848674,
+   "activeWhat": "new post"
   },
   "steam": {
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791042656
+   "active": 1791042656,
+   "activeWhat": "player count changed"
   }
  },
  "changedAt": 1791057732

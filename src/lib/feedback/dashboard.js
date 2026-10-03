@@ -69,7 +69,7 @@ async function copy(text, button) {
 }
 
 async function getJson(path) {
-  const res = await fetch(`${DATA}/${path}`, { cache: "no-store" });
+  const res = await fetch(`${DATA}/${path}`, { cache: "no-store", signal: AbortSignal.timeout(20000) });
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
   return res.json();
 }
@@ -153,20 +153,19 @@ function daily(n, valueOf) {
 // GitHub API is unreachable or rate-limited (60 requests an hour per IP).
 async function dataBase() {
   if (DATA_OVERRIDE) return;
-  try {
-    const res = await fetch("https://api.github.com/repos/fourgames/website/commits?path=feedback/data&per_page=1", { cache: "no-store" });
-    const [c] = await res.json();
-    if (!c?.sha) return;
+  // GitHub's API sometimes hangs rather than failing; never wait more than a few seconds for it.
+  const api = (path) => fetch(`https://api.github.com/repos/fourgames/website/${path}`, { cache: "no-store", signal: AbortSignal.timeout(5000) })
+    .then((res) => res.json());
+  // Both at once: the newest data commit, and whether the collecting workflow is running (data is
+  // only committed when something changed, so its date alone can look stale).
+  const [commits, runs] = await Promise.allSettled([api("commits?path=feedback/data&per_page=1"), api("actions/workflows/feedback.yml/runs?per_page=1")]);
+  const c = Array.isArray(commits.value) ? commits.value[0] : null;
+  if (c?.sha) {
     DATA = `${RAW}/${c.sha}/feedback/data`;
     state.dataChanged = Date.parse(c.commit.committer.date) / 1000;
-  } catch {}
-  // Whether checks are running: data is only committed when something changed, so its date alone
-  // can look stale.
-  try {
-    const res = await fetch("https://api.github.com/repos/fourgames/website/actions/workflows/feedback.yml/runs?per_page=1", { cache: "no-store" });
-    const run = (await res.json()).workflow_runs?.[0];
-    if (run) state.checks = { running: run.status !== "completed", ok: run.conclusion !== "failure", at: Date.parse(run.updated_at) / 1000 };
-  } catch {}
+  }
+  const run = runs.value?.workflow_runs?.[0];
+  if (run) state.checks = { running: run.status !== "completed", ok: run.conclusion !== "failure", at: Date.parse(run.updated_at) / 1000 };
 }
 
 async function init() {

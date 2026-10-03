@@ -15,7 +15,10 @@
    "kind": "review",
    "url": "https://steamcommunity.com/profiles/76561197968538504/recommended/3958210/",
    "author": {
-    "id": "76561197968538504"
+    "id": "76561197968538504",
+    "profile": "https://steamcommunity.com/profiles/76561197968538504",
+    "name": "DD83",
+    "avatar": "https://avatars.fastly.steamstatic.com/806e7f34e5f437e197640adfc2f8e497748eaa0b_medium.jpg"
    },
    "lang": "english",
    "created": 1790875183,
@@ -53,7 +56,10 @@
    "kind": "review",
    "url": "https://steamcommunity.com/profiles/76561198811001339/recommended/3958210/",
    "author": {
-    "id": "76561198811001339"
+    "id": "76561198811001339",
+    "profile": "https://steamcommunity.com/profiles/76561198811001339",
+    "name": "Seolhwa",
+    "avatar": "https://avatars.fastly.steamstatic.com/5fea668694c95ff82c2d9cc2b2afdb06a9d2bbb4_medium.jpg"
    },
    "lang": "koreana",
    "created": 1790868149,
@@ -91,7 +97,10 @@
    "kind": "review",
    "url": "https://steamcommunity.com/profiles/76561199743081459/recommended/3958210/",
    "author": {
-    "id": "76561199743081459"
+    "id": "76561199743081459",
+    "profile": "https://steamcommunity.com/profiles/76561199743081459",
+    "name": "김까까",
+    "avatar": "https://avatars.fastly.steamstatic.com/13fcac4e5d5618bccb3696d5691d1af5adbac1ba_medium.jpg"
    },
    "lang": "koreana",
    "created": 1790866538,
@@ -130,7 +139,10 @@
    "kind": "review",
    "url": "https://steamcommunity.com/profiles/76561198405011662/recommended/3958210/",
    "author": {
-    "id": "76561198405011662"
+    "id": "76561198405011662",
+    "profile": "https://steamcommunity.com/profiles/76561198405011662",
+    "name": "YoungGod",
+    "avatar": "https://avatars.fastly.steamstatic.com/3ae96e4394980161cb38e480c8cff6df1227e3ec_medium.jpg"
    },
    "lang": "koreana",
    "created": 1790856494,
@@ -169,7 +181,10 @@
    "kind": "review",
    "url": "https://steamcommunity.com/profiles/76561198318947652/recommended/3958210/",
    "author": {
-    "id": "76561198318947652"
+    "id": "76561198318947652",
+    "profile": "https://steamcommunity.com/profiles/76561198318947652",
+    "name": "Horror Heaven",
+    "avatar": "https://avatars.fastly.steamstatic.com/8442685651231b08503c282a75c5f324df2ae085_medium.jpg"
    },
    "lang": "german",
    "created": 1790789172,
@@ -207,7 +222,10 @@
    "kind": "review",
    "url": "https://steamcommunity.com/profiles/76561198008863704/recommended/3958210/",
    "author": {
-    "id": "76561198008863704"
+    "id": "76561198008863704",
+    "profile": "https://steamcommunity.com/profiles/76561198008863704",
+    "name": "|∩'ω'∩| hi",
+    "avatar": "https://avatars.fastly.steamstatic.com/e8c0bd01b178c4cd25c9b1aaab8960cf825f3681_medium.jpg"
    },
    "lang": "koreana",
    "created": 1790775236,
@@ -245,7 +263,10 @@
    "kind": "review",
    "url": "https://steamcommunity.com/profiles/76561198395502823/recommended/3958210/",
    "author": {
-    "id": "76561198395502823"
+    "id": "76561198395502823",
+    "profile": "https://steamcommunity.com/profiles/76561198395502823",
+    "name": "thedead817",
+    "avatar": "https://avatars.fastly.steamstatic.com/8bbf3dbea8e385c611ae4d8b2c79f43279b59035_medium.jpg"
    },
    "lang": "german",
    "created": 1790771780,
@@ -352,7 +373,9 @@
    "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660937593/#c594068734660950311",
    "author": {
     "id": "1509261874",
-    "name": "mklesmos"
+    "name": "mklesmos",
+    "profile": "https://steamcommunity.com/profiles/76561199469527602",
+    "avatar": "https://avatars.fastly.steamstatic.com/e6973454bced5dcd58186c729797fe4ca4dbaf57_medium.jpg"
    },
    "created": 1790824251,
    "updated": 1790824251,
@@ -434,7 +457,9 @@
    "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660926138/#c594068734660970660",
    "author": {
     "id": "358681924",
-    "name": "Horror Heaven"
+    "name": "Horror Heaven",
+    "profile": "https://steamcommunity.com/profiles/76561198318947652",
+    "avatar": "https://avatars.fastly.steamstatic.com/8442685651231b08503c282a75c5f324df2ae085_medium.jpg"
    },
    "created": 1790848674,
    "updated": 1790848674,
@@ -500,7 +525,9 @@
    "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660962823/#c594068734660964482",
    "author": {
     "id": "1675407187",
-    "name": "alsgus0878"
+    "name": "alsgus0878",
+    "profile": "https://steamcommunity.com/profiles/76561199635672915",
+    "avatar": "https://avatars.fastly.steamstatic.com/aebbb040b43ba8fa64531a26b875c75d45c6deb8_medium.jpg"
    },
    "created": 1790840407,
    "updated": 1790840407,
@@ -781,6 +808,10 @@
   [
    1791035631,
    1
+  ],
+  [
+   1791035726,
+   2
   ]
  ],
  "reviewTotals": {

@@ -15,7 +15,10 @@
    "kind": "review",
    "url": "https://steamcommunity.com/profiles/76561197995186543/recommended/2807130/",
    "author": {
-    "id": "76561197995186543"
+    "id": "76561197995186543",
+    "profile": "https://steamcommunity.com/profiles/76561197995186543",
+    "name": "turgle",
+    "avatar": "https://avatars.fastly.steamstatic.com/acd7307f605848312d5062b6258d751ee3d19242_medium.jpg"
    },
    "lang": "english",
    "created": 1751640136,

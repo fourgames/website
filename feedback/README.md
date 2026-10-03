@@ -77,6 +77,15 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 
 To point it at another copy of the data, add `?data=<base url>`, e.g. a local test run served by the dev server.
 
+## Listening to posts (🔊)
+
+Web pages can't use macOS's Siri voices or press its Speak Selection shortcut, so 🔊 hands the text to a Shortcut instead. Make it once:
+
+1. **Shortcuts** app → **File → New Shortcut**, named exactly **Speak Feedback**.
+2. Add the **Speak Text** action, speaking **Shortcut Input**. Under its options, pick your voice, or leave the default to follow your system voice.
+
+The first click asks to open Shortcuts; allow it. 🔊 also selects the text, so ⌥ Esc works too.
+
 ## Running it locally
 
 ```bash

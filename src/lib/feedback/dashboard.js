@@ -426,10 +426,13 @@ function suggestionText(issue, posts) {
   ].join("\n");
 }
 
-// 🔊 Selects a text so macOS reads it with your own voice (Siri included, which web pages can't
-// use themselves): press the Speak Selection shortcut (⌥ Esc unless you changed it) afterwards.
+// 🔊 Reads a text with your own Mac voice (Siri included, which web pages can't use themselves) by
+// handing it to a macOS Shortcut named "Speak Feedback" (one "Speak Text" action on the Shortcut
+// Input; see feedback/README.md). It also selects the text, so the Speak Selection shortcut
+// (⌥ Esc) works as a fallback.
+const SPEAK_SHORTCUT = "Speak Feedback";
 function speakButton(target) {
-  const button = h("button.speak", { type: "button", title: "Select the text to listen with your Mac's voice", "aria-label": "Select to listen" }, "🔊");
+  const button = h("button.speak", { type: "button", title: "Listen with your Mac's voice", "aria-label": "Listen" }, "🔊");
   button.addEventListener("click", (e) => {
     e.stopPropagation();
     const selection = window.getSelection();
@@ -437,7 +440,9 @@ function speakButton(target) {
     const range = document.createRange();
     range.selectNodeContents(target);
     selection.addRange(range);
-    toast("Selected: press ⌥ Esc (your Speak Selection shortcut) to listen");
+    const text = target.textContent.trim().slice(0, 6000);
+    location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(SPEAK_SHORTCUT)}&input=text&text=${encodeURIComponent(text)}`;
+    toast(`Reading it with your "${SPEAK_SHORTCUT}" shortcut (or press ⌥ Esc)`);
   });
   return button;
 }

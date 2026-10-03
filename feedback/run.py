@@ -491,6 +491,10 @@ def daily_report(index, states):
 
 
 def full_run():
+    import triage
+
+    if not triage.DRY_RUN and not os.environ.get("ANTHROPIC_API_KEY"):
+        sys.exit("ANTHROPIC_API_KEY is not set (add it as a GitHub secret, or set FEEDBACK_DRY_RUN=1 locally)")
     index = load(DATA / "index.json", {"schemaVersion": SCHEMA_VERSION, "games": [], "dailyReportAt": None})
     index["games"] = steam.fetch_games(index["games"])
     budget = {"left": MAX_TRIAGE_PER_RUN}
@@ -516,7 +520,8 @@ def full_run():
         check_releases(state, game, events)
         refresh_issues(state, game)
         send_alerts(state, game, run, first_run)
-        state["initialized"] = True
+        # The baseline lasts until the backfill is fully triaged, so old posts never trigger alerts.
+        state["initialized"] = not any(i.get("pending") for i in state["items"].values())
         print(
             f"[run] {game['name']}: {len(run['new'])} new, {len(run['edited'])} edited, "
             f"{len(run['flips'])} flipped negative, {len(state['issues'])} issues"

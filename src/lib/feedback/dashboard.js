@@ -4,7 +4,11 @@
 // Add ?data=<base url> to read another copy of the data, e.g. a local test run.
 import CSS from "./dashboard.css?inline";
 
-const DATA = (new URLSearchParams(location.search).get("data") || "https://raw.githubusercontent.com/fourgames/website/main/feedback/data").replace(/\/$/, "");
+// The data is read from the newest commit that touched it (see dataBase), never from "main": raw
+// GitHub caches a branch's files for minutes, so "main" can serve a stale copy.
+const DATA_OVERRIDE = new URLSearchParams(location.search).get("data")?.replace(/\/$/, "");
+const RAW = "https://raw.githubusercontent.com/fourgames/website";
+let DATA = DATA_OVERRIDE || `${RAW}/main/feedback/data`;
 const DAY = 86400;
 const URGENCY = { urgent: "Urgent", high: "High", medium: "Medium", low: "Low" };
 const KIND = { review: "Review", topic: "Thread", reply: "Reply" };
@@ -63,7 +67,7 @@ async function copy(text, button) {
 }
 
 async function getJson(path) {
-  const res = await fetch(`${DATA}/${path}?t=${Math.floor(Date.now() / 60000)}`, { cache: "no-store" });
+  const res = await fetch(`${DATA}/${path}`, { cache: "no-store" });
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
   return res.json();
 }
@@ -116,7 +120,21 @@ function daily(n, valueOf) {
 // Load
 // ---------------------------------------------------------------------------
 
+// Points DATA at the newest data commit and shows when it was made. Falls back to "main" if the
+// GitHub API is unreachable or rate-limited (60 requests an hour per IP).
+async function dataBase() {
+  if (DATA_OVERRIDE) return;
+  try {
+    const res = await fetch("https://api.github.com/repos/fourgames/website/commits?path=feedback/data&per_page=1", { cache: "no-store" });
+    const [c] = await res.json();
+    if (!c?.sha) return;
+    DATA = `${RAW}/${c.sha}/feedback/data`;
+    document.getElementById("fb-updated").textContent = "Data last changed " + ago(Date.parse(c.commit.committer.date) / 1000);
+  } catch {}
+}
+
 async function init() {
+  await dataBase();
   try {
     state.index = await getJson("index.json");
     state.sales = await getJson("sales.json").catch(() => null); // once the Steam key has the Financial permission
@@ -129,17 +147,6 @@ async function init() {
   const wanted = Number(hash.get("app") || store.get("app"));
   state.tab = ["issues", "suggestions", "feed", "stats", "sales"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
   if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : games[0].appId);
-  lastCommit();
-}
-
-async function lastCommit() {
-  const q = new URLSearchParams(location.search);
-  if (q.get("data")) return;
-  try {
-    const res = await fetch("https://api.github.com/repos/fourgames/website/commits?path=feedback/data&per_page=1");
-    const [c] = await res.json();
-    if (c) document.getElementById("fb-updated").textContent = "Data last changed " + ago(Date.parse(c.commit.committer.date) / 1000);
-  } catch {}
 }
 
 function renderGames() {

@@ -906,12 +906,17 @@ function reviewsChart(start, end, releases) {
     svg.append(t);
   }
   const onSale = saleBands(svg, x, start, end);
-  timeAxis(svg, x, start, end);
   releaseMarkers(svg, x, releases);
-  const bw = Math.max(1, (W - M.left - M.right) / n - 2);
+  // Each day (or week) gets its own bar, centred in its slot with a clear gap to the next, and its
+  // count printed on it, so neighbouring days never run together.
+  const slot = (k) => {
+    const from = x(Math.max(start, b0 + k * bucket)), to = x(Math.min(end, b0 + (k + 1) * bucket));
+    const w = Math.max(3, Math.min(44, (to - from) * 0.62));
+    return [from + (to - from - w) / 2, w];
+  };
   const bar = (k, value, sign, color) => {
     if (!value) return;
-    const bx = Math.max(M.left, x(b0 + k * bucket)) + 1;
+    const [bx, bw] = slot(k);
     const hgt = Math.max(2, (value / max) * half);
     const r = Math.min(4, bw / 2, hgt);
     // Rounded only at the data end, anchored square on the zero line.
@@ -919,8 +924,24 @@ function reviewsChart(start, end, releases) {
       ? `M${bx},${mid}V${mid - hgt + r}Q${bx},${mid - hgt} ${bx + r},${mid - hgt}H${bx + bw - r}Q${bx + bw},${mid - hgt} ${bx + bw},${mid - hgt + r}V${mid}Z`
       : `M${bx},${mid}V${mid + hgt - r}Q${bx},${mid + hgt} ${bx + r},${mid + hgt}H${bx + bw - r}Q${bx + bw},${mid + hgt} ${bx + bw},${mid + hgt - r}V${mid}Z`;
     svg.append(svgEl("path", { d, fill: color }));
+    if (bw >= 10) {
+      const label = svgEl("text", { x: bx + bw / 2, y: sign > 0 ? mid - hgt - 4 : mid + hgt + 12, "text-anchor": "middle", class: "bar-count" });
+      label.textContent = value;
+      svg.append(label);
+    }
   };
   for (let k = 0; k < n; k++) { bar(k, up[k], 1, "var(--fb-positive)"); bar(k, down[k], -1, "var(--fb-negative)"); }
+  // Dates under their own bars when each slot has room for one; otherwise the usual time axis.
+  const slotWidth = (W - M.left - M.right) / ((end - start) / bucket);
+  if (slotWidth >= 46) {
+    for (let k = 0; k < n; k++) {
+      const from = x(Math.max(start, b0 + k * bucket)), to = x(Math.min(end, b0 + (k + 1) * bucket));
+      if (to - from < 30) continue;
+      const t = svgEl("text", { x: (from + to) / 2, y: H - 6, "text-anchor": "middle" });
+      t.textContent = fmtShort(b0 + k * bucket);
+      svg.append(t);
+    }
+  } else timeAxis(svg, x, start, end);
   svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: mid, y2: mid, class: "base" }));
   const hit = svgEl("rect", { x: M.left, y: M.top, width: W - M.left - M.right, height: H - M.top - M.bottom, fill: "transparent" });
   svg.append(hit);

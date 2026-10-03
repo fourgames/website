@@ -1209,3 +1209,8 @@
 .fb button.pk:hover {
 	text-decoration: underline;
 }
+.fb svg.chart text.bar-count {
+	fill: var(--fb-ink);
+	font-size: 11px;
+	font-weight: 700;
+}

@@ -3,7 +3,7 @@
  "appId": 2807130,
  "initialized": true,
  "watermarks": {
-  "reviews": 0,
+  "reviews": 1751640136,
   "forums": {
    "0": 0,
    "event:18446744073709551615": 1790893073
@@ -41,7 +41,10 @@
      "english": "Thanks so much for playing and for the detailed feedback! We're glad you're enjoying the tower defense gameplay—and we'll definitely look into the head bob toggle, the HP meter issue, and those weapon mechanics."
     }
    },
-   "issue": "I1"
+   "issue": "I1",
+   "playtimeForever": 0.3,
+   "steamPurchase": true,
+   "receivedForFree": false
   },
   "t7130962134691875275": {
    "id": "t7130962134691875275",

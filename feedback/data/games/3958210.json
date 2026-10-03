@@ -3,7 +3,7 @@
  "appId": 3958210,
  "initialized": true,
  "watermarks": {
-  "reviews": 0,
+  "reviews": 1790875183,
   "forums": {
    "0": 1791019038,
    "event:18446744073709551615": 1790966789
@@ -42,7 +42,10 @@
      "english": "Thank you for the detailed feedback—we hear your points about progression clarity, mechanic incentives, and UI feedback, and we're grateful you're willing to revisit the game if we improve it."
     }
    },
-   "issue": "I6"
+   "issue": "I6",
+   "playtimeForever": 0.7,
+   "steamPurchase": true,
+   "receivedForFree": false
   },
   "r236626239": {
    "id": "r236626239",
@@ -76,7 +79,10 @@
      "english": "Thanks for the feedback! We'll keep in mind the short playtime."
     }
    },
-   "issue": "I2"
+   "issue": "I2",
+   "playtimeForever": 0.7,
+   "steamPurchase": false,
+   "receivedForFree": false
   },
   "r236624465": {
    "id": "r236624465",
@@ -110,7 +116,10 @@
      "english": "Thank you for the feedback! We're really sorry you didn't enjoy the game."
     }
    },
-   "issue": null
+   "issue": null,
+   "playtimeForever": 1.7,
+   "steamPurchase": true,
+   "receivedForFree": false
   },
   "r236614813": {
    "id": "r236614813",
@@ -144,7 +153,10 @@
      "english": "Thank you for the feedback about the ending! It would help us to know specifically what felt disappointing about it."
     }
    },
-   "issue": "I5"
+   "issue": "I5",
+   "playtimeForever": 1.1,
+   "steamPurchase": true,
+   "receivedForFree": false
   },
   "r236561103": {
    "id": "r236561103",
@@ -178,7 +190,10 @@
      "english": "Thank you for the detailed feedback, and we're glad you appreciated the sound improvement! We're continuing to refine the game."
     }
    },
-   "issue": "I3"
+   "issue": "I3",
+   "playtimeForever": 1.9,
+   "steamPurchase": true,
+   "receivedForFree": false
   },
   "r236545405": {
    "id": "r236545405",
@@ -212,7 +227,10 @@
      "english": "Thank you for playing. We'll consider adding more content so players can enjoy it longer."
     }
    },
-   "issue": "I2"
+   "issue": "I2",
+   "playtimeForever": 0.6,
+   "steamPurchase": true,
+   "receivedForFree": false
   },
   "r236542076": {
    "id": "r236542076",
@@ -246,7 +264,10 @@
      "english": "Thanks for your feedback! We're glad you're enjoying the game – we'll consider adding a better introduction to the game mechanics."
     }
    },
-   "issue": "I1"
+   "issue": "I1",
+   "playtimeForever": 0.3,
+   "steamPurchase": true,
+   "receivedForFree": false
   },
   "t594068999055121855": {
    "id": "t594068999055121855",

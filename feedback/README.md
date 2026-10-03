@@ -62,6 +62,18 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
 
 This repo is public, so this data is too. It's all public on Steam anyway.
 
+## Dashboard
+
+`public/fb-dash.html` is served at `/fb-dash`. The site doesn't link to it, and it carries a `noindex` tag. It reads `feedback/data` straight from the repo on raw.githubusercontent.com, so new data shows up without a site redeploy (allow for a few minutes of CDN cache).
+
+- **Top bar:** players now, review score, open bugs, issues still happening, new posts, and the latest update.
+- **Issues:** bug issues sorted by priority. Each has *Copy fix prompt*, the original posts with their translations and Steam links, and the draft replies with copy buttons.
+- **Suggestions:** the same view for suggestions.
+- **Feed:** every post, newest first, with filters and search.
+- **Stats:** concurrent players and new reviews over time, with every update marked, plus posts by category and by language.
+
+To point it at another copy of the data, add `?data=<base url>`, e.g. a local test run served by the dev server.
+
 ## Running it locally
 
 ```bash

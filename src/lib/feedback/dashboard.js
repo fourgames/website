@@ -426,32 +426,23 @@ function suggestionText(issue, posts) {
   ].join("\n");
 }
 
-// "Listen" reads a text with your own Mac voice (Siri included, which web pages can't use
-// themselves): it copies the text and runs the macOS Shortcut "Speak Feedback", which speaks the
-// clipboard (Get Clipboard → Speak Text; see feedback/README.md). Passing the text in the
-// shortcuts:// link itself is unreliable on macOS, so the clipboard carries it. The text is also
-// selected, so your Speak Selection shortcut works as a fallback.
-const SPEAK_SHORTCUT = "Speak Feedback";
+// "Select" highlights a text, so you can have macOS read it with your own voice (Siri included,
+// which web pages can't use themselves) by pressing your Speak Selection key. A page can't start
+// macOS speech itself, and running a Shortcut from a link always brings the Shortcuts app forward.
 function speakButton(target) {
-  const button = h("button.speak", { type: "button", title: `Read it aloud with your "${SPEAK_SHORTCUT}" shortcut` }, "Listen");
-  button.addEventListener("click", async (e) => {
+  const button = h("button.speak", { type: "button", title: "Select the text, then press your Speak Selection key to listen" }, "Select");
+  button.addEventListener("click", (e) => {
     e.stopPropagation();
     const selection = window.getSelection();
     selection.removeAllRanges();
     const range = document.createRange();
     range.selectNodeContents(target);
     selection.addRange(range);
-    try {
-      await navigator.clipboard.writeText(target.textContent.trim());
-    } catch {
-      document.execCommand("copy"); // the selection above is the text
-    }
-    location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(SPEAK_SHORTCUT)}`;
   });
   return button;
 }
 
-// A text with its Listen button beside it.
+// A text with its Select button beside it.
 function textRow(text) {
   const el = h("div.text", text);
   return h("div.text-row", el, speakButton(el));

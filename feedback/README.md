@@ -79,12 +79,7 @@ To point it at another copy of the data, add `?data=<base url>`, e.g. a local te
 
 ## Listening to posts
 
-Each post and reply has a **Listen** button. Web pages can't use macOS's Siri voices, so it copies the text and runs a Shortcut that speaks the clipboard. Make the Shortcut once:
-
-1. **Shortcuts** app → **File → New Shortcut**, named exactly **Speak Feedback**.
-2. Add **Get Clipboard**, then **Speak Text** speaking the **Clipboard** (and your voice under its options).
-
-The first click asks to open Shortcuts; allow it. Listen also selects the text, so your Speak Selection shortcut (⌥ Esc by default) works too.
+Each post and reply has a **Select** button that highlights its text; press your Speak Selection key (⌥ Esc by default, under System Settings → Accessibility → Read & Speak) to hear it in your own voice. A web page can't start macOS speech itself, and running a Shortcut from a link always brings the Shortcuts app to the front.
 
 ## Running it locally
 

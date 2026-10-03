@@ -426,13 +426,10 @@ function suggestionText(issue, posts) {
   ].join("\n");
 }
 
-// 🔊 Reads a text with your own Mac voice (Siri included, which web pages can't use themselves) by
-// handing it to a macOS Shortcut named "Speak Feedback" (one "Speak Text" action on the Shortcut
-// Input; see feedback/README.md). It also selects the text, so the Speak Selection shortcut
-// (⌥ Esc) works as a fallback.
-const SPEAK_SHORTCUT = "Speak Feedback";
+// "Select" highlights a text, so you can have macOS read it with your own voice (Siri included,
+// which web pages can't use themselves) by pressing your Speak Selection shortcut.
 function speakButton(target) {
-  const button = h("button.speak", { type: "button", title: "Listen with your Mac's voice", "aria-label": "Listen" }, "🔊");
+  const button = h("button.speak", { type: "button", title: "Select the text, then press your Speak Selection shortcut to listen" }, "Select");
   button.addEventListener("click", (e) => {
     e.stopPropagation();
     const selection = window.getSelection();
@@ -440,14 +437,11 @@ function speakButton(target) {
     const range = document.createRange();
     range.selectNodeContents(target);
     selection.addRange(range);
-    const text = target.textContent.trim().slice(0, 6000);
-    location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(SPEAK_SHORTCUT)}&input=text&text=${encodeURIComponent(text)}`;
-    toast(`Reading it with your "${SPEAK_SHORTCUT}" shortcut (or press ⌥ Esc)`);
   });
   return button;
 }
 
-// A text with its 🔊 button beside it.
+// A text with its Select button beside it.
 function textRow(text) {
   const el = h("div.text", text);
   return h("div.text-row", el, speakButton(el));

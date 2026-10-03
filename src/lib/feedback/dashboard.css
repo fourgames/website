@@ -886,7 +886,7 @@
 	margin: 0 0 1.25rem;
 }
 
-/* 🔊 Listen buttons */
+/* Select buttons (for listening with the Mac's Speak Selection) */
 .fb .text-row {
 	display: flex;
 	gap: 8px;
@@ -901,22 +901,19 @@
 	background: var(--fb-card-2);
 	border: 0;
 	border-radius: 99px;
-	width: 30px;
-	height: 30px;
-	font-size: 0.875rem;
-	line-height: 1;
+	padding: 3px 10px;
+	font-family: var(--font-heading);
+	font-size: 0.7rem;
+	font-weight: 700;
+	color: var(--fb-ink-2);
 	cursor: pointer;
 	margin-top: 4px;
-	opacity: 0.75;
 }
 .fb .speak:hover {
 	opacity: 1;
 	background: var(--fb-hover);
 }
 .fb .reply .speak {
-	width: 24px;
-	height: 24px;
 	margin: 0;
 	vertical-align: middle;
-	font-size: 0.75rem;
 }

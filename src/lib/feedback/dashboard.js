@@ -207,7 +207,7 @@ function renderStatus() {
     // Out of credit is the one with a fix behind a button; other services link to where they're fixed.
     const fix = key === "claude" && s && !/credit/i.test(s.message || "") ? ["https://platform.claude.com/settings/keys", "API keys"] : [href, action];
     return h(`div.svc.svc-${state_}`,
-      h("div.svc-head", h("span.svc-dot"), h("b", name), h("span.svc-state", { ok: "Working", bad: "Needs attention", idle: key === "discord" ? "No alerts yet" : "Not used yet" }[state_])),
+      h("div.svc-head", h("span.svc-dot"), h("b", name), h("span.svc-state", { ok: "Working", bad: "Needs attention", idle: "Not checked yet" }[state_])),
       h("div.svc-what", what),
       state_ === "bad" ? h("div.svc-msg", s.message || "Failed.", h("span.svc-since", ` · since ${ago(s.since)}`)) : null,
       state_ === "bad" ? h("a.btn.primary.svc-fix", { href: fix[0], target: "_blank", rel: "noopener" }, fix[1], " ↗") : null);

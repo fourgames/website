@@ -53,6 +53,25 @@ def _clip(text, limit):
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
+def check():
+    """Looks the webhook up without posting anything (Discord answers a GET with its details), so the
+    dashboard shows Discord as working before the first alert, and as broken if it's deleted."""
+    if not WEBHOOK:
+        status.fail("discord", "No DISCORD_WEBHOOK_URL secret is set, so alerts aren't sent.")
+        return
+    req = urllib.request.Request(WEBHOOK, headers={"User-Agent": "fourgames-feedback/1.0"})
+    try:
+        with urllib.request.urlopen(req, timeout=30):
+            status.ok("discord")
+    except urllib.error.HTTPError as error:
+        if error.code in (401, 403, 404):
+            status.fail("discord", f"The Discord webhook returned HTTP {error.code}; it may have been deleted.")
+        else:
+            print(f"[discord] webhook check: HTTP {error.code}")  # Discord hiccup: not the webhook's fault
+    except urllib.error.URLError as error:
+        print(f"[discord] webhook check failed: {type(error).__name__}")
+
+
 def send(embeds, ping=False, note=None):
     """Posts up to 10 embeds in one message, with an optional line of text above them. Returns True
     when Discord accepted it (or no webhook is set)."""

@@ -730,8 +730,7 @@ def full_run():
         sys.exit("ANTHROPIC_API_KEY is not set (add it as a GitHub secret, or set FEEDBACK_DRY_RUN=1 locally)")
     import notify
 
-    if not notify.WEBHOOK:
-        status.fail("discord", "No DISCORD_WEBHOOK_URL secret is set, so alerts aren't sent.")
+    notify.check()
     index = load(DATA / "index.json", {"schemaVersion": SCHEMA_VERSION, "games": [], "dailyReportAt": None})
     # The store data the website shows about each game; when any of it changes (a new store page, a
     # release, a sale, new screenshots or text), loop.sh starts a site rebuild instead of waiting for

@@ -666,7 +666,11 @@
 		color: inherit;
 	}
 	.fb .top img {
-		width: 5rem;
+		display: none;
+	}
+	.fb .status-row {
+		flex-direction: column;
+		align-items: flex-start;
 	}
 	.fb .top h2 {
 		font-size: 1.25rem;
@@ -679,12 +683,73 @@
 	}
 }
 
-/* Quick links to the game on Steam */
+/* The game's Steam pages, behind one menu button at the right of the header */
+.fb .top-text {
+	flex: 1;
+	min-width: 0;
+}
 .fb .steam-links {
+	flex: none;
+	align-self: flex-start;
+}
+.fb .steam-menu {
+	position: relative;
+}
+.fb .steam-menu summary {
+	list-style: none;
+	display: inline-flex;
+	align-items: center;
+	cursor: pointer;
+}
+.fb .steam-menu summary::-webkit-details-marker {
+	display: none;
+}
+.fb .steam-menu .menu {
+	position: absolute;
+	right: 0;
+	top: calc(100% + 6px);
+	z-index: 10;
+	min-width: 12rem;
+	background: var(--fb-card);
+	box-shadow: var(--fb-shadow), 0 8px 24px rgb(0 0 0 / 0.18);
+	border-radius: var(--radius-card);
+	padding: 6px;
 	display: flex;
-	flex-wrap: wrap;
-	gap: 6px;
-	margin: -0.5rem 0 1.25rem;
+	flex-direction: column;
+}
+.fb .steam-menu .menu a {
+	padding: 7px 10px;
+	border-radius: 6px;
+	color: var(--fb-ink);
+	text-decoration: none;
+}
+.fb .steam-menu .menu a:hover {
+	background: var(--fb-hover);
+}
+
+/* Overview */
+.fb .ov-section {
+	margin-bottom: 1.75rem;
+}
+.fb .ov-section > h3 {
+	font-size: 1.125rem;
+	margin: 0 0 10px;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.fb .ov-count {
+	font-family: var(--font-sans);
+	font-size: 0.75rem;
+	font-weight: 700;
+	background: var(--fb-accent);
+	color: #fff;
+	border-radius: 99px;
+	padding: 1px 8px;
+}
+.fb .ov-calm {
+	color: var(--fb-muted);
+	margin: 0;
 }
 .fb .link-btn {
 	display: inline-flex;
@@ -772,4 +837,18 @@
 	align-items: flex-start;
 	justify-content: space-between;
 	flex-wrap: wrap;
+}
+
+/* Overview: a long post shows its first lines until clicked */
+.fb .card.clamp {
+	cursor: pointer;
+}
+.fb .card.clamp .post .text {
+	display: -webkit-box;
+	-webkit-line-clamp: 4;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+.fb .card.clamp details {
+	display: none;
 }

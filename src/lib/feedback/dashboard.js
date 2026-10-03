@@ -12,7 +12,7 @@ let DATA = DATA_OVERRIDE || `${RAW}/main/feedback/data`;
 const DAY = 86400;
 const URGENCY = { urgent: "Urgent", high: "High", medium: "Medium", low: "Low" };
 const KIND = { review: "Review", topic: "Thread", reply: "Reply" };
-const state = { index: null, games: {}, game: null, tab: "issues", filters: { issues: { status: "active", q: "" }, suggestions: { status: "active", q: "" }, feed: { kind: "all", category: "all", q: "", shown: 50 }, stats: { range: 90 } } };
+const state = { index: null, games: {}, game: null, tab: "overview", filters: { issues: { status: "active", q: "" }, suggestions: { status: "active", q: "" }, feed: { kind: "all", category: "all", q: "", shown: 50 }, stats: { range: 90 } } };
 
 const store = {
   get(k) { try { return localStorage.getItem("fb-dash:" + k); } catch { return null; } },
@@ -78,7 +78,7 @@ const ICONS = {
   suggestions: "M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4",
   feed: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
   stats: "M3 3v18h18M18 17V9M13 17V5M8 17v-3",
-  replies: "M9 17H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M14 19l2 2 5-5",
+  overview: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z",
 };
 function icon(name) {
   const svg = svgEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", class: "icon", "aria-hidden": "true" });
@@ -129,7 +129,7 @@ async function dataBase() {
     const [c] = await res.json();
     if (!c?.sha) return;
     DATA = `${RAW}/${c.sha}/feedback/data`;
-    document.getElementById("fb-updated").textContent = "Data last changed " + ago(Date.parse(c.commit.committer.date) / 1000);
+    state.dataChanged = Date.parse(c.commit.committer.date) / 1000;
   } catch {}
 }
 
@@ -145,8 +145,10 @@ async function init() {
   const games = state.index.games || [];
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = Number(hash.get("app") || store.get("app"));
-  state.tab = ["issues", "suggestions", "replies", "feed", "stats"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
-  if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : games[0].appId);
+  state.tab = ["overview", "issues", "suggestions", "feed", "stats"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
+  const { released, upcoming } = orderedGames();
+  const first = released[0] || upcoming[0];
+  if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : first.appId);
 }
 
 // What the last runs could and couldn't reach (feedback/status.py), with the fix for each problem.
@@ -177,13 +179,24 @@ function renderStatus() {
     })));
 }
 
-function renderGames() {
+// Released games first, newest release on top; then coming-soon games, soonest first.
+function orderedGames() {
   const games = state.index.games || [];
+  const released = games.filter((g) => g.status !== "upcoming").sort((a, b) => (b.released || 0) - (a.released || 0));
+  const upcoming = games.filter((g) => g.status === "upcoming").sort((a, b) => (a.released || Infinity) - (b.released || Infinity));
+  return { released, upcoming };
+}
+
+function renderGames() {
+  const { released, upcoming } = orderedGames();
   const item = (g) => h("button.g-item", { type: "button", title: g.name, "aria-current": String(state.game?.appId === g.appId), onclick: () => pickGame(g.appId) },
     g.capsule ? h("img.g-thumb", { src: g.capsule, alt: "", loading: "lazy" }) : h("span.g-thumb"),
-    h("span.g-name", g.name, h("span.g-sub", g.status === "upcoming" ? "Coming soon" : "Released")));
-  document.getElementById("fb-games-side").replaceChildren(...games.map(item));
-  document.getElementById("fb-games-strip").replaceChildren(...games.map(item));
+    h("span.g-name", g.name, g.released ? h("span.g-sub", fmtDate(g.released)) : null));
+  document.getElementById("fb-games-side").replaceChildren(...[
+    released.length ? h("div.side-label", "Released") : null, ...released.map(item),
+    upcoming.length ? h("div.side-label", "Coming soon") : null, ...upcoming.map(item),
+  ].filter(Boolean));
+  document.getElementById("fb-games-strip").replaceChildren(...[...released, ...upcoming].map(item));
 }
 
 async function pickGame(appId) {
@@ -229,7 +242,14 @@ function renderHeader() {
   const img = document.getElementById("fb-capsule");
   img.hidden = !meta.capsule;
   if (meta.capsule) img.src = meta.capsule;
-  document.getElementById("fb-title").replaceChildren(meta.name || "", h("span.pill", meta.status === "upcoming" ? "Coming soon" : "Released"));
+  document.getElementById("fb-title").replaceChildren(...[meta.name || "", meta.status === "upcoming" ? h("span.pill", "Coming soon") : null].filter(Boolean));
+  const g = state.game;
+  // The newest numbered update; a launch post or an unnumbered one only when there's nothing else.
+  const release = (g.releases || []).filter((r) => r.version).at(-1) || (g.releases || []).at(-1);
+  document.getElementById("fb-updated").replaceChildren([
+    release ? `Latest update ${release.version ? "v" + release.version : release.name}, ${ago(release.time)}` : null,
+    state.dataChanged ? `data updated ${ago(state.dataChanged)}` : null,
+  ].filter(Boolean).join(" · "));
   const id = state.game.appId;
   const links = [
     ["Store page", `https://store.steampowered.com/app/${id}/`],
@@ -241,7 +261,9 @@ function renderHeader() {
     ["Sales", `https://partner.steampowered.com/app/details/${id}/`],
   ];
   document.getElementById("fb-links").replaceChildren(
-    ...links.map(([label, href]) => h("a.btn.link-btn", { href, target: "_blank", rel: "noopener" }, label, " ↗")));
+    h("details.steam-menu",
+      h("summary.btn", "Steam ▾"),
+      h("div.menu", ...links.map(([label, href]) => h("a", { href, target: "_blank", rel: "noopener" }, label, " ↗")))));
 }
 
 function renderStats() {
@@ -260,9 +282,6 @@ function renderStats() {
   const urgent = bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high");
   const still = Object.values(g.issues || {}).filter((i) => i.status === "still_happening");
   const fresh = items().filter((i) => !i.dev && i.created >= t - DAY);
-  // The newest numbered update; a launch post or an unnumbered one only when there's nothing else.
-  const release = (g.releases || []).filter((r) => r.version).at(-1) || (g.releases || []).at(-1);
-
   const tile = (label, value, sub, trend, color) => h("div.kpi", h("div.label", label), h("div.value", value), sub ? h("div.sub", sub) : null, trend ? spark(trend, color) : null);
   const pct = totals && totals.positive + totals.negative ? Math.round((100 * totals.positive) / (totals.positive + totals.negative)) + "%" : "–";
   document.getElementById("fb-stats").replaceChildren(...[
@@ -270,7 +289,6 @@ function renderStats() {
     tile("Positive reviews", pct, totals ? `${totals.positive} 👍 · ${totals.negative} 👎` : "no reviews yet", reviewsPerDay, "var(--fb-positive)"),
     tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent"),
     tile("New posts", fresh.length, "last 24 h", postsPerDay),
-    tile("Latest update", release ? (release.version ? "v" + release.version : "–") : "–", release ? `${release.version ? "" : release.name + " · "}${ago(release.time)}` : "none yet"),
   ].filter(Boolean));
 }
 
@@ -286,16 +304,16 @@ function render() {
     issues: issues("bug").filter(isActive).length,
     suggestions: issues("suggestion").filter(isActive).length,
     feed: items().filter((i) => !i.dev).length,
-    replies: toReply().length,
+    overview: attention().length + toReply().length || null,
   };
-  const tabs = [["issues", "Issues"], ["suggestions", "Suggestions"], ["replies", "Replies"], ["feed", "Feed"], ["stats", "Stats"]];
+  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["feed", "All posts"], ["stats", "Charts"]];
   const buttons = () => tabs.map(([id, label]) =>
     h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
       icon(id), h("span", label), counts[id] != null ? h("span.count", counts[id]) : null));
   document.getElementById("fb-nav-side").replaceChildren(...buttons());
   document.getElementById("fb-nav-top").replaceChildren(...buttons());
   setHash();
-  const view = { issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), replies: repliesView, feed: feedView, stats: statsView }[state.tab]();
+  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), feed: feedView, stats: statsView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
 
@@ -412,29 +430,52 @@ function toReply() {
     .sort((a, b) => b.created - a.created);
 }
 
-function repliesView() {
-  const list = toReply();
-  const intro = h("p.updated", { style: "margin:0 0 12px" },
-    "Negative reviews and threads about something an update has since fixed. Steam suggests replying only in cases like these: say what was fixed, briefly. Once you reply on Steam, the post leaves this list on the next run.");
-  if (!list.length) return h("div", intro, h("p.empty", "Nothing to reply to right now."));
-  return h("div", intro, ...list.map((item) => {
-    const r = item.fixReply;
-    const issue = state.game.issues[r.issue];
-    const done = h("button.btn", { onclick: () => {
-      store.set("replied", [...(store.get("replied") || "").split(",").filter(Boolean), item.id].join(","));
-      render();
-    } }, "Done");
-    return h("div.card",
-      h("div.meta", h("span.badge.s-fixed", `✓ Fixed in ${r.version}`), h("b", issue?.title || "")),
-      h("div.reply",
-        h("div.reply-row",
-          h("div", h("div", "💬 ", r.text), r.text !== r.english ? h("div.en", r.english) : null),
-          h("div.actions", { style: "margin:0;flex:none" },
-            h("button.btn.primary", { onclick: (e) => copy(r.text, e.currentTarget) }, "Copy reply"),
-            h("a.btn.link-btn", { href: item.url, target: "_blank", rel: "noopener" }, item.kind === "review" ? "Reply on Steam ↗" : "Open thread ↗"),
-            done))),
-      postView(item));
-  }));
+function replyCard(item) {
+  const r = item.fixReply;
+  const issue = state.game.issues[r.issue];
+  const done = h("button.btn", { onclick: () => {
+    store.set("replied", [...(store.get("replied") || "").split(",").filter(Boolean), item.id].join(","));
+    render();
+  } }, "Done");
+  return h("div.card",
+    h("div.meta", h("span.badge.s-fixed", `✓ Fixed in ${r.version}`), h("b", issue?.title || "")),
+    h("div.reply",
+      h("div.reply-row",
+        h("div", h("div", "💬 ", r.text), r.text !== r.english ? h("div.en", r.english) : null),
+        h("div.actions", { style: "margin:0;flex:none" },
+          h("button.btn.primary", { onclick: (e) => copy(r.text, e.currentTarget) }, "Copy reply"),
+          h("a.btn.link-btn", { href: item.url, target: "_blank", rel: "noopener" }, item.kind === "review" ? "Reply on Steam ↗" : "Open thread ↗"),
+          done))),
+    postView(item));
+}
+
+// Bugs that need you now: reported again after a fix, or high/urgent and still open.
+function attention() {
+  return Object.values(state.game.issues || {})
+    .filter((i) => i.status === "still_happening" || (i.kind === "bug" && isActive(i) && (i.urgency === "urgent" || i.urgency === "high")))
+    .sort((a, b) => b.priority - a.priority);
+}
+
+function overviewView() {
+  const go = (tab, label) => h("button.btn", { onclick: () => { state.tab = tab; render(); window.scrollTo({ top: 0 }); } }, label, " →");
+  const section = (title, count, ...body) => h("section.ov-section", h("h3", title, count != null ? h("span.ov-count", count) : null), ...body);
+  const urgent = attention();
+  const replies = toReply();
+  const latest = items().filter((i) => !i.dev).sort((a, b) => b.created - a.created).slice(0, 5);
+  return h("div",
+    urgent.length
+      ? section("Needs attention", urgent.length, ...urgent.slice(0, 5).map((i) => issueCard(i)), urgent.length > 5 || issues("bug").filter(isActive).length > urgent.length ? go("issues", "All bugs") : null)
+      : section("Needs attention", null, h("p.ov-calm", "Nothing urgent. No bugs are high priority or back after a fix.")),
+    replies.length
+      ? section("Worth a reply", replies.length,
+          h("p.updated", { style: "margin:0 0 10px" }, "Negative reviews and threads about something an update has since fixed. Steam suggests replying in cases like these, briefly. Each one leaves this list once you've replied on Steam."),
+          ...replies.map(replyCard))
+      : null,
+    section("Latest posts", null,
+      // Long reviews are cut to a few lines here; a click shows the whole post.
+      ...(latest.length ? latest.map((i) => h("div.card.clamp", { onclick: (e) => e.currentTarget.classList.remove("clamp") }, postView(i))) : [h("p.ov-calm", "No posts yet.")]),
+      latest.length ? go("feed", "All posts") : null),
+  );
 }
 
 function feedView() {
@@ -679,7 +720,6 @@ const SHELL = `
 <div class="status" id="fb-status"></div>
 <div class="fb-layout">
   <aside class="fb-side" aria-label="Games and views">
-    <div class="side-label">Games</div>
     <div id="fb-games-side"></div>
     <div class="side-label">Views</div>
     <nav class="nav-side" id="fb-nav-side" aria-label="Views"></nav>
@@ -688,15 +728,23 @@ const SHELL = `
     <div class="strip" id="fb-games-strip" aria-label="Games"></div>
     <header class="top">
       <img id="fb-capsule" alt="" hidden>
-      <div><h2 id="fb-title">Loading…</h2><div class="updated" id="fb-updated"></div></div>
+      <div class="top-text"><h2 id="fb-title">Loading…</h2><div class="updated" id="fb-updated"></div></div>
+      <div class="steam-links" id="fb-links"></div>
     </header>
-    <div class="steam-links" id="fb-links"></div>
     <section class="kpis" id="fb-stats" aria-label="Summary"></section>
     <nav class="nav-top" id="fb-nav-top" aria-label="Views"></nav>
     <div id="fb-view"></div>
   </div>
 </div>
 <div class="toast" id="fb-toast" role="status"></div>`;
+
+// The Steam menu is a <details>; close it when clicking elsewhere or pressing Escape.
+document.addEventListener("click", (e) => {
+  document.querySelectorAll(".fb .steam-menu[open]").forEach((m) => { if (!m.contains(e.target)) m.open = false; });
+});
+document.addEventListener("keydown", (e) => {
+  if (e.key === "Escape") document.querySelectorAll(".fb .steam-menu[open]").forEach((m) => { m.open = false; });
+});
 
 export function mount(root) {
   if (!document.getElementById("fb-dash-css")) {

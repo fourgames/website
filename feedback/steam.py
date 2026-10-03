@@ -6,6 +6,7 @@ import os
 import re
 import subprocess
 import time
+from datetime import datetime, timezone
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -123,6 +124,8 @@ def fetch_games(previous):
                 "appId": app_id,
                 "name": d.get("name") or known.get(app_id, {}).get("name") or str(app_id),
                 "status": "upcoming" if (d.get("release_date") or {}).get("coming_soon") else "released",
+                # For ordering the dashboard's game list; Steam gives a display string ("Sep 30, 2026").
+                "released": parse_release_date((d.get("release_date") or {}).get("date")),
                 "capsule": d.get("header_image"),
             }
         )
@@ -190,6 +193,16 @@ def update_events(app_id):
             }
         )
     return sorted(events, key=lambda e: e["time"], reverse=True)
+
+
+def parse_release_date(text):
+    """Unix time for Steam's release date string ("Sep 30, 2026", "30 Sep, 2026", "Q4 2026"…), or None."""
+    for fmt in ("%b %d, %Y", "%d %b, %Y", "%B %d, %Y", "%b %Y", "%B %Y", "%Y"):
+        try:
+            return int(datetime.strptime((text or "").strip(), fmt).replace(tzinfo=timezone.utc).timestamp())
+        except ValueError:
+            continue
+    return None
 
 
 def bbcode_to_text(text):

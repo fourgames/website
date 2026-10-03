@@ -367,7 +367,11 @@ def assign_issues(state, item, result, run):
         if point["kind"] in ("bug", "complaint", "suggestion", "praise"):
             kind = {"bug": "bug", "praise": "praise"}.get(point["kind"], "suggestion")
             issue_id = point.get("existing_issue") if point.get("existing_issue") in state["issues"] else None
-            title = (point.get("new_issue_title") or "").strip()
+            # Praise never joins a bug or idea, nor a complaint something players love.
+            if issue_id and (state["issues"][issue_id]["kind"] == "praise") != (kind == "praise"):
+                issue_id = None
+            # A point Claude left without an issue still gets one, titled after itself.
+            title = (point.get("new_issue_title") or "").strip() or point["text"].strip().rstrip(".")[:80]
             if not issue_id and title:
                 issue_id = new_titles.get(title.lower())
                 if not issue_id:

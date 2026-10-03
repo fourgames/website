@@ -97,7 +97,8 @@ item, tool or feature never joins an issue just because the complaint sounds ali
 doesn't join a dynamite one): start a new issue instead. Points in one post that are \
 about the same thing share one title. A reply such as "same here" in a thread whose opening post belongs to issues \
 repeats them. Praise points likewise join a "what players love" item (listed with kind "praise"), e.g. "Satisfying \
-chainsaw digging"; questions join nothing. Each point also gets its own urgency, on the scale above.
+chainsaw digging"; each such item is one specific thing (the digging, the sound, the developer's quick updates), \
+never a catch-all like "fun gameplay", so praise for something else starts its own item. Questions join nothing. Each point also gets its own urgency, on the scale above.
 - Some listed issues say they were likely fixed in an update, and how. A point that joins one sets still_after_fix \
 only when it clearly says the problem persists after that fix (e.g. "still no explanation even after the update"); \
 a player describing the old problem, or playing an older version, doesn't count.

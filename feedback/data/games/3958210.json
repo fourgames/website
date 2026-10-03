@@ -139,7 +139,8 @@
      "text": "피드백 감사합니다! 짧은 플레이 시간에 대해 알아두겠습니다.",
      "english": "Thanks for the feedback! We'll keep in mind the short playtime."
     },
-    "tone": "sincere"
+    "tone": "sincere",
+    "points": []
    },
    "issue": "I2",
    "playtimeForever": 0.7,
@@ -181,7 +182,8 @@
      "english": "Thank you for the feedback! We're really sorry you didn't enjoy the game."
     },
     "tone": "joke",
-    "note": "\"도망쳐\" (run away) is a Korean Steam meme: a recommended review using this phrase humorously means the game is so addictive/engaging you should flee to avoid getting hooked."
+    "note": "Korean meme: \"도망쳐\" (run away) is a playful warning that a game is dangerously addictive or engaging, not a genuine warning to avoid it. The recommended rating confirms this is praise.",
+    "points": []
    },
    "issue": null,
    "playtimeForever": 1.7,
@@ -223,7 +225,17 @@
      "english": "Thank you for the feedback about the ending! It would help us to know specifically what felt disappointing about it."
     },
     "tone": "sincere",
-    "note": "The player uses 'dopamine' as slang for 'enjoyment' or 'satisfaction,' common in gaming communities."
+    "note": "'Dopamine' here refers to the reward and satisfaction of the gameplay loop, a common gaming slang term.",
+    "points": [
+     {
+      "kind": "suggestion",
+      "text": "The ending needs to be more satisfying and rewarding."
+     },
+     {
+      "kind": "praise",
+      "text": "The core gameplay loop climbing up and digging down is very engaging."
+     }
+    ]
    },
    "issue": "I5",
    "playtimeForever": 1.1,
@@ -323,7 +335,8 @@
      "text": "플레이해주셔서 감사합니다. 더 오래 즐길 수 있도록 콘텐츠 추가를 고려하겠습니다.",
      "english": "Thank you for playing. We'll consider adding more content so players can enjoy it longer."
     },
-    "tone": "sincere"
+    "tone": "sincere",
+    "points": []
    },
    "issue": "I2",
    "playtimeForever": 0.6,
@@ -478,7 +491,14 @@
      "text": "That (+) sign is a power-up floor—try standing on it to activate the boost and keep digging deeper!",
      "english": "That (+) sign is a power-up floor—try standing on it to activate the boost and keep digging deeper!"
     },
-    "tone": "sincere"
+    "tone": "sincere",
+    "note": "Player uses caps lock and abbreviated text, but the meaning is clear.",
+    "points": [
+     {
+      "kind": "question",
+      "text": "What is the floor with a (+) sign at depth 450 and how do you pass it?"
+     }
+    ]
    },
    "issue": null
   },
@@ -649,7 +669,13 @@
      "text": "이 깊이 관련 버그를 알려주셔서 감사합니다! 재시작으로 해결되었다니 다행이며, 우리 팀이 이 문제를 찾아 수정하는 데 도움이 될 거예요.",
      "english": "Thank you for reporting this depth-related bug! We're glad restarting fixed it, and this will help our team track down and fix the issue."
     },
-    "tone": "sincere"
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "bug",
+      "text": "At 410m depth, ice becomes indestructible to all damage sources (chainsaw, dynamite, torches)."
+     }
+    ]
    },
    "issue": "I4"
   },

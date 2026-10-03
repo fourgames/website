@@ -1,0 +1,88 @@
+name: Player feedback
+
+# Every 20 minutes a cheap gate decides whether a full run is due: every 4 hours normally, every tick
+# for 48 hours after a game publishes an update or patch notes (which /ship does). See feedback/README.md.
+on:
+  schedule:
+    - cron: "*/20 * * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Run now, whatever the schedule says
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+concurrency:
+  group: feedback
+  cancel-in-progress: false
+
+jobs:
+  feedback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Restore run state
+        uses: actions/cache/restore@v6
+        with:
+          path: feedback/.cache
+          key: feedback-run-${{ github.run_id }}
+          restore-keys: feedback-run-
+
+      - name: Is a full run due?
+        id: gate
+        run: python3 feedback/run.py --gate
+        env:
+          FEEDBACK_FORCE: ${{ inputs.force }}
+
+      - name: Set up Python
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: feedback/requirements.txt
+
+      - name: Install dependencies
+        if: steps.gate.outputs.run == 'true'
+        run: pip install -r feedback/requirements.txt
+
+      - name: Collect and triage feedback
+        if: steps.gate.outputs.run == 'true'
+        run: python feedback/run.py
+        env:
+          STEAM_PUBLISHER_KEY: ${{ secrets.STEAM_PUBLISHER_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_MENTION: ${{ secrets.DISCORD_MENTION }}
+
+      - name: Save run state
+        if: steps.gate.outputs.run == 'true'
+        uses: actions/cache/save@v6
+        with:
+          path: feedback/.cache
+          key: feedback-run-${{ github.run_id }}
+
+      # Commits made with the workflow token don't trigger other workflows, so this never redeploys the
+      # site; the dashboard reads feedback/data straight from the repo.
+      - name: Commit changes
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          git add feedback/data
+          if git diff --cached --quiet; then
+            echo "Nothing changed."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -q -m "Update player feedback"
+          for attempt in 1 2 3; do
+            git pull -q --rebase origin main && git push -q origin HEAD:main && exit 0
+            sleep 5
+          done
+          exit 1

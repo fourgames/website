@@ -70,3 +70,6 @@ Icon[
 Network Trash Folder
 Temporary Items
 .apdisk
+# Player feedback run state (kept in the Actions cache, not committed)
+feedback/.cache/
+__pycache__/

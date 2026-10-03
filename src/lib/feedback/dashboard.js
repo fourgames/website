@@ -358,6 +358,7 @@ function render() {
   document.getElementById("fb-nav-side").replaceChildren(...buttons());
   document.getElementById("fb-nav-top").replaceChildren(...buttons());
   setHash();
+  renderCardPicker();
   const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), replies: repliesView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
@@ -505,7 +506,7 @@ function postParts(item) {
   };
 }
 
-function postView(item) {
+function postViewSteam(item) {
   const p = postParts(item);
   const [icon, kind] = CATEGORY[p.t.category] || [];
   const tone = p.verdict ? p.verdict[0].replace("vote-", "is-") : "neutral";
@@ -523,6 +524,82 @@ function postView(item) {
           p.t.urgency ? h(`span.pv3-urgency.u-${p.t.urgency}`, h("span.dot"), `${URGENCY[p.t.urgency]} priority`) : null) : null)),
     ...p.body,
     h("div.meta", ...p.flags, item.forum && item.kind !== "review" ? h("span", item.forum) : null, p.link));
+}
+
+// Five takes on the Steam-style card, each making the type and priority readable at a glance
+// (temporary: /fb-dash?cards shows a bar to pick one; 0 is the card above).
+const CARD_DESIGNS = [[0, "Current"], [1, "Coloured tags"], [2, "Type edge"], [3, "Tag row on top"], [4, "Corner label"], [5, "Headline"]];
+const cardDesign = () => Number(store.get("cardDesign") || 0);
+const PRIORITY_BARS = { low: 1, medium: 2, high: 3, urgent: 4 };
+
+function postView(item) {
+  const d = cardDesign();
+  if (!d) return postViewSteam(item);
+  const p = postParts(item);
+  const cat = p.t.category;
+  const [icon, kind] = CATEGORY[cat] || [];
+  const u = p.t.urgency;
+  const tone = p.verdict ? p.verdict[0].replace("vote-", "is-") : "neutral";
+  const typeTag = kind ? h(`span.tt.tt-${cat}`, icon, " ", kind) : null;
+  const prioTag = u ? h(`span.pt.pt-${u}`, `${URGENCY[u]}${u === "urgent" ? "" : " priority"}`) : null;
+  const bars = u ? h(`span.bars4.pt-${u}`, { title: `${URGENCY[u]} priority` }, ...[1, 2, 3, 4].map((n) => h(n <= PRIORITY_BARS[u] ? "i.on" : "i"))) : null;
+  const left = [
+    h("div.pv3-icon", p.verdict ? p.verdict[1] : "💬"),
+    h("div.pv3-title",
+      h("b", p.verdict ? p.verdict[2] : p.kind),
+      p.hours ? h("span", `${p.hours} on record`, p.atReview ? ` (${p.atReview})` : "") : p.who ? h("span", p.who) : null,
+      h("span", `Posted ${p.when}`)),
+  ];
+  const lang = h("div.pv3-lang", h("span.pv3-flag", p.flag), p.language);
+  const foot = h("div.meta", ...p.flags, item.forum && item.kind !== "review" ? h("span", item.forum) : null, p.link);
+
+  // 1 · Coloured tags: the same header, type and priority as solid coloured tags under the language.
+  if (d === 1) return h("div.post.pv3",
+    h(`div.pv3-head.${tone}`, ...left, h("div.pv3-right", lang, typeTag || prioTag ? h("div.tags", typeTag, prioTag) : null)),
+    ...p.body, foot);
+  // 2 · Type edge: the card's left edge in the type's colour, priority as signal bars.
+  if (d === 2) return h(`div.post.pv3.edge.edge-${cat || "none"}`,
+    h(`div.pv3-head.${tone}`, ...left, h("div.pv3-right", lang,
+      kind ? h(`div.edge-type.tt-text-${cat}`, icon, " ", kind) : null,
+      u ? h("div.edge-prio", bars, `${URGENCY[u]} priority`) : null)),
+    ...p.body, foot);
+  // 3 · Tag row on top: what it is and how urgent, above the Steam header.
+  if (d === 3) return h("div.post.pv3",
+    typeTag || prioTag ? h("div.tags.tags-top", typeTag, prioTag) : null,
+    h(`div.pv3-head.${tone}`, ...left, h("div.pv3-right", lang)),
+    ...p.body, foot);
+  // 4 · Corner label: the type as a coloured label in the card's top corner, priority beside it.
+  if (d === 4) return h("div.post.pv3.cornered",
+    kind ? h(`div.corner.tt-${cat}`, icon, " ", kind, u ? h("span.corner-prio", " · ", URGENCY[u]) : null) : null,
+    h(`div.pv3-head.${tone}`, ...left, h("div.pv3-right", lang)),
+    ...p.body, foot);
+  // 5 · Headline: type and priority as the card's title line; the Steam facts as a calmer line below.
+  return h("div.post.pv5h",
+    h("div.headline",
+      kind ? h(`span.tt-text-${cat}`, icon, " ", kind) : h("span", p.kind),
+      u ? h(`span.pt.pt-${u}`, `${URGENCY[u]}${u === "urgent" ? "" : " priority"}`) : null,
+      h("span.headline-lang", p.flag, " ", p.language)),
+    h("div.subline",
+      p.verdict ? h(`span.${p.verdict[0]}`, p.verdict[1], " ", p.verdict[2]) : null,
+      p.hours ? h("span", `${p.hours} on record`, p.atReview ? ` (${p.atReview})` : "") : p.who ? h("span", p.who) : null,
+      h("span", `Posted ${p.when}`)),
+    ...p.body, foot);
+}
+
+function renderCardPicker() {
+  if (!new URLSearchParams(location.search).has("cards")) return;
+  let bar = document.getElementById("fb-card-picker");
+  if (!bar) {
+    bar = h("div.card-picker", { id: "fb-card-picker", role: "group", "aria-label": "Card design" });
+    document.querySelector(".fb").append(bar);
+  }
+  bar.replaceChildren(h("span", "Card design"),
+    ...CARD_DESIGNS.map(([n, name]) => h("button", { type: "button", "aria-pressed": String(cardDesign() === n), onclick: () => {
+      store.set("cardDesign", n);
+      const y = window.scrollY;
+      render();
+      window.scrollTo(0, y);
+    } }, `${n} · ${name}`)));
 }
 
 // Posts worth a reply: a negative review or a thread about something a later update fixed (Steam's

@@ -1015,3 +1015,188 @@
 .fb .pv3-urgency.u-medium .dot {
 	background: var(--fb-warning);
 }
+
+/* Card design picker (temporary) */
+.fb .card-picker {
+	position: fixed;
+	bottom: 16px;
+	left: 50%;
+	transform: translateX(-50%);
+	z-index: 40;
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	background: #0b0b0b;
+	color: #fff;
+	border-radius: 99px;
+	padding: 6px 6px 6px 14px;
+	box-shadow: 0 8px 30px rgb(0 0 0 / 0.35);
+	font-size: 0.8125rem;
+	max-width: calc(100vw - 32px);
+	overflow-x: auto;
+	scrollbar-width: none;
+}
+.fb .card-picker span {
+	white-space: nowrap;
+	margin-right: 4px;
+}
+.fb .card-picker button {
+	border: 0;
+	border-radius: 99px;
+	padding: 6px 12px;
+	background: #262626;
+	color: #ddd;
+	white-space: nowrap;
+}
+.fb .card-picker button[aria-pressed="true"] {
+	background: #fff;
+	color: #000;
+	font-weight: 600;
+}
+
+/* Type colours: bug red, suggestion purple, question blue, praise green */
+.fb {
+	--type-bug: #e5484d;
+	--type-suggestion: #8e4ec6;
+	--type-question: #0090ff;
+	--type-praise: #30a46c;
+}
+.fb .tags {
+	display: flex;
+	gap: 6px;
+	flex-wrap: wrap;
+	justify-content: flex-end;
+}
+.fb .tags-top {
+	justify-content: flex-start;
+	margin-bottom: 8px;
+}
+.fb .tt {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	padding: 2px 10px;
+	border-radius: 99px;
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: #fff;
+}
+.fb .tt-bug { background: var(--type-bug); }
+.fb .tt-suggestion { background: var(--type-suggestion); }
+.fb .tt-question { background: var(--type-question); }
+.fb .tt-praise { background: var(--type-praise); }
+.fb .tt-text-bug { color: var(--type-bug); }
+.fb .tt-text-suggestion { color: var(--type-suggestion); }
+.fb .tt-text-question { color: var(--type-question); }
+.fb .tt-text-praise { color: var(--type-praise); }
+@media (prefers-color-scheme: dark) {
+	.fb .tt-text-suggestion { color: #b78ae0; }
+	.fb .tt-text-question { color: #4fb2ff; }
+}
+
+/* Priority: urgent filled red, high orange, medium amber, low grey */
+.fb .pt {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 10px;
+	border-radius: 99px;
+	font-size: 0.75rem;
+	font-weight: 700;
+	border: 1.5px solid currentColor;
+}
+.fb .pt-urgent { color: #fff; background: var(--fb-critical); border-color: var(--fb-critical); }
+.fb .pt-high { color: var(--fb-serious); }
+.fb .pt-medium { color: #d79b00; }
+.fb .pt-low { color: var(--fb-muted); }
+.fb .bars4 {
+	display: inline-flex;
+	align-items: flex-end;
+	gap: 2px;
+	height: 12px;
+	margin-right: 6px;
+	border: 0;
+	padding: 0;
+	background: none;
+}
+.fb .bars4 i {
+	width: 3px;
+	border-radius: 1px;
+	background: var(--fb-line);
+}
+.fb .bars4 i:nth-child(1) { height: 4px; }
+.fb .bars4 i:nth-child(2) { height: 7px; }
+.fb .bars4 i:nth-child(3) { height: 10px; }
+.fb .bars4 i:nth-child(4) { height: 12px; }
+.fb .bars4 i.on { background: currentColor; }
+.fb .bars4.pt-urgent { color: var(--fb-critical); background: none; }
+
+/* 2 · Type edge */
+.fb .post.edge {
+	border-left: 4px solid var(--fb-line);
+	padding-left: 12px;
+}
+.fb .edge-bug { border-left-color: var(--type-bug) !important; }
+.fb .edge-suggestion { border-left-color: var(--type-suggestion) !important; }
+.fb .edge-question { border-left-color: var(--type-question) !important; }
+.fb .edge-praise { border-left-color: var(--type-praise) !important; }
+.fb .edge-type {
+	font-family: var(--font-heading);
+	font-weight: 800;
+	font-size: 0.875rem;
+}
+.fb .edge-prio {
+	display: flex;
+	align-items: center;
+	font-size: 0.75rem;
+	color: var(--fb-ink-2);
+}
+
+/* 4 · Corner label */
+.fb .post.cornered {
+	position: relative;
+	padding-top: 22px;
+}
+.fb .card > .post.cornered:first-child {
+	padding-top: 22px;
+}
+.fb .corner {
+	position: absolute;
+	top: -14px;
+	right: -16px;
+	padding: 4px 12px;
+	border-radius: 0 var(--radius-card) 0 var(--radius-card);
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: #fff;
+}
+.fb .corner-prio {
+	font-weight: 600;
+	opacity: 0.9;
+}
+
+/* 5 · Headline */
+.fb .headline {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-family: var(--font-heading);
+	font-size: 1.05rem;
+	font-weight: 800;
+}
+.fb .headline-lang {
+	margin-left: auto;
+	font-family: var(--font-sans);
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: var(--fb-title);
+}
+.fb .subline {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 14px;
+	font-size: 0.8125rem;
+	color: var(--fb-ink-2);
+	margin: 2px 0 6px;
+	padding-bottom: 6px;
+	border-bottom: 1px solid var(--fb-line);
+}

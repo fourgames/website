@@ -876,6 +876,42 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Escape") document.querySelectorAll(".fb .steam-menu[open]").forEach((m) => { m.open = false; });
 });
 
+// Left open (on a TV, say), the page keeps itself current: every 5 minutes it asks GitHub for the
+// newest data commit and, when there is one, reloads the data and redraws in place, keeping the
+// game, view, filters, open chart and scroll position. Every 12 hours it reloads the whole page,
+// to pick up changes to the dashboard itself.
+const REFRESH_MS = 5 * 60 * 1000;
+const FULL_RELOAD_MS = 12 * 3600 * 1000;
+let refreshTimer = null;
+const loadedAt = Date.now();
+
+async function refresh() {
+  if (!document.getElementById("fb-view")) return clearInterval(refreshTimer); // left the page
+  if (!state.game) return;
+  if (Date.now() - loadedAt > FULL_RELOAD_MS && !window.getSelection().toString()) return location.reload();
+  const before = DATA;
+  await dataBase();
+  if (DATA !== before) {
+    try {
+      const index = await getJson("index.json");
+      const appId = state.game.appId;
+      const game = await getJson(`games/${appId}.json`);
+      state.index = index;
+      state.games = { [appId]: game }; // other games reload when picked
+      state.game = { ...game, meta: index.games.find((g) => g.appId === appId) };
+    } catch {
+      return; // try again next time
+    }
+  }
+  // Not while typing in a search box: a redraw would wipe it. Next round.
+  if (document.activeElement?.matches?.(".fb input")) return;
+  // Redraw either way, so "x min ago" stays true; keep the reader's place.
+  const y = window.scrollY;
+  renderStatus();
+  render();
+  window.scrollTo(0, y);
+}
+
 export function mount(root) {
   if (!document.getElementById("fb-dash-css")) {
     document.head.append(h("style", { id: "fb-dash-css" }, CSS));
@@ -884,4 +920,6 @@ export function mount(root) {
   // Lets the site's header show a "Feedback" link in this browser from now on (SiteHeader.vue).
   store.set("visited", "1");
   init();
+  clearInterval(refreshTimer);
+  refreshTimer = setInterval(refresh, REFRESH_MS);
 }

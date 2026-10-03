@@ -509,10 +509,59 @@ def process_in_order(state, game, run, budget, events):
         if any(i.get("pending") and not i.get("dev") and i["created"] < release["time"] for i in state["items"].values()):
             print(f"[release] {release['name']}: matching waits for older posts to be triaged")
             break
+        if not merge_duplicates(state, game):
+            break
         refresh_issues(state, game)
         if not match_release(state, game, release):
             break
     triage_pending(state, game, run, budget)
+    merge_duplicates(state, game)
+
+
+def merge_duplicates(state, game):
+    """Posts are sorted one at a time, so two issues can end up being the same thing. After new
+    issues appear, Claude looks over the whole list once and duplicates are merged into the oldest."""
+    import triage
+
+    if state.get("mergedAt") == state["nextIssue"]:
+        return True
+    issues = [i for i in state["issues"].values() if i["items"]]
+    try:
+        groups = triage.find_duplicates(game["name"], issue_digest(issues, state))
+    except Exception as error:  # noqa: BLE001 - try again next run
+        print(f"[merge] {type(error).__name__}: {error}")
+        status.fail("claude", f"{triage.describe_error(error)[0]} Duplicate issues wait to be merged.")
+        return False
+    number = lambda issue_id: int(issue_id[1:])
+    for group in groups:
+        keep_id, *others = sorted(group["ids"], key=number)
+        keep = state["issues"][keep_id]
+        keep["title"] = group["title"]
+        for other_id in others:
+            other = state["issues"].pop(other_id)
+            for item_id in other["items"]:
+                item = state["items"].get(item_id)
+                if not item:
+                    continue
+                for pt in (item.get("triage") or {}).get("points") or []:
+                    if pt.get("issue") == other_id:
+                        pt["issue"] = keep_id
+                item["issues"] = list(dict.fromkeys(keep_id if i == other_id else i for i in item.get("issues") or []))
+                item["issue"] = item["issues"][0] if item["issues"] else None
+                if item_id not in keep["items"]:
+                    keep["items"].append(item_id)
+            for p in other.get("partly", []):
+                if not any(q["in"] == p["in"] for q in keep.get("partly", [])):
+                    keep.setdefault("partly", []).append(p)
+            if other.get("status") == "likely_fixed" and keep.get("status") != "likely_fixed":
+                keep.update({k: other.get(k) for k in ("status", "fixedIn", "fixedAt", "fixedUrl", "fixReason")})
+            for release in state["releases"]:
+                for key in ("matched", "partly"):
+                    if other_id in release.get(key, []):
+                        release[key] = list(dict.fromkeys(keep_id if i == other_id else i for i in release[key]))
+        print(f"[merge] {game['name']}: {', '.join(others)} into {keep_id} ({group['title']})")
+    state["mergedAt"] = state["nextIssue"]
+    return True
 
 
 def match_release(state, game, release):

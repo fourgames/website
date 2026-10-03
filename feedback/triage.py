@@ -252,3 +252,46 @@ def match_release(game_name, release, issues):
     known = {i["id"] for i in issues}
     return [m.model_dump() for m in response.parsed_output.fixed if m.issue in known]
 
+
+
+class Duplicates(BaseModel):
+    ids: list[str] = Field(description="Two or more issue IDs that are the same thing.")
+    title: str = Field(description="A short, general title for the merged issue.")
+
+
+class DuplicateGroups(BaseModel):
+    groups: list[Duplicates]
+
+
+def find_duplicates(game_name, issues):
+    """Groups of issues that are the same underlying problem or request (or the same praised thing)."""
+    if len(issues) < 2 or DRY_RUN:
+        return []
+    issue_lines = "\n".join(
+        f"{i['id']} [{i['kind']}, {i['area']}] {i['title']} ({i['mentions']} mentions)"
+        + (f"\n   players said: {' | '.join(i['said'])}" if i.get("said") else "")
+        for i in issues
+    )
+    prompt = (
+        f"These are the player-reported issues for {game_name}, sorted one post at a time, so some may be "
+        f"duplicates:\n\n<issues>\n{issue_lines}\n</issues>\n\n"
+        "Group the issues that are the same underlying problem, request or praised thing: ones one change would "
+        "settle (e.g. \"game too short\" and \"needs more content\"). Don't group issues that are only related or "
+        "about different items. Only list groups of two or more; leave everything else out."
+    )
+    response = client().messages.parse(
+        model=MODEL,
+        max_tokens=2000,
+        messages=[{"role": "user", "content": prompt}],
+        output_format=DuplicateGroups,
+    )
+    if response.stop_reason != "end_turn" or response.parsed_output is None:
+        raise RuntimeError(f"duplicate check stopped with {response.stop_reason}")
+    known = {i["id"]: i["kind"] for i in issues}
+    groups = []
+    for g in response.parsed_output.groups:
+        ids = list(dict.fromkeys(i for i in g.ids if i in known))
+        # Praise never merges with bugs or ideas.
+        if len(ids) >= 2 and len({known[i] == "praise" for i in ids}) == 1:
+            groups.append({"ids": ids, "title": g.title})
+    return groups

@@ -871,16 +871,18 @@ function overviewView() {
   const go = (tab, label) => h("button.btn", { onclick: () => { state.tab = tab; render(); window.scrollTo({ top: 0 }); } }, label, " →");
   const section = (title, count, ...body) => h("section.ov-section", h("h3", title, count != null ? h("span.ov-count", count) : null), ...body);
   const urgent = attention();
-  const costly = Object.values(state.game.issues || {}).filter((i) => i.kind !== "praise" && isActive(i) && i.negativeReviews)
+  // Next to anything urgent, the open complaints in the most negative reviews (not already above).
+  const costly = Object.values(state.game.issues || {}).filter((i) => i.kind !== "praise" && isActive(i) && i.negativeReviews && !urgent.includes(i))
     .sort((a, b) => b.negativeReviews - a.negativeReviews || b.mentions - a.mentions).slice(0, 3);
   const replies = toReply();
   const latest = items().filter((i) => !i.dev).sort((a, b) => b.created - a.created).slice(0, 5);
   return h("div",
     urgent.length
       ? section("Needs attention", urgent.length, ...urgent.slice(0, 5).map((i) => issueCard(i)), urgent.length > 5 || issues("bug").filter(isActive).length > urgent.length ? go("issues", "All bugs") : null)
-      : costly.length
-        ? section("Costing you reviews", costly.length, h("p.ov-calm", "Nothing urgent. These open complaints come up most in negative reviews."), ...costly.map((i) => issueCard(i)), go("suggestions", "All ideas"))
-        : section("Needs attention", null, h("p.ov-calm", "Nothing urgent: no high-priority bugs, and nothing came back after a fix.")),
+      : section("Needs attention", null, h("p.ov-calm", "Nothing urgent: no high-priority bugs, and nothing came back after a fix.")),
+    costly.length
+      ? section("Costing you reviews", costly.length, h("p.ov-calm", "The open complaints that come up most in negative reviews."), ...costly.map((i) => issueCard(i)), go("suggestions", "All ideas"))
+      : null,
     replies.length
       ? section("Worth a reply", replies.length, h("p.ov-calm", `${plural(replies.length, "post")} about something an update has since fixed. `, go("replies", "Replies")))
       : null,

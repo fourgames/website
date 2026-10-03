@@ -257,6 +257,20 @@ def thread_context(state, item):
     return ctx
 
 
+def add_profiles(state):
+    """The player's Steam name, picture and profile link for each post (from their public profile),
+    looked up once per post so the dashboard can show who wrote it."""
+    for item in state["items"].values():
+        author = item.get("author") or {}
+        if item.get("dev") or not author.get("id") or "profile" in author:
+            continue
+        profile = steam.profile(author["id"])
+        author["profile"] = profile["url"] if profile else None
+        if profile:
+            author.update(name=profile["name"], avatar=profile["avatar"])
+        item["author"] = author
+
+
 def add_tone(state, game, budget):
     """Posts triaged before triage had tone and note get just those two filled in, once; their
     category, issue and alerts stay as they are."""
@@ -627,6 +641,7 @@ def full_run():
         discussions.ingest(state, game, run)
         triage_pending(state, game, run, budget)
         add_tone(state, game, budget)
+        add_profiles(state)
         refresh_issues(state, game)
         check_releases(state, game, events)
         refresh_issues(state, game)

@@ -1111,3 +1111,19 @@
 	color: var(--fb-muted);
 	margin-right: 4px;
 }
+.fb .pc-player {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-weight: 600;
+	color: var(--fb-title);
+	text-decoration: none;
+}
+.fb .pc-player:hover {
+	text-decoration: underline;
+}
+.fb .avatar {
+	width: 20px;
+	height: 20px;
+	border-radius: 4px;
+}

@@ -467,6 +467,9 @@ function playtime(item) {
 
 const CATEGORY = { bug: ["🐞", "Bug"], suggestion: ["💡", "Suggestion"], question: ["❓", "Question"], praise: ["💬", "Praise"] };
 
+const POINT_ORDER = ["bug", "complaint", "suggestion", "question", "praise"];
+const POINT_LABEL = { bug: "Bug", complaint: "Complaint", suggestion: "Suggestion", question: "Question", praise: "Praise" };
+
 // The parts of a post the card shows.
 function postParts(item) {
   const t = item.triage || {};
@@ -496,7 +499,12 @@ function postParts(item) {
     body: [
       parent ? h("div.meta", "in “", parent.title || "thread", "”") : null,
       item.title ? h("div", h("b", item.title)) : null,
-      textRow(english(item)),
+      // A long post leads with its key points, most actionable first; the full text folds away.
+      ...(t.points?.length ? [
+        h("ul.pc-points", ...[...t.points].sort((a, b) => POINT_ORDER.indexOf(a.kind) - POINT_ORDER.indexOf(b.kind))
+          .map((pt) => h("li", h(`span.pk.pk-${pt.kind}`, POINT_LABEL[pt.kind]), h("span", pt.text)))),
+        h("details", h("summary", "Full post"), textRow(english(item))),
+      ] : [textRow(english(item))]),
       t.note ? h("div.pc-note", h("b", "Note "), t.note) : null,
       translated ? h("details", h("summary", `Original (${t.language})`), textRow(item.text)) : null,
       (item.versions || []).length ? h("details", h("summary", `Earlier versions (${item.versions.length})`),

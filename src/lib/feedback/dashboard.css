@@ -1127,3 +1127,34 @@
 	height: 20px;
 	border-radius: 4px;
 }
+.fb .pc-points {
+	list-style: none;
+	margin: 6px 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 5px;
+}
+.fb .pc-points li {
+	display: flex;
+	gap: 10px;
+	align-items: baseline;
+}
+.fb .pk {
+	flex: none;
+	width: 6.5rem;
+	font-family: var(--font-heading);
+	font-size: 0.7rem;
+	font-weight: 800;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+.fb .pk-bug { color: var(--type-bug); }
+.fb .pk-complaint { color: var(--fb-serious); }
+.fb .pk-suggestion { color: var(--type-suggestion); }
+.fb .pk-question { color: var(--type-question); }
+.fb .pk-praise { color: var(--type-praise); }
+@media (prefers-color-scheme: dark) {
+	.fb .pk-suggestion { color: #b78ae0; }
+	.fb .pk-question { color: #4fb2ff; }
+}

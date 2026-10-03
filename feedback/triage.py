@@ -40,6 +40,11 @@ def describe_error(error):
     return f"Claude calls are failing ({type(error).__name__}).", False
 
 
+class Point(BaseModel):
+    kind: Literal["bug", "complaint", "suggestion", "question", "praise"]
+    text: str = Field(description="The point in one short English sentence, as a developer would note it.")
+
+
 class Triage(BaseModel):
     language: str = Field(description="Language the post is written in, as an English name, e.g. 'Japanese'.")
     english: str = Field(description="The full post translated to English, or an empty string if it is already in English.")
@@ -56,6 +61,10 @@ class Triage(BaseModel):
     )
     tone: Literal["sincere", "joke", "sarcastic", "mixed"] = Field(
         description="How the post is meant: a joke or meme, sarcasm (the words mean the opposite), or sincere."
+    )
+    points: list[Point] = Field(
+        description="For a long post (several sentences or more): its separate points, most actionable first "
+        "(bugs, then complaints and suggestions, then questions, then praise). Empty for short posts."
     )
     note: Optional[str] = Field(
         description="Usually null. Only when the English would mislead on its own: one short sentence explaining a meme, "
@@ -82,7 +91,10 @@ suggestion, give new_issue_title. Questions and praise get neither.
 recommended review that only says "run away" (Korean "도망쳐") jokes that the game is addictive or hard, not a \
 warning. Set tone accordingly and triage what the player actually means.
 - note is for the rare post whose English would be misread without it (a meme, slang, a sarcastic line, a game \
-reference). Leave it null otherwise; most posts need none. Don't use it to summarise, judge or interpret the post."""
+reference). Leave it null otherwise; most posts need none. Don't use it to summarise, judge or interpret the post.
+- points: break a long post into the separate things it says, for the developer reading it (not a buyer's TL;DR): \
+each bug, complaint, suggestion, question and bit of praise as its own short line, most actionable first. Keep the \
+player's specifics (numbers, places, items). Leave it empty for a post of a sentence or two."""
 
 
 def triage(game_name, item, issues, context=None):
@@ -122,6 +134,7 @@ def _dry_triage(item):
         summary=text[:120],
         category="bug" if bug else ("praise" if item.get("votedUp", True) else "suggestion"),
         tone="sincere",
+        points=[],
         note=None,
         urgency="high" if bug else "low",
         area="general",

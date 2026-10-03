@@ -1354,3 +1354,14 @@
 		flex-direction: row;
 	}
 }
+.fb .impact-stat.warn b {
+	color: var(--fb-serious);
+}
+.fb .upd-section {
+	margin-top: 10px;
+}
+.fb .upd-section > b {
+	font-family: var(--font-heading);
+	font-size: 0.8125rem;
+	color: var(--fb-title);
+}

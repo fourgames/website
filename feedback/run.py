@@ -352,8 +352,8 @@ def assign_issues(state, item, result, run):
     links, new_titles, points = [], {}, []
     for point in result.get("points") or []:
         stored = {"kind": point["kind"], "text": point["text"], "urgency": point.get("urgency", "low")}
-        if point["kind"] in ("bug", "complaint", "suggestion"):
-            kind = "bug" if point["kind"] == "bug" else "suggestion"
+        if point["kind"] in ("bug", "complaint", "suggestion", "praise"):
+            kind = {"bug": "bug", "praise": "praise"}.get(point["kind"], "suggestion")
             issue_id = point.get("existing_issue") if point.get("existing_issue") in state["issues"] else None
             title = (point.get("new_issue_title") or "").strip()
             if not issue_id and title:
@@ -398,6 +398,9 @@ def refresh_issues(state, game):
         urgencies = urgencies or [(p.get("triage") or {}).get("urgency", "low") for p in posts]
         issue["urgency"] = max(urgencies, key=URGENCY.index)
         issue["negativeReviews"] = sum(1 for p in posts if p["kind"] == "review" and not p.get("votedUp"))
+        # Reported inside Steam's 2-hour refund window: a first-impression problem.
+        issue["firstSession"] = len({(p.get("author") or {}).get("id") or p["id"] for p in posts
+                                     if p["kind"] == "review" and p.get("playtime") is not None and p["playtime"] < 2})
         issue["details"] = list(dict.fromkeys(d for p in posts if (d := (p.get("triage") or {}).get("details"))))[:8]
         if issue["status"] in ("likely_fixed", "still_happening"):
             after = [p["created"] for p in posts if p["created"] > issue["fixedAt"]]
@@ -485,7 +488,8 @@ def check_releases(state, game, events):
             print(f"[release] {release['name']}: matching waits for older posts to be triaged")
             break
         candidates = [
-            i for i in state["issues"].values() if i["status"] in ("open", "still_happening") and i["firstSeen"] < release["time"]
+            i for i in state["issues"].values()
+            if i["kind"] != "praise" and i["status"] in ("open", "still_happening") and i["firstSeen"] < release["time"]
         ]
         try:
             matches = triage.match_release(game["name"], {**release, "body": release.get("notes", "")}, issue_digest(candidates))
@@ -562,7 +566,7 @@ def send_alerts(state, game, run, first_run):
     clusters = []
     for issue_id in run["touched"]:
         issue = issues.get(issue_id)
-        if not issue:
+        if not issue or issue["kind"] == "praise":  # what players love isn't an alert
             continue
         level = max((n for n in CLUSTER_LEVELS if issue["mentions"] >= n), default=0)
         if level > issue["alerted"]["cluster"]:
@@ -596,7 +600,7 @@ def daily_lines(index, states):
         flips = sum(1 for i in items for f in i.get("flips", []) if f["at"] >= since)
         threads = sum(1 for i in items if i["kind"] == "topic" and i["created"] >= since and not i.get("dev"))
         replies = sum(1 for i in items if i["kind"] == "reply" and i["created"] >= since and not i.get("dev"))
-        new_issues = [i for i in state["issues"].values() if i["created"] >= since]
+        new_issues = [i for i in state["issues"].values() if i["created"] >= since and i["kind"] != "praise"]
         to_reply = [i for i in items if i.get("fixReply") and not i.get("devResponse")
                     and state["issues"].get(i["fixReply"]["issue"], {}).get("status") == "likely_fixed"]
         open_bugs = [i for i in state["issues"].values() if i["kind"] == "bug" and i["status"] != "likely_fixed"]

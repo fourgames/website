@@ -12,7 +12,7 @@ let DATA = DATA_OVERRIDE || `${RAW}/main/feedback/data`;
 const DAY = 86400;
 const URGENCY = { urgent: "Urgent", high: "High", medium: "Medium", low: "Low" };
 const KIND = { review: "Review", topic: "Thread", reply: "Reply" };
-const state = { index: null, games: {}, game: null, tab: "overview", filters: { issues: { status: "active", q: "" }, suggestions: { status: "active", q: "" }, feed: { kind: "all", category: "all", q: "", shown: 50 }, stats: { range: 0 }, replies: { show: "open" } } };
+const state = { index: null, games: {}, game: null, tab: "overview", filters: { issues: { status: "active", q: "", sort: "priority" }, suggestions: { status: "active", q: "", sort: "priority" }, feed: { kind: "all", category: "all", q: "", shown: 50 }, stats: { range: 0 }, replies: { show: "open" } } };
 
 const store = {
   get(k) { try { return localStorage.getItem("fb-dash:" + k); } catch { return null; } },
@@ -103,6 +103,8 @@ const ICONS = {
   suggestions: "M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4",
   feed: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
   overview: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z",
+  loved: "M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z",
+  updates: "M12 19V5M5 12l7-7 7 7M4 21h16",
   replies: "M9 17H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M14 19l2 2 5-5",
 };
 function icon(name) {
@@ -170,7 +172,7 @@ async function init() {
   const games = state.index.games || [];
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = Number(hash.get("app") || store.get("app"));
-  state.tab = ["overview", "issues", "suggestions", "replies", "feed"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
+  state.tab = ["overview", "issues", "suggestions", "loved", "replies", "updates", "feed"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
   if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : orderedGames()[0].appId);
 }
 
@@ -394,17 +396,18 @@ function render() {
     issues: issues("bug").filter(isActive).length,
     suggestions: issues("suggestion").filter(isActive).length,
     feed: items().filter((i) => !i.dev).length,
+    loved: issues("praise").length,
     replies: toReply().length,
     overview: attention().length || null,
   };
-  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["replies", "Replies"], ["feed", "All posts"]];
+  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["updates", "Updates"], ["feed", "All posts"]];
   const buttons = () => tabs.map(([id, label]) =>
     h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
       icon(id), h("span", label), counts[id] != null ? h("span.count", counts[id]) : null));
   document.getElementById("fb-nav-side").replaceChildren(...buttons());
   document.getElementById("fb-nav-top").replaceChildren(...buttons());
   setHash();
-  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), replies: repliesView, feed: feedView }[state.tab]();
+  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
 
@@ -417,14 +420,71 @@ function issueView(kind) {
     const shown = issues(kind)
       .filter((i) => f.status === "all" || (f.status === "active" ? isActive(i) : f.status === "still" ? i.status === "still_happening" : i.status === "likely_fixed"))
       .filter((i) => !q || (i.title + " " + i.area + " " + (i.summary || "")).toLowerCase().includes(q))
-      .sort((a, b) => b.priority - a.priority);
+      .filter((i) => f.sort !== "first" || i.firstSession > 0)
+      .sort(SORTS[f.sort] || SORTS.priority);
     list.replaceChildren(...(shown.length ? shown.map((i) => issueCard(i)) : [h("p.empty", kind === "bug" ? "No issues here." : "No suggestions here.")]));
   };
   const status = chips([["active", "Open"], ["still", "Still happening"], ["fixed", "Likely fixed"], ["all", "All"]], f.status, (v) => { f.status = v; draw(); }, "Status");
+  // What costs the most reviews, what most players hit, or what turns new players away.
+  const sort = chips([["priority", "Priority"], ["negative", "Negative reviews"], ["players", "Most players"], ["first", "First 2 hours"]], f.sort, (v) => { f.sort = v; draw(); }, "Sort");
   const search = h("input", { type: "search", placeholder: "Search issues", value: f.q, oninput: (e) => { f.q = e.target.value; draw(); } });
-  wrap.append(h("div.filters", status, search), list);
+  wrap.append(h("div.filters", status, h("span.zoom-label", "Sort"), sort, search), list);
   draw();
   return wrap;
+}
+
+const SORTS = {
+  priority: (a, b) => b.priority - a.priority,
+  negative: (a, b) => (b.negativeReviews || 0) - (a.negativeReviews || 0) || b.mentions - a.mentions,
+  players: (a, b) => b.mentions - a.mentions || (b.negativeReviews || 0) - (a.negativeReviews || 0),
+  first: (a, b) => (b.firstSession || 0) - (a.firstSession || 0) || b.mentions - a.mentions,
+};
+
+// What players love: praise grouped like ideas, most players first, ready to copy for a store page.
+function lovedView() {
+  const list = issues("praise").sort((a, b) => b.mentions - a.mentions || b.lastSeen - a.lastSeen);
+  const copyAll = h("button.btn.primary", { onclick: (e) => copy(list.map((i) => `- ${i.title} (${plural(i.mentions, "player")})`).join("\n"), e.currentTarget) }, "Copy the list");
+  return h("div",
+    h("p.updated", { style: "margin:0 0 12px" }, "What players praise, grouped like ideas: things to keep, and wording for your store page and trailers."),
+    list.length ? h("div.filters", copyAll) : null,
+    ...(list.length ? list.map((i) => issueCard(i)) : [h("p.empty", "No praise grouped yet.")]));
+}
+
+// How each update landed: negative reviews before and after it, what it fixed and whether those
+// reports stopped, and what's new since.
+function updatesView() {
+  const all = (state.game.releases || []).filter((r) => r.version || isLaunch(r)).sort((a, b) => a.time - b.time);
+  const reviews = items().filter((i) => i.kind === "review");
+  const tally = (from, to) => {
+    const list = reviews.filter((r) => r.created >= from && r.created < to);
+    return { n: list.length, neg: list.filter((r) => !r.votedUp).length };
+  };
+  const share = (w) => (w.n ? `${Math.round((100 * w.neg) / w.n)}% negative` : "no reviews");
+  const cards = all.slice().reverse().map((r) => {
+    const i = all.indexOf(r);
+    const prev = all[i - 1]?.time ?? (state.game.meta?.released || r.time - 14 * DAY);
+    const next = all[i + 1]?.time ?? now();
+    const before = tally(prev, r.time), after = tally(r.time, next);
+    const fixed = (r.matched || []).map((id) => state.game.issues?.[id]).filter(Boolean);
+    const since = Object.values(state.game.issues || {}).filter((x) => x.kind !== "praise" && x.firstSeen >= r.time && x.firstSeen < next);
+    const reportsAfter = (x) => x.items.map((id) => state.game.items[id]).filter((p) => p && p.created > r.time).length;
+    const better = before.n && after.n ? after.neg / after.n < before.neg / before.n : null;
+    return h("article.card",
+      h("div.pc-top",
+        h("div.pc-main", h("span.pc-type", isLaunch(r) ? "Launch" : `v${r.version}`), h("span.pc-prio", fmtDate(r.time))),
+        h("div.pc-aside.impact",
+          h("div.impact-stat", h("b", `${before.neg}/${before.n}`), h("span", `negative before (${share(before)})`)),
+          h(`div.impact-stat${better === false ? ".bad" : ""}`, h("b", `${after.neg}/${after.n}`), h("span", `negative after (${share(after)})`)))),
+      fixed.length ? h("div.upd-section", h("b", "Fixed by this update"),
+        h("ul.pc-points", ...fixed.map((x) => h("li", h(`span.pk.pk-${x.kind === "bug" ? "bug" : "suggestion"}`, x.kind === "bug" ? "Bug" : "Idea"),
+          h("span", x.title, " · ", reportsAfter(x) ? h("span.vote-down", `${plural(reportsAfter(x), "report")} since`) : h("span.s-fixed", "no reports since")))))) : null,
+      since.length ? h("div.upd-section", h("b", "New since this update"),
+        h("ul.pc-points", ...since.map((x) => h("li", h(`span.pk.pk-${x.kind === "bug" ? "bug" : "suggestion"}`, x.kind === "bug" ? "Bug" : "Idea"), h("span", `${x.title} (${plural(x.mentions, "player")})`))))) : null,
+      h("div.meta", h("a", { href: r.url, target: "_blank", rel: "noopener" }, "Patch notes ↗")));
+  });
+  return h("div",
+    h("p.updated", { style: "margin:0 0 12px" }, "Each update with the negative reviews before and after it (until the next update), what it fixed and whether those reports stopped, and what came up since."),
+    ...(cards.length ? cards : [h("p.empty", "No updates yet.")]));
 }
 
 function urgencyBadge(u) {
@@ -474,6 +534,10 @@ function issueCard(issue) {
   } }, `Show ${plural(posts.length, "post")}`);
   const copyText = issue.kind === "bug" ? issue.fixPrompt : suggestionText(issue, posts);
   const copyBtn = h("button.btn.primary", { onclick: (e) => copy(copyText, e.currentTarget) }, issue.kind === "bug" ? "Copy fix prompt" : "Copy summary");
+  // A ready line for the patch notes, crediting how many players raised it.
+  const patchLine = issue.kind === "bug" ? `Fixed: ${issue.title} (reported by ${plural(issue.mentions, "player")})`
+    : `${issue.title} (suggested by ${plural(issue.mentions, "player")})`;
+  const patchBtn = issue.kind === "praise" ? null : h("button.btn", { onclick: (e) => copy(patchLine, e.currentTarget) }, "Copy patch-note line");
   const linkBtn = h("button.btn", { onclick: (e) => copy(posts.map((p) => p.url).join("\n"), e.currentTarget) }, "Copy links");
   const [, kind] = CATEGORY[issue.kind] || [];
   const u = issue.urgency;
@@ -490,9 +554,12 @@ function issueCard(issue) {
           statusBadge(issue)),
         // The impact, big: how many players reported it and how many negative reviews it's in.
         h("div.pc-aside.impact",
-          h("div.impact-stat", h("b", issue.mentions), h("span", issue.mentions === 1 ? "player reported it" : "players reported it")),
-          h(`div.impact-stat${issue.negativeReviews ? ".bad" : ""}`, h("b", issue.negativeReviews || 0),
-            h("span", issue.negativeReviews === 1 ? "negative review" : "negative reviews")))),
+          h("div.impact-stat", h("b", issue.mentions), h("span", issue.kind === "praise" ? (issue.mentions === 1 ? "player loves it" : "players love it")
+            : issue.mentions === 1 ? "player reported it" : "players reported it")),
+          issue.kind === "praise" ? null : h(`div.impact-stat${issue.negativeReviews ? ".bad" : ""}`, h("b", issue.negativeReviews || 0),
+            h("span", issue.negativeReviews === 1 ? "negative review" : "negative reviews")),
+          // Raised inside Steam's 2-hour refund window: what turns new players away.
+          issue.firstSession && issue.kind !== "praise" ? h("div.impact-stat.warn", h("b", issue.firstSession), h("span", "in the first 2 hours")) : null)),
       h("h3.issue-title", issue.title),
       h("div.pc-block-sub.issue-facts", [
         (issue.languages || []).map((l) => withFlag(l)).join(", "),
@@ -500,7 +567,7 @@ function issueCard(issue) {
         issue.area,
       ].filter(Boolean).join(" · ")),
       summary ? h("ul.pc-points", h("li", summaryLabel, summary)) : null,
-      h("div.actions", copyBtn, toggle, linkBtn)),
+      h("div.actions", issue.kind === "praise" ? null : copyBtn, toggle, patchBtn, linkBtn)),
     postList);
 }
 

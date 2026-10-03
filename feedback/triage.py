@@ -44,10 +44,10 @@ class Point(BaseModel):
     kind: Literal["bug", "complaint", "suggestion", "question", "praise"]
     text: str = Field(description="The point in one short English sentence, as a developer would note it.")
     urgency: Literal["low", "medium", "high", "urgent"]
-    existing_issue: Optional[str] = Field(description="For a bug, complaint or suggestion: the ID of the listed issue it repeats, or null.")
+    existing_issue: Optional[str] = Field(description="For a bug, complaint, suggestion or praise: the ID of the listed issue it repeats, or null.")
     new_issue_title: Optional[str] = Field(
-        description="For a bug, complaint or suggestion matching no listed issue: a short, general English title other "
-        "players' posts about the same thing would fit. Null for praise and questions."
+        description="For a bug, complaint, suggestion or praise matching no listed issue: a short, general English title "
+        "other players' posts about the same thing would fit. Null for questions."
     )
 
 
@@ -90,7 +90,8 @@ point belongs to one: if it is the same underlying problem or request as a liste
 existing_issue to that ID; otherwise give new_issue_title, a short, general title that other players' posts about \
 the same thing would also fit (e.g. "Chainsaw upgrades feel meaningless", not a quote). Points in one post that are \
 about the same thing share one title. A reply such as "same here" in a thread whose opening post belongs to issues \
-repeats them. Praise and questions get neither. Each point also gets its own urgency, on the scale above.
+repeats them. Praise points likewise join a "what players love" item (listed with kind "praise"), e.g. "Satisfying \
+chainsaw digging"; questions join nothing. Each point also gets its own urgency, on the scale above.
 - Read the post the way a native speaker and Steam regular would. Steam reviews are full of memes and irony: a \
 recommended review that only says "run away" (Korean "도망쳐") jokes that the game is addictive or hard, not a \
 warning. Set tone accordingly and triage what the player actually means.

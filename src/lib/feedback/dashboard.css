@@ -917,3 +917,19 @@
 	margin: 0;
 	vertical-align: middle;
 }
+
+/* Chart extras: sale periods and the launch marker */
+.fb .band {
+	fill: var(--fb-warning);
+	opacity: 0.16;
+}
+.fb svg.chart text.band-label {
+	fill: var(--fb-ink-2);
+	font-size: 10px;
+	font-weight: 600;
+}
+.fb svg.chart .release.launch {
+	stroke: var(--fb-accent);
+	stroke-dasharray: none;
+	opacity: 0.9;
+}

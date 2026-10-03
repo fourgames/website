@@ -327,7 +327,7 @@ function chartPanel(which) {
   const draw = () => {
     const end = now();
     const start = f.range ? end - f.range * DAY : Math.min(end - 7 * DAY, ...[...(state.game.players || []).map((p) => p[0]), ...items().map((i) => i.created)]);
-    const releases = (state.game.releases || []).filter((r) => r.time >= start && r.time <= end);
+    const releases = markers(start, end);
     body.replaceChildren(which === "players" ? playersChart(start, end, releases) : reviewsChart(start, end, releases));
   };
   const range = chips([[7, "7D"], [30, "30D"], [90, "90D"], [365, "1Y"], [0, "All"]], f.range, (v) => { f.range = v; draw(); }, "Time range");
@@ -635,7 +635,7 @@ function feedView() {
 // Stats
 // ---------------------------------------------------------------------------
 
-const W = 760, H = 220, M = { top: 18, right: 12, bottom: 24, left: 40 };
+const W = 760, H = 240, M = { top: 44, right: 12, bottom: 24, left: 40 };
 
 function niceMax(v) {
   if (v <= 4) return Math.max(4, Math.ceil(v));
@@ -667,19 +667,51 @@ function yAxis(svg, y, max, fmt = (v) => v) {
   }
 }
 
+// Updates and the launch as dashed lines, every one labelled: labels that would overlap move to
+// the next of three rows above the plot.
+const isLaunch = (r) => r.launch || /\b(out now|available now|launch(ed)?|released?)\b/i.test(r.name || "");
+function markers(start, end) {
+  const list = (state.game.releases || []).filter((r) => r.time >= start && r.time <= end);
+  // No launch post: mark the store's release date instead.
+  const released = state.game.meta?.released;
+  if (!list.some(isLaunch) && released && released >= start && released <= end) list.push({ time: released, launch: true, name: "Release" });
+  return list.sort((a, b) => a.time - b.time);
+}
 function releaseMarkers(svg, x, releases) {
-  let lastLabel = -1e9;
+  const rowEnd = [-1e9, -1e9, -1e9];
   for (const r of releases) {
     const px = x(r.time);
-    svg.append(svgEl("line", { x1: px, x2: px, y1: M.top - 4, y2: H - M.bottom, class: "release" }));
-    if (px - lastLabel > 40) {
-      const t = svgEl("text", { x: px + 3, y: M.top - 6, class: "release-label" });
-      t.textContent = r.version ? "v" + r.version : r.name.slice(0, 18);
-      svg.append(t);
-      lastLabel = px;
-    }
+    const label = isLaunch(r) ? "🚀 Launch" : r.version ? "v" + r.version : r.name.slice(0, 14);
+    const width = label.length * 6 + 8;
+    let row = rowEnd.findIndex((e) => px - e > 4);
+    if (row < 0) row = rowEnd.indexOf(Math.min(...rowEnd));
+    rowEnd[row] = px + width;
+    const y = M.top - 6 - row * 12;
+    svg.append(svgEl("line", { x1: px, x2: px, y1: y + 2, y2: H - M.bottom, class: isLaunch(r) ? "release launch" : "release" }));
+    const t = svgEl("text", { x: px + 3, y, class: "release-label" });
+    t.textContent = label;
+    svg.append(t);
   }
 }
+
+// Sale periods (recorded from the store's discount, see feedback/run.py record_discount) as shaded bands.
+function saleBands(svg, x, start, end) {
+  const series = state.game.discounts || [];
+  const bands = [];
+  series.forEach(([t, pct], i) => {
+    if (!pct) return;
+    const from = Math.max(t, start), to = Math.min(series[i + 1]?.[0] ?? end, end);
+    if (to > from) bands.push([from, to, pct]);
+  });
+  for (const [from, to, pct] of bands) {
+    svg.append(svgEl("rect", { x: x(from), y: M.top, width: Math.max(2, x(to) - x(from)), height: H - M.top - M.bottom, class: "band" }));
+    const t = svgEl("text", { x: x(from) + 4, y: H - M.bottom - 6, class: "band-label" });
+    t.textContent = `−${pct}%`;
+    svg.append(t);
+  }
+  return bands.length > 0;
+}
+const saleLegend = () => h("span", h("i", { style: "background:var(--fb-warning);opacity:.45" }), "On sale");
 
 function chartCard(title, sub, legend, svg, table) {
   const card = h("div.chart-card", h("h3", title), h("div.sub", sub), legend, svg, table);
@@ -711,6 +743,7 @@ function playersChart(start, end, releases) {
   const x = (t) => M.left + ((t - start) / (end - start)) * (W - M.left - M.right);
   const y = (v) => H - M.bottom - (v / max) * (H - M.top - M.bottom);
   const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": "Concurrent players over time" });
+  const onSale = saleBands(svg, x, start, end);
   yAxis(svg, y, max);
   timeAxis(svg, x, start, end);
   releaseMarkers(svg, x, releases);
@@ -724,7 +757,8 @@ function playersChart(start, end, releases) {
   svg.append(cross, dot);
   const table = h("details", h("summary", "Data table"),
     h("table.data", h("tr", h("th", "Time"), h("th", "Players")), ...series.filter(([t]) => t >= start).slice(-200).reverse().map(([t, n]) => h("tr", h("td", new Date(t * 1000).toLocaleString()), h("td", n)))));
-  const { card, tip } = chartCard("Concurrent players", pts.length ? "Steam's current player count, sampled every run. Dashed lines are updates." : "No player data in this range.", null, svg, table);
+  const { card, tip } = chartCard("Concurrent players", pts.length ? "Steam's current player count, sampled every run. Dashed lines are updates." : "No player data in this range.",
+    onSale ? h("div.legend", saleLegend()) : null, svg, table);
   svg.addEventListener("pointermove", (e) => {
     if (!pts.length) return;
     const box = svg.getBoundingClientRect();
@@ -765,6 +799,7 @@ function reviewsChart(start, end, releases) {
     t.textContent = v;
     svg.append(t);
   }
+  const onSale = saleBands(svg, x, start, end);
   timeAxis(svg, x, start, end);
   releaseMarkers(svg, x, releases);
   const bw = Math.max(1, (W - M.left - M.right) / n - 2);
@@ -783,7 +818,7 @@ function reviewsChart(start, end, releases) {
   svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: mid, y2: mid, class: "base" }));
   const hit = svgEl("rect", { x: M.left, y: M.top, width: W - M.left - M.right, height: H - M.top - M.bottom, fill: "transparent" });
   svg.append(hit);
-  const legend = h("div.legend", h("span", h("i", { style: "background:var(--fb-positive)" }), "Recommended"), h("span", h("i", { style: "background:var(--fb-negative)" }), "Not recommended"));
+  const legend = h("div.legend", h("span", h("i", { style: "background:var(--fb-positive)" }), "Recommended"), h("span", h("i", { style: "background:var(--fb-negative)" }), "Not recommended"), onSale ? saleLegend() : null);
   const total = up.reduce((a, b) => a + b, 0) + down.reduce((a, b) => a + b, 0);
   const table = h("details", h("summary", "Data table"),
     h("table.data", h("tr", h("th", bucket === DAY ? "Day" : "Week of"), h("th", "👍"), h("th", "👎")),

@@ -127,6 +127,8 @@ def fetch_games(previous):
                 # For ordering the dashboard's game list; Steam gives a display string ("Sep 30, 2026").
                 "released": parse_release_date((d.get("release_date") or {}).get("date")),
                 "capsule": d.get("header_image"),
+                # The store's current discount; each run records it, so sale periods build up over time.
+                "discount": (d.get("price_overview") or {}).get("discount_percent", 0),
             }
         )
         time.sleep(0.3)
@@ -187,6 +189,7 @@ def update_events(app_id):
                 "gid": str(e.get("gid")),
                 "name": name,
                 "version": version.group(1) if version else None,
+                "launch": e.get("event_type") == 10,  # the "game released" post
                 "time": int(e.get("rtime32_start_time") or body.get("posttime") or 0),
                 "url": f"https://store.steampowered.com/news/app/{app_id}/view/{e.get('gid')}",
                 "body": bbcode_to_text(body.get("body") or ""),

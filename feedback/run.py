@@ -199,6 +199,17 @@ def upsert_review(state, game, r, run):
     run["edited"].append(rid)
 
 
+def record_discount(state, game):
+    """Steam has no history of a game's sales, but its store shows the current discount: keep it, as
+    [time, percent] changes, so the dashboard can shade sale periods from now on."""
+    discount = game.get("discount")
+    if discount is None:
+        return
+    series = state.setdefault("discounts", [])
+    if not series or series[-1][1] != discount:
+        series.append([now(), discount])
+
+
 def record_players(state, game):
     try:
         count = steam.player_count(game["appId"])
@@ -397,7 +408,7 @@ def check_releases(state, game, events):
     for event in events:
         if event["gid"] not in known:
             state["releases"].append(
-                {k: event[k] for k in ("gid", "name", "version", "time", "url")}
+                {k: event[k] for k in ("gid", "name", "version", "launch", "time", "url")}
                 | {"notes": event["body"][:20000], "matched": [], "checked": False}
             )
     state["releases"].sort(key=lambda r: r["time"])
@@ -589,6 +600,7 @@ def full_run():
                 print(f"[steam] {game['name']} reviews: {error}")
                 status.fail("steam", f"Couldn't read the reviews ({error}).")
             record_players(state, game)
+            record_discount(state, game)
         import discussions
 
         discussions.ingest(state, game, run)

@@ -12,122 +12,170 @@
   Add ?data=<base url> to read another copy of the data, e.g. a local test run.
 -->
 <style>
+/* Five designs share this page; <html data-v="1…5"> picks one. Tokens first, then layout per design. */
 :root {
-  color-scheme: light;
-  --page: #f9f9f7;
-  --surface: #fcfcfb;
-  --surface-2: #f0efec;
-  --ink: #0b0b0b;
-  --ink-2: #52514e;
-  --muted: #898781;
-  --grid: #e1e0d9;
-  --axis: #c3c2b7;
-  --ring: rgba(11, 11, 11, 0.1);
-  --accent: #2a78d6;
-  --positive: #2a78d6;
-  --negative: #e34948;
-  --good: #0ca30c;
-  --good-text: #006300;
-  --warning: #fab219;
-  --serious: #ec835a;
-  --critical: #d03b3b;
-  --font: system-ui, -apple-system, "Segoe UI", sans-serif;
-}
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    color-scheme: dark;
-    --page: #0d0d0d;
-    --surface: #1a1a19;
-    --surface-2: #232321;
-    --ink: #ffffff;
-    --ink-2: #c3c2b7;
-    --grid: #2c2c2a;
-    --axis: #383835;
-    --ring: rgba(255, 255, 255, 0.1);
-    --accent: #3987e5;
-    --positive: #3987e5;
-    --negative: #e66767;
-    --good-text: #0ca30c;
-  }
-}
-:root[data-theme="dark"] {
+  --page: #0f1012; --panel: #16171a; --surface: #1d1e22; --surface-2: #27282d; --hover: #2f3036;
+  --ink: #f2f3f5; --ink-2: #b6bac3; --muted: #80858f; --grid: #292b30; --axis: #3a3d44; --ring: rgba(255, 255, 255, 0.07);
+  --accent: #335fff; --accent-ink: #ffffff; --positive: #3987e5; --negative: #e66767;
+  --good: #0ca30c; --good-text: #2fbf4a; --warning: #fab219; --serious: #ec835a; --critical: #d03b3b;
+  --radius: 14px; --font: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --side-w: 0px;
   color-scheme: dark;
-  --page: #0d0d0d;
-  --surface: #1a1a19;
-  --surface-2: #232321;
-  --ink: #ffffff;
-  --ink-2: #c3c2b7;
-  --grid: #2c2c2a;
-  --axis: #383835;
-  --ring: rgba(255, 255, 255, 0.1);
-  --accent: #3987e5;
-  --positive: #3987e5;
-  --negative: #e66767;
-  --good-text: #0ca30c;
 }
+[data-v="1"] { --side-w: 264px; }
+[data-v="3"] { --side-w: 76px; --page: #121212; --panel: #181818; --surface: #1e1e1e; --surface-2: #282828; --hover: #303030; --radius: 10px; --accent: #00b06f; }
+[data-v="4"] {
+  --side-w: 264px; color-scheme: light;
+  --page: #f3f4f7; --panel: #ffffff; --surface: #ffffff; --surface-2: #eff1f4; --hover: #e7e9ee;
+  --ink: #111318; --ink-2: #4a4f59; --muted: #7b808a; --grid: #e7e9ed; --axis: #cfd3da; --ring: rgba(16, 24, 40, 0.08);
+  --positive: #2a78d6; --negative: #e34948; --good-text: #006300;
+}
+[data-v="5"] { --page: #0b0c10; --surface: #15161c; --surface-2: #20222a; --hover: #2a2c36; --accent: #7c5cff; --radius: 18px; }
 * { box-sizing: border-box; }
-body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.5 var(--font); }
+body { margin: 0; background: var(--page); color: var(--ink); font: 14px/1.5 var(--font); -webkit-font-smoothing: antialiased; }
+[data-v="5"] body { background: radial-gradient(1200px 500px at 10% -10%, rgba(124, 92, 255, 0.18), transparent), var(--page); }
 a { color: var(--accent); }
-button, select, input { font: inherit; color: inherit; }
-.wrap { max-width: 1100px; margin: 0 auto; padding: 16px; }
-header { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; justify-content: space-between; margin-bottom: 16px; }
-header h1 { font-size: 20px; margin: 0; }
-.game-pick { display: flex; gap: 10px; align-items: center; min-width: 0; max-width: 100%; }
-.game-pick label { flex: 1; min-width: 0; }
-.game-pick select { width: 100%; }
-.game-pick img { width: 92px; height: 43px; object-fit: cover; border-radius: 6px; box-shadow: 0 0 0 1px var(--ring); }
-select, input[type="search"] { background: var(--surface); border: 1px solid var(--ring); border-radius: 8px; padding: 6px 10px; min-height: 36px; max-width: 100%; }
+[data-v="1"] a, [data-v="2"] a, [data-v="5"] a { color: #7d9bff; }
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+.icon { width: 18px; height: 18px; flex: none; }
+
+/* Shell */
+.app { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); min-height: 100vh; }
+.side { position: sticky; top: 0; height: 100vh; overflow-y: auto; background: var(--panel); border-right: 1px solid var(--ring); padding: 16px 12px; display: flex; flex-direction: column; gap: 4px; }
+[data-v="2"] .side, [data-v="5"] .side { display: none; }
+[data-v="2"] .app, [data-v="5"] .app { grid-template-columns: minmax(0, 1fr); }
+.brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 15px; padding: 4px 8px 14px; }
+.brand-mark { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); display: grid; place-items: center; color: var(--accent-ink); flex: none; }
+.side-label { color: var(--muted); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; padding: 12px 8px 6px; }
+.main { padding: 20px 28px 64px; max-width: 1240px; width: 100%; margin: 0 auto; min-width: 0; }
+
+/* Game switcher: a list in the sidebar, tiles or chips in the strip */
+.g-item { display: flex; align-items: center; gap: 10px; width: 100%; text-align: left; background: none; border: 0; border-radius: 10px; padding: 6px 8px; color: var(--ink-2); position: relative; }
+.g-item:hover { background: var(--hover); color: var(--ink); }
+.g-item[aria-current="true"] { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+.g-item[aria-current="true"]::before { content: ""; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 3px; border-radius: 0 3px 3px 0; background: var(--accent); }
+.g-thumb { width: 64px; height: 30px; border-radius: 6px; object-fit: cover; background: var(--surface-2); flex: none; box-shadow: 0 0 0 1px var(--ring); }
+.g-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13px; }
+.g-sub { display: block; color: var(--muted); font-size: 11px; font-weight: 400; }
+[data-v="3"] .side { padding: 14px 10px; align-items: center; }
+[data-v="3"] .brand span, [data-v="3"] .side-label, [data-v="3"] .g-name, [data-v="3"] .nav-side, [data-v="3"] .side-foot { display: none; }
+[data-v="3"] .brand { padding: 4px 0 12px; }
+[data-v="3"] .g-item { padding: 4px; justify-content: center; }
+[data-v="3"] .g-item[aria-current="true"]::before { left: -10px; }
+[data-v="3"] .g-thumb { width: 44px; height: 44px; border-radius: 12px; }
+[data-v="3"] .g-item[aria-current="true"] .g-thumb { box-shadow: 0 0 0 2px var(--accent); }
+
+.strip { display: none; gap: 12px; margin-bottom: 20px; }
+[data-v="2"] .strip { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); }
+[data-v="2"] .g-item { flex-direction: column; align-items: stretch; padding: 0; background: var(--surface); border-radius: var(--radius); overflow: hidden; box-shadow: 0 0 0 1px var(--ring); transition: transform 0.15s, box-shadow 0.15s; }
+[data-v="2"] .g-item:hover { transform: translateY(-2px); }
+[data-v="2"] .g-item[aria-current="true"] { box-shadow: 0 0 0 2px var(--accent); }
+[data-v="2"] .g-item::before { display: none; }
+[data-v="2"] .g-thumb { width: 100%; height: auto; aspect-ratio: 460 / 215; border-radius: 0; box-shadow: none; }
+[data-v="2"] .g-name { padding: 8px 12px 10px; font-size: 14px; }
+[data-v="5"] .strip { display: flex; flex-wrap: wrap; }
+[data-v="5"] .g-item { width: auto; border-radius: 99px; padding: 4px 14px 4px 4px; background: var(--surface); box-shadow: 0 0 0 1px var(--ring); }
+[data-v="5"] .g-item::before { display: none; }
+[data-v="5"] .g-item[aria-current="true"] { background: var(--accent); color: #fff; box-shadow: none; }
+[data-v="5"] .g-thumb { width: 30px; height: 30px; border-radius: 50%; }
+[data-v="5"] .g-sub { display: none; }
+
+/* Header */
+.top { display: flex; align-items: center; gap: 14px; margin-bottom: 18px; }
+.top img { width: 120px; height: 56px; object-fit: cover; border-radius: 10px; box-shadow: 0 0 0 1px var(--ring); }
+[data-v="2"] .top img, [data-v="5"] .top img { display: none; }
+.top h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.2; }
 .updated { color: var(--muted); font-size: 12px; }
+.pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 99px; background: var(--surface-2); color: var(--ink-2); vertical-align: 4px; margin-left: 8px; }
 
-.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 16px; }
-.stat { background: var(--surface); box-shadow: 0 0 0 1px var(--ring); border-radius: 12px; padding: 12px 14px; }
-.stat .label { color: var(--ink-2); font-size: 12px; }
-.stat .value { font-size: 24px; font-weight: 650; line-height: 1.2; }
-.stat .sub { color: var(--muted); font-size: 12px; }
+/* Views nav: a list in the sidebar (1, 4), tabs on top (2, 3, 5) */
+.nav-side { display: flex; flex-direction: column; gap: 2px; }
+.nav-btn { display: flex; align-items: center; gap: 10px; width: 100%; background: none; border: 0; border-radius: 10px; padding: 8px 10px; color: var(--ink-2); font-weight: 500; text-align: left; }
+.nav-btn:hover { background: var(--hover); color: var(--ink); }
+.nav-btn[aria-current="true"] { background: var(--surface-2); color: var(--ink); font-weight: 600; }
+.nav-btn .count { margin-left: auto; font-size: 11px; color: var(--muted); font-weight: 600; }
+.side-foot { margin-top: auto; padding: 12px 8px 0; }
+.nav-top { display: none; gap: 6px; margin-bottom: 18px; overflow-x: auto; scrollbar-width: none; }
+[data-v="2"] .nav-top, [data-v="3"] .nav-top, [data-v="5"] .nav-top { display: flex; }
+.nav-top .nav-btn { width: auto; white-space: nowrap; }
+[data-v="2"] .nav-top .nav-btn { border-radius: 99px; padding: 7px 16px; background: var(--surface); box-shadow: 0 0 0 1px var(--ring); }
+[data-v="2"] .nav-top .nav-btn[aria-current="true"] { background: var(--accent); color: #fff; box-shadow: none; }
+[data-v="2"] .nav-top .nav-btn[aria-current="true"] .count { color: rgba(255, 255, 255, 0.8); }
+[data-v="3"] .nav-top { gap: 0; border-bottom: 1px solid var(--grid); }
+[data-v="3"] .nav-top .nav-btn { border-radius: 0; background: none; border-bottom: 2px solid transparent; padding: 10px 14px; }
+[data-v="3"] .nav-top .nav-btn[aria-current="true"] { border-bottom-color: var(--accent); }
+[data-v="5"] .nav-top { display: grid; grid-template-columns: repeat(5, minmax(110px, 1fr)); gap: 10px; }
+[data-v="5"] .nav-top .nav-btn { flex-direction: column; align-items: flex-start; gap: 6px; padding: 14px; border-radius: var(--radius); background: var(--surface); box-shadow: 0 0 0 1px var(--ring); }
+[data-v="5"] .nav-top .nav-btn .count { margin: 0; font-size: 20px; color: var(--ink); }
+[data-v="5"] .nav-top .nav-btn[aria-current="true"] { box-shadow: 0 0 0 2px var(--accent); background: linear-gradient(160deg, rgba(124, 92, 255, 0.22), var(--surface) 70%); }
 
-.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--grid); margin-bottom: 12px; overflow-x: auto; }
-.tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; cursor: pointer; color: var(--ink-2); white-space: nowrap; }
-.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); font-weight: 600; }
-.tabs .count { color: var(--muted); font-weight: 400; margin-left: 4px; }
-.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; align-items: center; }
-.filters input[type="search"] { flex: 1 1 200px; }
+/* KPI cards */
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(108px, 1fr)); gap: 12px; margin-bottom: 20px; }
+.kpi { background: var(--surface); box-shadow: 0 0 0 1px var(--ring); border-radius: var(--radius); padding: 14px 16px 10px; min-width: 0; position: relative; overflow: hidden; }
+[data-v="4"] .kpi, [data-v="4"] .card, [data-v="4"] .chart-card { box-shadow: 0 0 0 1px var(--ring), 0 1px 3px rgba(16, 24, 40, 0.06); }
+[data-v="5"] .kpi::after { content: ""; position: absolute; inset: 0 0 auto; height: 2px; background: linear-gradient(90deg, var(--accent), #2fd5ff); }
+[data-v="5"] .kpis { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+[data-v="5"] .kpi:nth-child(6):last-child { grid-column: span 2; }
+[data-v="5"] .kpi:nth-child(5):last-child { grid-column: span 3; }
+[data-v="5"] .kpi:first-child { grid-column: span 2; grid-row: span 2; }
+[data-v="5"] .kpi:first-child .value { font-size: 44px; }
+[data-v="5"] .kpi:first-child .spark { height: 96px; }
+.kpi .label { color: var(--ink-2); font-size: 12px; font-weight: 500; }
+.kpi .sub, .kpi .label { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.kpi .value { font-size: 26px; font-weight: 700; line-height: 1.2; letter-spacing: -0.01em; }
+.kpi .sub { color: var(--muted); font-size: 12px; }
+.spark { display: block; width: 100%; height: 34px; margin-top: 6px; }
+[data-v="3"] .kpi { padding: 10px 12px 8px; }
+[data-v="3"] .kpi .value { font-size: 22px; }
 
-.card { background: var(--surface); box-shadow: 0 0 0 1px var(--ring); border-radius: 12px; padding: 12px 14px; margin-bottom: 8px; }
-.card-head { display: flex; gap: 10px; align-items: flex-start; }
-.card-head .main { flex: 1; min-width: 0; }
-.card h3 { font-size: 15px; margin: 0 0 4px; overflow-wrap: anywhere; }
-.meta { display: flex; flex-wrap: wrap; gap: 4px 12px; color: var(--ink-2); font-size: 12px; }
-.badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; padding: 1px 8px; border-radius: 99px; white-space: nowrap; background: var(--surface-2); color: var(--ink-2); }
-.badge .dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+/* Buttons and one-click filters */
+.filters { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; align-items: center; }
+.filters input[type="search"] { flex: 1 1 200px; background: var(--surface); border: 1px solid var(--ring); border-radius: 10px; padding: 7px 12px; min-height: 36px; }
+.chips { display: inline-flex; flex-wrap: wrap; gap: 2px; background: var(--surface-2); border-radius: 10px; padding: 3px; }
+.chips button { background: none; border: 0; border-radius: 8px; padding: 5px 12px; color: var(--ink-2); font-size: 13px; font-weight: 500; white-space: nowrap; }
+.chips button:hover { color: var(--ink); }
+.chips button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.25), 0 0 0 1px var(--ring); }
+[data-v="2"] .chips button[aria-pressed="true"], [data-v="5"] .chips button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+.btn { background: var(--surface-2); border: 0; border-radius: 9px; padding: 6px 12px; font-size: 13px; font-weight: 500; min-height: 32px; color: var(--ink); }
+.btn:hover { background: var(--hover); }
+.btn.primary { background: var(--accent); color: #fff; }
+.btn.primary:hover { filter: brightness(1.1); }
+.btn.done { color: var(--good-text); }
+
+/* Cards, posts */
+.card { background: var(--surface); box-shadow: 0 0 0 1px var(--ring); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+.card-head { display: flex; gap: 12px; align-items: flex-start; }
+.card-head .main-col { flex: 1; min-width: 0; }
+.card h3 { font-size: 15px; margin: 0 0 6px; overflow-wrap: anywhere; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; color: var(--ink-2); font-size: 12px; }
+.badge { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 99px; white-space: nowrap; background: var(--surface-2); color: var(--ink-2); text-decoration: none; }
+.badge .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
 .u-urgent .dot { background: var(--critical); }
 .u-high .dot { background: var(--serious); }
 .u-medium .dot { background: var(--warning); }
 .u-low .dot { background: var(--muted); }
 .s-fixed { color: var(--good-text); }
 .s-still { color: var(--critical); }
-.mentions { text-align: right; min-width: 64px; }
+.mentions { text-align: center; min-width: 64px; background: var(--surface-2); border-radius: 10px; padding: 6px 8px; }
 .mentions b { display: block; font-size: 20px; line-height: 1.1; }
-.mentions span { color: var(--muted); font-size: 12px; }
-.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.btn { background: var(--surface-2); border: 1px solid var(--ring); border-radius: 8px; padding: 4px 10px; cursor: pointer; font-size: 13px; min-height: 30px; }
-.btn:hover { border-color: var(--axis); }
-.btn.primary { background: var(--accent); border-color: transparent; color: #fff; }
-.btn.done { color: var(--good-text); }
-
-.post { border-top: 1px solid var(--grid); padding: 10px 0 2px; }
-.post:first-child { border-top: 0; }
-.post .text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 4px 0; }
+.mentions span { color: var(--muted); font-size: 11px; }
+.actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.post { border-top: 1px solid var(--grid); padding: 12px 0 2px; margin-top: 10px; }
+.card > .post:first-child { border-top: 0; padding-top: 0; margin-top: 0; }
+.post .text { white-space: pre-wrap; overflow-wrap: anywhere; margin: 6px 0; }
 .post details { color: var(--ink-2); font-size: 13px; }
-.post details .text { color: var(--ink-2); }
-.reply { background: var(--surface-2); border-radius: 8px; padding: 8px 10px; margin: 6px 0; font-size: 13px; }
+.post summary { cursor: pointer; }
+.reply { background: var(--surface-2); border-radius: 10px; padding: 8px 12px; margin: 8px 0; font-size: 13px; }
 .reply .en { color: var(--muted); }
 .reply-row { display: flex; gap: 8px; align-items: flex-start; justify-content: space-between; }
 .vote-up { color: var(--positive); font-weight: 600; }
 .vote-down { color: var(--negative); font-weight: 600; }
-.empty { color: var(--muted); padding: 24px; text-align: center; }
+.empty { color: var(--muted); padding: 32px; text-align: center; }
 .more { display: block; margin: 12px auto; }
 
-.chart-card { background: var(--surface); box-shadow: 0 0 0 1px var(--ring); border-radius: 12px; padding: 14px; margin-bottom: 12px; position: relative; }
+/* Charts */
+.chart-card { background: var(--surface); box-shadow: 0 0 0 1px var(--ring); border-radius: var(--radius); padding: 16px; margin-bottom: 12px; position: relative; }
 .chart-card h3 { margin: 0; font-size: 14px; }
 .chart-card .sub { color: var(--muted); font-size: 12px; margin-bottom: 8px; }
 .legend { display: flex; gap: 12px; font-size: 12px; color: var(--ink-2); margin-bottom: 4px; flex-wrap: wrap; }
@@ -139,37 +187,71 @@ svg.chart .base { stroke: var(--axis); stroke-width: 1; }
 svg.chart .release { stroke: var(--ink-2); stroke-width: 1; stroke-dasharray: 3 3; opacity: 0.6; }
 svg.chart text.release-label { fill: var(--ink-2); font-size: 10px; }
 svg.chart .cross { stroke: var(--ink-2); stroke-width: 1; }
-.tip { position: absolute; pointer-events: none; background: var(--surface); box-shadow: 0 0 0 1px var(--ring), 0 4px 16px rgba(0,0,0,.15); border-radius: 8px; padding: 6px 10px; font-size: 12px; white-space: nowrap; display: none; z-index: 2; }
+.band { fill: var(--warning); opacity: 0.14; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); box-shadow: 0 0 0 1px var(--ring), 0 6px 20px rgba(0, 0, 0, 0.25); border-radius: 10px; padding: 7px 11px; font-size: 12px; white-space: nowrap; display: none; z-index: 2; }
 .tip b { font-size: 14px; }
 .tip .t { color: var(--muted); }
-.bars { display: grid; grid-template-columns: max-content 1fr max-content; gap: 6px 10px; align-items: center; font-size: 13px; }
+.bars { display: grid; grid-template-columns: max-content 1fr max-content; gap: 7px 10px; align-items: center; font-size: 13px; }
 .bars .bar { height: 10px; background: var(--accent); border-radius: 0 4px 4px 0; min-width: 2px; }
 .bars .n { font-variant-numeric: tabular-nums; color: var(--ink-2); }
-.band { fill: var(--warning); opacity: 0.14; }
 .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; }
 table.data { border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; margin-top: 8px; }
 table.data td, table.data th { padding: 2px 10px 2px 0; text-align: left; }
 .chart-card details { margin-top: 8px; font-size: 12px; color: var(--ink-2); }
-.toast { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--page); padding: 6px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast { position: fixed; bottom: 72px; left: 50%; transform: translateX(-50%); background: var(--ink); color: var(--page); padding: 6px 14px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.2s; pointer-events: none; z-index: 20; }
 .toast.show { opacity: 1; }
+
+/* Design picker (remove once a design is chosen) */
+.picker { position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 10; display: flex; align-items: center; gap: 6px; background: #0b0b0b; color: #fff; border-radius: 99px; padding: 6px 6px 6px 14px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35); font-size: 13px; max-width: calc(100vw - 32px); overflow-x: auto; scrollbar-width: none; }
+.picker span { white-space: nowrap; margin-right: 4px; }
+.picker button { border: 0; border-radius: 99px; padding: 6px 12px; background: #262626; color: #ddd; white-space: nowrap; font-size: 13px; }
+.picker button[aria-pressed="true"] { background: #fff; color: #000; font-weight: 600; }
+
+/* Phones: every design gets the strip as chips and the views as scrolling tabs */
+@media (max-width: 820px) {
+  .app { grid-template-columns: minmax(0, 1fr); }
+  .side { display: none; }
+  .main { padding: 16px 16px 80px; }
+  .strip, [data-v] .strip { display: flex; overflow-x: auto; gap: 8px; margin: 0 -16px 16px; padding: 0 16px 4px; }
+  [data-v] .strip .g-item { width: auto; flex: none; flex-direction: row; border-radius: 99px; padding: 4px 14px 4px 4px; background: var(--surface); box-shadow: 0 0 0 1px var(--ring); transform: none; }
+  [data-v] .strip .g-item[aria-current="true"] { background: var(--accent); color: #fff; }
+  [data-v] .strip .g-thumb { width: 30px; height: 30px; aspect-ratio: auto; border-radius: 50%; }
+  [data-v] .strip .g-name { padding: 0; font-size: 13px; }
+  [data-v] .strip .g-sub { display: none; }
+  .nav-top, [data-v] .nav-top { display: flex; grid-template-columns: none; }
+  [data-v] .nav-top .nav-btn { flex-direction: row; align-items: center; padding: 7px 14px; border-radius: 99px; }
+  [data-v] .nav-top .nav-btn .count { font-size: 11px; color: inherit; margin-left: 4px; }
+  .top img { width: 72px; height: 34px; }
+  .top h1 { font-size: 20px; }
+  [data-v="5"] .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi .value { font-size: 22px; }
+}
 </style>
+
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div>
-      <h1>Player feedback</h1>
-      <div class="updated" id="updated">Loading…</div>
-    </div>
-    <div class="game-pick">
+<div class="app">
+  <aside class="side" aria-label="Games and views">
+    <div class="brand"><span class="brand-mark"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span><span>Player feedback</span></div>
+    <div class="side-label">Games</div>
+    <div id="games-side"></div>
+    <div class="side-label">Views</div>
+    <nav class="nav-side" id="nav-side" aria-label="Views"></nav>
+    <div class="side-foot updated" id="updated-side"></div>
+  </aside>
+  <div class="main">
+    <div class="strip" id="games-strip" aria-label="Games"></div>
+    <header class="top">
       <img id="capsule" alt="" hidden>
-      <label><span class="sr" hidden>Game</span><select id="game" aria-label="Game"></select></label>
-    </div>
-  </header>
-  <section class="stats" id="stats" aria-label="Summary"></section>
-  <nav class="tabs" role="tablist" id="tabs"></nav>
-  <main id="view"></main>
+      <div><h1 id="title">Player feedback</h1><div class="updated" id="updated">Loading…</div></div>
+    </header>
+    <section class="kpis" id="stats" aria-label="Summary"></section>
+    <nav class="nav-top" id="nav-top" aria-label="Views"></nav>
+    <main id="view"></main>
+  </div>
 </div>
+<div class="picker" id="picker" role="group" aria-label="Design"></div>
 <div class="toast" id="toast" role="status"></div>
 <script>
 "use strict";
@@ -237,31 +319,95 @@ async function getJson(path) {
 }
 
 // ---------------------------------------------------------------------------
+// Designs (pick one with the bar at the bottom; ?v=1…5 also works)
+// ---------------------------------------------------------------------------
+
+const DESIGNS = [[1, "Creator Hub"], [2, "Game tiles"], [3, "Icon rail"], [4, "Studio light"], [5, "Bento"]];
+function setDesign(v) {
+  document.documentElement.dataset.v = v;
+  store.set("design", v);
+  document.querySelectorAll(".picker button").forEach((b) => b.setAttribute("aria-pressed", String(b.dataset.v === String(v))));
+}
+function renderPicker() {
+  const v = new URLSearchParams(location.search).get("v") || store.get("design") || "1";
+  document.getElementById("picker").replaceChildren(
+    h("span", "Pick a design"),
+    ...DESIGNS.map(([n, name]) => h("button", { "data-v": n, onclick: () => setDesign(n) }, `${n} · ${name}`)),
+  );
+  setDesign(v);
+}
+
+const ICONS = {
+  issues: "M8 2l1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3 3 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4",
+  suggestions: "M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4",
+  feed: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
+  stats: "M3 3v18h18M18 17V9M13 17V5M8 17v-3",
+  sales: "M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+};
+function icon(name) {
+  const svg = svgEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", class: "icon", "aria-hidden": "true" });
+  svg.append(svgEl("path", { d: ICONS[name] }));
+  return svg;
+}
+
+// One-click filter buttons (replaces every dropdown).
+function chips(options, value, onChange, label) {
+  const group = h("div.chips", { role: "group", "aria-label": label });
+  for (const [v, text] of options) {
+    group.append(h("button", { type: "button", "aria-pressed": String(v === value), onclick: (e) => {
+      group.querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", "false"));
+      e.currentTarget.setAttribute("aria-pressed", "true");
+      onChange(v);
+    } }, text));
+  }
+  return group;
+}
+
+// A small single-series trend line for the KPI cards.
+function spark(values, color = "var(--accent)") {
+  const svg = svgEl("svg", { viewBox: "0 0 100 30", preserveAspectRatio: "none", class: "spark", "aria-hidden": "true" });
+  if (values.length < 2 || !values.some((v) => v)) return svg;
+  const max = Math.max(...values), min = Math.min(0, ...values);
+  const pts = values.map((v, i) => [(i / (values.length - 1)) * 100, 28 - ((v - min) / (max - min || 1)) * 26]);
+  const line = pts.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(1)},${y.toFixed(1)}`).join("");
+  svg.append(svgEl("path", { d: `${line}L100,30L0,30Z`, fill: color, opacity: 0.14 }));
+  svg.append(svgEl("path", { d: line, fill: "none", stroke: color, "stroke-width": 2, "vector-effect": "non-scaling-stroke", "stroke-linejoin": "round" }));
+  return svg;
+}
+// Per-day values for the last `n` days.
+function daily(n, valueOf) {
+  const today = Math.floor(now() / DAY);
+  return Array.from({ length: n }, (_, i) => valueOf((today - n + 1 + i) * DAY));
+}
+
+// ---------------------------------------------------------------------------
 // Load
 // ---------------------------------------------------------------------------
 
 async function init() {
+  renderPicker();
   try {
-    state.index = await getJson("index.json");
-    state.sales = await getJson("sales.json").catch(() => null); // only once STEAM_FINANCIAL_KEY is set
+    if (new URLSearchParams(location.search).has("demo")) Object.assign(state, demoData());
+    else {
+      state.index = await getJson("index.json");
+      state.sales = await getJson("sales.json").catch(() => null); // once the Steam key has the Financial permission
+    }
   } catch (e) {
     document.getElementById("updated").textContent = "No data yet: the feedback workflow hasn't committed anything. (" + e.message + ")";
     return;
   }
   const games = state.index.games || [];
-  const select = document.getElementById("game");
-  for (const g of games) select.append(h("option", { value: g.appId }, g.name + (g.status === "upcoming" ? " (coming soon)" : "")));
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = Number(hash.get("app") || store.get("app"));
   state.tab = ["issues", "suggestions", "feed", "stats", "sales"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
-  select.value = games.some((g) => g.appId === wanted) ? wanted : games[0]?.appId;
-  select.addEventListener("change", () => pickGame(Number(select.value)));
-  if (games.length) pickGame(Number(select.value));
+  if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : games[0].appId);
   lastCommit();
 }
 
 async function lastCommit() {
-  if (new URLSearchParams(location.search).get("data")) return;
+  const q = new URLSearchParams(location.search);
+  if (q.has("demo")) document.getElementById("updated").textContent = "Demo data: made up, to compare the designs";
+  if (q.get("data") || q.has("demo")) return;
   try {
     const res = await fetch("https://api.github.com/repos/fourgames/website/commits?path=feedback/data&per_page=1");
     const [c] = await res.json();
@@ -269,29 +415,35 @@ async function lastCommit() {
   } catch {}
 }
 
+function renderGames() {
+  const games = state.index.games || [];
+  const item = (g) => h("button.g-item", { type: "button", title: g.name, "aria-current": String(state.game?.appId === g.appId), onclick: () => pickGame(g.appId) },
+    g.capsule ? h("img.g-thumb", { src: g.capsule, alt: "", loading: "lazy" }) : h("span.g-thumb"),
+    h("span.g-name", g.name, h("span.g-sub", g.status === "upcoming" ? "Coming soon" : "Released")));
+  document.getElementById("games-side").replaceChildren(...games.map(item));
+  document.getElementById("games-strip").replaceChildren(...games.map(item));
+}
+
 async function pickGame(appId) {
   store.set("app", appId);
   const meta = state.index.games.find((g) => g.appId === appId);
-  const img = document.getElementById("capsule");
-  img.hidden = !meta?.capsule;
-  if (meta?.capsule) img.src = meta.capsule;
   if (!state.games[appId]) {
     document.getElementById("view").replaceChildren(h("p.empty", "Loading…"));
     try {
       state.games[appId] = await getJson(`games/${appId}.json`);
     } catch (e) {
+      state.game = { appId, meta, items: {}, issues: {}, players: [], releases: [], reviewTotals: {} };
+      render();
       document.getElementById("view").replaceChildren(h("p.empty", "No data for this game yet."));
-      document.getElementById("stats").replaceChildren();
       return;
     }
   }
   state.game = { ...state.games[appId], meta };
-  if (document.getElementById("updated").textContent === "Loading…") document.getElementById("updated").textContent = "";
   render();
 }
 
 function setHash() {
-  history.replaceState(null, "", `#app=${state.game.appId}&tab=${state.tab}`);
+  history.replaceState(null, "", `${location.search}#app=${state.game.appId}&tab=${state.tab}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -309,39 +461,54 @@ function playersAt(series, t) {
   return v;
 }
 
+function renderHeader() {
+  const meta = state.game.meta || {};
+  const img = document.getElementById("capsule");
+  img.hidden = !meta.capsule;
+  if (meta.capsule) img.src = meta.capsule;
+  document.getElementById("title").replaceChildren(meta.name || "", h("span.pill", meta.status === "upcoming" ? "Coming soon" : "Released"));
+}
+
 function renderStats() {
   const g = state.game;
   const series = g.players || [];
   const t = now();
   const current = series.length ? series[series.length - 1][1] : null;
   const inDay = series.filter(([ts]) => ts >= t - DAY).map(([, n]) => n);
-  const before = playersAt(series, t - DAY);
-  const peak = Math.max(...inDay, before ?? 0, current ?? 0);
+  const peak = Math.max(...inDay, playersAt(series, t - DAY) ?? 0, current ?? 0);
+  const peaks = daily(14, (d) => Math.max(playersAt(series, d) ?? 0, ...series.filter(([ts]) => ts >= d && ts < d + DAY).map(([, n]) => n)));
   const totalsKey = Object.keys(g.reviewTotals || {}).sort().pop();
   const totals = totalsKey ? g.reviewTotals[totalsKey] : null;
+  const reviewsPerDay = daily(14, (d) => items().filter((i) => i.kind === "review" && i.created >= d && i.created < d + DAY).length);
+  const postsPerDay = daily(14, (d) => items().filter((i) => !i.dev && i.created >= d && i.created < d + DAY).length);
   const bugs = issues("bug").filter(isActive);
   const urgent = bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high");
   const still = Object.values(g.issues || {}).filter((i) => i.status === "still_happening");
   const fresh = items().filter((i) => !i.dev && i.created >= t - DAY);
   const release = (g.releases || []).at(-1);
+  const salesDaysList = state.sales ? salesDays() : [];
+  const byDay = new Map(salesDaysList);
+  const revenue = daily(14, (d) => byDay.get(new Date(d * 1000).toISOString().slice(0, 10))?.net || 0);
 
-  const tile = (label, value, sub) => h("div.stat", h("div.label", label), h("div.value", value), sub ? h("div.sub", sub) : null);
+  const tile = (label, value, sub, trend, color) => h("div.kpi", h("div.label", label), h("div.value", value), sub ? h("div.sub", sub) : null, trend ? spark(trend, color) : null);
   const pct = totals && totals.positive + totals.negative ? Math.round((100 * totals.positive) / (totals.positive + totals.negative)) + "%" : "–";
   document.getElementById("stats").replaceChildren(
-    tile("Players now", current ?? "–", current != null ? `${peak} peak in 24 h` : "not released"),
-    tile("Reviews", pct, totals ? `${totals.positive} 👍 · ${totals.negative} 👎${totals.desc ? " · " + totals.desc : ""}` : "no reviews yet"),
-    tile("Open bugs", bugs.length, urgent.length ? `${urgent.length} high or urgent` : "none high or urgent"),
-    tile("Still happening", still.length, "reported again after a fix"),
-    tile("New posts", fresh.length, "last 24 h"),
+    tile("Players now", current ?? "–", current != null ? `${peak} peak today` : "not released", peaks),
+    tile("Positive reviews", pct, totals ? `${totals.positive} 👍 · ${totals.negative} 👎` : "no reviews yet", reviewsPerDay, "var(--positive)"),
+    tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent"),
+    tile("New posts", fresh.length, "last 24 h", postsPerDay),
+    salesDaysList.length ? tile("Revenue, 7 d", usd(revenue.slice(-7).reduce((a, b) => a + b, 0)), "net, after refunds", revenue, "var(--good)") : null,
     tile("Latest update", release ? (release.version ? "v" + release.version : "–") : "–", release ? `${release.version ? "" : release.name + " · "}${ago(release.time)}` : "none yet"),
   );
 }
 
 // ---------------------------------------------------------------------------
-// Tabs
+// Views
 // ---------------------------------------------------------------------------
 
 function render() {
+  renderGames();
+  renderHeader();
   renderStats();
   const counts = {
     issues: issues("bug").filter(isActive).length,
@@ -349,11 +516,11 @@ function render() {
     feed: items().filter((i) => !i.dev).length,
   };
   const tabs = [["issues", "Issues"], ["suggestions", "Suggestions"], ["feed", "Feed"], ["stats", "Stats"], ["sales", "Sales"]];
-  document.getElementById("tabs").replaceChildren(
-    ...tabs.map(([id, label]) =>
-      h("button", { role: "tab", "aria-selected": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
-        label, counts[id] != null ? h("span.count", counts[id]) : null)),
-  );
+  const buttons = () => tabs.map(([id, label]) =>
+    h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
+      icon(id), h("span", label), counts[id] != null ? h("span.count", counts[id]) : null));
+  document.getElementById("nav-side").replaceChildren(...buttons());
+  document.getElementById("nav-top").replaceChildren(...buttons());
   setHash();
   const view = { issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), feed: feedView, stats: statsView, sales: salesView }[state.tab]();
   document.getElementById("view").replaceChildren(view);
@@ -371,9 +538,7 @@ function issueView(kind) {
       .sort((a, b) => b.priority - a.priority);
     list.replaceChildren(...(shown.length ? shown.map((i) => issueCard(i)) : [h("p.empty", kind === "bug" ? "No issues here." : "No suggestions here.")]));
   };
-  const status = h("select", { "aria-label": "Status", onchange: (e) => { f.status = e.target.value; draw(); } },
-    ...[["active", "Open & still happening"], ["still", "Still happening"], ["fixed", "Likely fixed"], ["all", "All"]]
-      .map(([v, l]) => h("option", { value: v, selected: f.status === v }, l)));
+  const status = chips([["active", "Open"], ["still", "Still happening"], ["fixed", "Likely fixed"], ["all", "All"]], f.status, (v) => { f.status = v; draw(); }, "Status");
   const search = h("input", { type: "search", placeholder: "Search issues", value: f.q, oninput: (e) => { f.q = e.target.value; draw(); } });
   wrap.append(h("div.filters", status, search), list);
   draw();
@@ -406,7 +571,7 @@ function issueCard(issue) {
   const linkBtn = h("button.btn", { onclick: (e) => copy(posts.map((p) => p.url).join("\n"), e.currentTarget) }, "Copy links");
   return h("article.card",
     h("div.card-head",
-      h("div.main",
+      h("div.main-col",
         h("h3", issue.title),
         h("div.meta", urgencyBadge(issue.urgency), statusBadge(issue), h("span", issue.area), h("span", (issue.languages || []).join(", ")),
           h("span", `last ${ago(issue.lastSeen)}`), issue.negativeReviews ? h("span.vote-down", `${issue.negativeReviews} 👎 review${issue.negativeReviews === 1 ? "" : "s"}`) : null)),
@@ -474,8 +639,7 @@ function feedView() {
     list.replaceChildren(...(shown.length ? shown.map((i) => h("div.card", postView(i))) : [h("p.empty", "Nothing here yet.")]));
     if (all.length > shown.length) list.append(h("button.btn.more", { onclick: () => { f.shown += 50; draw(); } }, `Show more (${all.length - shown.length} left)`));
   };
-  const sel = (label, key, options) => h("select", { "aria-label": label, onchange: (e) => { f[key] = e.target.value; f.shown = 50; draw(); } },
-    ...options.map(([v, l]) => h("option", { value: v, selected: f[key] === v }, l)));
+  const sel = (label, key, options) => chips(options, f[key], (v) => { f[key] = v; f.shown = 50; draw(); }, label);
   wrap.append(
     h("div.filters",
       sel("Type", "kind", [["all", "All posts"], ["review", "Reviews"], ["topic", "Threads"], ["reply", "Replies"]]),
@@ -504,8 +668,7 @@ function statsView() {
       h("div.grid-2", breakdown("Posts by category", start, (i) => i.triage?.category), breakdown("Posts by language", start, (i) => i.triage?.language)),
     );
   };
-  const range = h("select", { "aria-label": "Time range", onchange: (e) => { f.range = Number(e.target.value); draw(); } },
-    ...[[7, "Last 7 days"], [30, "Last 30 days"], [90, "Last 90 days"], [365, "Last year"], [0, "All time"]].map(([v, l]) => h("option", { value: v, selected: f.range === v }, l)));
+  const range = chips([[7, "7D"], [30, "30D"], [90, "90D"], [365, "1Y"], [0, "All"]], f.range, (v) => { f.range = v; draw(); }, "Time range");
   wrap.append(h("div.filters", range), body);
   draw();
   return wrap;
@@ -695,7 +858,7 @@ function salesDays() {
 
 function salesView() {
   if (!state.sales) {
-    return h("div.card", h("p", "No sales data yet."), h("p.meta", "Add the STEAM_FINANCIAL_KEY secret (a Financial API Group key) and the next run fills this in. See feedback/README.md."));
+    return h("div.card", h("p", "No sales data yet."), h("p.meta", "Tick the Financial permission on the Steam Web API key (or add STEAM_FINANCIAL_KEY) and the next run fills this in. See feedback/README.md."));
   }
   const f = state.filters.sales;
   const wrap = h("div");
@@ -707,10 +870,10 @@ function salesView() {
     const inRange = days.filter(([d]) => dayTime(d) >= start);
     const sum = (list, k) => list.reduce((a, [, t]) => a + (t[k] || 0), 0);
     const units = sum(inRange, "units"), refunded = sum(inRange, "returnedUnits");
-    const tile = (label, value, sub) => h("div.stat", h("div.label", label), h("div.value", value), sub ? h("div.sub", sub) : null);
+    const tile = (label, value, sub) => h("div.kpi", h("div.label", label), h("div.value", value), sub ? h("div.sub", sub) : null);
     const releases = (state.game.releases || []).filter((r) => r.time >= start && r.time <= end);
     body.replaceChildren(
-      h("section.stats", { "aria-label": "Sales summary" },
+      h("section.kpis", { "aria-label": "Sales summary" },
         tile("Net revenue", usd(sum(inRange, "net")), "after refunds and tax, before Steam's cut"),
         tile("Units sold", units - refunded, `${units} sold, ${refunded} refunded`),
         tile("Refund rate", units ? Math.round((100 * refunded) / units) + "%" : "–", "of units sold in this range"),
@@ -720,8 +883,7 @@ function salesView() {
       countryBreakdown(inRange),
     );
   };
-  const range = h("select", { "aria-label": "Time range", onchange: (e) => { f.range = Number(e.target.value); draw(); } },
-    ...[[7, "Last 7 days"], [30, "Last 30 days"], [90, "Last 90 days"], [365, "Last year"], [0, "All time"]].map(([v, l]) => h("option", { value: v, selected: f.range === v }, l)));
+  const range = chips([[7, "7D"], [30, "30D"], [90, "90D"], [365, "1Y"], [0, "All"]], f.range, (v) => { f.range = v; draw(); }, "Time range");
   wrap.append(h("div.filters", range, h("span.updated", "Steam days are Pacific time; recent days can still change as payments settle.")), body);
   draw();
   return wrap;
@@ -807,6 +969,94 @@ function breakdown(title, start, key) {
   const max = Math.max(1, ...rows.map((r) => r[1]));
   return h("div.chart-card", h("h3", title), h("div.sub", rows.length ? "Posts in this range" : "No posts in this range."),
     h("div.bars", ...rows.flatMap(([k, v]) => [h("span", k), h("div", h("div.bar", { style: `width:${(100 * v) / max}%` })), h("span.n", v)])));
+}
+
+// ---------------------------------------------------------------------------
+// ?demo: made-up data, so the designs can be judged before real feedback piles up
+// ---------------------------------------------------------------------------
+
+function demoData() {
+  let seed = 7;
+  const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+  const pick = (a) => a[Math.floor(rnd() * a.length)];
+  const t = now();
+  const cdn = (id, hash) => `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${id}/${hash}/header.jpg`;
+  const games = [
+    { appId: 2807130, name: "Reforge Front", status: "released", capsule: cdn(2807130, "f709685fb160ba9042b9b5ef18d36fad0b58f5c1") },
+    { appId: 3958210, name: "Digging A Hole In Ice With A Chainsaw", status: "released", capsule: cdn(3958210, "2ddbceeb0eec5ee1d6aee9ade2a18b16aa89c8fb") },
+    { appId: 5207970, name: "Pomo Valley", status: "upcoming", capsule: cdn(5207970, "2d745a298911828330c2c76f8506f2bb3461bad8") },
+  ];
+  const posts = [
+    ["bug", "urgent", "upgrade menu", "Crash when opening the upgrade menu", [["English", "The game crashes every time I open the upgrade menu."], ["Japanese", "アップグレードメニューを開くと毎回クラッシュします。", "The game crashes every time I open the upgrade menu."]]],
+    ["bug", "high", "level 3", "Goblins get stuck in the walls on level 3", [["Schinese", "第三关的哥布林卡在墙里。", "The goblins in level 3 get stuck in the wall."], ["English", "Goblins clip into the wall on level 3 and the wave never ends."]]],
+    ["bug", "medium", "audio", "Music cuts out after alt-tab", [["German", "Nach Alt-Tab ist die Musik weg.", "The music is gone after alt-tab."]]],
+    ["suggestion", "medium", "controls", "Controller support", [["German", "Bitte fügt Controller-Unterstützung hinzu.", "Please add controller support."], ["English", "Would love to play this on the couch with a controller."]]],
+    ["suggestion", "low", "settings", "Option to turn off head bob", [["English", "Please add an option to disable the head bob."]]],
+    ["praise", "low", "general", null, [["Korean", "재미있어요! 망치가 최고예요.", "It's fun! The hammer is the best."], ["English", "Great little tower defense, the hammer feels amazing."]]],
+    ["question", "low", "general", null, [["Brazilian", "Vai ter modo cooperativo?", "Will there be a co-op mode?"]]],
+  ];
+  const out = { index: { games }, games: {}, sales: { days: {}, apps: {} } };
+  for (const g of games) {
+    const state = { appId: g.appId, items: {}, issues: {}, players: [], reviewTotals: {}, releases: [] };
+    if (g.status === "released") {
+      let n = 0, issueN = 1;
+      for (let d = 0; d < 120; d++) {
+        for (let k = 0; k < Math.floor(rnd() * 3.2); k++) {
+          const [category, urgency, area, title, variants] = pick(posts);
+          const [language, text, en] = pick(variants);
+          const kind = rnd() < 0.65 ? "review" : rnd() < 0.5 ? "topic" : "reply";
+          const id = (kind === "review" ? "r" : kind === "topic" ? "t" : "c") + ++n;
+          const item = {
+            id, kind, created: t - d * DAY - Math.floor(rnd() * DAY), author: { id: "a" + n, name: kind === "review" ? null : pick(["Zhain", "mklesmos", "Paranoia", "Horror Heaven", "vikvik"]) },
+            url: `https://store.steampowered.com/app/${g.appId}/`, text, votedUp: category === "praise" || (category === "suggestion" && rnd() < 0.5), playtime: Math.round(rnd() * 200) / 10, versions: [], flips: [],
+            title: kind === "topic" ? en || text : undefined,
+            triage: { language, english: en, summary: en || text, category, urgency, area, details: category === "bug" ? "Happens on Windows 11 right after the action." : null,
+              reply: { text: language === "English" ? "Thanks for the report, we're on it!" : "ありがとうございます！確認中です。", english: "Thanks for the report, we're on it!" } },
+          };
+          item.updated = item.created;
+          if (title) {
+            let issue = Object.values(state.issues).find((i) => i.title === title);
+            if (!issue) {
+              issue = state.issues["I" + issueN] = { id: "I" + issueN++, kind: category, title, area, summary: en || text, status: "open", created: item.created, items: [], languages: [], mentions: 0, urgency, negativeReviews: 0, priority: 0, lastSeen: 0 };
+            }
+            issue.items.push(id);
+            item.issue = issue.id;
+          }
+          state.items[id] = item;
+        }
+      }
+      for (const issue of Object.values(state.issues)) {
+        const its = issue.items.map((i) => state.items[i]);
+        issue.mentions = its.length;
+        issue.languages = [...new Set(its.map((i) => i.triage.language))];
+        issue.lastSeen = Math.max(...its.map((i) => i.created));
+        issue.firstSeen = Math.min(...its.map((i) => i.created));
+        issue.negativeReviews = its.filter((i) => i.kind === "review" && !i.votedUp).length;
+        issue.priority = { urgent: 8, high: 4, medium: 2, low: 1 }[issue.urgency] * (1 + Math.log2(issue.mentions));
+        issue.fixPrompt = `Players of ${g.name} are reporting a bug on Steam: ${issue.title}. (demo)`;
+      }
+      const lvl = Object.values(state.issues).find((i) => i.title.includes("level 3"));
+      if (lvl) Object.assign(lvl, { status: "still_happening", fixedIn: "v1.03", fixedAt: t - 20 * DAY, fixedUrl: "#" });
+      const audio = Object.values(state.issues).find((i) => i.title.includes("Music"));
+      if (audio) Object.assign(audio, { status: "likely_fixed", fixedIn: "v1.03", fixedAt: t - 20 * DAY, fixedUrl: "#" });
+      let v = 40;
+      for (let ts = t - 200 * DAY; ts < t; ts += 3 * 3600) { v = Math.max(0, Math.round(v + (rnd() - 0.48) * 8)); state.players.push([ts, v]); }
+      const reviews = Object.values(state.items).filter((i) => i.kind === "review");
+      state.reviewTotals.today = { positive: reviews.filter((r) => r.votedUp).length, negative: reviews.filter((r) => !r.votedUp).length };
+      state.releases = [[60, "1.01"], [35, "1.02"], [20, "1.03"]].map(([d, version]) => ({ gid: version, name: "Update " + version, version, time: t - d * DAY, url: "#", matched: [] }));
+      for (let d = 0; d < 200; d++) {
+        const date = new Date((t - d * DAY) * 1000).toISOString().slice(0, 10);
+        const sale = (d > 40 && d < 50) || (d > 120 && d < 130);
+        const units = Math.max(0, Math.round((sale ? 18 : 7) + (rnd() - 0.5) * 8));
+        const refunded = Math.floor(rnd() * units * 0.12);
+        const net = Math.round((units * (sale ? 2.99 : 4.99) - refunded * 4) * 0.9 * 100) / 100;
+        const day = (out.sales.days[date] ||= {});
+        day[g.appId] = { net, units, returnedUnits: refunded, discount: sale ? 40 : 0, countries: { US: [net * 0.4, Math.round(units * 0.4)], DE: [net * 0.2, Math.round(units * 0.2)], JP: [net * 0.15, Math.round(units * 0.15)], SE: [net * 0.1, Math.round(units * 0.1)], BR: [net * 0.05, Math.round(units * 0.05)] } };
+      }
+    }
+    out.games[g.appId] = state;
+  }
+  return out;
 }
 
 // Lets the site's header show a "Feedback" link in this browser from now on (SiteHeader.vue).

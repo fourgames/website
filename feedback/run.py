@@ -440,7 +440,7 @@ def send_alerts(state, game, run, first_run):
             notify.send(batch[start : start + 10], ping=ping)
 
 
-def daily_report(index, states):
+def daily_report(index, states, sales=None):
     import notify
 
     since = max(index.get("dailyReportAt") or 0, now() - 36 * 3600) or now() - DAY
@@ -477,6 +477,15 @@ def daily_report(index, states):
         if still:
             parts.append(f"{len(still)} still happening after a fix")
         line += "\n" + " · ".join(parts)
+        days = (sales or {}).get("days") or {}
+        if days:
+            # Steam's days are Pacific time and settle late, so report the latest day with data.
+            latest = max(days)
+            t = days[latest].get(str(game["appId"]))
+            if t:
+                line += f"\n💰 {latest}: ${t.get('net', 0):,.2f} net, {t.get('units', 0)} sold"
+                if t.get("returnedUnits"):
+                    line += f", {t['returnedUnits']} refunded"
         for issue in sorted(new_issues, key=lambda i: i["priority"], reverse=True)[:3]:
             line += f"\n• New {issue['kind']}: {issue['title']} ({issue['mentions']})"
         lines.append(line)
@@ -533,11 +542,17 @@ def full_run():
         if save(path, state):
             changed.append(game["name"])
 
+    import sales as sales_api
+
+    sales = load(DATA / "sales.json", {"highwatermark": "0", "days": {}, "apps": {}})
+    if sales_api.sync(sales):
+        save(DATA / "sales.json", sales)
+
     hour = time.gmtime().tm_hour
     today = time.strftime("%Y-%m-%d", time.gmtime())
     last = index.get("dailyReportAt")
     if last and hour >= DAILY_REPORT_HOUR and time.strftime("%Y-%m-%d", time.gmtime(last)) != today:
-        if daily_report(index, states):
+        if daily_report(index, states, sales):
             index["dailyReportAt"] = now()
     elif not last:
         index["dailyReportAt"] = now()  # first ever run: start counting from here

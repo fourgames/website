@@ -48,6 +48,7 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
 | `STEAM_PUBLISHER_KEY` | Steamworks Web API publisher key (Users & Permissions → Manage Groups → Web API key) |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `DISCORD_WEBHOOK_URL` | The channel's webhook URL |
+| `STEAM_FINANCIAL_KEY` | Key of a *Financial API Group* (Users & Permissions → Manage Groups → Create New Financial API Group), for sales (optional) |
 | `DISCORD_MENTION` | Who to ping: `<@USER_ID>`, `<@&ROLE_ID>` or a bare user ID (optional) |
 
 ## Data
@@ -60,7 +61,12 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
   - `reviewTotals`: per day;
   - `releases`.
 
-This repo is public, so this data is too. It's all public on Steam anyway.
+- `data/sales.json` holds Steam sales from `IPartnerFinancialsService`: one total per day and game, with net and gross USD, units, refunds, the discount and countries. Package sales count toward the package's primary app.
+  - Days are Pacific time.
+  - Steam restates days as payments settle; each run rebuilds the days Steam reports as changed.
+  - "Net" is after refunds and tax, before Steam's cut.
+
+This repo is public, so this data is too. Valve lets developers share their own sales data "as they see fit". It's all public on Steam anyway.
 
 ## Dashboard
 
@@ -70,6 +76,7 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 - **Issues:** bug issues sorted by priority. Each has *Copy fix prompt*, the original posts with their translations and Steam links, and the draft replies with copy buttons.
 - **Suggestions:** the same view for suggestions.
 - **Feed:** every post, newest first, with filters and search.
+- **Sales:** net revenue per day or week, with updates and discounts marked, plus units sold, refund rate, lifetime totals and top countries. It's filled in once `STEAM_FINANCIAL_KEY` is set.
 - **Stats:** concurrent players and new reviews over time, with every update marked, plus posts by category and by language.
 
 To point it at another copy of the data, add `?data=<base url>`, e.g. a local test run served by the dev server.

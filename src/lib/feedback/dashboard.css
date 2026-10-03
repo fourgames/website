@@ -886,7 +886,7 @@
 	margin: 0 0 1.25rem;
 }
 
-/* Select buttons (for listening with the Mac's Speak Selection) */
+/* Listen buttons (read aloud through the Speak Feedback shortcut) */
 .fb .text-row {
 	display: flex;
 	gap: 8px;

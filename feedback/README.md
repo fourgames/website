@@ -79,7 +79,12 @@ To point it at another copy of the data, add `?data=<base url>`, e.g. a local te
 
 ## Listening to posts
 
-Each post and reply has a **Select** button that highlights its text. Press your Speak Selection shortcut (⌥ Esc by default, under System Settings → Accessibility → Read & Speak) to hear it with your own voice. Web pages can't use the Siri voices themselves.
+Each post and reply has a **Listen** button. Web pages can't use macOS's Siri voices, so it hands the text to a Shortcut that speaks it. Make the Shortcut once:
+
+1. **Shortcuts** app → **File → New Shortcut**, named exactly **Speak Feedback**.
+2. Add the **Speak Text** action, speaking **Shortcut Input**, with your voice.
+
+The first click asks to open Shortcuts; allow it. Listen also selects the text, so your Speak Selection shortcut (⌥ Esc by default) works too.
 
 ## Running it locally
 

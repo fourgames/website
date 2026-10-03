@@ -358,7 +358,6 @@ function render() {
   document.getElementById("fb-nav-side").replaceChildren(...buttons());
   document.getElementById("fb-nav-top").replaceChildren(...buttons());
   setHash();
-  renderCardPicker();
   const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), replies: repliesView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
@@ -428,21 +427,26 @@ function suggestionText(issue, posts) {
 }
 
 // "Listen" reads a text with your own Mac voice (Siri included, which web pages can't use
-// themselves) by handing it to the macOS Shortcut "Speak Feedback" (one Speak Text action on the
-// Shortcut Input; see feedback/README.md). It also selects the text, so your Speak Selection
-// shortcut works as a fallback.
+// themselves): it copies the text and runs the macOS Shortcut "Speak Feedback", which speaks the
+// clipboard (Get Clipboard → Speak Text; see feedback/README.md). Passing the text in the
+// shortcuts:// link itself is unreliable on macOS, so the clipboard carries it. The text is also
+// selected, so your Speak Selection shortcut works as a fallback.
 const SPEAK_SHORTCUT = "Speak Feedback";
 function speakButton(target) {
   const button = h("button.speak", { type: "button", title: `Read it aloud with your "${SPEAK_SHORTCUT}" shortcut` }, "Listen");
-  button.addEventListener("click", (e) => {
+  button.addEventListener("click", async (e) => {
     e.stopPropagation();
     const selection = window.getSelection();
     selection.removeAllRanges();
     const range = document.createRange();
     range.selectNodeContents(target);
     selection.addRange(range);
-    const text = target.textContent.trim().slice(0, 6000);
-    location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(SPEAK_SHORTCUT)}&input=text&text=${encodeURIComponent(text)}`;
+    try {
+      await navigator.clipboard.writeText(target.textContent.trim());
+    } catch {
+      document.execCommand("copy"); // the selection above is the text
+    }
+    location.href = `shortcuts://run-shortcut?name=${encodeURIComponent(SPEAK_SHORTCUT)}`;
   });
   return button;
 }
@@ -465,46 +469,14 @@ function playtime(item) {
   return { total: `${now} h`, atReview: now > item.playtime ? `${item.playtime} h at review` : null };
 }
 
-function postViewCurrent(item) {
-  const t = item.triage || {};
-  const parent = item.topic ? state.game.items[item.topic] : null;
-  const translated = t.english && t.english.trim() !== (item.text || "").trim();
-  const flipped = (item.flips || []).at(-1);
-  return h("div.post",
-    h("div.meta",
-      h("b", KIND[item.kind]),
-      item.kind === "review" ? h(item.votedUp ? "span.vote-up" : "span.vote-down", item.votedUp ? "👍 Recommended" : "👎 Not recommended") : null,
-      playtime(item) ? h("span", `${playtime(item).total} on record`, playtime(item).atReview ? ` (${playtime(item).atReview})` : "") : null,
-      item.author?.name ? h("span", item.author.name) : null,
-      t.language ? h("span", withFlag(t.language, item.lang)) : null,
-      h("span", fmtDate(item.created)),
-      item.edited ? h("span.badge", { title: `Edited · ${(item.versions || []).length} earlier version(s) kept` }, "edited") : null,
-      flipped ? h("span.badge", { class: flipped.to === "negative" ? "s-still" : "s-fixed" }, `flipped ${flipped.to} ${fmtShort(flipped.at)}`) : null,
-      item.deleted ? h("span.badge.s-still", "deleted on Steam") : null,
-      item.dev ? h("span.badge", "Your post") : null,
-      item.forum ? h("span", item.forum) : null,
-      t.category ? h("span.badge", t.category) : null,
-      t.urgency ? urgencyBadge(t.urgency) : null,
-      h("a", { href: item.url, target: "_blank", rel: "noopener" }, "Open on Steam ↗")),
-    parent ? h("div.meta", "in “", parent.title || "thread", "”") : null,
-    item.title ? h("div", h("b", item.title)) : null,
-    textRow(english(item)),
-    translated ? h("details", h("summary", `Original (${t.language})`), textRow(item.text)) : null,
-    (item.versions || []).length ? h("details", h("summary", `Earlier versions (${item.versions.length})`),
-      ...item.versions.slice().reverse().map((v) => h("div.text", `${fmtDate(v.at)}${v.votedUp == null ? "" : v.votedUp ? " · 👍" : " · 👎"}\n${v.title ? v.title + "\n" : ""}${v.text}`))) : null,
-    item.devResponse ? h("details", h("summary", "Your reply on Steam"), h("div.text", item.devResponse)) : null,
-  );
-}
-
 // ---------------------------------------------------------------------------
-// Post card designs (temporary: pick one with the bar at the bottom, shown on /fb-dash?cards).
-// Each makes the player's language and playtime easier to see; 0 is the current card.
+// Post card: laid out like Steam's own review box. The header carries the verdict, hours and date
+// on the left and the player's language with what triage made of it on the right.
 // ---------------------------------------------------------------------------
 
-const CARD_DESIGNS = [[0, "Current"], [1, "Chips"], [2, "Side panel"], [3, "Steam style"], [4, "Labelled facts"], [5, "Stripe"]];
-const cardDesign = () => Number(store.get("cardDesign") || 0);
+const CATEGORY = { bug: ["🐞", "Bug"], suggestion: ["💡", "Suggestion"], question: ["❓", "Question"], praise: ["💬", "Praise"] };
 
-// Pieces every design shares.
+// The parts of a post the card shows.
 function postParts(item) {
   const t = item.triage || {};
   const translated = t.english && t.english.trim() !== (item.text || "").trim();
@@ -543,74 +515,23 @@ function postParts(item) {
 }
 
 function postView(item) {
-  const d = cardDesign();
-  if (!d) return postViewCurrent(item);
   const p = postParts(item);
-  // 1 · Chips: language, playtime and verdict as big labelled chips on top.
-  if (d === 1) return h("div.post.pv1",
-    h("div.pv1-chips",
-      h("span.pv1-chip", h("span.pv1-big", p.flag), p.language),
-      p.hours ? h("span.pv1-chip", "⏱ ", h("b", p.hours), " on record", p.atReview ? h("span.pv-note", ` (${p.atReview})`) : null) : p.who ? h("span.pv1-chip", "👤 ", p.who) : null,
-      p.verdict ? h(`span.pv1-chip.${p.verdict[0]}`, p.verdict[1], " ", p.verdict[2]) : h("span.pv1-chip", p.kind)),
-    ...p.body,
-    h("div.meta", ...p.flags, ...p.tags, h("span", p.when), p.review ? h("span", p.kind) : null, p.link));
-  // 2 · Side panel: a column with a big flag, language and hours beside the text.
-  if (d === 2) return h("div.post.pv2",
-    h("div.pv2-side",
-      h("div.pv2-flag", p.flag),
-      h("div.pv2-lang", p.language),
-      p.hours ? h("div.pv2-hours", h("b", p.hours), h("span", "on record"), p.atReview ? h("span", `(${p.atReview})`) : null) : null,
-      p.verdict ? h(`div.pv2-verdict.${p.verdict[0]}`, p.verdict[1]) : null),
-    h("div.pv2-main",
-      h("div.meta", h("b", p.kind), p.who ? h("span", p.who) : null, h("span", p.when), ...p.flags, ...p.tags, p.link),
-      ...p.body));
-  // 3 · Steam style: a header like Steam's own review box (verdict and hours left, language right).
-  if (d === 3) return h("div.post.pv3",
-    h(`div.pv3-head.${p.verdict ? p.verdict[0].replace("vote-", "is-") : "neutral"}`,
+  const [icon, kind] = CATEGORY[p.t.category] || [];
+  const tone = p.verdict ? p.verdict[0].replace("vote-", "is-") : "neutral";
+  return h("div.post.pv3",
+    h(`div.pv3-head.${tone}`,
       h("div.pv3-icon", p.verdict ? p.verdict[1] : "💬"),
       h("div.pv3-title",
         h("b", p.verdict ? p.verdict[2] : p.kind),
-        h("span", p.hours ? `${p.hours} on record${p.atReview ? ` (${p.atReview})` : ""}` : p.who || "")),
-      h("div.pv3-lang", h("span.pv3-flag", p.flag), p.language)),
+        p.hours ? h("span", `${p.hours} on record`, p.atReview ? ` (${p.atReview})` : "") : p.who ? h("span", p.who) : null,
+        h("span", `Posted ${p.when}`)),
+      h("div.pv3-right",
+        h("div.pv3-lang", h("span.pv3-flag", p.flag), p.language),
+        kind || p.t.urgency ? h("div.pv3-triage",
+          kind ? h("span", icon, " ", kind) : null,
+          p.t.urgency ? h(`span.pv3-urgency.u-${p.t.urgency}`, h("span.dot"), `${URGENCY[p.t.urgency]} priority`) : null) : null)),
     ...p.body,
-    h("div.meta", h("span", `Posted ${p.when}`), ...p.flags, ...p.tags, p.link));
-  // 4 · Labelled facts: every fact with a small label above it, in one row.
-  if (d === 4) {
-    const fact = (label, value, cls) => h(`div.pv4-fact${cls ? "." + cls : ""}`, h("span.pv4-label", label), h("span.pv4-value", value));
-    return h("div.post.pv4",
-      h("div.pv4-facts",
-        fact("Language", `${p.flag} ${p.language}`),
-        p.hours ? fact("Played", p.atReview ? `${p.hours} (${p.atReview})` : p.hours) : p.who ? fact("Player", p.who) : null,
-        p.verdict ? fact("Verdict", `${p.verdict[1]} ${p.verdict[2]}`, p.verdict[0]) : fact("Post", p.kind),
-        fact("Posted", p.when),
-        p.t.category ? fact("Type", p.t.category) : null,
-        p.t.urgency ? fact("Priority", URGENCY[p.t.urgency]) : null),
-      ...p.body,
-      h("div.meta", ...p.flags, p.link));
-  }
-  // 5 · Stripe: a coloured edge for the verdict; language and hours lead the first line.
-  return h(`div.post.pv5.${p.verdict ? p.verdict[0].replace("vote-", "is-") : "neutral"}`,
-    h("div.pv5-line",
-      h("span.pv5-flag", p.flag), h("b", p.language),
-      p.hours ? h("span.pv5-hours", "· ", h("b", p.hours), " on record", p.atReview ? ` (${p.atReview})` : "") : p.who ? h("span.pv5-hours", "· ", p.who) : null),
-    h("div.meta", h("span", p.verdict ? `${p.verdict[1]} ${p.verdict[2]}` : p.kind), h("span", p.when), ...p.flags, ...p.tags, p.link),
-    ...p.body);
-}
-
-function renderCardPicker() {
-  if (!new URLSearchParams(location.search).has("cards")) return;
-  let bar = document.getElementById("fb-card-picker");
-  if (!bar) {
-    bar = h("div.card-picker", { id: "fb-card-picker", role: "group", "aria-label": "Card design" });
-    document.querySelector(".fb").append(bar);
-  }
-  bar.replaceChildren(h("span", "Card design"),
-    ...CARD_DESIGNS.map(([n, name]) => h("button", { type: "button", "aria-pressed": String(cardDesign() === n), onclick: () => {
-      store.set("cardDesign", n);
-      const y = window.scrollY;
-      render();
-      window.scrollTo(0, y);
-    } }, `${n} · ${name}`)));
+    h("div.meta", ...p.flags, item.forum && item.kind !== "review" ? h("span", item.forum) : null, p.link));
 }
 
 // Posts worth a reply: a negative review or a thread about something a later update fixed (Steam's

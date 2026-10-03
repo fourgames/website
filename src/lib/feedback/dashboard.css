@@ -934,107 +934,7 @@
 	opacity: 0.9;
 }
 
-/* Post card designs (temporary, see CARD_DESIGNS in dashboard.js) */
-.fb .card-picker {
-	position: fixed;
-	bottom: 16px;
-	left: 50%;
-	transform: translateX(-50%);
-	z-index: 40;
-	display: flex;
-	align-items: center;
-	gap: 6px;
-	background: #0b0b0b;
-	color: #fff;
-	border-radius: 99px;
-	padding: 6px 6px 6px 14px;
-	box-shadow: 0 8px 30px rgb(0 0 0 / 0.35);
-	font-size: 0.8125rem;
-	max-width: calc(100vw - 32px);
-	overflow-x: auto;
-	scrollbar-width: none;
-}
-.fb .card-picker span {
-	white-space: nowrap;
-	margin-right: 4px;
-}
-.fb .card-picker button {
-	border: 0;
-	border-radius: 99px;
-	padding: 6px 12px;
-	background: #262626;
-	color: #ddd;
-	white-space: nowrap;
-}
-.fb .card-picker button[aria-pressed="true"] {
-	background: #fff;
-	color: #000;
-	font-weight: 600;
-}
-
-/* 1 · Chips */
-.fb .pv1-chips {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 8px;
-	margin-bottom: 6px;
-}
-.fb .pv1-chip {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	background: var(--fb-card-2);
-	border-radius: 99px;
-	padding: 4px 12px;
-	font-size: 0.875rem;
-	font-weight: 600;
-	color: var(--fb-title);
-}
-.fb .pv1-big {
-	font-size: 1.15rem;
-	line-height: 1;
-}
-
-/* 2 · Side panel */
-.fb .pv2 {
-	display: grid;
-	grid-template-columns: 6.5rem minmax(0, 1fr);
-	gap: 14px;
-}
-.fb .pv2-side {
-	background: var(--fb-card-2);
-	border-radius: var(--radius-card);
-	padding: 10px 8px;
-	text-align: center;
-	align-self: start;
-}
-.fb .pv2-flag {
-	font-size: 2rem;
-	line-height: 1.1;
-}
-.fb .pv2-lang {
-	font-weight: 600;
-	color: var(--fb-title);
-	font-size: 0.8125rem;
-}
-.fb .pv2-hours {
-	margin-top: 8px;
-	display: flex;
-	flex-direction: column;
-	color: var(--fb-muted);
-	font-size: 0.7rem;
-}
-.fb .pv2-hours b {
-	font-family: var(--font-heading);
-	font-size: 1.25rem;
-	color: var(--fb-title);
-}
-.fb .pv2-verdict {
-	margin-top: 6px;
-	font-size: 1.4rem;
-}
-
-/* 3 · Steam style */
+/* Post card, laid out like Steam's review box */
 .fb .pv3-head {
 	display: flex;
 	align-items: center;
@@ -1078,63 +978,40 @@
 	line-height: 1;
 }
 
-/* 4 · Labelled facts */
-.fb .pv4-facts {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 6px 22px;
-	padding-bottom: 8px;
-	margin-bottom: 4px;
-	border-bottom: 1px solid var(--fb-line);
+.fb .pv3-title span:last-child {
+	color: var(--fb-muted);
+	font-size: 0.75rem;
 }
-.fb .pv4-fact {
+.fb .pv3-right {
 	display: flex;
 	flex-direction: column;
+	align-items: flex-end;
+	gap: 2px;
+	text-align: right;
 }
-.fb .pv4-label {
-	font-size: 0.65rem;
-	font-weight: 700;
-	letter-spacing: 0.06em;
-	text-transform: uppercase;
-	color: var(--fb-muted);
-}
-.fb .pv4-value {
-	font-weight: 600;
-	color: var(--fb-title);
-}
-.fb .pv4-fact.vote-up .pv4-value {
-	color: var(--fb-positive);
-}
-.fb .pv4-fact.vote-down .pv4-value {
-	color: var(--fb-negative);
-}
-
-/* 5 · Stripe */
-.fb .pv5 {
-	border-left: 4px solid var(--fb-line);
-	padding-left: 12px;
-}
-.fb .pv5.is-up {
-	border-left-color: var(--fb-positive);
-}
-.fb .pv5.is-down {
-	border-left-color: var(--fb-negative);
-}
-.fb .pv5-line {
+.fb .pv3-triage {
 	display: flex;
-	align-items: center;
-	gap: 8px;
-	font-size: 1rem;
-	color: var(--fb-title);
-}
-.fb .pv5-flag {
-	font-size: 1.4rem;
-	line-height: 1;
-}
-.fb .pv5-hours {
+	gap: 10px;
+	font-size: 0.75rem;
 	color: var(--fb-ink-2);
 }
-.fb .pv-note {
-	font-weight: 400;
-	color: var(--fb-muted);
+.fb .pv3-urgency {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+}
+.fb .pv3-urgency .dot {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: var(--fb-muted);
+}
+.fb .pv3-urgency.u-urgent .dot {
+	background: var(--fb-critical);
+}
+.fb .pv3-urgency.u-high .dot {
+	background: var(--fb-serious);
+}
+.fb .pv3-urgency.u-medium .dot {
+	background: var(--fb-warning);
 }

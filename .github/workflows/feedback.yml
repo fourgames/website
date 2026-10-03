@@ -66,6 +66,7 @@ jobs:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_MENTION: ${{ secrets.DISCORD_MENTION }}
+          GH_TOKEN: ${{ github.token }}
 
       - name: Start the next run
         if: ${{ !inputs.test_discord && success() }}

@@ -733,7 +733,15 @@ def full_run():
     if not notify.WEBHOOK:
         status.fail("discord", "No DISCORD_WEBHOOK_URL secret is set, so alerts aren't sent.")
     index = load(DATA / "index.json", {"schemaVersion": SCHEMA_VERSION, "games": [], "dailyReportAt": None})
+    # What the website shows about each game; when it changes (a new store page, a release, a sale),
+    # loop.sh starts a site rebuild instead of waiting for the daily one.
+    site_view = lambda games: sorted((g["appId"], g["name"], g["status"], g.get("released"), g.get("discount")) for g in games)
+    before = site_view(index["games"])
     index["games"] = steam.fetch_games(index["games"])
+    if before and site_view(index["games"]) != before:
+        (HERE / ".cache").mkdir(exist_ok=True)
+        (HERE / ".cache" / "rebuild-site").touch()
+        print("[site] game list changed: the website will be rebuilt")
     budget = {"left": MAX_TRIAGE_PER_RUN}
     states, changed = {}, []
     for game in index["games"]:

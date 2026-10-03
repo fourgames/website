@@ -32,6 +32,8 @@ Every post's text is stored, so a post deleted on Steam isn't lost here. A file 
 
 Each workflow run does a full run every 10 minutes for about 4 hours (`loop.sh`), then starts the next run; the schedule starts one if none is going. A run with nothing new only reads from Steam: the review list, player count and update posts, and the first page of each discussion forum (threads are opened only when they have new activity). Claude is only called for new or edited posts.
 
+When a game's store entry changes (a new public store page, a release, a sale), the run also starts the site's *Build and deploy* workflow, so the website shows it within minutes instead of at the daily rebuild.
+
 Starting the workflow by hand (*Run workflow*) replaces the current run.
 
 ## Secrets

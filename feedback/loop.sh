@@ -31,6 +31,10 @@ while :; do
   # Other commits (yours, or code changes) land between checks.
   git pull -q --rebase origin main || git rebase --abort 2>/dev/null
   python feedback/run.py && commit || echo "::warning::This run failed; the next one tries again."
+  # A new store page, release or sale: rebuild the site now rather than at the daily rebuild.
+  if [ -f feedback/.cache/rebuild-site ]; then
+    gh workflow run static.yml --ref main && rm feedback/.cache/rebuild-site
+  fi
   (( SECONDS + tick > end )) && break
   sleep $(( tick - (SECONDS - started) > 0 ? tick - (SECONDS - started) : 0 ))
 done

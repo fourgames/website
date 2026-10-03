@@ -885,3 +885,48 @@
 	color: var(--fb-title);
 	margin: 0 0 1.25rem;
 }
+
+/* 🔊 Listen buttons */
+.fb .text-row {
+	display: flex;
+	gap: 8px;
+	align-items: flex-start;
+}
+.fb .text-row .text {
+	flex: 1;
+	min-width: 0;
+}
+.fb .speak {
+	flex: none;
+	background: var(--fb-card-2);
+	border: 0;
+	border-radius: 99px;
+	width: 30px;
+	height: 30px;
+	font-size: 0.875rem;
+	line-height: 1;
+	cursor: pointer;
+	margin-top: 4px;
+	opacity: 0.75;
+}
+.fb .speak:hover {
+	opacity: 1;
+	background: var(--fb-hover);
+}
+.fb .speak.on {
+	opacity: 1;
+	background: var(--fb-accent);
+	animation: fb-pulse 1.2s ease-in-out infinite;
+}
+.fb .reply .speak {
+	width: 24px;
+	height: 24px;
+	margin: 0;
+	vertical-align: middle;
+	font-size: 0.75rem;
+}
+@keyframes fb-pulse {
+	50% {
+		opacity: 0.6;
+	}
+}

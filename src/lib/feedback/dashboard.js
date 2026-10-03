@@ -12,7 +12,7 @@ let DATA = DATA_OVERRIDE || `${RAW}/main/feedback/data`;
 const DAY = 86400;
 const URGENCY = { urgent: "Urgent", high: "High", medium: "Medium", low: "Low" };
 const KIND = { review: "Review", topic: "Thread", reply: "Reply" };
-const state = { index: null, games: {}, game: null, tab: "overview", filters: { issues: { status: "active", q: "" }, suggestions: { status: "active", q: "" }, feed: { kind: "all", category: "all", q: "", shown: 50 }, stats: { range: 0 } } };
+const state = { index: null, games: {}, game: null, tab: "overview", filters: { issues: { status: "active", q: "" }, suggestions: { status: "active", q: "" }, feed: { kind: "all", category: "all", q: "", shown: 50 }, stats: { range: 0 }, replies: { show: "open" } } };
 
 const store = {
   get(k) { try { return localStorage.getItem("fb-dash:" + k); } catch { return null; } },
@@ -426,6 +426,36 @@ function suggestionText(issue, posts) {
   ].join("\n");
 }
 
+// 🔊 Read a text aloud with the browser's own voices (the system voices on a Mac). The language
+// picks a matching voice, so a Korean original is read by a Korean voice. Pressing it again stops.
+const SPEECH_LANG = {
+  english: "en-US", korean: "ko-KR", japanese: "ja-JP", "simplified chinese": "zh-CN", chinese: "zh-CN",
+  "chinese (simplified)": "zh-CN", "traditional chinese": "zh-TW", "chinese (traditional)": "zh-TW", german: "de-DE",
+  french: "fr-FR", spanish: "es-ES", "latin american spanish": "es-MX", portuguese: "pt-PT", "brazilian portuguese": "pt-BR",
+  "portuguese (brazil)": "pt-BR", russian: "ru-RU", polish: "pl-PL", italian: "it-IT", turkish: "tr-TR", ukrainian: "uk-UA",
+  dutch: "nl-NL", swedish: "sv-SE", danish: "da-DK", norwegian: "nb-NO", finnish: "fi-FI", czech: "cs-CZ", hungarian: "hu-HU",
+  romanian: "ro-RO", thai: "th-TH", vietnamese: "vi-VN", indonesian: "id-ID", greek: "el-GR", arabic: "ar-SA",
+};
+function speakButton(text, language) {
+  if (!("speechSynthesis" in window) || !text) return null;
+  const button = h("button.speak", { type: "button", title: "Listen", "aria-label": "Listen" }, "🔊");
+  button.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const playing = button.classList.contains("on");
+    speechSynthesis.cancel();
+    document.querySelectorAll(".fb .speak.on").forEach((b) => b.classList.remove("on"));
+    if (playing) return;
+    const say = new SpeechSynthesisUtterance(text);
+    say.lang = SPEECH_LANG[(language || "english").toLowerCase()] || "en-US";
+    const voice = speechSynthesis.getVoices().find((v) => v.lang.replace("_", "-") === say.lang);
+    if (voice) say.voice = voice;
+    say.onend = say.onerror = () => button.classList.remove("on");
+    button.classList.add("on");
+    speechSynthesis.speak(say);
+  });
+  return button;
+}
+
 function postView(item) {
   const t = item.triage || {};
   const parent = item.topic ? state.game.items[item.topic] : null;
@@ -449,8 +479,8 @@ function postView(item) {
       h("a", { href: item.url, target: "_blank", rel: "noopener" }, "Open on Steam ↗")),
     parent ? h("div.meta", "in “", parent.title || "thread", "”") : null,
     item.title ? h("div", h("b", item.title)) : null,
-    h("div.text", english(item)),
-    translated ? h("details", h("summary", `Original (${t.language})`), h("div.text", item.text)) : null,
+    h("div.text-row", h("div.text", english(item)), speakButton([item.title, english(item)].filter(Boolean).join(". "), "english")),
+    translated ? h("details", h("summary", `Original (${t.language})`), h("div.text-row", h("div.text", item.text), speakButton(item.text, t.language))) : null,
     (item.versions || []).length ? h("details", h("summary", `Earlier versions (${item.versions.length})`),
       ...item.versions.slice().reverse().map((v) => h("div.text", `${fmtDate(v.at)}${v.votedUp == null ? "" : v.votedUp ? " · 👍" : " · 👎"}\n${v.title ? v.title + "\n" : ""}${v.text}`))) : null,
     item.devResponse ? h("details", h("summary", "Your reply on Steam"), h("div.text", item.devResponse)) : null,
@@ -486,7 +516,7 @@ function replyCard(item) {
     h("div.meta", h("span.badge.s-fixed", `✓ Fixed in ${r.version}`), h("b", issue?.title || "")),
     h("div.reply",
       h("div.reply-row",
-        h("div", h("div", "💬 ", r.text), r.text !== r.english ? h("div.en", r.english) : null),
+        h("div", h("div", "💬 ", r.text, " ", speakButton(r.text, item.triage?.language)), r.text !== r.english ? h("div.en", r.english) : null),
         h("div.actions", { style: "margin:0;flex:none" },
           h("button.btn.primary", { onclick: (e) => copy(r.text, e.currentTarget) }, "Copy reply"),
           h("a.btn.link-btn", { href: item.url, target: "_blank", rel: "noopener" }, item.kind === "review" ? "Reply on Steam ↗" : "Open thread ↗"),
@@ -494,11 +524,46 @@ function replyCard(item) {
     postView(item));
 }
 
+// Your answer to a player's post: the developer response on a review, or your first post in the
+// thread after theirs.
+function yourReply(item) {
+  if (item.devResponse) return { text: item.devResponse, at: null };
+  const thread = item.topic || item.id;
+  const mine = items().filter((i) => i.dev && (i.id === thread || i.topic === thread) && i.created > item.created)
+    .sort((a, b) => a.created - b.created)[0];
+  return mine ? { text: mine.text, at: mine.created } : null;
+}
+
+function repliedCard(item) {
+  const mine = yourReply(item);
+  return h("div.card",
+    h("div.meta", h("span.badge.s-fixed", "✓ Replied"), mine?.at ? h("span", fmtDate(mine.at)) : null,
+      !mine ? h("span", "marked done here") : null),
+    mine ? h("div.reply", h("div.reply-row", h("div", h("div.en", "Your reply"), h("div", mine.text, " ", speakButton(mine.text, item.triage?.language))))) : null,
+    postView(item));
+}
+
 function repliesView() {
-  const list = toReply();
+  const f = state.filters.replies;
+  const done = new Set((store.get("replied") || "").split(",").filter(Boolean));
+  const open = toReply();
+  // Every player post you've answered, plus drafts you marked done here.
+  const answered = items()
+    .filter((i) => !i.dev && (replied(i) || (i.fixReply && done.has(i.id))))
+    .sort((a, b) => b.created - a.created);
+  const list = h("div");
+  const draw = () => {
+    const cards = f.show === "open" ? open.map(replyCard)
+      : f.show === "replied" ? answered.map(repliedCard)
+      : [...open.map(replyCard), ...answered.map(repliedCard)];
+    const empty = { open: "Nothing to reply to right now.", replied: "You haven't replied to any posts yet.", all: "Nothing here yet." }[f.show];
+    list.replaceChildren(...(cards.length ? cards : [h("p.empty", empty)]));
+  };
   const intro = h("p.updated", { style: "margin:0 0 12px" },
-    "Negative reviews and threads about something an update has since fixed. Steam suggests replying in cases like these, briefly: say what was fixed. Each one leaves this list once you've replied on Steam.");
-  return h("div", intro, ...(list.length ? list.map(replyCard) : [h("p.empty", "Nothing to reply to right now.")]));
+    "To reply: negative reviews and threads about something an update has since fixed. Steam suggests replying in cases like these, briefly: say what was fixed. Replied: posts you've already answered on Steam.");
+  const filter = chips([["open", `To reply (${open.length})`], ["replied", `Replied (${answered.length})`], ["all", "All"]], f.show, (v) => { f.show = v; draw(); }, "Show");
+  draw();
+  return h("div", intro, h("div.filters", filter), list);
 }
 
 // Bugs that need you now: reported again after a fix, or high/urgent and still open.

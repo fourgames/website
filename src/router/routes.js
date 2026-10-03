@@ -40,12 +40,26 @@ export const routes = [
 		component: () => import("@/views/WorkWithUsView.vue"),
 		meta: { head: { key: "jobs" } },
 	},
+	// Private player-feedback dashboard: English only, never indexed, not in the sitemap.
+	{
+		path: "/fb-dash",
+		name: "feedback",
+		component: () => import("@/views/FeedbackView.vue"),
+		meta: {
+			head: {
+				title: "Player feedback",
+				description: "Private player feedback dashboard.",
+				robots: "noindex, nofollow",
+			},
+		},
+	},
 	// GitHub Pages also serves the physical files — keep one canonical URL per page.
 	{ path: `${L}/index.html`, redirect: keepLocale("/") },
 	{ path: `${L}/games.html`, redirect: keepLocale("/games") },
 	{ path: `${L}/videos.html`, redirect: keepLocale("/videos") },
 	{ path: `${L}/code.html`, redirect: keepLocale("/code") },
 	{ path: `${L}/jobs.html`, redirect: keepLocale("/jobs") },
+	{ path: "/fb-dash.html", redirect: "/fb-dash" },
 	{
 		path: "/:pathMatch(.*)*",
 		name: "not-found",
@@ -64,5 +78,6 @@ export const prerenderTargets = [
 	{ url: "/videos", file: "videos.html", sitemap: true },
 	{ url: "/code", file: "code.html", sitemap: true },
 	{ url: "/jobs", file: "jobs.html", sitemap: true },
+	{ url: "/fb-dash", file: "fb-dash.html", sitemap: false, localized: false },
 	{ url: "/404", file: "404.html", sitemap: false, localized: false },
 ];

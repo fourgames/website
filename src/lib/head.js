@@ -13,7 +13,8 @@ const OG_IMAGE = {
 export function getHead(route, i18n) {
 	const { t, locale } = i18n;
 	const head = route.meta?.head ?? {};
-	const pageTitle = head.key ? t(`head.${head.key}.title`) : SITE.name;
+	// A page without translations (the private dashboard) gives its title and description as text.
+	const pageTitle = head.title ?? (head.key ? t(`head.${head.key}.title`) : SITE.name);
 	const title = head.absoluteTitle ? pageTitle : `${pageTitle} · ${SITE.name}`;
 	const robots = head.robots ?? "index, follow";
 	const indexable = !robots.includes("noindex");
@@ -28,7 +29,7 @@ export function getHead(route, i18n) {
 		: [];
 	return {
 		title,
-		description: head.key ? t(`head.${head.key}.description`) : t("site.tagline"),
+		description: head.description ?? (head.key ? t(`head.${head.key}.description`) : t("site.tagline")),
 		robots,
 		canonical: indexable ? SITE.url + localizePath(englishPath, locale.code) : null,
 		alternates,

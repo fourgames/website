@@ -1,6 +1,6 @@
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import { RouterLink, useRoute } from "vue-router";
 import Icon from "@/components/ui/Icon.vue";
 import LogoMark from "@/components/ui/LogoMark.vue";
 import NavLink from "@/components/ui/NavLink.vue";
@@ -26,8 +26,8 @@ watch(
 	() => (open.value = false),
 );
 
-// The private feedback dashboard (public/fb-dash.html) isn't linked anywhere, but once a browser has
-// opened it, it marks itself in localStorage and gets a header link back to it. Read after mount
+// The private feedback dashboard (/fb-dash) isn't linked anywhere, but once a browser has opened it,
+// it marks itself in localStorage and gets a header link back to it. Read after mount
 // only, so the prerendered HTML (and every other visitor) never has the link.
 const showFeedback = ref(false);
 onMounted(() => {
@@ -100,7 +100,14 @@ function onLogoClick() {
 					</li>
 					<!-- Private and English-only, so not translated. -->
 					<li v-if="showFeedback">
-						<a href="/fb-dash" class="nav-link" @click="open = false">Feedback</a>
+						<!-- English-only page, so no NavLink (that would localise it to /ja/fb-dash). -->
+						<RouterLink
+							to="/fb-dash"
+							class="nav-link aria-[current=page]:text-navbar-current"
+							@click="open = false"
+						>
+							Feedback
+						</RouterLink>
 					</li>
 				</ul>
 				<ul>

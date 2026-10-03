@@ -998,12 +998,6 @@
 .fb .post.pc.neutral {
 	border-left-color: color-mix(in srgb, var(--fb-muted) 55%, transparent);
 }
-.fb .pc-top {
-	display: flex;
-	align-items: center;
-	gap: 14px;
-	flex-wrap: wrap;
-}
 .fb .pc-type {
 	display: inline-flex;
 	align-items: center;
@@ -1026,31 +1020,6 @@
 	font-size: 0.8125rem;
 	font-weight: 600;
 	color: var(--fb-ink-2);
-}
-.fb .pc-lang {
-	margin-left: auto;
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
-	font-weight: 600;
-	color: var(--fb-title);
-}
-.fb .pc-sub {
-	display: flex;
-	align-items: center;
-	flex-wrap: wrap;
-	gap: 4px 14px;
-	font-size: 0.8125rem;
-	color: var(--fb-ink-2);
-	margin: 4px 0 6px;
-	padding-bottom: 8px;
-	border-bottom: 1px solid var(--fb-line);
-}
-.fb .pc-sub .vote-up,
-.fb .pc-sub .vote-down {
-	display: inline-flex;
-	align-items: center;
-	gap: 6px;
 }
 .fb .thumb {
 	width: 20px;
@@ -1157,4 +1126,78 @@
 @media (prefers-color-scheme: dark) {
 	.fb .pk-suggestion { color: #b78ae0; }
 	.fb .pk-question { color: #4fb2ff; }
+}
+.fb .pc-top {
+	display: flex;
+	align-items: flex-start;
+	gap: 16px;
+	padding-bottom: 8px;
+	margin-bottom: 6px;
+	border-bottom: 1px solid var(--fb-line);
+}
+.fb .pc-main {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px 14px;
+	padding-top: 2px;
+}
+.fb .pc-aside {
+	flex: none;
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 3px;
+	padding-left: 16px;
+	border-left: 1px solid var(--fb-line);
+	font-size: 0.75rem;
+	color: var(--fb-muted);
+	text-align: right;
+}
+.fb .pc-aside-row {
+	display: flex;
+	align-items: center;
+	justify-content: flex-end;
+	flex-wrap: wrap;
+	gap: 4px 10px;
+}
+.fb .pc-aside .pc-player {
+	font-size: 0.75rem;
+}
+.fb .pc-lang {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	color: var(--fb-ink-2);
+	font-weight: 600;
+}
+.fb .pc-aside .vote-up,
+.fb .pc-aside .vote-down {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font-weight: 600;
+}
+.fb .pc-aside .thumb {
+	width: 16px;
+	height: 16px;
+}
+.fb .pc-aside .pv3-flag {
+	font-size: 1rem;
+}
+@media (width < 40rem) {
+	.fb .pc-top {
+		flex-direction: column;
+	}
+	.fb .pc-aside {
+		align-items: flex-start;
+		border-left: 0;
+		padding-left: 0;
+		text-align: left;
+	}
+	.fb .pc-aside-row {
+		justify-content: flex-start;
+	}
 }

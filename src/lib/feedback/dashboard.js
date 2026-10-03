@@ -545,19 +545,23 @@ function postView(item) {
   const edge = p.verdict ? p.verdict[0].replace("vote-", "is-") : "neutral";
   const bars = u ? h(`span.bars4.pt-${u}`, ...[1, 2, 3, 4].map((n) => h(n <= PRIORITY_BARS[u] ? "i.on" : "i"))) : null;
   const up = p.verdict && p.verdict[0] === "vote-up";
+  // Left: only what matters when skimming hundreds of posts, the type and priority. Right, smaller
+  // and behind a divider: who wrote it, in what language, their verdict, hours and date.
   return h(`div.post.pc.${edge}`,
     h("div.pc-top",
-      kind ? h(`span.pc-type.tt-text-${cat}`, typeIcon(cat), kind) : h("span.pc-type.pc-kind", p.kind),
-      u ? h("span.pc-prio", bars, `${URGENCY[u]} priority`) : null,
-      p.t.tone && p.t.tone !== "sincere" ? h("span.pc-tone", { title: "How the post is meant" }, { joke: "Joke", sarcastic: "Sarcastic", mixed: "Partly joking" }[p.t.tone]) : null,
-      h("span.pc-lang", h("span.pv3-flag", p.flag), p.language)),
-    h("div.pc-sub",
-      item.author?.name && !item.dev ? h("a.pc-player", { href: item.author.profile || item.url, target: "_blank", rel: "noopener", title: "Steam profile" },
-        item.author.avatar ? h("img.avatar", { src: item.author.avatar, alt: "", loading: "lazy" }) : null, item.author.name) : null,
-      p.verdict ? h(`span.${p.verdict[0]}`, h("img.thumb", { src: up ? STEAM_THUMB.up : STEAM_THUMB.down, alt: "" }), p.verdict[2]) : null,
-      p.hours ? h("span", `${p.hours} on record`, p.atReview ? ` (${p.atReview})` : "") : p.who && item.dev ? h("span", p.who) : null,
-      h("span", `Posted ${p.when}`),
-      item.kind !== "review" && kind ? h("span", KIND[item.kind]) : null),
+      h("div.pc-main",
+        kind ? h(`span.pc-type.tt-text-${cat}`, typeIcon(cat), kind) : h("span.pc-type.pc-kind", p.kind),
+        u ? h("span.pc-prio", bars, `${URGENCY[u]} priority`) : null,
+        p.t.tone && p.t.tone !== "sincere" ? h("span.pc-tone", { title: "How the post is meant" }, { joke: "Joke", sarcastic: "Sarcastic", mixed: "Partly joking" }[p.t.tone]) : null),
+      h("div.pc-aside",
+        h("div.pc-aside-row",
+          item.author?.name && !item.dev ? h("a.pc-player", { href: item.author.profile || item.url, target: "_blank", rel: "noopener", title: "Steam profile" },
+            item.author.avatar ? h("img.avatar", { src: item.author.avatar, alt: "", loading: "lazy" }) : null, item.author.name) : p.who ? h("span", p.who) : null,
+          p.flag || p.language ? h("span.pc-lang", p.flag ? h("span.pv3-flag", p.flag) : null, p.language) : null),
+        h("div.pc-aside-row",
+          p.verdict ? h(`span.${p.verdict[0]}`, h("img.thumb", { src: up ? STEAM_THUMB.up : STEAM_THUMB.down, alt: "" }), p.verdict[2]) : item.kind !== "review" ? h("span", KIND[item.kind]) : null,
+          p.hours ? h("span", `${p.hours} on record`, p.atReview ? ` (${p.atReview})` : "") : null,
+          h("span", p.when)))),
     ...p.body,
     h("div.meta", ...p.flags, item.forum && item.kind !== "review" ? h("span", item.forum) : null, p.link));
 }

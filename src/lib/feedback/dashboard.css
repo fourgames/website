@@ -671,10 +671,6 @@
 	.fb .top img {
 		display: none;
 	}
-	.fb .status-row {
-		flex-direction: column;
-		align-items: flex-start;
-	}
 	.fb .top h2 {
 		font-size: 1.25rem;
 	}
@@ -762,62 +758,72 @@
 	padding: 4px 12px;
 }
 
-/* Status bar: which services the last run could reach */
-.fb .status {
-	margin-bottom: 1.25rem;
-}
-.fb .status-ok {
+/* In the page header: collecting, last change, and a card per service */
+.fb .svc-run {
 	display: inline-flex;
 	align-items: center;
 	gap: 8px;
+	margin-bottom: 12px;
 	color: var(--fb-muted);
 	font-size: 0.8125rem;
 }
-.fb .status-ok .dot {
+.fb .svc-dot {
 	width: 8px;
 	height: 8px;
+	flex: none;
 	border-radius: 50%;
+	background: var(--fb-muted);
+}
+.fb .svc-run .svc-dot,
+.fb .svc-ok .svc-dot {
 	background: #2f9e6a;
 }
-.fb .status-bad {
+.fb .svc-run-bad .svc-dot,
+.fb .svc-bad .svc-dot {
+	background: var(--fb-critical);
+}
+.fb .svc-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+	gap: 10px;
+}
+.fb .svc {
 	background: var(--fb-card);
-	box-shadow: var(--fb-shadow), inset 4px 0 0 var(--fb-critical);
+	box-shadow: var(--fb-shadow);
 	border-radius: var(--radius-card);
-	padding: 0.875rem 1rem 0.5rem 1.25rem;
+	padding: 10px 12px;
 }
-.fb .status-head {
-	font-family: var(--font-heading);
-	font-weight: 700;
-	color: var(--fb-critical);
-	margin-bottom: 4px;
+.fb .svc-bad {
+	box-shadow: var(--fb-shadow), inset 3px 0 0 var(--fb-critical);
 }
-.fb .status-fine {
-	margin-left: 10px;
-	font-family: var(--font-sans);
-	font-weight: 400;
-	font-size: 0.75rem;
-	color: var(--fb-muted);
-}
-.fb .status-row {
+.fb .svc-head {
 	display: flex;
 	align-items: center;
-	justify-content: space-between;
-	gap: 12px;
-	padding: 8px 0;
-	border-top: 1px solid var(--fb-line);
+	gap: 8px;
 }
-.fb .status-row:first-of-type {
-	border-top: 0;
+.fb .svc-state {
+	margin-left: auto;
+	font-size: 0.75rem;
+	color: var(--fb-muted);
 }
-.fb .status-msg {
+.fb .svc-bad .svc-state {
+	color: var(--fb-critical);
+}
+.fb .svc-what {
+	margin-top: 2px;
+	font-size: 0.8125rem;
+	color: var(--fb-muted);
+}
+.fb .svc-msg {
+	margin-top: 6px;
+	font-size: 0.8125rem;
 	color: var(--fb-ink);
 }
-.fb .status-since {
+.fb .svc-since {
 	color: var(--fb-muted);
-	font-size: 0.75rem;
 }
-.fb .status-row .btn {
-	flex: none;
+.fb .svc-fix {
+	margin-top: 8px;
 	text-decoration: none;
 	display: inline-flex;
 	align-items: center;

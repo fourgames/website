@@ -15,8 +15,11 @@ onMounted(async () => {
 <template>
 	<PageHeader
 		title="Player feedback"
-		description="Reviews, discussions, issues and sales for every game, triaged by Claude."
-	/>
+		description="Reviews, discussions, bugs and ideas for every game, sorted by Claude."
+	>
+		<!-- Filled by the dashboard: how often it collects and whether each service works. -->
+		<div class="fb"><div id="fb-status"></div></div>
+	</PageHeader>
 	<section class="bg-bg">
 		<div class="container-page padded">
 			<div ref="root" class="fb">

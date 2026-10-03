@@ -183,32 +183,39 @@ async function init() {
   if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : orderedGames()[0].appId);
 }
 
-// What the last runs could and couldn't reach (feedback/status.py), with the fix for each problem.
+// The services each run uses (feedback/status.py), what they're for, and where a problem is fixed.
 const SERVICES = {
-  claude: ["Claude (translation and triage)", "https://platform.claude.com/settings/billing", "Add credit"],
-  steam: ["Steam reviews, players and updates", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
-  forums: ["Steam discussions", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
-  discord: ["Discord alerts", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
+  steam: ["Steam", "Reviews, player counts and updates", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
+  forums: ["Steam discussions", "Threads, replies and announcement comments", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
+  claude: ["Claude", "Translates and sorts new posts", "https://platform.claude.com/settings/billing", "Add credit"],
+  discord: ["Discord", "Pings for urgent bugs and flipped reviews", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
 };
+
+// In the page header: how often it collects, when something last changed, and a card per service.
 function renderStatus() {
-  const all = Object.entries(state.index.status || {}).filter(([key]) => SERVICES[key]);
-  const problems = all.filter(([, s]) => !s.ok);
   const el = document.getElementById("fb-status");
-  if (!all.length) return el.replaceChildren();
-  if (!problems.length) {
-    return el.replaceChildren(h("div.status-ok", h("span.dot"), `All ${all.length} services worked on the last run.`));
-  }
-  el.replaceChildren(h("div.status-bad",
-    h("div.status-head", "⚠ ", problems.length === 1 ? "1 service needs attention" : `${problems.length} services need attention`,
-      h("span.status-fine", `${all.length - problems.length} of ${all.length} working`)),
-    ...problems.map(([key, s]) => {
-      const [label, href, action] = SERVICES[key] || [key, "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"];
-      // Out of credit is the one with a fix behind a button; other services link to where they're fixed.
-      const fix = key === "claude" && !/credit/i.test(s.message || "") ? ["https://platform.claude.com/settings/keys", "API keys"] : [href, action];
-      return h("div.status-row",
-        h("div", h("b", label), h("div.status-msg", s.message || "Failed."), h("div.status-since", `since ${ago(s.since)}`)),
-        h("a.btn.primary", { href: fix[0], target: "_blank", rel: "noopener" }, fix[1], " ↗"));
-    })));
+  if (!el || !state.index) return;
+  const status = state.index.status || {};
+  const checks = state.checks;
+  const run = [
+    checks ? (checks.running ? "Collecting every 10 min" : checks.ok ? `Last collected ${ago(checks.at)}` : "Collecting stopped") : null,
+    state.dataChanged ? `last change ${ago(state.dataChanged)}` : null,
+  ].filter(Boolean);
+  const card = ([key, [name, what, href, action]]) => {
+    const s = status[key];
+    const state_ = !s ? "idle" : s.ok ? "ok" : "bad";
+    // Out of credit is the one with a fix behind a button; other services link to where they're fixed.
+    const fix = key === "claude" && s && !/credit/i.test(s.message || "") ? ["https://platform.claude.com/settings/keys", "API keys"] : [href, action];
+    return h(`div.svc.svc-${state_}`,
+      h("div.svc-head", h("span.svc-dot"), h("b", name), h("span.svc-state", { ok: "Working", bad: "Needs attention", idle: key === "discord" ? "No alerts yet" : "Not used yet" }[state_])),
+      h("div.svc-what", what),
+      state_ === "bad" ? h("div.svc-msg", s.message || "Failed.", h("span.svc-since", ` · since ${ago(s.since)}`)) : null,
+      state_ === "bad" ? h("a.btn.primary.svc-fix", { href: fix[0], target: "_blank", rel: "noopener" }, fix[1], " ↗") : null);
+  };
+  el.replaceChildren(...[
+    run.length ? h(`div.svc-run${checks && !checks.running && !checks.ok ? ".svc-run-bad" : ""}`, h("span.svc-dot"), run.join(" · ")) : null,
+    h("div.svc-grid", ...Object.entries(SERVICES).map(card)),
+  ].filter(Boolean));
 }
 
 // Released games first, newest release on top; then coming-soon games, soonest first.
@@ -276,8 +283,6 @@ function renderHeader() {
   const release = (g.releases || []).filter((r) => r.version).at(-1) || (g.releases || []).at(-1);
   document.getElementById("fb-updated").replaceChildren([
     release ? `Latest update ${release.version ? "v" + release.version : release.name}, ${ago(release.time)}` : null,
-    state.dataChanged ? `last change ${ago(state.dataChanged)}` : null,
-    state.checks ? (state.checks.running ? "checking every 10 min" : state.checks.ok ? `last checked ${ago(state.checks.at)}` : "checks stopped (see GitHub Actions)") : null,
   ].filter(Boolean).join(" · "));
   const id = state.game.appId;
   const links = [
@@ -1165,7 +1170,6 @@ function reviewsChart(start, end, releases) {
 // ---------------------------------------------------------------------------
 
 const SHELL = `
-<div class="status" id="fb-status"></div>
 <div class="fb-layout">
   <aside class="fb-side" aria-label="Games and views">
     <div id="fb-games-side"></div>
@@ -1202,6 +1206,7 @@ document.addEventListener("keydown", (e) => {
 const REFRESH_MS = 5 * 60 * 1000;
 const FULL_RELOAD_MS = 12 * 3600 * 1000;
 let refreshTimer = null;
+let clockTimer = null;
 const loadedAt = Date.now();
 
 async function refresh() {
@@ -1247,4 +1252,11 @@ export function mount(root) {
   init();
   clearInterval(refreshTimer);
   refreshTimer = setInterval(refresh, REFRESH_MS);
+  // The header's "x min ago" counts up every minute on its own; only new data needs the network.
+  clearInterval(clockTimer);
+  clockTimer = setInterval(() => {
+    if (!document.getElementById("fb-view")) return clearInterval(clockTimer);
+    renderStatus();
+    if (state.game) renderHeader();
+  }, 60 * 1000);
 }

@@ -271,20 +271,17 @@ def add_profiles(state):
         item["author"] = author
 
 
-LONG_POST = 300  # characters; longer posts get key points
-
-
 def add_tone(state, game, budget):
     """Posts triaged before triage had tone, note and key points get just those filled in, once;
-    their category, issue and alerts stay as they are."""
+    their category, issue and alerts stay as they are. (An empty points list means "checked, one
+    point", so a post is only asked about once.)"""
     import triage
 
     for item in state["items"].values():
         t = item.get("triage")
         if not t or item.get("dev") or budget["left"] <= 0:
             continue
-        long = len(item.get("text") or "") >= LONG_POST
-        if "tone" in t and (not long or "points" in t):
+        if "tone" in t and "points" in t:
             continue
         try:
             result = triage.triage(game["name"], item, [], thread_context(state, item))
@@ -327,8 +324,6 @@ def triage_pending(state, game, run, budget):
         result = t.model_dump(exclude={"existing_issue", "new_issue_title"})
         if not result["english"].strip() or result["english"].strip() == (item.get("text") or "").strip():
             result.pop("english")  # an English post: the dashboard shows its own text
-        if not result["points"]:
-            result.pop("points")
         item["triage"] = result
         item["pending"] = False
         assign_issue(state, item, t, run)

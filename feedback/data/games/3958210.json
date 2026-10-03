@@ -44,7 +44,61 @@
      "text": "Thank you for the detailed feedback—we hear your points about progression clarity, mechanic incentives, and UI feedback, and we're grateful you're willing to revisit the game if we improve it.",
      "english": "Thank you for the detailed feedback—we hear your points about progression clarity, mechanic incentives, and UI feedback, and we're grateful you're willing to revisit the game if we improve it."
     },
-    "tone": "sincere"
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "complaint",
+      "text": "Jetpack has no fuel gauge and no incentive to upgrade beyond a couple times since upgrades only increase speed."
+     },
+     {
+      "kind": "complaint",
+      "text": "Digging tool (chainsaw) has minimal upgrade path with only radius increases and no visual changes."
+     },
+     {
+      "kind": "complaint",
+      "text": "Chainsaw visually glows suggesting heat/overheat mechanic but doesn't actually overheat, creating false expectations."
+     },
+     {
+      "kind": "complaint",
+      "text": "No fuel or energy system means no reason to return to surface once backpack is upgraded beyond selling items."
+     },
+     {
+      "kind": "complaint",
+      "text": "Backpack upgrades are only flat doubling of size, not varied progression options."
+     },
+     {
+      "kind": "complaint",
+      "text": "Collected items just add pack space rather than being distinct collectibles with personality or discovery value."
+     },
+     {
+      "kind": "complaint",
+      "text": "Lighting system is pointless since going deeper doesn't increase darkness."
+     },
+     {
+      "kind": "complaint",
+      "text": "Dynamite exists but is unused and has no upgrades."
+     },
+     {
+      "kind": "complaint",
+      "text": "Tent at surface has unclear function with no UI notification."
+     },
+     {
+      "kind": "complaint",
+      "text": "Hole is small enough to stand in center and hit all sides with full chainsaw range, no sense of deep exploration."
+     },
+     {
+      "kind": "complaint",
+      "text": "No hidden collectibles, side paths, or environmental variety in the hole."
+     },
+     {
+      "kind": "complaint",
+      "text": "UI doesn't show exact upgrade values (e.g. 'radius 1 > 2') making upgrades feel unclear."
+     },
+     {
+      "kind": "suggestion",
+      "text": "Add meaningful progression loops and mechanics that encourage surface returns and deeper exploration."
+     }
+    ]
    },
    "issue": "I6",
    "playtimeForever": 0.7,
@@ -210,7 +264,25 @@
      "text": "Vielen Dank für das detaillierte Feedback und toll, dass dir die Soundverbesserung gefallen hat! Wir arbeiten weiterhin daran, das Spiel zu verfeinern.",
      "english": "Thank you for the detailed feedback, and we're glad you appreciated the sound improvement! We're continuing to refine the game."
     },
-    "tone": "sincere"
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "complaint",
+      "text": "Sound effects were extremely harsh and unpleasant to listen to, sounding like dental work mixed with breaking bottles."
+     },
+     {
+      "kind": "complaint",
+      "text": "Dynamite tool is poor value for money, creating only small holes."
+     },
+     {
+      "kind": "suggestion",
+      "text": "Game lacks content to discover and progression feels too fast; all upgrades unlocked in first quarter of playtime."
+     },
+     {
+      "kind": "praise",
+      "text": "Developer responded very quickly to sound complaint and has been releasing updates frequently."
+     }
+    ]
    },
    "issue": "I3",
    "playtimeForever": 1.9,
@@ -292,7 +364,17 @@
      "text": "Danke für dein Feedback! Es freut uns, dass dir das Spiel Spaß macht – wir werden eine bessere Einführung in die Spielmechaniken in Betracht ziehen.",
      "english": "Thanks for your feedback! We're glad you're enjoying the game – we'll consider adding a better introduction to the game mechanics."
     },
-    "tone": "sincere"
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "suggestion",
+      "text": "Add an explanation at the start: players should know they need to sell ice to earn currency for upgrades."
+     },
+     {
+      "kind": "praise",
+      "text": "Game is a relaxing digging/resource management experience with replayability potential."
+     }
+    ]
    },
    "issue": "I1",
    "playtimeForever": 0.3,
@@ -481,7 +563,25 @@
      "text": "Danke für den ausführlichen Report! Diesen Bug bei 400m Tiefe mit der Säge werden wir uns sofort anschauen.",
      "english": "Thanks for the detailed report! We'll look into that bug at 400m depth with the saw right away."
     },
-    "tone": "sincere"
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "praise",
+      "text": "Developers respond quickly to criticism."
+     },
+     {
+      "kind": "praise",
+      "text": "Ice destruction is now much more pleasant."
+     },
+     {
+      "kind": "complaint",
+      "text": "No noticeable difference in the saw's behavior."
+     },
+     {
+      "kind": "bug",
+      "text": "At 400m depth, the saw creates new ice or drags old ice instead of removing it."
+     }
+    ]
    },
    "issue": "I4"
   },
@@ -812,6 +912,10 @@
   [
    1791035726,
    2
+  ],
+  [
+   1791035925,
+   1
   ]
  ],
  "reviewTotals": {

@@ -43,7 +43,30 @@
      "text": "Thanks so much for playing and for the detailed feedback! We're glad you're enjoying the tower defense gameplay—and we'll definitely look into the head bob toggle, the HP meter issue, and those weapon mechanics.",
      "english": "Thanks so much for playing and for the detailed feedback! We're glad you're enjoying the tower defense gameplay—and we'll definitely look into the head bob toggle, the HP meter issue, and those weapon mechanics."
     },
-    "tone": "sincere"
+    "tone": "sincere",
+    "note": "\"Torbjorn simulator\" references the Overwatch character; player means the game has a similar feel to playing that hero. \"Cute lil gobbos\" refers to the enemies/units.",
+    "points": [
+     {
+      "kind": "bug",
+      "text": "HP meter was bugged at time of playing."
+     },
+     {
+      "kind": "complaint",
+      "text": "Recoil head bob effect is distracting; needs toggle option."
+     },
+     {
+      "kind": "suggestion",
+      "text": "Hammer switching is too slow."
+     },
+     {
+      "kind": "suggestion",
+      "text": "Pop gun should have a close quarters secondary fire mode."
+     },
+     {
+      "kind": "praise",
+      "text": "3D perspective is a nice change from typical bird's-eye tower defense format."
+     }
+    ]
    },
    "issue": "I1",
    "playtimeForever": 0.3,

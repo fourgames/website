@@ -380,9 +380,14 @@ def check_releases(state, game, events):
     import triage
 
     known = {r["gid"] for r in state["releases"]}
+    # Posts from before an update must be triaged into issues before its patch notes can be matched.
+    oldest_pending = min((i["created"] for i in state["items"].values() if i.get("pending")), default=None)
     for event in sorted(events, key=lambda e: e["time"]):
         if event["gid"] in known:
             continue
+        if oldest_pending is not None and oldest_pending < event["time"]:
+            print(f"[release] {event['name']}: waiting for older posts to be triaged")
+            break
         candidates = [
             i for i in state["issues"].values() if i["status"] in ("open", "still_happening") and i["firstSeen"] < event["time"]
         ]

@@ -451,6 +451,11 @@
      }
     ],
     "note": null
+   },
+   "devResponseLanguage": "Korean",
+   "devResponseEnglish": "Thank you for the feedback! I sympathized with the comment about it ending too quickly, so in the 1.02 update I increased the pit depth from 100m to 500m. Now you can enjoy it much longer while obtaining all the upgrades. Since I'm developing it solo, there are many shortcomings, but I'd be really happy if you got a chance to play it again sometime haha",
+   "translatedOwn": {
+    "devResponse": "4a9faf7feada"
    }
   },
   "r236542076": {
@@ -526,7 +531,10 @@
    "url": "https://steamcommunity.com/app/3958210/discussions/0/594068999055121855/",
    "author": {
     "id": "1029710208",
-    "name": "Danny"
+    "name": "Danny",
+    "profile": "https://steamcommunity.com/profiles/76561198989975936",
+    "avatar": "https://avatars.fastly.steamstatic.com/7fd012481753eceb898d0652579c2831453e53d1_medium.jpg",
+    "games": null
    },
    "created": 1791019038,
    "updated": 1791019038,
@@ -535,7 +543,14 @@
    "forum": "General Discussions",
    "dev": true,
    "versions": [],
-   "pending": false
+   "pending": false,
+   "triage": {
+    "language": "English",
+    "english": ""
+   },
+   "translatedOwn": {
+    "text": "a94a8fe5ccb1"
+   }
   },
   "t594068734660893708": {
    "id": "t594068734660893708",
@@ -596,7 +611,8 @@
     "id": "1509261874",
     "name": "mklesmos",
     "profile": "https://steamcommunity.com/profiles/76561199469527602",
-    "avatar": "https://avatars.fastly.steamstatic.com/e6973454bced5dcd58186c729797fe4ca4dbaf57_medium.jpg"
+    "avatar": "https://avatars.fastly.steamstatic.com/e6973454bced5dcd58186c729797fe4ca4dbaf57_medium.jpg",
+    "games": null
    },
    "created": 1790824251,
    "updated": 1790824251,
@@ -633,7 +649,10 @@
    "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660937593/#c594068734660962351",
    "author": {
     "id": "1029710208",
-    "name": "Danny"
+    "name": "Danny",
+    "profile": "https://steamcommunity.com/profiles/76561198989975936",
+    "avatar": "https://avatars.fastly.steamstatic.com/7fd012481753eceb898d0652579c2831453e53d1_medium.jpg",
+    "games": null
    },
    "created": 1790837774,
    "updated": 1790837774,
@@ -642,7 +661,14 @@
    "forum": "Events & Announcements",
    "dev": true,
    "versions": [],
-   "pending": false
+   "pending": false,
+   "triage": {
+    "language": "English",
+    "english": ""
+   },
+   "translatedOwn": {
+    "text": "37a705890451"
+   }
   },
   "t594068734660983696": {
    "id": "t594068734660983696",
@@ -686,7 +712,8 @@
     "id": "358681924",
     "name": "Horror Heaven",
     "profile": "https://steamcommunity.com/profiles/76561198318947652",
-    "avatar": "https://avatars.fastly.steamstatic.com/8442685651231b08503c282a75c5f324df2ae085_medium.jpg"
+    "avatar": "https://avatars.fastly.steamstatic.com/8442685651231b08503c282a75c5f324df2ae085_medium.jpg",
+    "games": null
    },
    "created": 1790848674,
    "updated": 1790848674,
@@ -744,7 +771,10 @@
    "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660926138/#c594068734660995171",
    "author": {
     "id": "1029710208",
-    "name": "Danny"
+    "name": "Danny",
+    "profile": "https://steamcommunity.com/profiles/76561198989975936",
+    "avatar": "https://avatars.fastly.steamstatic.com/7fd012481753eceb898d0652579c2831453e53d1_medium.jpg",
+    "games": null
    },
    "created": 1790873176,
    "updated": 1790873176,
@@ -753,7 +783,14 @@
    "forum": "Events & Announcements",
    "dev": true,
    "versions": [],
-   "pending": false
+   "pending": false,
+   "triage": {
+    "language": "German",
+    "english": "Thanks for the feedback! Glad the ice sounds better now, I'll take another look at the saw. The bug at 400 m should be fixed with update 1.06. Sorry you got stuck there, and respect for fighting your way down to the bottom despite being stuck at the edge!"
+   },
+   "translatedOwn": {
+    "text": "18b3b4b78da1"
+   }
   },
   "t594068734660962823": {
    "id": "t594068734660962823",
@@ -780,7 +817,8 @@
     "id": "1675407187",
     "name": "alsgus0878",
     "profile": "https://steamcommunity.com/profiles/76561199635672915",
-    "avatar": "https://avatars.fastly.steamstatic.com/aebbb040b43ba8fa64531a26b875c75d45c6deb8_medium.jpg"
+    "avatar": "https://avatars.fastly.steamstatic.com/aebbb040b43ba8fa64531a26b875c75d45c6deb8_medium.jpg",
+    "games": null
    },
    "created": 1790840407,
    "updated": 1790840407,
@@ -835,7 +873,10 @@
    "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660962823/#c594068734660995690",
    "author": {
     "id": "1029710208",
-    "name": "Danny"
+    "name": "Danny",
+    "profile": "https://steamcommunity.com/profiles/76561198989975936",
+    "avatar": "https://avatars.fastly.steamstatic.com/7fd012481753eceb898d0652579c2831453e53d1_medium.jpg",
+    "games": null
    },
    "created": 1790873615,
    "updated": 1790873615,
@@ -844,7 +885,14 @@
    "forum": "Events & Announcements",
    "dev": true,
    "versions": [],
-   "pending": false
+   "pending": false,
+   "triage": {
+    "language": "Korean",
+    "english": "Thank you for the report! There was a bug where ice wasn't being cut from around 400m onwards, but we fixed it in the 1.06 update. I'm sorry you must have been very frustrated since it wouldn't cut no matter what you did ㅠㅠ"
+   },
+   "translatedOwn": {
+    "text": "021c9614966f"
+   }
   },
   "t594068734661092033": {
    "id": "t594068734661092033",

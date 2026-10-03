@@ -277,7 +277,7 @@ function renderHeader() {
   document.getElementById("fb-updated").replaceChildren([
     release ? `Latest update ${release.version ? "v" + release.version : release.name}, ${ago(release.time)}` : null,
     state.dataChanged ? `last change ${ago(state.dataChanged)}` : null,
-    state.checks ? (state.checks.running ? "checking every 20 min" : state.checks.ok ? `last checked ${ago(state.checks.at)}` : "checks stopped (see GitHub Actions)") : null,
+    state.checks ? (state.checks.running ? "checking every 10 min" : state.checks.ok ? `last checked ${ago(state.checks.at)}` : "checks stopped (see GitHub Actions)") : null,
   ].filter(Boolean).join(" · "));
   const id = state.game.appId;
   const links = [

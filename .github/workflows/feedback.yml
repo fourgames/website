@@ -1,6 +1,6 @@
 name: Player feedback
 
-# Each run checks every 20 minutes for about 4 hours, then starts the next run. A cheap gate decides
+# Each run checks every 10 minutes for about 4 hours, then starts the next run. A cheap gate decides
 # whether a check is a full run (every 4 hours normally, every check for 48 hours after a game
 # publishes an update). The schedule starts a run if none is going. See feedback/README.md.
 on:
@@ -62,7 +62,7 @@ jobs:
 
       # Commits made with the workflow token don't trigger other workflows, so this never redeploys the
       # site; the dashboard reads feedback/data straight from the repo.
-      - name: Check every 20 minutes for 4 hours
+      - name: Check every 10 minutes for 4 hours
         if: ${{ !inputs.test_discord }}
         run: |
           git config user.name "github-actions[bot]"

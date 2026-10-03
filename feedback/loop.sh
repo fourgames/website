@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Checks every 20 minutes for about 4 hours: the gate, then a full run (collect, triage, commit)
+# Checks every 10 minutes for about 4 hours: the gate, then a full run (collect, triage, commit)
 # whenever it says one is due. The workflow starts the next run when this one ends. See
 # feedback/README.md.
 set -uo pipefail
 
 loop_seconds=${FEEDBACK_LOOP_SECONDS:-14400}
-tick=1200
+tick=600
 force=${FEEDBACK_FORCE:-false}
 end=$((SECONDS + loop_seconds))
 

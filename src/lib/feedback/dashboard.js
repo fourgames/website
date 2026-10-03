@@ -554,7 +554,6 @@ function issueCard(issue) {
   const patchLine = issue.kind === "bug" ? `Fixed: ${issue.title} (reported by ${plural(issue.mentions, "player")})`
     : `${issue.title} (suggested by ${plural(issue.mentions, "player")})`;
   const patchBtn = issue.kind === "praise" ? null : h("button.btn", { onclick: (e) => copy(patchLine, e.currentTarget) }, "Copy patch-note line");
-  const linkBtn = h("button.btn", { onclick: (e) => copy(posts.map((p) => p.url).join("\n"), e.currentTarget) }, "Copy links");
   const [, kind] = CATEGORY[issue.kind] || [];
   const u = issue.kind === "praise" ? null : issue.urgency; // praise has no priority
   const bars = u ? h(`span.bars4.pt-${u}`, ...[1, 2, 3, 4].map((n) => h(n <= PRIORITY_BARS[u] ? "i.on" : "i"))) : null;
@@ -583,7 +582,7 @@ function issueCard(issue) {
         issue.area,
       ].filter(Boolean).join(" · ")),
       summary ? h("ul.pc-points", h("li", summaryLabel, summary)) : null,
-      h("div.actions", issue.kind === "praise" ? null : copyBtn, toggle, patchBtn, linkBtn)),
+      h("div.actions", issue.kind === "praise" ? null : copyBtn, toggle, patchBtn)),
     postList);
 }
 

@@ -153,19 +153,48 @@ function daily(n, valueOf) {
 // GitHub API is unreachable or rate-limited (60 requests an hour per IP).
 async function dataBase() {
   if (DATA_OVERRIDE) return;
+  const read = (k) => { try { return JSON.parse(store.get(k)); } catch { return null; } };
+  // A recent answer is reused, so refreshing the page doesn't ask GitHub again (unauthenticated
+  // calls are limited to 60 an hour per connection).
+  const cached = read("api");
+  if (cached && Date.now() - cached.at < 60 * 1000) return applyApi(cached);
+  // After a timeout or the hourly limit, skip the API until it's likely back, and load the data
+  // straight from the repo instead of waiting each time.
+  if ((read("apiDownUntil") || 0) > Date.now()) return cached ? applyApi(cached, true) : null;
+  let limitedUntil = null;
   // GitHub's API sometimes hangs rather than failing; never wait more than a few seconds for it.
   const api = (path) => fetch(`https://api.github.com/repos/fourgames/website/${path}`, { cache: "no-store", signal: AbortSignal.timeout(5000) })
-    .then((res) => res.json());
+    .then((res) => {
+      if (!res.ok) limitedUntil = Number(res.headers.get("x-ratelimit-reset")) * 1000 || Date.now() + 10 * 60 * 1000;
+      return res.json();
+    });
   // Both at once: the newest data commit, and whether the collecting workflow is running (data is
   // only committed when something changed, so its date alone can look stale).
   const [commits, runs] = await Promise.allSettled([api("commits?path=feedback/data&per_page=1"), api("actions/workflows/feedback.yml/runs?per_page=1")]);
   const c = Array.isArray(commits.value) ? commits.value[0] : null;
-  if (c?.sha) {
-    DATA = `${RAW}/${c.sha}/feedback/data`;
-    state.dataChanged = Date.parse(c.commit.committer.date) / 1000;
-  }
   const run = runs.value?.workflow_runs?.[0];
-  if (run) state.checks = { running: run.status !== "completed", ok: run.conclusion !== "failure", at: Date.parse(run.updated_at) / 1000 };
+  if (!c?.sha) {
+    store.set("apiDownUntil", JSON.stringify(limitedUntil || Date.now() + 5 * 60 * 1000));
+    return cached ? applyApi(cached, true) : null;
+  }
+  const answer = {
+    at: Date.now(),
+    sha: c.sha,
+    dataChanged: Date.parse(c.commit.committer.date) / 1000,
+    checks: run ? { running: run.status !== "completed", ok: run.conclusion !== "failure", at: Date.parse(run.updated_at) / 1000 } : null,
+  };
+  store.set("api", JSON.stringify(answer));
+  applyApi(answer);
+}
+
+// Which data is on screen: its commit, and its own last-change time (for data straight from main).
+const drawnKey = () => `${DATA}@${state.index?.changedAt || ""}`;
+
+// Uses an API answer; an old one only for the times (its data commit may be outdated).
+function applyApi(answer, stale = false) {
+  if (!stale) DATA = `${RAW}/${answer.sha}/feedback/data`;
+  state.dataChanged = answer.dataChanged;
+  if (answer.checks) state.checks = answer.checks;
 }
 
 async function init() {
@@ -427,7 +456,7 @@ function chartPanel(which) {
 // ---------------------------------------------------------------------------
 
 function render() {
-  state.drawn = DATA; // what's on screen, so a refresh only redraws for new data
+  state.drawn = drawnKey(); // what's on screen, so a refresh only redraws for new data
   renderGames();
   renderHeader();
   renderStats();
@@ -1243,7 +1272,9 @@ async function refresh() {
   if (Date.now() - loadedAt > FULL_RELOAD_MS && !window.getSelection().toString()) return location.reload();
   const loaded = DATA;
   await dataBase();
-  if (DATA !== loaded) {
+  // A new data commit, or (when GitHub's API is skipped and the data comes straight from main)
+  // every round, since main may have moved on.
+  if (DATA !== loaded || DATA.includes("/main/")) {
     try {
       const index = await getJson("index.json");
       const appId = state.game.appId;
@@ -1258,7 +1289,7 @@ async function refresh() {
   }
   // Nothing new since the last redraw: only the header's times and check status change, so open
   // posts stay open. Not while typing in a search box either (a redraw would wipe it); next round.
-  if (DATA === state.drawn || document.activeElement?.matches?.(".fb input")) {
+  if (drawnKey() === state.drawn || document.activeElement?.matches?.(".fb input")) {
     renderStatus();
     renderHeader();
     return;

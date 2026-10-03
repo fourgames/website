@@ -5,7 +5,8 @@
  "watermarks": {
   "reviews": 1790875183,
   "forums": {
-   "0": 0
+   "0": 1791019038,
+   "event:18446744073709551615": 1790966789
   }
  },
  "items": {
@@ -148,6 +149,261 @@
    "versions": [],
    "flips": [],
    "pending": true
+  },
+  "t594068999055121855": {
+   "id": "t594068999055121855",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/discussions/0/594068999055121855/",
+   "author": {
+    "id": "1029710208",
+    "name": "Danny"
+   },
+   "created": 1791019038,
+   "updated": 1791019038,
+   "text": "test",
+   "title": "test",
+   "forum": "General Discussions",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  },
+  "t594068734660893708": {
+   "id": "t594068734660893708",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660893708/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1790779823,
+   "updated": 1790779823,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/3958210/announcements/detail/695399726270382300",
+   "title": "Update 1.4",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  },
+  "t594068734660900216": {
+   "id": "t594068734660900216",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660900216/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1790784289,
+   "updated": 1790784289,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/3958210/announcements/detail/695399726270382319",
+   "title": "Hotfix 1.4.1",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  },
+  "t594068734660937593": {
+   "id": "t594068734660937593",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660937593/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1790810954,
+   "updated": 1790810954,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/3958210/announcements/detail/695399726270382443",
+   "title": "Update 1.2",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  },
+  "c594068734660950311": {
+   "id": "c594068734660950311",
+   "kind": "reply",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660937593/#c594068734660950311",
+   "author": {
+    "id": "1509261874",
+    "name": "mklesmos"
+   },
+   "created": 1790824251,
+   "updated": 1790824251,
+   "text": "HI.... I REACH I THINK 450 AND THERE A FLOOR WITH A (+) SIGN WHAT I CAN DO SI I CAN PASS THIS IS THERE A PUZZLE I DONT KNOW ABOUT",
+   "topic": "t594068734660937593",
+   "forum": "Events & Announcements",
+   "dev": false,
+   "versions": [],
+   "pending": true
+  },
+  "c594068734660962351": {
+   "id": "c594068734660962351",
+   "kind": "reply",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660937593/#c594068734660962351",
+   "author": {
+    "id": "1029710208",
+    "name": "Danny"
+   },
+   "created": 1790837774,
+   "updated": 1790837774,
+   "text": "Hi! You're getting close, just keep going and try bringing some dynamite 😉",
+   "topic": "t594068734660937593",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  },
+  "t594068734660983696": {
+   "id": "t594068734660983696",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660983696/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1790863137,
+   "updated": 1790863137,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/3958210/announcements/detail/695399726270382653",
+   "title": "Hotfix 1.3.1",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  },
+  "t594068734660926138": {
+   "id": "t594068734660926138",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660926138/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1790801014,
+   "updated": 1790801014,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/3958210/announcements/detail/695399726270382420",
+   "title": "Update 1.1",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  },
+  "c594068734660970660": {
+   "id": "c594068734660970660",
+   "kind": "reply",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660926138/#c594068734660970660",
+   "author": {
+    "id": "358681924",
+    "name": "Horror Heaven"
+   },
+   "created": 1790848674,
+   "updated": 1790848674,
+   "text": "Ich finde das richtig gut, wie schnell hier auf Kritik reagiert wird\n. Die Zerstörung vom Eis selber ist nun viel angenehmer. Aber ehrlich gesagt fällt mir bei der Säge kein großer Unterschied auf.\nBei genau 400m kommt leider auch noch ein Bug mit dem Eis. Anstatt es zu entfernen, erzeugt man irgendwie neues mit der Säge, oder zieht das alte mit. ganz merkwürdig da. Ich habe zum Glück eine Stelle am Rand der Grube gefunden, an der ich mich gerade so die letzten 100m runter graben konnte.",
+   "topic": "t594068734660926138",
+   "forum": "Events & Announcements",
+   "dev": false,
+   "versions": [],
+   "pending": true
+  },
+  "c594068734660995171": {
+   "id": "c594068734660995171",
+   "kind": "reply",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660926138/#c594068734660995171",
+   "author": {
+    "id": "1029710208",
+    "name": "Danny"
+   },
+   "created": 1790873176,
+   "updated": 1790873176,
+   "text": "Danke fürs Feedback! Schön, dass sich das Eis jetzt besser anhört, die Säge schau ich mir noch mal an.\nDer Bug bei 400 m sollte mit Update 1.06 behoben sein. Sorry, dass du da festgesteckt hast, und Respekt, dass du dich am Rand trotzdem bis nach unten durchgekämpft hast!",
+   "topic": "t594068734660926138",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  },
+  "t594068734660962823": {
+   "id": "t594068734660962823",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660962823/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1790838325,
+   "updated": 1790838325,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/3958210/announcements/detail/695399726270382544",
+   "title": "Update 1.3",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  },
+  "c594068734660964482": {
+   "id": "c594068734660964482",
+   "kind": "reply",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660962823/#c594068734660964482",
+   "author": {
+    "id": "1675407187",
+    "name": "alsgus0878"
+   },
+   "created": 1790840407,
+   "updated": 1790840407,
+   "text": "410m부터는 깎이지도 않아요.... 다이너마이트 100개를 던져도 횃불을 100개를 던져도 하루죙일 파고있어도 얼음이 그대로입니다\n무슨버그였는지는 모르겠으나 껏다 키니깐 됐습니다.",
+   "topic": "t594068734660962823",
+   "forum": "Events & Announcements",
+   "dev": false,
+   "versions": [],
+   "pending": true
+  },
+  "c594068734660995690": {
+   "id": "c594068734660995690",
+   "kind": "reply",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734660962823/#c594068734660995690",
+   "author": {
+    "id": "1029710208",
+    "name": "Danny"
+   },
+   "created": 1790873615,
+   "updated": 1790873615,
+   "text": "제보 감사합니다! 400m쯤부터 얼음이 안 깎이는 버그였는데, 1.06 업데이트에서 고쳤습니다. 뭘 해도 안 깎여서 많이 답답하셨을 텐데 죄송합니다ㅠㅠ",
+   "topic": "t594068734660962823",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  },
+  "t594068734661092033": {
+   "id": "t594068734661092033",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734661092033/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1790966642,
+   "updated": 1790966642,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/3958210/announcements/detail/695399726270384005",
+   "title": "Digging A Hole In Ice With A Chainsaw on Steam Deck",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  },
+  "t594068734661092280": {
+   "id": "t594068734661092280",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594068734661092280/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1790966789,
+   "updated": 1790966789,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/3958210/announcements/detail/695399726270384007",
+   "title": "Digging A Hole In Ice With A Chainsaw is out now!",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
   }
  },
  "issues": {},
@@ -165,6 +421,124 @@
    "desc": "7 user reviews"
   }
  },
- "releases": [],
- "threads": {}
+ "releases": [
+  {
+   "gid": "695399726270382419",
+   "name": "Update 1.1",
+   "version": "1.1",
+   "time": 1790800980,
+   "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382419",
+   "notes": "Thanks for all the feedback on day one! This update makes upgrades cheaper and fixes a few bugs you ran into.\n\nImprovements\n\n- \nThe first jet boots upgrade now costs exactly one full bag ($100), and the first bag and saw upgrades are cheaper\n\n- \nThe last three upgrade tiers are much cheaper, so you can max everything in a normal playthrough\n\nFixes\n\n- \nFixed a rare freeze on the loading screen at startup\n\n- \nFixed the camera lurching when you dig while walking\n\n- \nMinor cleanup and stability fixes\n\nFound a bug or have an idea? Tell us in the Steam discussions.\n\n— Danny",
+   "matched": [],
+   "checked": false
+  },
+  {
+   "gid": "695399726270382442",
+   "name": "Update 1.2",
+   "version": "1.2",
+   "time": 1790810760,
+   "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382442",
+   "notes": "You wanted to dig deeper, so the pit is now five times as deep.\n\nNew\n\n- \nThe pit is now 500 m deep instead of 100 m, so you have time to get every upgrade\n\n- \nA new hint the first time your bag is full: go up and sell at the pipe\n\nFixes\n\n- \nFixed dynamite and lanterns disappearing when thrown in a narrow tunnel\n\nFound a bug or have an idea? Tell us in the Steam discussions.\n\n— Danny",
+   "matched": [],
+   "checked": false
+  },
+  {
+   "gid": "695399726270382543",
+   "name": "Update 1.3",
+   "version": "1.3",
+   "time": 1790838300,
+   "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382543",
+   "notes": "A small update for the ending and for your ears.\n\nImprovements\n\n- \nDigging is easier on the ears: softer ice smashes and a less shrill chainsaw\n\nFixes\n\n- \nFixed the ending looking like a sudden cut to black: the camera now turns so you see all of it, on Steam Deck too\n\nFound a bug or have an idea? Tell us in the Steam discussions.\n\n— Danny",
+   "matched": [],
+   "checked": false
+  },
+  {
+   "gid": "695399726270382652",
+   "name": "Hotfix 1.3.1",
+   "version": "1.3.1",
+   "time": 1790863080,
+   "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382652",
+   "notes": "Sorry! Update 1.2 broke the deeper part of the pit: it had no walls and no loot, so you could dig right out of the level. This hotfix fixes it.\n\nFixes\n\n- \nThe walls and loot in the deeper part of the pit are back\n\n- \nIf your save is outside the walls, you start again at the surface. You keep your money and upgrades\n\n- \nThe bottom of the pit is now sealed, and the thin gaps where the wall sections meet are closed\n\nThanks for reporting it so quickly. If you still find a way out of the pit, tell us in the Steam discussions.\n\n— Danny",
+   "matched": [],
+   "checked": false
+  },
+  {
+   "gid": "695399726270382299",
+   "name": "Update 1.4",
+   "version": "1.4",
+   "time": 1790966040,
+   "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382299",
+   "notes": "A small one: you can now always tell how close you are to the bottom.\n\nImprovements\n\n- \nThe depth counter now stays readable until you're 20 m from the bottom of the pit. Before, it turned into symbols 100 m early, so it was hard to tell how close you were\n\nFound a bug or have an idea? Tell us in the Steam discussions.\n\n— Danny",
+   "matched": [],
+   "checked": false
+  },
+  {
+   "gid": "695399726270382318",
+   "name": "Hotfix 1.4.1",
+   "version": "1.4.1",
+   "time": 1790966220,
+   "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382318",
+   "notes": "Sorry to everyone who got stuck deep in the pit: from about 400 m down, the ice sometimes couldn't be broken. This hotfix fixes it.\n\nFixes\n\n- \nFixed ice from about 400 m down that sometimes couldn't be broken: the chainsaw and dynamite did nothing, or the ice seemed to grow back, until you restarted the game\n\nThanks for the reports! If anything else gets in your way, tell us in the Steam discussions.\n\n— Danny",
+   "matched": [],
+   "checked": false
+  },
+  {
+   "gid": "695399726270384006",
+   "name": "Digging A Hole In Ice With A Chainsaw is out now!",
+   "version": null,
+   "time": 1790966760,
+   "url": "https://store.steampowered.com/news/app/3958210/view/695399726270384006",
+   "notes": "It's out! Trapped in a pit with a chainsaw, you dig down through the ice, sell what you haul up, and buy upgrades and dynamite to go deeper, faster.\n\nAbout the game\n\n- \nDig: carve your way down through the ice\n\n- \nSell what you haul up, then buy upgrades and dynamite\n\n- \nA short game you can finish in one sitting\n\n- \nFull controller support, Steam Achievements and Steam Cloud\n\n- \nOh yeah, there's something waiting for you at the bottom\n\nIt's 40% off until October 14. If you enjoy it, a review helps a lot!\n\n— Danny",
+   "matched": [],
+   "checked": false
+  }
+ ],
+ "threads": {
+  "594068999055121855": {
+   "lastPost": 1791019038,
+   "replies": 0,
+   "forum": "General Discussions"
+  },
+  "594068734660893708": {
+   "lastPost": 1790779823,
+   "replies": 0,
+   "forum": "Events & Announcements"
+  },
+  "594068734660900216": {
+   "lastPost": 1790784289,
+   "replies": 0,
+   "forum": "Events & Announcements"
+  },
+  "594068734660937593": {
+   "lastPost": 1790837774,
+   "replies": 2,
+   "forum": "Events & Announcements"
+  },
+  "594068734660983696": {
+   "lastPost": 1790863137,
+   "replies": 0,
+   "forum": "Events & Announcements"
+  },
+  "594068734660926138": {
+   "lastPost": 1790873176,
+   "replies": 2,
+   "forum": "Events & Announcements"
+  },
+  "594068734660962823": {
+   "lastPost": 1790873615,
+   "replies": 2,
+   "forum": "Events & Announcements"
+  },
+  "594068734661092033": {
+   "lastPost": 1790966642,
+   "replies": 0,
+   "forum": "Events & Announcements"
+  },
+  "594068734661092280": {
+   "lastPost": 1790966789,
+   "replies": 0,
+   "forum": "Events & Announcements"
+  }
+ },
+ "devAccounts": []
 }

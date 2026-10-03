@@ -444,22 +444,6 @@
 .fb .post summary {
 	cursor: pointer;
 }
-.fb .reply {
-	background: var(--fb-card-2);
-	border-radius: var(--radius-card);
-	padding: 8px 12px;
-	margin: 8px 0;
-	font-size: 0.8125rem;
-}
-.fb .reply .en {
-	color: var(--fb-muted);
-}
-.fb .reply-row {
-	display: flex;
-	gap: 8px;
-	align-items: flex-start;
-	justify-content: space-between;
-}
 .fb .vote-up {
 	color: var(--fb-positive);
 	font-weight: 600;

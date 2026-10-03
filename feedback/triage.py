@@ -40,11 +40,6 @@ def describe_error(error):
     return f"Claude calls are failing ({type(error).__name__}).", False
 
 
-class DraftReply(BaseModel):
-    text: str = Field(description="One friendly sentence from the developer, in the player's language.")
-    english: str = Field(description="What that sentence means in English.")
-
-
 class Triage(BaseModel):
     language: str = Field(description="Language the post is written in, as an English name, e.g. 'Japanese'.")
     english: str = Field(description="The full post translated to English (unchanged if it already is English).")
@@ -59,7 +54,6 @@ class Triage(BaseModel):
     details: Optional[str] = Field(
         description="For a bug: what a developer needs to reproduce it (steps, hardware, settings, when it happens). Else null."
     )
-    reply: Optional[DraftReply] = Field(description="A reply worth posting, or null when none is needed.")
 
 
 TRIAGE_SYSTEM = """You triage player feedback for an indie game studio's Steam games. Each message is one post: \
@@ -75,10 +69,7 @@ bugs and popular requests; "low" for everything else.
 - Duplicates: the user message lists the game's open issues. If the post reports the same underlying problem or \
 request as one of them, in any language, set existing_issue to that issue's ID. A reply such as "same here" or \
 "me too" in a thread whose opening post belongs to an issue repeats that issue. Otherwise, for a bug or \
-suggestion, give new_issue_title. Questions and praise get neither.
-- reply: draft one short, warm, specific sentence the developer could post back, in the player's own language, \
-when a reply would help (a bug report, a question, a negative review, a thoughtful suggestion). Never promise \
-dates or features. Null for posts that need no answer."""
+suggestion, give new_issue_title. Questions and praise get neither."""
 
 
 def triage(game_name, item, issues, context=None):
@@ -122,7 +113,6 @@ def _dry_triage(item):
         existing_issue=None,
         new_issue_title=("Dry-run issue: " + text[:60]) if bug or not item.get("votedUp", True) else None,
         details=None,
-        reply=None,
     )
 
 

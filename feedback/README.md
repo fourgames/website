@@ -14,7 +14,6 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
    - translates the post to English;
    - sorts it as bug, suggestion, question or praise;
    - sets urgency and the game area;
-   - drafts an optional one-sentence reply in the player's language, with its English meaning;
    - merges duplicates, across languages, into *issues* with mention counts. A mention is one distinct player.
 6. **Issues.** Every issue gets a priority score. Every bug issue gets a ready-to-paste Claude Code fix prompt.
 7. **Releases.** When a game publishes an update or patch-notes event, which `/ship` does, Claude Haiku 4.5 matches the open issues against the patch notes and marks matches **likely fixed in vX**. If new reports of a likely-fixed issue arrive after that release, the issue becomes **still happening**.
@@ -69,7 +68,7 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 - **Status bar:** which services the last run could and couldn't reach (Claude, Steam, discussions, Discord), each with a button to the fix. "Out of Anthropic API credit" links straight to billing. It's recorded in `data/index.json` → `status` only when something changes.
 - **Steam links:** buttons for the store page, reviews, discussions, news, Steamworks and the Steamworks sales report (sales aren't mirrored here).
 - **Top bar:** players now, review score, open bugs, issues still happening, new posts, and the latest update.
-- **Issues:** bug issues sorted by priority. Each has *Copy fix prompt*, the original posts with their translations and Steam links, and the draft replies with copy buttons.
+- **Issues:** bug issues sorted by priority. Each has *Copy fix prompt* and the original posts with their translations and Steam links.
 - **Suggestions:** the same view for suggestions.
 - **Feed:** every post, newest first, with filters and search.
 - **Stats:** concurrent players and new reviews over time, with every update marked, plus posts by category and by language.

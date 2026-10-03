@@ -389,10 +389,6 @@ function postView(item) {
     (item.versions || []).length ? h("details", h("summary", `Earlier versions (${item.versions.length})`),
       ...item.versions.slice().reverse().map((v) => h("div.text", `${fmtDate(v.at)}${v.votedUp == null ? "" : v.votedUp ? " · 👍" : " · 👎"}\n${v.title ? v.title + "\n" : ""}${v.text}`))) : null,
     item.devResponse ? h("details", h("summary", "Your reply on Steam"), h("div.text", item.devResponse)) : null,
-    t.reply ? h("div.reply",
-      h("div.reply-row",
-        h("div", h("div", "💬 ", t.reply.text), t.reply.text !== t.reply.english ? h("div.en", t.reply.english) : null),
-        h("button.btn", { onclick: (e) => copy(t.reply.text, e.currentTarget) }, "Copy reply"))) : null,
   );
 }
 

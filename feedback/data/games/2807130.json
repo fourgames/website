@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "appId": 2807130,
- "initialized": true,
+ "initialized": false,
  "watermarks": {
   "reviews": 1751640136,
   "forums": {
@@ -33,7 +33,7 @@
    "devResponse": "Thanks for the review! I've updated the game based on your feedback:\n\nHead-bob: Reduced by 50%.\nSwap Speed: 33% faster.\nHammer: New icon instead of heart and clearer melee/AoE functionality.\nThanks for helping me improve the game!",
    "versions": [],
    "flips": [],
-   "pending": false,
+   "pending": true,
    "triage": {
     "language": "English",
     "summary": "Player enjoys the game but reports a head bob effect they want disabled, a bugged HP meter, desires a close-quarters mode for the pop gun, and finds hammer switching too slow.",
@@ -70,7 +70,6 @@
      }
     ]
    },
-   "issue": "I1",
    "playtimeForever": 0.3,
    "steamPurchase": true,
    "receivedForFree": false
@@ -229,41 +228,8 @@
    "pending": false
   }
  },
- "issues": {
-  "I1": {
-   "id": "I1",
-   "kind": "suggestion",
-   "title": "Multiple balance and UX improvements: head bob toggle, HP meter bug, hammer switch speed",
-   "area": "controls, UI, gameplay",
-   "summary": "Player enjoys the game but reports a head bob effect they want disabled, a bugged HP meter, desires a close-quarters mode for the pop gun, and finds hammer switching too slow.",
-   "status": "likely_fixed",
-   "created": 1791020710,
-   "items": [
-    "r198931298"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1751640136,
-   "lastSeen": 1751640136,
-   "urgency": "medium",
-   "negativeReviews": 0,
-   "details": [],
-   "priority": 0.12,
-   "fixPrompt": null,
-   "fixedIn": "Reforge Front Update",
-   "fixedAt": 1777578540,
-   "fixedUrl": "https://store.steampowered.com/news/app/2807130/view/690882175138005309",
-   "fixReason": "Reduced headbob by 50% addresses the head bob effect complaint, and Switching equipment is now 33% faster addresses the hammer switch speed concern",
-   "stillSince": null
-  }
- },
- "nextIssue": 2,
+ "issues": {},
+ "nextIssue": 1,
  "players": [
   [
    1791016905,
@@ -286,7 +252,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/7081438768274849107",
    "notes": "The new demo is here, and it’s packed with big changes and a ton of new content! We've added new goblin types, more levels, a hub area, upgraded graphics, and much more!\n\nROADMAP\n- More sound effects\n- Game balancing\n- Optimization improvements\n- Feedback and suggestions from the community\n- (Maybe) a new building",
    "matched": [],
-   "checked": true
+   "checked": false
   },
   {
    "gid": "4524520259786639017",
@@ -296,7 +262,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/4524520259786639017",
    "notes": "The hammer can now be used to damage enemies and more.\n\nPatch Notes:\n- Optimization improvements\n- Furnace turn off animation\n- Hammer Damage\n- Game balancing: tutorial, world 1 levels\n- Enemy AI Improvements\n- Cannon Rotation Improvements\n\nRoadmap:\n- Replace placeholder sound effects\n- More sound effects\n- Game balancing\n- More Enemy AI Improvements\n- Feedback and suggestions from the community\n- (Maybe) a new building",
    "matched": [],
-   "checked": true
+   "checked": false
   },
   {
    "gid": "4517765223387783650",
@@ -306,7 +272,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/4517765223387783650",
    "notes": "Patch Notes:\n- Loading screen improvements\n- Bullets interact with grass\n- Enable v-sync by default\n- Make default sens higher\n- New bomb building\n- Make barricades price / 2\n- Bigger bomb goblin hit box\n- Reduce wait time from 30sec > 15sec\n- Variable jump heights\n- Many new SFX\n- BIG Color adjustments \n- Grass/ground changes \n- Saturation changes\n- Smarter goblin navigation\n- Cannon rotation bug fix\n- Add back unstuck\n- Game name change from \"Forge Front\" to \"Forg\" to make it easier to search for and more memorable.\n- Balance worlds \n- Balance goblin economy\n- Balance Furnace\n- Update steam page\n- Cannon rope model fix\n- tutorial changes\n- More credits\n- Tree improvements\n- Wind and water improvements\n- Fix bug reset buildings placed for each level\n\nRoadmap:\n- More SFX, music improvements \n- Balance\n- Feedback and suggestions from the community",
    "matched": [],
-   "checked": true
+   "checked": false
   },
   {
    "gid": "509567431915603800",
@@ -316,7 +282,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/509567431915603800",
    "notes": "Patch Notes:\n\n-  Improved tutorial & tutorial prompts for better clarity.\n\n-  Building limit now shows max text instead of cost.\n\n-  Increased music volume by +5 dB.\n\n-  Added more tips \"IT'S OVER, GOBLINS. I HAVE THE HIGH GROUND!\" - CANNON\n\n-  Moved loading screen tips to the options tab due to faster load times.\n\n-  Replaced icons and symbols with emojis to fix alignment issues. 🪙❤️💥💣🌑☀️\n\n-  Made upgrade information easier to understand, add extra information as tips.\n\n-  Collect gold from chests.\n\n-  Eat mushrooms to heal.\n\n-  Corrected next item and previous item scroll order issues.\n\n-  Fixed scroll UI bugs.\n\n-  Resolved speed line overlay bugs and made improvements.\n\n-  Fixed damage overlay bugs and made improvements.\n\n-  Adjusted barricade model ropes.\n\n-  Added more shake effects for interactions.\n\n-  Achievements now available on more levels.\n\n-  Removed fruit basket.\n\n-  All levels baked.\n\n-  New OG Level Crystal, Very Hard+ Start with 100 gold (instead of 400) & No healing mushrooms and limited high ground for strategic placements. Big respect to you if you can beat Crystal on Night Mode.\n\n-  Fix place building flash.\n\n-  Add bomb place particles.\n\n-  Fix sky resources.\n\n-  Updated screenshots.\n\n-  Update GIFs.\n\n-  Updated trailer.\n\nRoadmap:\n\n-  Engine upgrade for better performance.\n\n-  Community feedback and suggestions.",
    "matched": [],
-   "checked": true
+   "checked": false
   },
   {
    "gid": "690882175138005309",
@@ -325,10 +291,8 @@
    "time": 1777578540,
    "url": "https://store.steampowered.com/news/app/2807130/view/690882175138005309",
    "notes": "New Features\n\n- \nController Support: Full support added with aim assist.\n\n- \nmacOS: Now officially playable on Mac.\n\n- \nWidescreen: UI and textures now scale correctly.\n\n- \nBlood Moon: New event! Snow and lava levels are now night-only.\n\nGameplay & Audio\n\n- \nSpeed: Switching equipment is now 33% faster.\n\n- \nComfort: Reduced headbob by 50%.\n\n- \nWaves: Press Q to start waves manually.\n\n- \nAudio: Balanced volume and added new button SFX.\n\nFixes & Improvements\n\n- \nBombs: Now properly damage enemies (not just you!).\n\n- \nMenus: Fixed mouse disappearing/getting stuck.\n\n- \nVisuals: Refined lighting and color grading.\n\nupdated pricing using Steam’s new Purchasing Power conversion to ensure the game is accessible to more players. Prices reduced by 20% or more in many regions.Example: Our EU price has been lowered from €4,99 to €3,55.\n\nThanks for playing!",
-   "matched": [
-    "I1"
-   ],
-   "checked": true
+   "matched": [],
+   "checked": false
   },
   {
    "gid": "684140727200907388",
@@ -338,7 +302,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/684140727200907388",
    "notes": "- \nNow in 28 languages, including Japanese, Korean and Chinese. The game follows your Steam language, or pick one in Options\n\n- \nNow playable on Linux\n\n- \nNew lighting in every world: an overcast forest, freezing snow, warm lava, a torchlit hub and a glowing furnace\n\n- \nNew title logo, with its own version in Japanese, Korean and Chinese\n\n- \nThe whole Options menu now works with a controller: LB/RB switch tabs and B goes back, great on Steam Deck\n\n- \nController: hold LT to aim, which is when aim assist kicks in. Sprint is now on L3, crouch on R3 and bomb on View\n\n- \nFive achievements that could not be unlocked before now unlock\n\n- \nSmoother play: no freeze on the first hit, and much steadier frame rates on Mac\n\n- \nCoin, heart and bomb icons now look the same on every system\n\n- \nNew 16:10 resolutions, including Steam Deck's 1280x800\n\n- \nFixed: the 2560x1440 option set 2560x1080, rebinding a key removed its controller button, and the pause menu was empty after pressing Esc in Options\n\n- \nFixed: the lava world's last wave played the wrong music, and the snow music restarted off the beat",
    "matched": [],
-   "checked": true
+   "checked": false
   },
   {
    "gid": "684140727200908131",
@@ -348,7 +312,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/684140727200908131",
    "notes": "- \nMaintenance update: no gameplay changes",
    "matched": [],
-   "checked": true
+   "checked": false
   },
   {
    "gid": "684140727200908155",
@@ -358,7 +322,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/684140727200908155",
    "notes": "- \nMaintenance update: no gameplay changes",
    "matched": [],
-   "checked": true
+   "checked": false
   }
  ],
  "threads": {

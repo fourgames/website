@@ -43,6 +43,12 @@ def describe_error(error):
 class Point(BaseModel):
     kind: Literal["bug", "complaint", "suggestion", "question", "praise"]
     text: str = Field(description="The point in one short English sentence, as a developer would note it.")
+    urgency: Literal["low", "medium", "high", "urgent"]
+    existing_issue: Optional[str] = Field(description="For a bug, complaint or suggestion: the ID of the listed issue it repeats, or null.")
+    new_issue_title: Optional[str] = Field(
+        description="For a bug, complaint or suggestion matching no listed issue: a short, general English title other "
+        "players' posts about the same thing would fit. Null for praise and questions."
+    )
 
 
 class Triage(BaseModel):
@@ -52,10 +58,6 @@ class Triage(BaseModel):
     category: Literal["bug", "suggestion", "question", "praise"]
     urgency: Literal["low", "medium", "high", "urgent"]
     area: str = Field(description="The part of the game it's about, 1-3 words, e.g. 'controls', 'performance', 'level 3'.")
-    existing_issue: Optional[str] = Field(description="ID of the open issue this repeats, or null.")
-    new_issue_title: Optional[str] = Field(
-        description="For a bug or suggestion that matches no listed issue: a short English title for a new issue. Else null."
-    )
     details: Optional[str] = Field(
         description="For a bug: what a developer needs to reproduce it (steps, hardware, settings, when it happens). Else null."
     )
@@ -83,10 +85,12 @@ when the player mainly asks something; "praise" for posts that are mostly positi
 - urgency: "urgent" only for crashes on start, lost saves or progress, the game being unplayable, or many players \
 blocked; "high" for serious bugs or a strongly negative review that names a fixable problem; "medium" for ordinary \
 bugs and popular requests; "low" for everything else.
-- Duplicates: the user message lists the game's open issues. If the post reports the same underlying problem or \
-request as one of them, in any language, set existing_issue to that issue's ID. A reply such as "same here" or \
-"me too" in a thread whose opening post belongs to an issue repeats that issue. Otherwise, for a bug or \
-suggestion, give new_issue_title. Questions and praise get neither.
+- Issues: the user message lists the game's open issues (bugs and ideas). Every bug, complaint and suggestion \
+point belongs to one: if it is the same underlying problem or request as a listed issue, in any language, set its \
+existing_issue to that ID; otherwise give new_issue_title, a short, general title that other players' posts about \
+the same thing would also fit (e.g. "Chainsaw upgrades feel meaningless", not a quote). Points in one post that are \
+about the same thing share one title. A reply such as "same here" in a thread whose opening post belongs to issues \
+repeats them. Praise and questions get neither. Each point also gets its own urgency, on the scale above.
 - Read the post the way a native speaker and Steam regular would. Steam reviews are full of memes and irony: a \
 recommended review that only says "run away" (Korean "도망쳐") jokes that the game is addictive or hard, not a \
 warning. Set tone accordingly and triage what the player actually means.
@@ -129,19 +133,19 @@ def triage(game_name, item, issues, context=None):
 def _dry_triage(item):
     text = item.get("text") or ""
     bug = any(w in text.lower() for w in ("crash", "bug", "broken", "freeze", "error"))
+    kind = "bug" if bug else ("praise" if item.get("votedUp", True) else "complaint")
     return Triage(
         language="English",
         english=text,
         summary=text[:120],
         category="bug" if bug else ("praise" if item.get("votedUp", True) else "suggestion"),
-        tone="sincere",
-        points=[],
-        note=None,
         urgency="high" if bug else "low",
         area="general",
-        existing_issue=None,
-        new_issue_title=("Dry-run issue: " + text[:60]) if bug or not item.get("votedUp", True) else None,
         details=None,
+        tone="sincere",
+        points=[Point(kind=kind, text=text[:120], urgency="high" if bug else "low", existing_issue=None,
+                      new_issue_title=None if kind == "praise" else "Dry-run issue: " + text[:60])],
+        note=None,
     )
 
 

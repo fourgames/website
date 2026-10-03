@@ -253,8 +253,8 @@ def thread_context(state, item):
     if not op:
         return None
     ctx = f"Thread: \"{op.get('title', '')}\""
-    if op.get("issue"):
-        ctx += f" (its opening post is issue {op['issue']})"
+    if op.get("issues"):
+        ctx += f" (its opening post is in issues {', '.join(op['issues'])})"
     return ctx
 
 
@@ -330,44 +330,53 @@ def triage_pending(state, game, run, budget):
             continue
         status.ok("claude")
         budget["left"] -= 1
-        result = t.model_dump(exclude={"existing_issue", "new_issue_title"})
+        result = t.model_dump()
         result["points"] = result["points"] or fallback_points(result)
         if not result["english"].strip() or result["english"].strip() == (item.get("text") or "").strip():
             result.pop("english")  # an English post: the dashboard shows its own text
+        assign_issues(state, item, result, run)
         item["triage"] = result
         item["pending"] = False
-        assign_issue(state, item, t, run)
         if t.urgency == "urgent":
             run["urgent"].append(item["id"])
 
 
-def assign_issue(state, item, t, run):
-    old = item.get("issue")
-    if old and old in state["issues"]:
-        state["issues"][old]["items"] = [i for i in state["issues"][old]["items"] if i != item["id"]]
-        run["touched"].add(old)
-    item["issue"] = None
-    if t.category not in ("bug", "suggestion"):
-        return
-    issue_id = t.existing_issue if t.existing_issue in state["issues"] else None
-    if not issue_id and t.new_issue_title:
-        issue_id = f"I{state['nextIssue']}"
-        state["nextIssue"] += 1
-        state["issues"][issue_id] = {
-            "id": issue_id,
-            "kind": t.category,
-            "title": t.new_issue_title.strip(),
-            "area": t.area,
-            "summary": t.summary,
-            "status": "open",
-            "created": now(),
-            "items": [],
-            "alerted": {"urgent": False, "cluster": 0},
-        }
-    if issue_id:
-        state["issues"][issue_id]["items"].append(item["id"])
-        item["issue"] = issue_id
-        run["touched"].add(issue_id)
+def assign_issues(state, item, result, run):
+    """Every bug, complaint and suggestion point joins a bug or idea (an existing one it repeats, or a
+    new one), so one long review can count towards several, and each idea counts every player who
+    raised it. Rewrites the stored points as {kind, text, urgency, issue}."""
+    for old in item.get("issues") or ([item["issue"]] if item.get("issue") else []):
+        if old in state["issues"]:
+            state["issues"][old]["items"] = [i for i in state["issues"][old]["items"] if i != item["id"]]
+            run["touched"].add(old)
+    links, new_titles, points = [], {}, []
+    for point in result.get("points") or []:
+        stored = {"kind": point["kind"], "text": point["text"], "urgency": point.get("urgency", "low")}
+        if point["kind"] in ("bug", "complaint", "suggestion"):
+            kind = "bug" if point["kind"] == "bug" else "suggestion"
+            issue_id = point.get("existing_issue") if point.get("existing_issue") in state["issues"] else None
+            title = (point.get("new_issue_title") or "").strip()
+            if not issue_id and title:
+                issue_id = new_titles.get(title.lower())
+                if not issue_id:
+                    issue_id = f"I{state['nextIssue']}"
+                    state["nextIssue"] += 1
+                    new_titles[title.lower()] = issue_id
+                    state["issues"][issue_id] = {
+                        "id": issue_id, "kind": kind, "title": title, "area": result.get("area"), "summary": point["text"],
+                        "status": "open", "created": now(), "items": [], "alerted": {"urgent": False, "cluster": 0},
+                    }
+            if issue_id:
+                stored["issue"] = issue_id
+                if item["id"] not in state["issues"][issue_id]["items"]:
+                    state["issues"][issue_id]["items"].append(item["id"])
+                if issue_id not in links:
+                    links.append(issue_id)
+                run["touched"].add(issue_id)
+        points.append(stored)
+    result["points"] = points
+    item["issues"] = links
+    item["issue"] = links[0] if links else None  # the most actionable one (points are ordered that way)
 
 
 def refresh_issues(state, game):
@@ -384,7 +393,10 @@ def refresh_issues(state, game):
         issue["languages"] = sorted({(p.get("triage") or {}).get("language") or "?" for p in posts})
         issue["firstSeen"] = min(p["created"] for p in posts)
         issue["lastSeen"] = max(p["created"] for p in posts)
-        issue["urgency"] = max(((p.get("triage") or {}).get("urgency", "low") for p in posts), key=URGENCY.index)
+        # Urgency from the points that belong to this issue (a post can raise several), else the post's.
+        urgencies = [pt.get("urgency", "low") for p in posts for pt in (p.get("triage") or {}).get("points") or [] if pt.get("issue") == issue_id]
+        urgencies = urgencies or [(p.get("triage") or {}).get("urgency", "low") for p in posts]
+        issue["urgency"] = max(urgencies, key=URGENCY.index)
         issue["negativeReviews"] = sum(1 for p in posts if p["kind"] == "review" and not p.get("votedUp"))
         issue["details"] = list(dict.fromkeys(d for p in posts if (d := (p.get("triage") or {}).get("details"))))[:8]
         if issue["status"] in ("likely_fixed", "still_happening"):
@@ -411,6 +423,10 @@ def fix_prompt(game, issue, posts):
     for p in posts[:8]:
         t = p.get("triage") or {}
         english = (t.get("english") or p.get("text") or "").strip().replace("\n", " ")
+        # The player's own point about this bug first, then the post it's from.
+        mine = [pt["text"] for pt in t.get("points") or [] if pt.get("issue") == issue["id"]]
+        if mine:
+            english = "; ".join(mine) + f" (from the post: {english})"
         if len(english) > 600:
             english = english[:600] + "…"
         where = {"review": "Steam review", "topic": "Steam discussion", "reply": "Steam discussion reply"}[p["kind"]]

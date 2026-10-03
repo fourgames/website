@@ -125,6 +125,43 @@ class ReleaseMatch(BaseModel):
     fixed: list[Fix]
 
 
+class FixReply(BaseModel):
+    text: str = Field(description="The reply, in the player's language.")
+    english: str = Field(description="What the reply says, in English.")
+
+
+FIX_REPLY_SYSTEM = """You write a developer's reply to a player on Steam, for one case only: the problem the \
+player wrote about has since been fixed in an update. Steam's guidance is to reply only to address a specific \
+issue or misinformation, clearly and concisely, so:
+- One or two short sentences, in the player's own language.
+- Say that the problem they described is fixed, name it in their own terms, and give the update version.
+- Thank them for reporting it. If it's a negative review, you may invite them to give the game another try; never \
+ask them to change their review.
+- No promises, no excuses, no marketing, no arguing."""
+
+
+def fix_reply(game_name, item, issue_title, version):
+    """A short reply telling the player that what they reported is fixed in `version`."""
+    if DRY_RUN:
+        return FixReply(text=f"Thanks for reporting this! It's fixed in {version}.", english=f"Thanks for reporting this! It's fixed in {version}.")
+    t = item.get("triage") or {}
+    content = (
+        f"Game: {game_name}\nFixed in: {version}\nWhat was fixed: {issue_title}\n"
+        f"Post type: {item['kind']}{' (negative review)' if item['kind'] == 'review' and not item.get('votedUp') else ''}\n"
+        f"Player's language: {t.get('language') or 'unknown'}\n\n<post>\n{(item.get('text') or '')[:6000]}\n</post>"
+    )
+    response = client().messages.parse(
+        model=MODEL,
+        max_tokens=1000,
+        system=FIX_REPLY_SYSTEM,
+        messages=[{"role": "user", "content": content}],
+        output_format=FixReply,
+    )
+    if response.stop_reason != "end_turn" or response.parsed_output is None:
+        raise RuntimeError(f"fix reply stopped with {response.stop_reason}")
+    return response.parsed_output
+
+
 def match_release(game_name, release, issues):
     """IDs (with a one-line reason) of the open issues the patch notes most likely address."""
     if not issues:

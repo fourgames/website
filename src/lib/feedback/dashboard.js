@@ -78,6 +78,7 @@ const ICONS = {
   suggestions: "M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4",
   feed: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
   stats: "M3 3v18h18M18 17V9M13 17V5M8 17v-3",
+  replies: "M9 17H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M14 19l2 2 5-5",
 };
 function icon(name) {
   const svg = svgEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", class: "icon", "aria-hidden": "true" });
@@ -144,7 +145,7 @@ async function init() {
   const games = state.index.games || [];
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = Number(hash.get("app") || store.get("app"));
-  state.tab = ["issues", "suggestions", "feed", "stats"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
+  state.tab = ["issues", "suggestions", "replies", "feed", "stats"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
   if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : games[0].appId);
 }
 
@@ -285,15 +286,16 @@ function render() {
     issues: issues("bug").filter(isActive).length,
     suggestions: issues("suggestion").filter(isActive).length,
     feed: items().filter((i) => !i.dev).length,
+    replies: toReply().length,
   };
-  const tabs = [["issues", "Issues"], ["suggestions", "Suggestions"], ["feed", "Feed"], ["stats", "Stats"]];
+  const tabs = [["issues", "Issues"], ["suggestions", "Suggestions"], ["replies", "Replies"], ["feed", "Feed"], ["stats", "Stats"]];
   const buttons = () => tabs.map(([id, label]) =>
     h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
       icon(id), h("span", label), counts[id] != null ? h("span.count", counts[id]) : null));
   document.getElementById("fb-nav-side").replaceChildren(...buttons());
   document.getElementById("fb-nav-top").replaceChildren(...buttons());
   setHash();
-  const view = { issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), feed: feedView, stats: statsView }[state.tab]();
+  const view = { issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), replies: repliesView, feed: feedView, stats: statsView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
 
@@ -390,6 +392,49 @@ function postView(item) {
       ...item.versions.slice().reverse().map((v) => h("div.text", `${fmtDate(v.at)}${v.votedUp == null ? "" : v.votedUp ? " · 👍" : " · 👎"}\n${v.title ? v.title + "\n" : ""}${v.text}`))) : null,
     item.devResponse ? h("details", h("summary", "Your reply on Steam"), h("div.text", item.devResponse)) : null,
   );
+}
+
+// Posts worth a reply: a negative review or a thread about something a later update fixed (Steam's
+// guidance: reply to "a bug that has since been resolved"). Drafted by feedback/run.py when a patch
+// is matched; gone once you've replied on Steam, the issue turns out to be still happening, or you
+// press Done (remembered in this browser).
+function replied(item) {
+  if (item.devResponse) return true;
+  const thread = item.topic || item.id;
+  // Any post of yours in the thread after the player's counts, even one from before the fix.
+  return items().some((i) => i.dev && (i.id === thread || i.topic === thread) && i.created > item.created);
+}
+function toReply() {
+  const done = new Set((store.get("replied") || "").split(",").filter(Boolean));
+  return items()
+    .filter((i) => i.fixReply && !done.has(i.id) && !replied(i))
+    .filter((i) => state.game.issues?.[i.fixReply.issue]?.status === "likely_fixed")
+    .sort((a, b) => b.created - a.created);
+}
+
+function repliesView() {
+  const list = toReply();
+  const intro = h("p.updated", { style: "margin:0 0 12px" },
+    "Negative reviews and threads about something an update has since fixed. Steam suggests replying only in cases like these: say what was fixed, briefly. Once you reply on Steam, the post leaves this list on the next run.");
+  if (!list.length) return h("div", intro, h("p.empty", "Nothing to reply to right now."));
+  return h("div", intro, ...list.map((item) => {
+    const r = item.fixReply;
+    const issue = state.game.issues[r.issue];
+    const done = h("button.btn", { onclick: () => {
+      store.set("replied", [...(store.get("replied") || "").split(",").filter(Boolean), item.id].join(","));
+      render();
+    } }, "Done");
+    return h("div.card",
+      h("div.meta", h("span.badge.s-fixed", `✓ Fixed in ${r.version}`), h("b", issue?.title || "")),
+      h("div.reply",
+        h("div.reply-row",
+          h("div", h("div", "💬 ", r.text), r.text !== r.english ? h("div.en", r.english) : null),
+          h("div.actions", { style: "margin:0;flex:none" },
+            h("button.btn.primary", { onclick: (e) => copy(r.text, e.currentTarget) }, "Copy reply"),
+            h("a.btn.link-btn", { href: item.url, target: "_blank", rel: "noopener" }, item.kind === "review" ? "Reply on Steam ↗" : "Open thread ↗"),
+            done))),
+      postView(item));
+  }));
 }
 
 function feedView() {

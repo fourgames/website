@@ -17,6 +17,7 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
    - merges duplicates, across languages, into *issues* with mention counts. A mention is one distinct player.
 6. **Issues.** Every issue gets a priority score. Every bug issue gets a ready-to-paste Claude Code fix prompt.
 7. **Releases.** When a game publishes an update or patch-notes event, which `/ship` does, Claude Haiku 4.5 matches the open issues against the patch notes and marks matches **likely fixed in vX**. If new reports of a likely-fixed issue arrive after that release, the issue becomes **still happening**.
+   - For every negative review and every thread in an issue that a release fixed, Claude drafts a one- or two-sentence reply in the player's language, saying what was fixed and in which version. Steam's moderation guide suggests replying only in cases like that. The drafts show in the dashboard's **Replies** view until you reply on Steam.
 8. **Discord.** It posts webhook embeds that link to the original post for:
    - urgent issues (with an @mention);
    - reviews flipped to negative;
@@ -70,6 +71,7 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 - **Top bar:** players now, review score, open bugs, issues still happening, new posts, and the latest update.
 - **Issues:** bug issues sorted by priority. Each has *Copy fix prompt* and the original posts with their translations and Steam links.
 - **Suggestions:** the same view for suggestions.
+- **Replies:** negative reviews and threads about something an update has since fixed, each with a drafted reply (Copy reply, Reply on Steam, Done).
 - **Feed:** every post, newest first, with filters and search.
 - **Stats:** concurrent players and new reviews over time, with every update marked, plus posts by category and by language.
 

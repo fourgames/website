@@ -417,6 +417,43 @@ def check_releases(state, game, events):
             issue.update(status="likely_fixed", fixedIn=label, fixedAt=release["time"], fixedUrl=release["url"], fixReason=m["reason"])
         release.update(matched=[m["issue"] for m in matches], checked=True)
         print(f"[release] {game['name']} {label}: {len(matches)} issue(s) likely fixed")
+    for issue in state["issues"].values():
+        if issue["status"] == "likely_fixed":
+            if not draft_fix_replies(state, game, issue):
+                break
+
+
+def draft_fix_replies(state, game, issue):
+    """Steam's guidance: reply when a review or thread is about a bug you've since fixed. For each
+    negative review and each thread in a likely-fixed issue, from before the fix, draft that reply
+    once (one per thread). The dashboard lists them until you've replied on Steam. Returns False
+    when Claude can't be reached, so the caller stops trying this run."""
+    import triage
+
+    threads = {state["items"][i].get("topic") or i for i in issue["items"]
+               if i in state["items"] and state["items"][i].get("fixReply") and state["items"][i]["kind"] != "review"}
+    for item_id in issue["items"]:
+        item = state["items"].get(item_id)
+        if not item or item["created"] >= issue["fixedAt"] or item.get("fixReply") or item.get("dev"):
+            continue
+        if item["kind"] == "review":
+            if item.get("votedUp") or item.get("devResponse"):
+                continue
+        else:
+            thread = item.get("topic") or item["id"]
+            answered = any(i.get("dev") and (i["id"] == thread or i.get("topic") == thread) and i["created"] > item["created"]
+                           for i in state["items"].values())
+            if thread in threads or answered:
+                continue
+            threads.add(thread)
+        try:
+            reply = triage.fix_reply(game["name"], item, issue["title"], issue["fixedIn"])
+        except Exception as error:  # noqa: BLE001 - a missing draft isn't worth failing the run
+            print(f"[reply] {item_id}: {type(error).__name__}: {error}")
+            status.fail("claude", f"{triage.describe_error(error)[0]} Reply drafts for fixed issues are missing.")
+            return False
+        item["fixReply"] = {"issue": issue["id"], "version": issue["fixedIn"], "at": issue["fixedAt"], **reply.model_dump()}
+    return True
 
 
 # ---------------------------------------------------------------------------
@@ -473,6 +510,8 @@ def daily_report(index, states):
         threads = sum(1 for i in items if i["kind"] == "topic" and i["created"] >= since and not i.get("dev"))
         replies = sum(1 for i in items if i["kind"] == "reply" and i["created"] >= since and not i.get("dev"))
         new_issues = [i for i in state["issues"].values() if i["created"] >= since]
+        to_reply = [i for i in items if i.get("fixReply") and not i.get("devResponse")
+                    and state["issues"].get(i["fixReply"]["issue"], {}).get("status") == "likely_fixed"]
         open_bugs = [i for i in state["issues"].values() if i["kind"] == "bug" and i["status"] != "likely_fixed"]
         still = [i for i in state["issues"].values() if i["status"] == "still_happening"]
         players = [n for t, n in state["players"] if t >= since]
@@ -491,6 +530,8 @@ def daily_report(index, states):
         if threads or replies:
             parts.append(f"{threads} new thread{'s' if threads != 1 else ''}, {replies} repl{'ies' if replies != 1 else 'y'}")
         parts.append(f"{len(open_bugs)} open bug{'s' if len(open_bugs) != 1 else ''}")
+        if to_reply:
+            parts.append(f"{len(to_reply)} worth a reply (fixed since)")
         if still:
             parts.append(f"{len(still)} still happening after a fix")
         line += "\n" + " · ".join(parts)

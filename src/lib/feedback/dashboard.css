@@ -754,3 +754,22 @@
 	display: inline-flex;
 	align-items: center;
 }
+
+/* A drafted reply to a player (Replies view) */
+.fb .reply {
+	background: var(--fb-card-2);
+	border-radius: var(--radius-card);
+	padding: 10px 12px;
+	margin: 10px 0 2px;
+}
+.fb .reply .en {
+	color: var(--fb-muted);
+	font-size: 0.8125rem;
+}
+.fb .reply-row {
+	display: flex;
+	gap: 12px;
+	align-items: flex-start;
+	justify-content: space-between;
+	flex-wrap: wrap;
+}

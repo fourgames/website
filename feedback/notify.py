@@ -30,6 +30,23 @@ def _mention():
     return f"<@{m.group(2)}>", {"parse": [], "users": [m.group(2)]}
 
 
+# Flags for the alert's language field (dashboard.js has the same idea): the country a language is
+# most associated with.
+FLAGS = {
+    "english": "gb", "korean": "kr", "japanese": "jp", "chinese": "cn", "simplified chinese": "cn",
+    "traditional chinese": "tw", "german": "de", "french": "fr", "spanish": "es", "portuguese": "pt",
+    "brazilian portuguese": "br", "russian": "ru", "polish": "pl", "italian": "it", "turkish": "tr", "ukrainian": "ua",
+    "dutch": "nl", "swedish": "se", "danish": "dk", "norwegian": "no", "finnish": "fi", "czech": "cz",
+    "hungarian": "hu", "thai": "th", "vietnamese": "vn", "indonesian": "id", "arabic": "sa",
+}
+
+
+def _flag(language):
+    code = FLAGS.get((language or "").lower())
+    flag = "".join(chr(0x1F1A5 + ord(c)) for c in code.upper()) if code else ""
+    return f"{flag} {language}".strip()
+
+
 def _clip(text, limit):
     text = (text or "").strip()
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
@@ -82,7 +99,7 @@ def _post_fields(item):
     t = item.get("triage") or {}
     fields = [{"name": "Area", "value": _clip(t.get("area") or "-", 100), "inline": True}]
     if t.get("language") and t["language"] != "English":
-        fields.append({"name": "Language", "value": t["language"], "inline": True})
+        fields.append({"name": "Language", "value": _flag(t["language"]), "inline": True})
     if item["kind"] == "review":
         fields.append({"name": "Played", "value": f"{item.get('playtime', 0)} h", "inline": True})
     return fields
@@ -117,7 +134,7 @@ def cluster(game, issue, items):
         + (f" ({i['triage']['language']})" if (i.get("triage") or {}).get("language", "English") != "English" else "")
         for i in items[:6]
     )
-    langs = ", ".join(issue.get("languages") or [])
+    langs = ", ".join(_flag(lang) for lang in issue.get("languages") or [])
     return {
         "title": _clip(f"🔁 {issue['mentions']} players report: {issue['title']} · {game['name']}", 256),
         "url": items[0]["url"] if items else DASHBOARD_URL,

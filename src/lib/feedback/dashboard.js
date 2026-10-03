@@ -73,6 +73,31 @@ async function getJson(path) {
 }
 
 
+// A flag for a language: the country it's most associated with (a language isn't a country, but
+// it reads at a glance). Reviews carry Steam's own language code; forum posts the name Claude gave.
+const STEAM_LANG = {
+  english: "gb", koreana: "kr", japanese: "jp", schinese: "cn", tchinese: "tw", german: "de", french: "fr",
+  spanish: "es", latam: "mx", portuguese: "pt", brazilian: "br", russian: "ru", polish: "pl", italian: "it",
+  turkish: "tr", ukrainian: "ua", dutch: "nl", swedish: "se", danish: "dk", norwegian: "no", finnish: "fi",
+  czech: "cz", hungarian: "hu", romanian: "ro", thai: "th", vietnamese: "vn", indonesian: "id", greek: "gr",
+  bulgarian: "bg", arabic: "sa",
+};
+const LANG_NAME = {
+  english: "gb", korean: "kr", japanese: "jp", chinese: "cn", "simplified chinese": "cn", "chinese (simplified)": "cn",
+  "traditional chinese": "tw", "chinese (traditional)": "tw", german: "de", french: "fr", spanish: "es",
+  "latin american spanish": "mx", "spanish (latin america)": "mx", portuguese: "pt", "brazilian portuguese": "br",
+  "portuguese (brazil)": "br", russian: "ru", polish: "pl", italian: "it", turkish: "tr", ukrainian: "ua", dutch: "nl",
+  swedish: "se", danish: "dk", norwegian: "no", finnish: "fi", czech: "cz", hungarian: "hu", romanian: "ro", thai: "th",
+  vietnamese: "vn", indonesian: "id", greek: "gr", bulgarian: "bg", arabic: "sa",
+};
+function flag(code) {
+  return code ? [...code.toUpperCase()].map((c) => String.fromCodePoint(0x1f1a5 + c.charCodeAt(0))).join("") : "";
+}
+function langFlag(name, steamCode) {
+  return flag(STEAM_LANG[steamCode] || LANG_NAME[(name || "").toLowerCase()]);
+}
+const withFlag = (name, steamCode) => [langFlag(name, steamCode), name].filter(Boolean).join(" ");
+
 const ICONS = {
   issues: "M8 2l1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3 3 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4",
   suggestions: "M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4",
@@ -364,7 +389,7 @@ function issueCard(issue) {
     h("div.card-head",
       h("div.main-col",
         h("h3", issue.title),
-        h("div.meta", urgencyBadge(issue.urgency), statusBadge(issue), h("span", issue.area), h("span", (issue.languages || []).join(", ")),
+        h("div.meta", urgencyBadge(issue.urgency), statusBadge(issue), h("span", issue.area), h("span", (issue.languages || []).map((l) => withFlag(l)).join(", ")),
           h("span", `last ${ago(issue.lastSeen)}`), issue.negativeReviews ? h("span.vote-down", `${issue.negativeReviews} 👎 review${issue.negativeReviews === 1 ? "" : "s"}`) : null)),
       h("div.mentions", h("b", issue.mentions), h("span", issue.mentions === 1 ? "player" : "players"))),
     issue.summary ? h("p", { style: "margin:6px 0 0;color:var(--fb-ink-2)" }, issue.summary) : null,
@@ -392,7 +417,7 @@ function postView(item) {
       item.kind === "review" ? h(item.votedUp ? "span.vote-up" : "span.vote-down", item.votedUp ? "👍 Recommended" : "👎 Not recommended") : null,
       item.kind === "review" && item.playtime != null ? h("span", `${item.playtime} h played`) : null,
       item.author?.name ? h("span", item.author.name) : null,
-      t.language ? h("span", t.language) : null,
+      t.language ? h("span", withFlag(t.language, item.lang)) : null,
       h("span", fmtDate(item.created)),
       item.edited ? h("span.badge", { title: `Edited · ${(item.versions || []).length} earlier version(s) kept` }, "edited") : null,
       flipped ? h("span.badge", { class: flipped.to === "negative" ? "s-still" : "s-fixed" }, `flipped ${flipped.to} ${fmtShort(flipped.at)}`) : null,
@@ -520,7 +545,7 @@ function statsView() {
     body.replaceChildren(
       playersChart(start, end, releases),
       reviewsChart(start, end, releases),
-      h("div.grid-2", breakdown("Posts by category", start, (i) => i.triage?.category), breakdown("Posts by language", start, (i) => i.triage?.language)),
+      h("div.grid-2", breakdown("Posts by category", start, (i) => i.triage?.category), breakdown("Posts by language", start, (i) => i.triage?.language && withFlag(i.triage.language, i.lang))),
     );
   };
   const range = chips([[7, "7D"], [30, "30D"], [90, "90D"], [365, "1Y"], [0, "All"]], f.range, (v) => { f.range = v; draw(); }, "Time range");

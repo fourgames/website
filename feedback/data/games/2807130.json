@@ -100,7 +100,9 @@
      }
     ],
     "note": null
-   }
+   },
+   "devResponseAt": 1777577988,
+   "devChecked": "573199efa14e:1"
   },
   "t7130962134691875275": {
    "id": "t7130962134691875275",
@@ -283,7 +285,14 @@
    "firstSession": 1,
    "details": [],
    "priority": 0.6,
-   "fixPrompt": "Players of Reforge Front are reporting a bug on Steam. Find the cause in this codebase and fix it.\n\nBug: HP meter display bug\nArea of the game: mechanics, UI\nReported by 1 player (English), between 2025-07-04 and 2025-07-04.\n\nPlayer reports (translated to English):\n- Steam review (2025-07-04, 0.3 h played): \"HP meter was bugged at the time of playing. (from the post: i saw this on the dev's yt and gave it a go  PROS pretty good torbjorn simulator td game i rate it higher than pve in overwatch 3d is a nice change from usual bird eye view td format the pop gun and hammer feels smooth cute lil gobbos come to take ur forge  CONS needs option to turn off the recoil head bob effect at the time of playing hp meter was bugged i think if the pop gun had a close quarters secondary mode that would be nice switching to the hammer is too slow)\"\n  https://steamcommunity.com/profiles/76561197995186543/recommended/2807130/\n\nWork out the most likely cause from the code, fix it, and tell me what you changed and how to test it. If the reports aren't enough to pin it down, say what to ask the players."
+   "fixPrompt": "Players of Reforge Front are reporting a bug on Steam. Find the cause in this codebase and fix it.\n\nBug: HP meter display bug\nArea of the game: mechanics, UI\nReported by 1 player (English), between 2025-07-04 and 2025-07-04.\n\nPlayer reports (translated to English):\n- Steam review (2025-07-04, 0.3 h played): \"HP meter was bugged at the time of playing. (from the post: i saw this on the dev's yt and gave it a go  PROS pretty good torbjorn simulator td game i rate it higher than pve in overwatch 3d is a nice change from usual bird eye view td format the pop gun and hammer feels smooth cute lil gobbos come to take ur forge  CONS needs option to turn off the recoil head bob effect at the time of playing hp meter was bugged i think if the pop gun had a close quarters secondary mode that would be nice switching to the hammer is too slow)\"\n  https://steamcommunity.com/profiles/76561197995186543/recommended/2807130/\n\nWork out the most likely cause from the code, fix it, and tell me what you changed and how to test it. If the reports aren't enough to pin it down, say what to ask the players.",
+   "partly": [
+    {
+     "in": "Forg QoL Update! + New Level",
+     "url": "https://steamcommunity.com/profiles/76561197995186543/recommended/2807130/",
+     "reason": "Your reply: \"Hammer: New icon instead of heart and clearer melee/AoE functionality\" - the clearer functionality may address the HP meter display issues but doesn't explicitly confirm the bug was fixed"
+    }
+   ]
   },
   "I15": {
    "id": "I15",
@@ -317,6 +326,11 @@
      "in": "Reforge Front Update",
      "url": "https://store.steampowered.com/news/app/2807130/view/690882175138005309",
      "reason": "\"Reduced headbob by 50%\" helps with the recoil head bob issue but doesn't add a toggle option as requested."
+    },
+    {
+     "in": "Forg QoL Update! + New Level",
+     "url": "https://steamcommunity.com/profiles/76561197995186543/recommended/2807130/",
+     "reason": "Your reply: \"Head-bob: Reduced by 50%\" - reduces the effect but doesn't provide a toggle option to turn it completely off as requested"
     }
    ]
   },

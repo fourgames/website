@@ -58,8 +58,8 @@ class Triage(BaseModel):
         description="How the post is meant: a joke or meme, sarcasm (the words mean the opposite), or sincere."
     )
     note: Optional[str] = Field(
-        description="One short English sentence on what a reader of the translation would miss: slang, memes, sarcasm "
-        "or cultural context. Null when there is nothing to add."
+        description="Usually null. Only when the English would mislead on its own: one short sentence explaining a meme, "
+        "slang term, sarcasm or reference. Never your reading of the player's opinion."
     )
 
 
@@ -80,8 +80,9 @@ request as one of them, in any language, set existing_issue to that issue's ID. 
 suggestion, give new_issue_title. Questions and praise get neither.
 - Read the post the way a native speaker and Steam regular would. Steam reviews are full of memes and irony: a \
 recommended review that only says "run away" (Korean "도망쳐") jokes that the game is addictive or hard, not a \
-warning. Set tone accordingly, triage what the player actually means, and put the context the literal translation \
-loses in note."""
+warning. Set tone accordingly and triage what the player actually means.
+- note is for the rare post whose English would be misread without it (a meme, slang, a sarcastic line, a game \
+reference). Leave it null otherwise; most posts need none. Don't use it to summarise, judge or interpret the post."""
 
 
 def triage(game_name, item, issues, context=None):

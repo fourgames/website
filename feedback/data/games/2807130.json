@@ -39,9 +39,7 @@
     "reply": {
      "text": "Thanks so much for playing and for the detailed feedback! We're glad you're enjoying the tower defense gameplay—and we'll definitely look into the head bob toggle, the HP meter issue, and those weapon mechanics.",
      "english": "Thanks so much for playing and for the detailed feedback! We're glad you're enjoying the tower defense gameplay—and we'll definitely look into the head bob toggle, the HP meter issue, and those weapon mechanics."
-    },
-    "tone": "sincere",
-    "note": "\"Torbjorn simulator\" refers to the Overwatch character, a hammer-wielding engineer; \"bird eye view\" likely means \"bird's eye view\"; \"cute lil gobbos\" are the enemies (goblins), using casual gaming slang ('lil'); the phrase is affectionate, not a complaint about enemy design."
+    }
    },
    "issue": "I1",
    "playtimeForever": 0.3,

@@ -488,15 +488,17 @@ function issueCard(issue) {
           h(`span.pc-type.tt-text-${issue.kind}`, typeIcon(issue.kind), kind),
           u ? h("span.pc-prio", bars, `${URGENCY[u]} priority`) : null,
           statusBadge(issue)),
-        h("div.pc-aside",
-          h("div.pc-aside-row",
-            h("span.pc-players", h("b", issue.mentions), issue.mentions === 1 ? " player" : " players"),
-            h("span.pc-lang", (issue.languages || []).map((l) => langFlag(l)).filter(Boolean).join(" ") || "", " ", (issue.languages || []).join(", "))),
-          h("div.pc-aside-row",
-            issue.negativeReviews ? h("span.vote-down", thumbImg(false), `${issue.negativeReviews} negative`) : null,
-            h("span", `last ${ago(issue.lastSeen)}`),
-            h("span", issue.area)))),
+        // The impact, big: how many players reported it and how many negative reviews it's in.
+        h("div.pc-aside.impact",
+          h("div.impact-stat", h("b", issue.mentions), h("span", issue.mentions === 1 ? "player reported it" : "players reported it")),
+          h(`div.impact-stat${issue.negativeReviews ? ".bad" : ""}`, h("b", issue.negativeReviews || 0),
+            h("span", issue.negativeReviews === 1 ? "negative review" : "negative reviews")))),
       h("h3.issue-title", issue.title),
+      h("div.pc-block-sub.issue-facts", [
+        (issue.languages || []).map((l) => withFlag(l)).join(", "),
+        `last reported ${ago(issue.lastSeen)}`,
+        issue.area,
+      ].filter(Boolean).join(" · ")),
       summary ? h("ul.pc-points", h("li", summaryLabel, summary)) : null,
       h("div.actions", copyBtn, toggle, linkBtn)),
     postList);
@@ -663,20 +665,26 @@ function postView(item) {
         kind ? h(`span.pc-type.tt-text-${cat}`, typeIcon(cat), kind) : h("span.pc-type.pc-kind", p.kind),
         u ? h("span.pc-prio", bars, `${URGENCY[u]} priority`) : null,
         p.t.tone && p.t.tone !== "sincere" ? h("span.pc-tone", { title: "How the post is meant" }, { joke: "Joke", sarcastic: "Sarcastic", mixed: "Partly joking" }[p.t.tone]) : null),
+      // Two tidy blocks: who wrote it (name; language, library, reviews) and what it is (verdict or
+      // kind; hours, date, version).
       h("div.pc-aside",
-        h("div.pc-aside-row",
-          item.author?.name && !item.dev ? h("a.pc-player", { href: item.author.profile || item.url, target: "_blank", rel: "noopener", title: "Steam profile" },
-            item.author.avatar ? h("img.avatar", { src: item.author.avatar, alt: "", loading: "lazy" }) : null, item.author.name) : p.who ? h("span", p.who) : null,
-          p.flag || p.language ? h("span.pc-lang", p.flag ? h("span.pv3-flag", p.flag) : null, p.language) : null),
-        // Like Steam's review sidebar: the reviewer's library size and how many reviews they've written.
-        item.kind === "review" && (item.author?.games != null || item.author?.reviews != null) ? h("div.pc-aside-row.pc-reviewer",
-          item.author.games != null ? h("span", `${item.author.games.toLocaleString("en-US")} games owned`) : null,
-          item.author.reviews != null ? h("span", plural(item.author.reviews, "review")) : null) : null,
-        h("div.pc-aside-row",
-          p.verdict ? h(`span.${p.verdict[0]}`, h("img.thumb", { src: up ? STEAM_THUMB.up : STEAM_THUMB.down, alt: "" }), p.verdict[2]) : item.kind !== "review" ? h("span", KIND[item.kind]) : null,
-          p.hours ? h("span", `${p.hours} on record`, p.atReview ? ` (${p.atReview})` : "") : null,
-          h("span", p.when),
-          versionAt(item.created) ? h("span.pc-version", { title: "The version that was live when this was posted (from the update dates)" }, `written on ${versionAt(item.created)}`) : null))),
+        h("div.pc-block",
+          h("div.pc-block-main",
+            item.author?.name && !item.dev ? h("a.pc-player", { href: item.author.profile || item.url, target: "_blank", rel: "noopener", title: "Steam profile" },
+              item.author.avatar ? h("img.avatar", { src: item.author.avatar, alt: "", loading: "lazy" }) : null, item.author.name) : h("span", p.who || "Steam user")),
+          h("div.pc-block-sub", [
+            p.flag || p.language ? `${p.flag ? p.flag + " " : ""}${p.language}` : null,
+            item.kind === "review" && item.author?.games != null ? `${item.author.games.toLocaleString("en-US")} games` : null,
+            item.kind === "review" && item.author?.reviews != null ? plural(item.author.reviews, "review") : null,
+          ].filter(Boolean).join(" · "))),
+        h("div.pc-block",
+          h("div.pc-block-main",
+            p.verdict ? h(`span.${p.verdict[0]}`, h("img.thumb", { src: up ? STEAM_THUMB.up : STEAM_THUMB.down, alt: "" }), p.verdict[2]) : h("span", KIND[item.kind])),
+          h("div.pc-block-sub", { title: "Hours played · posted · the version live then (from the update dates)" }, [
+            p.hours ? `${p.hours} played${p.atReview ? ` (${p.atReview})` : ""}` : null,
+            p.when,
+            versionAt(item.created),
+          ].filter(Boolean).join(" · "))))),
     ...p.body,
     h("div.meta", ...p.flags, item.forum && item.kind !== "review" ? h("span", item.forum) : null, p.link));
 }
@@ -773,19 +781,7 @@ function overviewView() {
   const urgent = attention();
   const replies = toReply();
   const latest = items().filter((i) => !i.dev).sort((a, b) => b.created - a.created).slice(0, 5);
-  // The week in one sentence.
-  const week = items().filter((i) => !i.dev && i.created >= now() - 7 * DAY);
-  const reviews = week.filter((i) => i.kind === "review");
-  const up = reviews.filter((i) => i.votedUp).length;
-  const parts = [
-    [week.length ? `${plural(week.length, "new post")} this week` : "No new posts this week"],
-    reviews.length ? [`${plural(reviews.length, "review")} (`, thumbImg(true), ` ${up}  `, thumbImg(false), ` ${reviews.length - up})`] : null,
-    [urgent.length ? `${urgent.length} need${urgent.length === 1 ? "s" : ""} attention` : "nothing urgent"],
-    replies.length ? [`${plural(replies.length, "post")} worth a reply`] : null,
-  ].filter(Boolean);
-  const summary = parts.flatMap((part, i) => (i ? [" · ", ...part] : part)).concat(".");
   return h("div",
-    h("p.ov-summary", ...summary),
     urgent.length
       ? section("Needs attention", urgent.length, ...urgent.slice(0, 5).map((i) => issueCard(i)), urgent.length > 5 || issues("bug").filter(isActive).length > urgent.length ? go("issues", "All bugs") : null)
       : section("Needs attention", null, h("p.ov-calm", "Nothing urgent: no high-priority bugs, and nothing came back after a fix.")),

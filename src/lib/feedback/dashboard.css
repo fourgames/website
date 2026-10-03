@@ -1286,3 +1286,71 @@
 .fb .post-card .post .pc-top {
 	cursor: pointer;
 }
+
+/* Post header, right side: two blocks */
+.fb .pc-aside {
+	flex-direction: row;
+	align-items: flex-start;
+	gap: 18px;
+}
+.fb .pc-block {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	gap: 3px;
+}
+.fb .pc-block-main {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--fb-title);
+	white-space: nowrap;
+}
+.fb .pc-block-sub {
+	font-size: 0.75rem;
+	color: var(--fb-muted);
+	white-space: nowrap;
+}
+.fb .issue-facts {
+	margin: 0 0 4px;
+	white-space: normal;
+}
+
+/* Bug and idea cards: impact numbers */
+.fb .pc-aside.impact {
+	gap: 22px;
+}
+.fb .impact-stat {
+	display: flex;
+	flex-direction: column;
+	align-items: flex-end;
+	line-height: 1.1;
+}
+.fb .impact-stat b {
+	font-family: var(--font-heading);
+	font-size: 1.6rem;
+	font-weight: 800;
+	color: var(--fb-title);
+}
+.fb .impact-stat span {
+	font-size: 0.7rem;
+	color: var(--fb-muted);
+}
+.fb .impact-stat.bad b {
+	color: var(--fb-negative);
+}
+@media (width < 40rem) {
+	.fb .pc-aside {
+		flex-direction: column;
+		gap: 6px;
+	}
+	.fb .pc-block,
+	.fb .impact-stat {
+		align-items: flex-start;
+	}
+	.fb .pc-aside.impact {
+		flex-direction: row;
+	}
+}

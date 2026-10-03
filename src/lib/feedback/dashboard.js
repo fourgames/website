@@ -12,7 +12,7 @@ let DATA = DATA_OVERRIDE || `${RAW}/main/feedback/data`;
 const DAY = 86400;
 const URGENCY = { urgent: "Urgent", high: "High", medium: "Medium", low: "Low" };
 const KIND = { review: "Review", topic: "Thread", reply: "Reply" };
-const state = { index: null, games: {}, game: null, tab: "issues", filters: { issues: { status: "active", q: "" }, suggestions: { status: "active", q: "" }, feed: { kind: "all", category: "all", q: "", shown: 50 }, stats: { range: 90 }, sales: { range: 90 } }, sales: null };
+const state = { index: null, games: {}, game: null, tab: "issues", filters: { issues: { status: "active", q: "" }, suggestions: { status: "active", q: "" }, feed: { kind: "all", category: "all", q: "", shown: 50 }, stats: { range: 90 } } };
 
 const store = {
   get(k) { try { return localStorage.getItem("fb-dash:" + k); } catch { return null; } },
@@ -78,7 +78,6 @@ const ICONS = {
   suggestions: "M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4",
   feed: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
   stats: "M3 3v18h18M18 17V9M13 17V5M8 17v-3",
-  sales: "M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
 };
 function icon(name) {
   const svg = svgEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", class: "icon", "aria-hidden": "true" });
@@ -137,7 +136,6 @@ async function init() {
   await dataBase();
   try {
     state.index = await getJson("index.json");
-    state.sales = await getJson("sales.json").catch(() => null); // once the Steam key has the Financial permission
   } catch (e) {
     document.getElementById("fb-updated").textContent = "No data yet: the feedback workflow hasn't committed anything. (" + e.message + ")";
     return;
@@ -146,7 +144,7 @@ async function init() {
   const games = state.index.games || [];
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = Number(hash.get("app") || store.get("app"));
-  state.tab = ["issues", "suggestions", "feed", "stats", "sales"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
+  state.tab = ["issues", "suggestions", "feed", "stats"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
   if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : games[0].appId);
 }
 
@@ -155,11 +153,10 @@ const SERVICES = {
   claude: ["Claude (translation and triage)", "https://platform.claude.com/settings/billing", "Add credit"],
   steam: ["Steam reviews, players and updates", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
   forums: ["Steam discussions", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
-  sales: ["Steam sales", "https://partner.steamgames.com/pub/groups/", "Steamworks groups"],
   discord: ["Discord alerts", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
 };
 function renderStatus() {
-  const all = Object.entries(state.index.status || {});
+  const all = Object.entries(state.index.status || {}).filter(([key]) => SERVICES[key]);
   const problems = all.filter(([, s]) => !s.ok);
   const el = document.getElementById("fb-status");
   if (!all.length) return el.replaceChildren();
@@ -239,6 +236,8 @@ function renderHeader() {
     ["Discussions", `https://steamcommunity.com/app/${id}/discussions/`],
     ["News", `https://store.steampowered.com/news/app/${id}`],
     ["Steamworks", `https://partner.steamgames.com/apps/landing/${id}`],
+    // Sales stay in Steamworks (not mirrored here): its per-game sales and activations report.
+    ["Sales", `https://partner.steampowered.com/app/details/${id}/`],
   ];
   document.getElementById("fb-links").replaceChildren(
     ...links.map(([label, href]) => h("a.btn.link-btn", { href, target: "_blank", rel: "noopener" }, label, " ↗")));
@@ -262,9 +261,6 @@ function renderStats() {
   const fresh = items().filter((i) => !i.dev && i.created >= t - DAY);
   // The newest numbered update; a launch post or an unnumbered one only when there's nothing else.
   const release = (g.releases || []).filter((r) => r.version).at(-1) || (g.releases || []).at(-1);
-  const salesDaysList = state.sales ? salesDays() : [];
-  const byDay = new Map(salesDaysList);
-  const revenue = daily(14, (d) => byDay.get(new Date(d * 1000).toISOString().slice(0, 10))?.net || 0);
 
   const tile = (label, value, sub, trend, color) => h("div.kpi", h("div.label", label), h("div.value", value), sub ? h("div.sub", sub) : null, trend ? spark(trend, color) : null);
   const pct = totals && totals.positive + totals.negative ? Math.round((100 * totals.positive) / (totals.positive + totals.negative)) + "%" : "–";
@@ -273,7 +269,6 @@ function renderStats() {
     tile("Positive reviews", pct, totals ? `${totals.positive} 👍 · ${totals.negative} 👎` : "no reviews yet", reviewsPerDay, "var(--fb-positive)"),
     tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent"),
     tile("New posts", fresh.length, "last 24 h", postsPerDay),
-    salesDaysList.length ? tile("Revenue, 7 d", usd(revenue.slice(-7).reduce((a, b) => a + b, 0)), "net, after refunds", revenue, "#2f9e6a") : null,
     tile("Latest update", release ? (release.version ? "v" + release.version : "–") : "–", release ? `${release.version ? "" : release.name + " · "}${ago(release.time)}` : "none yet"),
   ].filter(Boolean));
 }
@@ -291,14 +286,14 @@ function render() {
     suggestions: issues("suggestion").filter(isActive).length,
     feed: items().filter((i) => !i.dev).length,
   };
-  const tabs = [["issues", "Issues"], ["suggestions", "Suggestions"], ["feed", "Feed"], ["stats", "Stats"], ["sales", "Sales"]];
+  const tabs = [["issues", "Issues"], ["suggestions", "Suggestions"], ["feed", "Feed"], ["stats", "Stats"]];
   const buttons = () => tabs.map(([id, label]) =>
     h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
       icon(id), h("span", label), counts[id] != null ? h("span.count", counts[id]) : null));
   document.getElementById("fb-nav-side").replaceChildren(...buttons());
   document.getElementById("fb-nav-top").replaceChildren(...buttons());
   setHash();
-  const view = { issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), feed: feedView, stats: statsView, sales: salesView }[state.tab]();
+  const view = { issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), feed: feedView, stats: statsView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
 
@@ -620,120 +615,6 @@ function reviewsChart(start, end, releases) {
   });
   svg.addEventListener("pointerleave", () => { tip.style.display = "none"; });
   return card;
-}
-
-// ---------------------------------------------------------------------------
-// Sales (feedback/sales.py: Steam's per-day totals, Pacific-time dates, USD before Valve's cut)
-// ---------------------------------------------------------------------------
-
-const usd = (v, digits = 0) => "$" + Number(v || 0).toLocaleString("en-US", { minimumFractionDigits: digits, maximumFractionDigits: digits });
-const dayTime = (d) => Date.parse(d + "T12:00:00Z") / 1000;
-
-function salesDays() {
-  const id = String(state.game.appId);
-  return Object.entries(state.sales?.days || {}).map(([d, apps]) => [d, apps[id]]).filter(([, t]) => t);
-}
-
-function salesView() {
-  if (!state.sales || !Object.keys(state.sales.days || {}).length) {
-    return h("div.card", h("p", "No sales data yet."), h("p.meta", "Tick the Financial permission on the Steam Web API key (or add STEAM_FINANCIAL_KEY) and the next run fills this in. See feedback/README.md."));
-  }
-  const f = state.filters.sales;
-  const wrap = h("div");
-  const body = h("div");
-  const draw = () => {
-    const days = salesDays();
-    const end = now();
-    const start = f.range ? end - f.range * DAY : Math.min(end - 7 * DAY, ...days.map(([d]) => dayTime(d) - DAY));
-    const inRange = days.filter(([d]) => dayTime(d) >= start);
-    const sum = (list, k) => list.reduce((a, [, t]) => a + (t[k] || 0), 0);
-    const units = sum(inRange, "units"), refunded = sum(inRange, "returnedUnits");
-    const tile = (label, value, sub) => h("div.kpi", h("div.label", label), h("div.value", value), sub ? h("div.sub", sub) : null);
-    const releases = (state.game.releases || []).filter((r) => r.time >= start && r.time <= end);
-    body.replaceChildren(
-      h("section.kpis", { "aria-label": "Sales summary" },
-        tile("Net revenue", usd(sum(inRange, "net")), "after refunds and tax, before Steam's cut"),
-        tile("Units sold", units - refunded, `${units} sold, ${refunded} refunded`),
-        tile("Refund rate", units ? Math.round((100 * refunded) / units) + "%" : "–", "of units sold in this range"),
-        tile("Lifetime net", usd(sum(days, "net")), `${sum(days, "units") - sum(days, "returnedUnits")} units since launch`),
-        sum(inRange, "activations") ? tile("Key activations", sum(inRange, "activations"), "keys from outside Steam") : null),
-      revenueChart(inRange, start, end, releases),
-      countryBreakdown(inRange),
-    );
-  };
-  const range = chips([[7, "7D"], [30, "30D"], [90, "90D"], [365, "1Y"], [0, "All"]], f.range, (v) => { f.range = v; draw(); }, "Time range");
-  wrap.append(h("div.filters", range, h("span.updated", "Steam days are Pacific time; recent days can still change as payments settle.")), body);
-  draw();
-  return wrap;
-}
-
-function revenueChart(days, start, end, releases) {
-  const bucket = end - start > 120 * DAY ? 7 * DAY : DAY;
-  const b0 = Math.floor(start / bucket) * bucket;
-  const n = Math.ceil((end - b0) / bucket);
-  const rows = Array.from({ length: n }, () => ({ net: 0, units: 0, refunded: 0, discount: 0 }));
-  for (const [d, t] of days) {
-    const k = Math.floor((dayTime(d) - b0) / bucket);
-    if (k < 0 || k >= n) continue;
-    rows[k].net += t.net || 0; rows[k].units += t.units || 0; rows[k].refunded += t.returnedUnits || 0;
-    rows[k].discount = Math.max(rows[k].discount, t.discount || 0);
-  }
-  const max = niceMax(Math.max(1, ...rows.map((r) => r.net)));
-  const x = (t) => M.left + ((t - start) / (end - start)) * (W - M.left - M.right);
-  const y = (v) => H - M.bottom - (Math.max(0, v) / max) * (H - M.top - M.bottom);
-  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": "Net revenue over time" });
-  const bw = Math.max(1, (W - M.left - M.right) / n - 2);
-  rows.forEach((r, k) => {
-    if (r.discount) svg.append(svgEl("rect", { x: Math.max(M.left, x(b0 + k * bucket)), y: M.top, width: bw + 2, height: H - M.top - M.bottom, class: "band" }));
-  });
-  yAxis(svg, y, max, (v) => usd(v));
-  timeAxis(svg, x, start, end);
-  releaseMarkers(svg, x, releases);
-  rows.forEach((r, k) => {
-    if (r.net <= 0) return;
-    const bx = Math.max(M.left, x(b0 + k * bucket)) + 1, top = y(r.net), base = H - M.bottom, rr = Math.min(4, bw / 2, base - top);
-    svg.append(svgEl("path", { d: `M${bx},${base}V${top + rr}Q${bx},${top} ${bx + rr},${top}H${bx + bw - rr}Q${bx + bw},${top} ${bx + bw},${top + rr}V${base}Z`, fill: "var(--fb-accent)" }));
-  });
-  svg.append(svgEl("rect", { x: M.left, y: M.top, width: W - M.left - M.right, height: H - M.top - M.bottom, fill: "transparent" }));
-  const legend = h("div.legend", h("span", h("i", { style: "background:var(--fb-accent)" }), "Net revenue"), h("span", h("i", { style: "background:var(--fb-warning);opacity:.35" }), "On sale"));
-  const table = h("details", h("summary", "Data table"),
-    h("table.data", h("tr", h("th", bucket === DAY ? "Day" : "Week of"), h("th", "Net"), h("th", "Sold"), h("th", "Refunded"), h("th", "Discount")),
-      ...rows.map((r, k) => [k, r]).filter(([, r]) => r.units || r.net).reverse()
-        .map(([k, r]) => h("tr", h("td", fmtDate(b0 + k * bucket)), h("td", usd(r.net, 2)), h("td", r.units), h("td", r.refunded), h("td", r.discount ? r.discount + "%" : "")))));
-  const total = rows.reduce((a, r) => a + r.net, 0);
-  const { card, tip } = chartCard(`Net revenue per ${bucket === DAY ? "day" : "week"}`, total ? `${usd(total)} in this range. Dashed lines are updates; shaded days had a discount.` : "No sales in this range.", legend, svg, table);
-  svg.addEventListener("pointermove", (e) => {
-    const box = svg.getBoundingClientRect();
-    const px = ((e.clientX - box.left) / box.width) * W;
-    const k = Math.floor((start + ((px - M.left) / (W - M.left - M.right)) * (end - start) - b0) / bucket);
-    if (k < 0 || k >= n) return;
-    const r = rows[k];
-    showTip(card, tip, svg, px, y(r.net), [
-      h("div.t", (bucket === DAY ? "" : "Week of ") + fmtDate(b0 + k * bucket)),
-      h("div", h("b", usd(r.net, 2)), " net"),
-      h("div", `${r.units} sold${r.refunded ? `, ${r.refunded} refunded` : ""}`),
-      r.discount ? h("div.t", `On sale, up to ${r.discount}% off`) : null,
-    ].filter(Boolean));
-  });
-  svg.addEventListener("pointerleave", () => { tip.style.display = "none"; });
-  return card;
-}
-
-function countryBreakdown(days) {
-  const totals = new Map();
-  for (const [, t] of days) for (const [cc, [net, units]] of Object.entries(t.countries || {})) {
-    const c = totals.get(cc) || [0, 0];
-    totals.set(cc, [c[0] + net, c[1] + units]);
-  }
-  let names;
-  try { names = new Intl.DisplayNames(["en"], { type: "region" }); } catch {}
-  const rows = [...totals].filter(([, [net]]) => net > 0).sort((a, b) => b[1][0] - a[1][0]).slice(0, 12);
-  const max = Math.max(1, ...rows.map(([, [net]]) => net));
-  return h("div.chart-card", h("h3", "Top countries"), h("div.sub", rows.length ? "Net revenue in this range" : "No sales in this range."),
-    h("div.bars", ...rows.flatMap(([cc, [net, units]]) => [
-      h("span", (cc.length === 2 && names?.of(cc)) || cc),
-      h("div", h("div.bar", { style: `width:${(100 * net) / max}%` })),
-      h("span.n", `${usd(net)} · ${units}`)])));
 }
 
 function breakdown(title, start, key) {

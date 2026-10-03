@@ -32,11 +32,6 @@
    "message": null,
    "since": 1791020758
   },
-  "sales": {
-   "ok": false,
-   "message": "Steam returns no sales data for this key: it needs the Financial permission, or a Financial API Group key as STEAM_FINANCIAL_KEY.",
-   "since": 1791020758
-  },
   "steam": {
    "ok": true,
    "message": null,

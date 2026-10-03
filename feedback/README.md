@@ -45,10 +45,9 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
 
 | Secret | What it is |
 | --- | --- |
-| `STEAM_PUBLISHER_KEY` | Steamworks Web API publisher key (Users & Permissions → Manage Groups → your group → Web API key). Tick *General*, and *Financial* for sales |
+| `STEAM_PUBLISHER_KEY` | Steamworks Web API publisher key (Users & Permissions → Manage Groups → your group → Web API key), with the *General* permission |
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `DISCORD_WEBHOOK_URL` | The channel's webhook URL |
-| `STEAM_FINANCIAL_KEY` | Only if sales need a different key than `STEAM_PUBLISHER_KEY` (optional) |
 | `DISCORD_MENTION` | Who to ping: `<@USER_ID>`, `<@&ROLE_ID>` or a bare user ID (optional) |
 
 ## Data
@@ -61,23 +60,18 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
   - `reviewTotals`: per day;
   - `releases`.
 
-- `data/sales.json` holds Steam sales from `IPartnerFinancialsService`: one total per day and game, with net and gross USD, units, refunds, the discount and countries. Package sales count toward the package's primary app.
-  - Days are Pacific time.
-  - Steam restates days as payments settle; each run rebuilds the days Steam reports as changed.
-  - "Net" is after refunds and tax, before Steam's cut.
-
-This repo is public, so this data is too. Valve lets developers share their own sales data "as they see fit". It's all public on Steam anyway.
+This repo is public, so this data is too. It's all public on Steam anyway.
 
 ## Dashboard
 
 `/fb-dash` is a page of the site (`src/views/FeedbackView.vue`, with the dashboard itself in `src/lib/feedback/`, loaded only on that page). Nothing links to it except a header link that appears in browsers that have opened it once, it's `noindex`, and it isn't in the sitemap. It reads `feedback/data` straight from the repo on raw.githubusercontent.com, so new data shows up without a site redeploy (allow for a few minutes of CDN cache).
 
-- **Status bar:** which services the last run could and couldn't reach (Claude, Steam, discussions, sales, Discord), each with a button to the fix. "Out of Anthropic API credit" links straight to billing. It's recorded in `data/index.json` → `status` only when something changes.
+- **Status bar:** which services the last run could and couldn't reach (Claude, Steam, discussions, Discord), each with a button to the fix. "Out of Anthropic API credit" links straight to billing. It's recorded in `data/index.json` → `status` only when something changes.
+- **Steam links:** buttons for the store page, reviews, discussions, news, Steamworks and the Steamworks sales report (sales aren't mirrored here).
 - **Top bar:** players now, review score, open bugs, issues still happening, new posts, and the latest update.
 - **Issues:** bug issues sorted by priority. Each has *Copy fix prompt*, the original posts with their translations and Steam links, and the draft replies with copy buttons.
 - **Suggestions:** the same view for suggestions.
 - **Feed:** every post, newest first, with filters and search.
-- **Sales:** net revenue per day or week, with updates and discounts marked, plus units sold, refund rate, lifetime totals and top countries. It's filled in once the Steam key has the *Financial* permission.
 - **Stats:** concurrent players and new reviews over time, with every update marked, plus posts by category and by language.
 
 To point it at another copy of the data, add `?data=<base url>`, e.g. a local test run served by the dev server.

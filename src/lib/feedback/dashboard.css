@@ -542,10 +542,6 @@
 	stroke: var(--fb-ink-2);
 	stroke-width: 1;
 }
-.fb .band {
-	fill: var(--fb-warning);
-	opacity: 0.16;
-}
 .fb .tip {
 	position: absolute;
 	pointer-events: none;

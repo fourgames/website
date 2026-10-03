@@ -49,6 +49,10 @@ class Point(BaseModel):
         description="For a bug, complaint, suggestion or praise matching no listed issue: a short, general English title "
         "other players' posts about the same thing would fit. Null for questions."
     )
+    still_after_fix: bool = Field(
+        description="True only if the issue this point joins is listed as likely fixed, and the point says the problem "
+        "is still there in the fixed version. Mentioning the old problem, or an older experience, is not enough."
+    )
 
 
 class Triage(BaseModel):
@@ -92,6 +96,9 @@ the same thing would also fit (e.g. "Chainsaw upgrades feel meaningless", not a 
 about the same thing share one title. A reply such as "same here" in a thread whose opening post belongs to issues \
 repeats them. Praise points likewise join a "what players love" item (listed with kind "praise"), e.g. "Satisfying \
 chainsaw digging"; questions join nothing. Each point also gets its own urgency, on the scale above.
+- Some listed issues say they were likely fixed in an update, and how. A point that joins one sets still_after_fix \
+only when it clearly says the problem persists after that fix (e.g. "still no explanation even after the update"); \
+a player describing the old problem, or playing an older version, doesn't count.
 - Read the post the way a native speaker and Steam regular would. Steam reviews are full of memes and irony: a \
 recommended review that only says "run away" (Korean "도망쳐") jokes that the game is addictive or hard, not a \
 warning. Set tone accordingly and triage what the player actually means.
@@ -107,7 +114,11 @@ def triage(game_name, item, issues, context=None):
     """Returns a Triage for one post. `issues` are the game's open issues ({id, kind, title, area, mentions})."""
     if DRY_RUN:
         return _dry_triage(item)
-    issue_lines = "\n".join(f"{i['id']} [{i['kind']}, {i['area']}] {i['title']} ({i['mentions']} mentions)" for i in issues)
+    issue_lines = "\n".join(
+        f"{i['id']} [{i['kind']}, {i['area']}] {i['title']} ({i['mentions']} mentions)"
+        + (f" (likely fixed in {i['fixedIn']}: {i['fixReason']})" if i.get("fixedIn") else "")
+        for i in issues
+    )
     meta = [f"Game: {game_name}", f"Post type: {item['kind']}"]
     if item["kind"] == "review":
         meta.append(f"Review: {'recommended' if item.get('votedUp') else 'NOT recommended'}, {item.get('playtime', 0)} h played")
@@ -145,13 +156,17 @@ def _dry_triage(item):
         details=None,
         tone="sincere",
         points=[Point(kind=kind, text=text[:120], urgency="high" if bug else "low", existing_issue=None,
-                      new_issue_title=None if kind == "praise" else "Dry-run issue: " + text[:60])],
+                      new_issue_title="Dry-run issue: " + text[:60], still_after_fix=False)],
         note=None,
     )
 
 
 class Fix(BaseModel):
     issue: str = Field(description="The issue's ID.")
+    fit: Literal["direct", "partial"] = Field(
+        description="direct: a line fixes or implements exactly what players asked for. partial: a line helps with it "
+        "but doesn't do what they asked."
+    )
     reason: str = Field(description="Short reason, quoting the patch-notes line.")
 
 
@@ -169,18 +184,22 @@ player wrote about has since been fixed in an update. Steam's guidance is to rep
 issue or misinformation, clearly and concisely, so:
 - One or two short sentences, in the player's own language.
 - Say that the problem they described is fixed, name it in their own terms, and give the update version.
+- Only say what the patch-notes line given to you says the update changed. Never invent or embellish features, \
+mechanics or details; if the line is short, keep the reply short.
 - Thank them for reporting it. If it's a negative review, you may invite them to give the game another try; never \
 ask them to change their review.
 - No promises, no excuses, no marketing, no arguing."""
 
 
-def fix_reply(game_name, item, issue_title, version):
-    """A short reply telling the player that what they reported is fixed in `version`."""
+def fix_reply(game_name, item, issue_title, version, change):
+    """A short reply telling the player that what they reported is fixed in `version`; `change` is
+    the patch-notes line that fixed it, the only thing the reply may describe."""
     if DRY_RUN:
         return FixReply(text=f"Thanks for reporting this! It's fixed in {version}.", english=f"Thanks for reporting this! It's fixed in {version}.")
     t = item.get("triage") or {}
     content = (
-        f"Game: {game_name}\nFixed in: {version}\nWhat was fixed: {issue_title}\n"
+        f"Game: {game_name}\nFixed in: {version}\nWhat players reported: {issue_title}\n"
+        f"What the patch notes say changed: {change}\n"
         f"Post type: {item['kind']}{' (negative review)' if item['kind'] == 'review' and not item.get('votedUp') else ''}\n"
         f"Player's language: {t.get('language') or 'unknown'}\n\n<post>\n{(item.get('text') or '')[:6000]}\n</post>"
     )
@@ -203,14 +222,18 @@ def match_release(game_name, release, issues):
     if DRY_RUN:
         return []
     issue_lines = "\n".join(
-        f"{i['id']} [{i['kind']}, {i['area']}] {i['title']}: {i.get('details') or i.get('summary') or ''}" for i in issues
+        f"{i['id']} [{i['kind']}, {i['area']}] {i['title']}"
+        + (f"\n   players said: {' | '.join(i['said'])}" if i.get("said") else f": {i.get('details') or i.get('summary') or ''}")
+        for i in issues
     )
     prompt = (
         f"These are the patch notes for {game_name} {release['version'] or release['name']}:\n\n"
         f"<patch_notes>\n{release['body'][:20000]}\n</patch_notes>\n\n"
         f"These are the open player-reported issues:\n\n<issues>\n{issue_lines}\n</issues>\n\n"
-        "List the issues that a line in the patch notes most likely fixes or implements, each with a short reason "
-        "quoting that line. Only include clear matches; leave out anything the notes don't address."
+        "List the issues a line in the patch notes addresses, each with a short reason quoting that line. Judge by "
+        "what the players actually said: fit is direct only when the line fixes or implements exactly that (a missing "
+        "tutorial needs a tutorial, hint or explanation; cheaper upgrades don't explain anything); a line that helps "
+        "without doing what they asked is partial. Leave out everything else."
     )
     response = client().messages.parse(
         model=MODEL,

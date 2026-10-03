@@ -231,18 +231,26 @@ def record_players(state, game):
 # ---------------------------------------------------------------------------
 
 
-def issue_digest(issues):
-    """What Claude sees of each issue, to merge duplicates and match patch notes."""
+def issue_digest(issues, state=None):
+    """What Claude sees of each issue, to merge duplicates and match patch notes: its title, any fix it
+    likely got, and (with the state) what players actually said about it."""
+    def said(issue):
+        if not state:
+            return []
+        lines = [pt["text"] for item_id in issue.get("items", []) for pt in ((state["items"].get(item_id) or {}).get("triage") or {}).get("points") or []
+                 if pt.get("issue") == issue["id"]]
+        return list(dict.fromkeys(lines))[:5]
     return [
         {"id": i["id"], "kind": i["kind"], "title": i["title"], "area": i["area"], "mentions": i.get("mentions", 1),
-         "summary": i.get("summary"), "details": "; ".join(i.get("details", [])[:3])}
+         "summary": i.get("summary"), "details": "; ".join(i.get("details", [])[:3]), "said": said(i),
+         "fixedIn": i.get("fixedIn") if i.get("status") == "likely_fixed" else None, "fixReason": i.get("fixReason")}
         for i in issues
     ]
 
 
 def open_issues(state):
     """Every issue a new post could repeat, likely-fixed ones included (that's how "still happening" is found)."""
-    return issue_digest(sorted(state["issues"].values(), key=lambda i: i.get("lastSeen", 0), reverse=True)[:150])
+    return issue_digest(sorted(state["issues"].values(), key=lambda i: i.get("lastSeen", 0), reverse=True)[:150], state)
 
 
 def thread_context(state, item):
@@ -305,11 +313,13 @@ def add_tone(state, game, budget):
         t["points"] = [p.model_dump() for p in result.points] or fallback_points(t)
 
 
-def triage_pending(state, game, run, budget):
+def triage_pending(state, game, run, budget, until=None):
+    """Triages waiting posts oldest first (only those before `until`, when given)."""
     import triage
 
     pending = sorted(
-        (i for i in state["items"].values() if i.get("pending") and not i.get("dev")), key=lambda i: i["created"]
+        (i for i in state["items"].values() if i.get("pending") and not i.get("dev") and (until is None or i["created"] < until)),
+        key=lambda i: i["created"],
     )
     failures = 0
     for item in pending:
@@ -352,6 +362,8 @@ def assign_issues(state, item, result, run):
     links, new_titles, points = [], {}, []
     for point in result.get("points") or []:
         stored = {"kind": point["kind"], "text": point["text"], "urgency": point.get("urgency", "low")}
+        if point.get("still_after_fix"):
+            stored["still"] = True
         if point["kind"] in ("bug", "complaint", "suggestion", "praise"):
             kind = {"bug": "bug", "praise": "praise"}.get(point["kind"], "suggestion")
             issue_id = point.get("existing_issue") if point.get("existing_issue") in state["issues"] else None
@@ -403,7 +415,9 @@ def refresh_issues(state, game):
                                      if p["kind"] == "review" and p.get("playtime") is not None and p["playtime"] < 2})
         issue["details"] = list(dict.fromkeys(d for p in posts if (d := (p.get("triage") or {}).get("details"))))[:8]
         if issue["status"] in ("likely_fixed", "still_happening"):
-            after = [p["created"] for p in posts if p["created"] > issue["fixedAt"]]
+            # Only a post after the fix that says the problem persists in the fixed version counts.
+            after = [p["created"] for p in posts if p["created"] > issue["fixedAt"]
+                     and any(pt.get("issue") == issue_id and pt.get("still") for pt in (p.get("triage") or {}).get("points") or [])]
             issue["status"] = "still_happening" if after else "likely_fixed"
             issue["stillSince"] = min(after) if after else None
         issue["priority"] = priority(issue)
@@ -466,12 +480,8 @@ def fix_prompt(game, issue, posts):
 # ---------------------------------------------------------------------------
 
 
-def check_releases(state, game, events):
-    """New update events: ask Claude which open issues the patch notes address."""
-    import triage
-
-    # Every update is recorded at once (the dashboard shows it); matching its patch notes waits until
-    # the posts from before it are triaged into issues.
+def record_releases(state, events):
+    """Every update is recorded at once (the dashboard shows it); matching waits its turn."""
     known = {r["gid"] for r in state["releases"]}
     for event in events:
         if event["gid"] not in known:
@@ -480,29 +490,54 @@ def check_releases(state, game, events):
                 | {"notes": event["body"][:20000], "matched": [], "checked": False}
             )
     state["releases"].sort(key=lambda r: r["time"])
-    oldest_pending = min((i["created"] for i in state["items"].values() if i.get("pending")), default=None)
+
+
+def process_in_order(state, game, run, budget, events):
+    """Posts and updates in the order they happened: the posts before an update are triaged, then
+    its patch notes are matched, then the posts after it (which then know about the fix)."""
+    record_releases(state, events)
     for release in state["releases"]:
         if release.get("checked", True):
             continue
-        if oldest_pending is not None and oldest_pending < release["time"]:
+        triage_pending(state, game, run, budget, until=release["time"])
+        if any(i.get("pending") and not i.get("dev") and i["created"] < release["time"] for i in state["items"].values()):
             print(f"[release] {release['name']}: matching waits for older posts to be triaged")
             break
-        candidates = [
-            i for i in state["issues"].values()
-            if i["kind"] != "praise" and i["status"] in ("open", "still_happening") and i["firstSeen"] < release["time"]
-        ]
-        try:
-            matches = triage.match_release(game["name"], {**release, "body": release.get("notes", "")}, issue_digest(candidates))
-        except Exception as error:  # noqa: BLE001 - try again next run
-            print(f"[release] {release['name']}: {type(error).__name__}: {error}")
-            status.fail("claude", f"{triage.describe_error(error)[0]} Patch notes wait to be matched against issues.")
+        refresh_issues(state, game)
+        if not match_release(state, game, release):
             break
-        label = f"v{release['version']}" if release["version"] else release["name"]
-        for m in matches:
-            issue = state["issues"][m["issue"]]
+    triage_pending(state, game, run, budget)
+
+
+def match_release(state, game, release):
+    """Strict matching: direct fixes mark an issue likely fixed (a later, real fix takes over from an
+    earlier one); lines that only help are noted as partly addressing it."""
+    import triage
+
+    candidates = [
+        i for i in state["issues"].values()
+        if i["kind"] != "praise" and i["status"] in ("open", "still_happening", "likely_fixed") and i["firstSeen"] < release["time"]
+    ]
+    try:
+        matches = triage.match_release(game["name"], {**release, "body": release.get("notes", "")}, issue_digest(candidates, state))
+    except Exception as error:  # noqa: BLE001 - try again next run
+        print(f"[release] {release['name']}: {type(error).__name__}: {error}")
+        status.fail("claude", f"{triage.describe_error(error)[0]} Patch notes wait to be matched against issues.")
+        return False
+    label = f"v{release['version']}" if release["version"] else release["name"]
+    direct = [m for m in matches if m.get("fit", "direct") == "direct"]
+    for m in matches:
+        issue = state["issues"][m["issue"]]
+        if m in direct:
             issue.update(status="likely_fixed", fixedIn=label, fixedAt=release["time"], fixedUrl=release["url"], fixReason=m["reason"])
-        release.update(matched=[m["issue"] for m in matches], checked=True)
-        print(f"[release] {game['name']} {label}: {len(matches)} issue(s) likely fixed")
+        elif not any(p.get("in") == label for p in issue.get("partly", [])):
+            issue.setdefault("partly", []).append({"in": label, "url": release["url"], "reason": m["reason"]})
+    release.update(matched=[m["issue"] for m in direct], partly=[m["issue"] for m in matches if m not in direct], checked=True)
+    print(f"[release] {game['name']} {label}: {len(direct)} fixed, {len(matches) - len(direct)} partly")
+    return True
+
+
+def draft_all_fix_replies(state, game):
     for issue in state["issues"].values():
         if issue["status"] == "likely_fixed":
             if not draft_fix_replies(state, game, issue):
@@ -520,7 +555,8 @@ def draft_fix_replies(state, game, issue):
                if i in state["items"] and state["items"][i].get("fixReply") and state["items"][i]["kind"] != "review"}
     for item_id in issue["items"]:
         item = state["items"].get(item_id)
-        if not item or item["created"] >= issue["fixedAt"] or item.get("fixReply") or item.get("dev"):
+        # A draft for an earlier, since-replaced fix is drafted again.
+        if not item or item["created"] >= issue["fixedAt"] or (item.get("fixReply") or {}).get("version") == issue["fixedIn"] or item.get("dev"):
             continue
         if item["kind"] == "review":
             if item.get("votedUp") or item.get("devResponse"):
@@ -533,7 +569,7 @@ def draft_fix_replies(state, game, issue):
                 continue
             threads.add(thread)
         try:
-            reply = triage.fix_reply(game["name"], item, issue["title"], issue["fixedIn"])
+            reply = triage.fix_reply(game["name"], item, issue["title"], issue["fixedIn"], issue.get("fixReason") or "")
         except Exception as error:  # noqa: BLE001 - a missing draft isn't worth failing the run
             print(f"[reply] {item_id}: {type(error).__name__}: {error}")
             status.fail("claude", f"{triage.describe_error(error)[0]} Reply drafts for fixed issues are missing.")
@@ -673,11 +709,11 @@ def full_run():
         import discussions
 
         discussions.ingest(state, game, run)
-        triage_pending(state, game, run, budget)
+        process_in_order(state, game, run, budget, events)
         add_tone(state, game, budget)
         add_profiles(state)
         refresh_issues(state, game)
-        check_releases(state, game, events)
+        draft_all_fix_replies(state, game)
         refresh_issues(state, game)
         send_alerts(state, game, run, first_run)
         # The baseline lasts until the backfill is fully triaged, so old posts never trigger alerts.

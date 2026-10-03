@@ -398,6 +398,9 @@
 .fb .s-still {
 	color: var(--fb-critical);
 }
+.fb .s-partly {
+	color: var(--fb-muted);
+}
 .fb .mentions {
 	text-align: center;
 	min-width: 64px;

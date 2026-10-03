@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "appId": 2807130,
- "initialized": true,
+ "initialized": false,
  "watermarks": {
   "reviews": 1751640136,
   "forums": {
@@ -33,74 +33,10 @@
    "devResponse": "Thanks for the review! I've updated the game based on your feedback:\n\nHead-bob: Reduced by 50%.\nSwap Speed: 33% faster.\nHammer: New icon instead of heart and clearer melee/AoE functionality.\nThanks for helping me improve the game!",
    "versions": [],
    "flips": [],
-   "pending": false,
-   "triage": {
-    "language": "English",
-    "summary": "A positive review recommending the game as a solid tower defense experience, with praise for its 3D perspective and feel, but requesting some quality-of-life fixes and balance improvements.",
-    "category": "suggestion",
-    "urgency": "medium",
-    "area": "gameplay, camera, weapon balance",
-    "details": null,
-    "tone": "sincere",
-    "points": [
-     {
-      "kind": "bug",
-      "text": "HP meter was bugged during play.",
-      "urgency": "medium",
-      "issue": "I1"
-     },
-     {
-      "kind": "suggestion",
-      "text": "Add option to disable recoil head bob camera effect.",
-      "urgency": "low",
-      "issue": "I2"
-     },
-     {
-      "kind": "suggestion",
-      "text": "Hammer switching speed is too slow.",
-      "urgency": "low",
-      "issue": "I3"
-     },
-     {
-      "kind": "suggestion",
-      "text": "Pop gun should have a close quarters secondary mode.",
-      "urgency": "low",
-      "issue": "I4"
-     },
-     {
-      "kind": "praise",
-      "text": "3D perspective is a nice change from typical top-down tower defense format.",
-      "urgency": "low",
-      "issue": "I5"
-     },
-     {
-      "kind": "praise",
-      "text": "Pop gun and hammer feel smooth to use.",
-      "urgency": "low",
-      "issue": "I6"
-     },
-     {
-      "kind": "praise",
-      "text": "Solid tower defense game that surpasses PvE Overwatch as a Torbjorn simulator.",
-      "urgency": "low",
-      "issue": "I7"
-     }
-    ],
-    "note": null
-   },
+   "pending": true,
    "playtimeForever": 0.3,
    "steamPurchase": true,
-   "receivedForFree": false,
-   "issues": [
-    "I1",
-    "I2",
-    "I3",
-    "I4",
-    "I5",
-    "I6",
-    "I7"
-   ],
-   "issue": "I1"
+   "receivedForFree": false
   },
   "t7130962134691875275": {
    "id": "t7130962134691875275",
@@ -256,214 +192,7 @@
    "pending": false
   }
  },
- "issues": {
-  "I1": {
-   "id": "I1",
-   "kind": "bug",
-   "title": "HP meter display bug",
-   "area": "gameplay, camera, weapon balance",
-   "summary": "HP meter was bugged during play.",
-   "status": "open",
-   "created": 1791041336,
-   "items": [
-    "r198931298"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1751640136,
-   "lastSeen": 1751640136,
-   "urgency": "medium",
-   "negativeReviews": 0,
-   "firstSession": 1,
-   "details": [],
-   "priority": 0.6,
-   "fixPrompt": "Players of Reforge Front are reporting a bug on Steam. Find the cause in this codebase and fix it.\n\nBug: HP meter display bug\nArea of the game: gameplay, camera, weapon balance\nReported by 1 player (English), between 2025-07-04 and 2025-07-04.\n\nPlayer reports (translated to English):\n- Steam review (2025-07-04, 0.3 h played): \"HP meter was bugged during play. (from the post: i saw this on the dev's yt and gave it a go  PROS pretty good torbjorn simulator td game i rate it higher than pve in overwatch 3d is a nice change from usual bird eye view td format the pop gun and hammer feels smooth cute lil gobbos come to take ur forge  CONS needs option to turn off the recoil head bob effect at the time of playing hp meter was bugged i think if the pop gun had a close quarters secondary mode that would be nice switching to the hammer is too slow)\"\n  https://steamcommunity.com/profiles/76561197995186543/recommended/2807130/\n\nWork out the most likely cause from the code, fix it, and tell me what you changed and how to test it. If the reports aren't enough to pin it down, say what to ask the players."
-  },
-  "I2": {
-   "id": "I2",
-   "kind": "suggestion",
-   "title": "Camera recoil head bob toggle option",
-   "area": "gameplay, camera, weapon balance",
-   "summary": "Add option to disable recoil head bob camera effect.",
-   "status": "likely_fixed",
-   "created": 1791041336,
-   "items": [
-    "r198931298"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1751640136,
-   "lastSeen": 1751640136,
-   "urgency": "low",
-   "negativeReviews": 0,
-   "firstSession": 1,
-   "details": [],
-   "priority": 0.06,
-   "fixPrompt": null,
-   "fixedIn": "Reforge Front Update",
-   "fixedAt": 1777578540,
-   "fixedUrl": "https://store.steampowered.com/news/app/2807130/view/690882175138005309",
-   "fixReason": "Reduced headbob by 50%",
-   "stillSince": null
-  },
-  "I3": {
-   "id": "I3",
-   "kind": "suggestion",
-   "title": "Hammer weapon switch speed too slow",
-   "area": "gameplay, camera, weapon balance",
-   "summary": "Hammer switching speed is too slow.",
-   "status": "likely_fixed",
-   "created": 1791041336,
-   "items": [
-    "r198931298"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1751640136,
-   "lastSeen": 1751640136,
-   "urgency": "low",
-   "negativeReviews": 0,
-   "firstSession": 1,
-   "details": [],
-   "priority": 0.06,
-   "fixPrompt": null,
-   "fixedIn": "Reforge Front Update",
-   "fixedAt": 1777578540,
-   "fixedUrl": "https://store.steampowered.com/news/app/2807130/view/690882175138005309",
-   "fixReason": "Switching equipment is now 33% faster",
-   "stillSince": null
-  },
-  "I4": {
-   "id": "I4",
-   "kind": "suggestion",
-   "title": "Add pop gun secondary close quarters mode",
-   "area": "gameplay, camera, weapon balance",
-   "summary": "Pop gun should have a close quarters secondary mode.",
-   "status": "open",
-   "created": 1791041336,
-   "items": [
-    "r198931298"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1751640136,
-   "lastSeen": 1751640136,
-   "urgency": "low",
-   "negativeReviews": 0,
-   "firstSession": 1,
-   "details": [],
-   "priority": 0.3,
-   "fixPrompt": null
-  },
-  "I5": {
-   "id": "I5",
-   "kind": "praise",
-   "title": "3D perspective design appreciated",
-   "area": "gameplay, camera, weapon balance",
-   "summary": "3D perspective is a nice change from typical top-down tower defense format.",
-   "status": "open",
-   "created": 1791041336,
-   "items": [
-    "r198931298"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1751640136,
-   "lastSeen": 1751640136,
-   "urgency": "low",
-   "negativeReviews": 0,
-   "firstSession": 1,
-   "details": [],
-   "priority": 0.3,
-   "fixPrompt": null
-  },
-  "I6": {
-   "id": "I6",
-   "kind": "praise",
-   "title": "Satisfying weapon feel",
-   "area": "gameplay, camera, weapon balance",
-   "summary": "Pop gun and hammer feel smooth to use.",
-   "status": "open",
-   "created": 1791041336,
-   "items": [
-    "r198931298"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1751640136,
-   "lastSeen": 1751640136,
-   "urgency": "low",
-   "negativeReviews": 0,
-   "firstSession": 1,
-   "details": [],
-   "priority": 0.3,
-   "fixPrompt": null
-  },
-  "I7": {
-   "id": "I7",
-   "kind": "praise",
-   "title": "Engaging tower defense core gameplay",
-   "area": "gameplay, camera, weapon balance",
-   "summary": "Solid tower defense game that surpasses PvE Overwatch as a Torbjorn simulator.",
-   "status": "open",
-   "created": 1791041336,
-   "items": [
-    "r198931298"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1751640136,
-   "lastSeen": 1751640136,
-   "urgency": "low",
-   "negativeReviews": 0,
-   "firstSession": 1,
-   "details": [],
-   "priority": 0.3,
-   "fixPrompt": null
-  }
- },
+ "issues": {},
  "nextIssue": 8,
  "players": [
   [
@@ -487,7 +216,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/7081438768274849107",
    "notes": "The new demo is here, and it’s packed with big changes and a ton of new content! We've added new goblin types, more levels, a hub area, upgraded graphics, and much more!\n\nROADMAP\n- More sound effects\n- Game balancing\n- Optimization improvements\n- Feedback and suggestions from the community\n- (Maybe) a new building",
    "matched": [],
-   "checked": true
+   "checked": false
   },
   {
    "gid": "4524520259786639017",
@@ -497,7 +226,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/4524520259786639017",
    "notes": "The hammer can now be used to damage enemies and more.\n\nPatch Notes:\n- Optimization improvements\n- Furnace turn off animation\n- Hammer Damage\n- Game balancing: tutorial, world 1 levels\n- Enemy AI Improvements\n- Cannon Rotation Improvements\n\nRoadmap:\n- Replace placeholder sound effects\n- More sound effects\n- Game balancing\n- More Enemy AI Improvements\n- Feedback and suggestions from the community\n- (Maybe) a new building",
    "matched": [],
-   "checked": true
+   "checked": false
   },
   {
    "gid": "4517765223387783650",
@@ -507,7 +236,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/4517765223387783650",
    "notes": "Patch Notes:\n- Loading screen improvements\n- Bullets interact with grass\n- Enable v-sync by default\n- Make default sens higher\n- New bomb building\n- Make barricades price / 2\n- Bigger bomb goblin hit box\n- Reduce wait time from 30sec > 15sec\n- Variable jump heights\n- Many new SFX\n- BIG Color adjustments \n- Grass/ground changes \n- Saturation changes\n- Smarter goblin navigation\n- Cannon rotation bug fix\n- Add back unstuck\n- Game name change from \"Forge Front\" to \"Forg\" to make it easier to search for and more memorable.\n- Balance worlds \n- Balance goblin economy\n- Balance Furnace\n- Update steam page\n- Cannon rope model fix\n- tutorial changes\n- More credits\n- Tree improvements\n- Wind and water improvements\n- Fix bug reset buildings placed for each level\n\nRoadmap:\n- More SFX, music improvements \n- Balance\n- Feedback and suggestions from the community",
    "matched": [],
-   "checked": true
+   "checked": false
   },
   {
    "gid": "509567431915603800",
@@ -517,7 +246,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/509567431915603800",
    "notes": "Patch Notes:\n\n-  Improved tutorial & tutorial prompts for better clarity.\n\n-  Building limit now shows max text instead of cost.\n\n-  Increased music volume by +5 dB.\n\n-  Added more tips \"IT'S OVER, GOBLINS. I HAVE THE HIGH GROUND!\" - CANNON\n\n-  Moved loading screen tips to the options tab due to faster load times.\n\n-  Replaced icons and symbols with emojis to fix alignment issues. 🪙❤️💥💣🌑☀️\n\n-  Made upgrade information easier to understand, add extra information as tips.\n\n-  Collect gold from chests.\n\n-  Eat mushrooms to heal.\n\n-  Corrected next item and previous item scroll order issues.\n\n-  Fixed scroll UI bugs.\n\n-  Resolved speed line overlay bugs and made improvements.\n\n-  Fixed damage overlay bugs and made improvements.\n\n-  Adjusted barricade model ropes.\n\n-  Added more shake effects for interactions.\n\n-  Achievements now available on more levels.\n\n-  Removed fruit basket.\n\n-  All levels baked.\n\n-  New OG Level Crystal, Very Hard+ Start with 100 gold (instead of 400) & No healing mushrooms and limited high ground for strategic placements. Big respect to you if you can beat Crystal on Night Mode.\n\n-  Fix place building flash.\n\n-  Add bomb place particles.\n\n-  Fix sky resources.\n\n-  Updated screenshots.\n\n-  Update GIFs.\n\n-  Updated trailer.\n\nRoadmap:\n\n-  Engine upgrade for better performance.\n\n-  Community feedback and suggestions.",
    "matched": [],
-   "checked": true
+   "checked": false
   },
   {
    "gid": "690882175138005309",
@@ -526,11 +255,8 @@
    "time": 1777578540,
    "url": "https://store.steampowered.com/news/app/2807130/view/690882175138005309",
    "notes": "New Features\n\n- \nController Support: Full support added with aim assist.\n\n- \nmacOS: Now officially playable on Mac.\n\n- \nWidescreen: UI and textures now scale correctly.\n\n- \nBlood Moon: New event! Snow and lava levels are now night-only.\n\nGameplay & Audio\n\n- \nSpeed: Switching equipment is now 33% faster.\n\n- \nComfort: Reduced headbob by 50%.\n\n- \nWaves: Press Q to start waves manually.\n\n- \nAudio: Balanced volume and added new button SFX.\n\nFixes & Improvements\n\n- \nBombs: Now properly damage enemies (not just you!).\n\n- \nMenus: Fixed mouse disappearing/getting stuck.\n\n- \nVisuals: Refined lighting and color grading.\n\nupdated pricing using Steam’s new Purchasing Power conversion to ensure the game is accessible to more players. Prices reduced by 20% or more in many regions.Example: Our EU price has been lowered from €4,99 to €3,55.\n\nThanks for playing!",
-   "matched": [
-    "I2",
-    "I3"
-   ],
-   "checked": true
+   "matched": [],
+   "checked": false
   },
   {
    "gid": "684140727200907388",
@@ -540,7 +266,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/684140727200907388",
    "notes": "- \nNow in 28 languages, including Japanese, Korean and Chinese. The game follows your Steam language, or pick one in Options\n\n- \nNow playable on Linux\n\n- \nNew lighting in every world: an overcast forest, freezing snow, warm lava, a torchlit hub and a glowing furnace\n\n- \nNew title logo, with its own version in Japanese, Korean and Chinese\n\n- \nThe whole Options menu now works with a controller: LB/RB switch tabs and B goes back, great on Steam Deck\n\n- \nController: hold LT to aim, which is when aim assist kicks in. Sprint is now on L3, crouch on R3 and bomb on View\n\n- \nFive achievements that could not be unlocked before now unlock\n\n- \nSmoother play: no freeze on the first hit, and much steadier frame rates on Mac\n\n- \nCoin, heart and bomb icons now look the same on every system\n\n- \nNew 16:10 resolutions, including Steam Deck's 1280x800\n\n- \nFixed: the 2560x1440 option set 2560x1080, rebinding a key removed its controller button, and the pause menu was empty after pressing Esc in Options\n\n- \nFixed: the lava world's last wave played the wrong music, and the snow music restarted off the beat",
    "matched": [],
-   "checked": true
+   "checked": false
   },
   {
    "gid": "684140727200908131",
@@ -550,7 +276,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/684140727200908131",
    "notes": "- \nMaintenance update: no gameplay changes",
    "matched": [],
-   "checked": true
+   "checked": false
   },
   {
    "gid": "684140727200908155",
@@ -560,7 +286,7 @@
    "url": "https://store.steampowered.com/news/app/2807130/view/684140727200908155",
    "notes": "- \nMaintenance update: no gameplay changes",
    "matched": [],
-   "checked": true
+   "checked": false
   }
  ],
  "threads": {

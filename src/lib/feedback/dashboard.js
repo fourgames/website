@@ -195,6 +195,16 @@ function renderHeader() {
   img.hidden = !meta.capsule;
   if (meta.capsule) img.src = meta.capsule;
   document.getElementById("fb-title").replaceChildren(meta.name || "", h("span.pill", meta.status === "upcoming" ? "Coming soon" : "Released"));
+  const id = state.game.appId;
+  const links = [
+    ["Store page", `https://store.steampowered.com/app/${id}/`],
+    ["Reviews", `https://steamcommunity.com/app/${id}/reviews/?browsefilter=mostrecent`],
+    ["Discussions", `https://steamcommunity.com/app/${id}/discussions/`],
+    ["News", `https://store.steampowered.com/news/app/${id}`],
+    ["Steamworks", `https://partner.steamgames.com/apps/landing/${id}`],
+  ];
+  document.getElementById("fb-links").replaceChildren(
+    ...links.map(([label, href]) => h("a.btn.link-btn", { href, target: "_blank", rel: "noopener" }, label, " ↗")));
 }
 
 function renderStats() {
@@ -213,7 +223,8 @@ function renderStats() {
   const urgent = bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high");
   const still = Object.values(g.issues || {}).filter((i) => i.status === "still_happening");
   const fresh = items().filter((i) => !i.dev && i.created >= t - DAY);
-  const release = (g.releases || []).at(-1);
+  // The newest numbered update; a launch post or an unnumbered one only when there's nothing else.
+  const release = (g.releases || []).filter((r) => r.version).at(-1) || (g.releases || []).at(-1);
   const salesDaysList = state.sales ? salesDays() : [];
   const byDay = new Map(salesDaysList);
   const revenue = daily(14, (d) => byDay.get(new Date(d * 1000).toISOString().slice(0, 10))?.net || 0);
@@ -334,6 +345,8 @@ function postView(item) {
       item.edited ? h("span.badge", { title: `Edited · ${(item.versions || []).length} earlier version(s) kept` }, "edited") : null,
       flipped ? h("span.badge", { class: flipped.to === "negative" ? "s-still" : "s-fixed" }, `flipped ${flipped.to} ${fmtShort(flipped.at)}`) : null,
       item.deleted ? h("span.badge.s-still", "deleted on Steam") : null,
+      item.dev ? h("span.badge", "Your post") : null,
+      item.forum ? h("span", item.forum) : null,
       t.category ? h("span.badge", t.category) : null,
       t.urgency ? urgencyBadge(t.urgency) : null,
       h("a", { href: item.url, target: "_blank", rel: "noopener" }, "Open on Steam ↗")),
@@ -358,9 +371,9 @@ function feedView() {
   const draw = () => {
     const q = f.q.toLowerCase();
     const all = items()
-      .filter((i) => !i.dev)
+      .filter((i) => !i.dev || !(i.kind === "topic" && i.forum === "Events & Announcements"))
       .filter((i) => f.kind === "all" || i.kind === f.kind)
-      .filter((i) => f.category === "all" || (f.category === "pending" ? !i.triage : i.triage?.category === f.category))
+      .filter((i) => f.category === "all" || (f.category === "pending" ? !i.triage && !i.dev : i.triage?.category === f.category))
       .filter((i) => !q || (english(i) + " " + (i.text || "") + " " + (i.title || "")).toLowerCase().includes(q))
       .sort((a, b) => Math.max(b.created, b.updated || 0) - Math.max(a.created, a.updated || 0));
     const shown = all.slice(0, f.shown);
@@ -717,6 +730,7 @@ const SHELL = `
       <img id="fb-capsule" alt="" hidden>
       <div><h2 id="fb-title">Loading…</h2><div class="updated" id="fb-updated"></div></div>
     </header>
+    <div class="steam-links" id="fb-links"></div>
     <section class="kpis" id="fb-stats" aria-label="Summary"></section>
     <nav class="nav-top" id="fb-nav-top" aria-label="Views"></nav>
     <div id="fb-view"></div>

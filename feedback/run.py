@@ -379,32 +379,37 @@ def check_releases(state, game, events):
     """New update events: ask Claude which open issues the patch notes address."""
     import triage
 
+    # Every update is recorded at once (the dashboard shows it); matching its patch notes waits until
+    # the posts from before it are triaged into issues.
     known = {r["gid"] for r in state["releases"]}
-    # Posts from before an update must be triaged into issues before its patch notes can be matched.
+    for event in events:
+        if event["gid"] not in known:
+            state["releases"].append(
+                {k: event[k] for k in ("gid", "name", "version", "time", "url")}
+                | {"notes": event["body"][:20000], "matched": [], "checked": False}
+            )
+    state["releases"].sort(key=lambda r: r["time"])
     oldest_pending = min((i["created"] for i in state["items"].values() if i.get("pending")), default=None)
-    for event in sorted(events, key=lambda e: e["time"]):
-        if event["gid"] in known:
+    for release in state["releases"]:
+        if release.get("checked", True):
             continue
-        if oldest_pending is not None and oldest_pending < event["time"]:
-            print(f"[release] {event['name']}: waiting for older posts to be triaged")
+        if oldest_pending is not None and oldest_pending < release["time"]:
+            print(f"[release] {release['name']}: matching waits for older posts to be triaged")
             break
         candidates = [
-            i for i in state["issues"].values() if i["status"] in ("open", "still_happening") and i["firstSeen"] < event["time"]
+            i for i in state["issues"].values() if i["status"] in ("open", "still_happening") and i["firstSeen"] < release["time"]
         ]
         try:
-            matches = triage.match_release(game["name"], event, issue_digest(candidates))
+            matches = triage.match_release(game["name"], {**release, "body": release.get("notes", "")}, issue_digest(candidates))
         except Exception as error:  # noqa: BLE001 - try again next run
-            print(f"[release] {event['name']}: {type(error).__name__}: {error}")
-            continue
-        label = f"v{event['version']}" if event["version"] else event["name"]
+            print(f"[release] {release['name']}: {type(error).__name__}: {error}")
+            break
+        label = f"v{release['version']}" if release["version"] else release["name"]
         for m in matches:
             issue = state["issues"][m["issue"]]
-            issue.update(status="likely_fixed", fixedIn=label, fixedAt=event["time"], fixedUrl=event["url"], fixReason=m["reason"])
-        state["releases"].append(
-            {k: event[k] for k in ("gid", "name", "version", "time", "url")} | {"matched": [m["issue"] for m in matches]}
-        )
+            issue.update(status="likely_fixed", fixedIn=label, fixedAt=release["time"], fixedUrl=release["url"], fixReason=m["reason"])
+        release.update(matched=[m["issue"] for m in matches], checked=True)
         print(f"[release] {game['name']} {label}: {len(matches)} issue(s) likely fixed")
-    state["releases"].sort(key=lambda r: r["time"])
 
 
 # ---------------------------------------------------------------------------

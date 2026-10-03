@@ -4,7 +4,8 @@ name: Player feedback
 # for 48 hours after a game publishes an update or patch notes (which /ship does). See feedback/README.md.
 on:
   schedule:
-    - cron: "*/20 * * * *"
+    # Off the busy :00/:20/:40 marks, where GitHub delays or drops scheduled runs.
+    - cron: "7,27,47 * * * *"
   workflow_dispatch:
     inputs:
       force:

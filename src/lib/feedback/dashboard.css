@@ -698,3 +698,18 @@
 		font-size: 1.375rem;
 	}
 }
+
+/* Quick links to the game on Steam */
+.fb .steam-links {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	margin: -0.5rem 0 1.25rem;
+}
+.fb .link-btn {
+	display: inline-flex;
+	align-items: center;
+	text-decoration: none;
+	min-height: 30px;
+	padding: 4px 12px;
+}

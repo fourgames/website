@@ -266,6 +266,8 @@ def match_dev_reply(game_name, posts, reply, issues):
         "List the issues the reply says are already fixed or changed in the game, each with a short reason quoting "
         "the reply. Only count what's done: plans or promises (\"will fix\", \"looking into it\") don't. fit is "
         "direct when the change does what the players asked or fixes what they reported; partial when it only helps. "
+        "The developer knows the game better than the player: a change the reply aims at what the player reported "
+        "is direct even if it names it differently (a player's \"broken health meter\" fixed by a clearer icon). "
         "Leave out everything else."
     )
     response = client().messages.parse(

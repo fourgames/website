@@ -416,8 +416,7 @@
      }
     ],
     "note": null
-   },
-   "devChecked": "4a9faf7feada:1"
+   }
   },
   "r236542076": {
    "id": "r236542076",
@@ -598,8 +597,7 @@
    "forum": "Events & Announcements",
    "dev": true,
    "versions": [],
-   "pending": false,
-   "devChecked": "37a705890451:1"
+   "pending": false
   },
   "t594068734660983696": {
    "id": "t594068734660983696",
@@ -714,8 +712,7 @@
    "forum": "Events & Announcements",
    "dev": true,
    "versions": [],
-   "pending": false,
-   "devChecked": "18b3b4b78da1:1"
+   "pending": false
   },
   "t594068734660962823": {
    "id": "t594068734660962823",
@@ -791,8 +788,7 @@
    "forum": "Events & Announcements",
    "dev": true,
    "versions": [],
-   "pending": false,
-   "devChecked": "021c9614966f:1"
+   "pending": false
   },
   "t594068734661092033": {
    "id": "t594068734661092033",

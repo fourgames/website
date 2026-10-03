@@ -582,8 +582,11 @@ def check_dev_replies(state, game):
                 print(f"[dev reply] {holder['id']}: {type(error).__name__}: {error}")
                 status.fail("claude", f"{triage.describe_error(error)[0]} Your replies wait to be checked for fixes.")
                 return
+            # A reply on an update's day (just before or after it) is usually about that update.
+            near = [r for r in state["releases"] if abs(r["time"] - at) <= 2 * 86400]
             live = [r for r in state["releases"] if r["time"] <= at]
-            release = max(live, key=lambda r: r["time"]) if live else None
+            release = (min(near, key=lambda r: abs(r["time"] - at)) if near
+                       else max(live, key=lambda r: r["time"]) if live else None)
             label = (f"v{release['version']}" if release["version"] else release["name"]) if release else "your reply"
             for m in matches:
                 issue = state["issues"][m["issue"]]

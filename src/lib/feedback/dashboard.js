@@ -142,11 +142,41 @@ async function init() {
     document.getElementById("fb-updated").textContent = "No data yet: the feedback workflow hasn't committed anything. (" + e.message + ")";
     return;
   }
+  renderStatus();
   const games = state.index.games || [];
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = Number(hash.get("app") || store.get("app"));
   state.tab = ["issues", "suggestions", "feed", "stats", "sales"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
   if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : games[0].appId);
+}
+
+// What the last runs could and couldn't reach (feedback/status.py), with the fix for each problem.
+const SERVICES = {
+  claude: ["Claude (translation and triage)", "https://platform.claude.com/settings/billing", "Add credit"],
+  steam: ["Steam reviews, players and updates", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
+  forums: ["Steam discussions", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
+  sales: ["Steam sales", "https://partner.steamgames.com/pub/groups/", "Steamworks groups"],
+  discord: ["Discord alerts", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
+};
+function renderStatus() {
+  const all = Object.entries(state.index.status || {});
+  const problems = all.filter(([, s]) => !s.ok);
+  const el = document.getElementById("fb-status");
+  if (!all.length) return el.replaceChildren();
+  if (!problems.length) {
+    return el.replaceChildren(h("div.status-ok", h("span.dot"), `All ${all.length} services worked on the last run.`));
+  }
+  el.replaceChildren(h("div.status-bad",
+    h("div.status-head", "⚠ ", problems.length === 1 ? "1 service needs attention" : `${problems.length} services need attention`,
+      h("span.status-fine", `${all.length - problems.length} of ${all.length} working`)),
+    ...problems.map(([key, s]) => {
+      const [label, href, action] = SERVICES[key] || [key, "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"];
+      // Out of credit is the one with a fix behind a button; other services link to where they're fixed.
+      const fix = key === "claude" && !/credit/i.test(s.message || "") ? ["https://platform.claude.com/settings/keys", "API keys"] : [href, action];
+      return h("div.status-row",
+        h("div", h("b", label), h("div.status-msg", s.message || "Failed."), h("div.status-since", `since ${ago(s.since)}`)),
+        h("a.btn.primary", { href: fix[0], target: "_blank", rel: "noopener" }, fix[1], " ↗"));
+    })));
 }
 
 function renderGames() {
@@ -724,6 +754,7 @@ function breakdown(title, start, key) {
 // ---------------------------------------------------------------------------
 
 const SHELL = `
+<div class="status" id="fb-status"></div>
 <div class="fb-layout">
   <aside class="fb-side" aria-label="Games and views">
     <div class="side-label">Games</div>

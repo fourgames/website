@@ -7,6 +7,7 @@ import time
 
 from bs4 import BeautifulSoup
 
+import status
 import steam
 
 PAGE_SIZE = 15  # replies per topic page
@@ -39,6 +40,7 @@ def subforums(app_id):
             forums[f"event:{feature.group(1)}"] = ("Event", feature.group(1), "Events & Announcements")
     except steam.HttpError as error:
         print(f"[forum] {app_id} announcement comments: {error}")
+        status.fail("forums", f"Couldn't read the announcement comments ({error})")
     return owner.group(1), forums
 
 
@@ -136,9 +138,11 @@ def ingest(state, game, run):
         owner, forums = subforums(app_id)
     except steam.HttpError as error:
         print(f"[forum] {game['name']}: {error}")
+        status.fail("forums", f"Couldn't read the Steam discussions ({error})")
         return
     if not owner:
         return
+    status.ok("forums")
     marks = state["watermarks"].setdefault("forums", {})
     threads = state.setdefault("threads", {})
     budget = MAX_TOPICS_PER_RUN
@@ -148,6 +152,7 @@ def ingest(state, game, run):
             topics = topic_list(owner, kind, feature, marks.get(forum, 0))
         except steam.HttpError as error:
             print(f"[forum] {game['name']} / {forum_name}: {error}")
+            status.fail("forums", f"Couldn't list the threads in {forum_name} ({error})")
             continue
         topics = [t for t in topics if t["lastPost"] > threads.get(t["id"], {}).get("lastPost", 0)]
         topics.sort(key=lambda t: t["lastPost"])  # oldest activity first, so the watermark can follow
@@ -160,6 +165,7 @@ def ingest(state, game, run):
                 op, replies = topic_pages(topic["url"], known // PAGE_SIZE + 1)
             except steam.HttpError as error:
                 print(f"[forum] topic {topic['id']}: {error}")
+                status.fail("forums", f"Couldn't read a discussion thread ({error})")
                 break
             budget -= 1
             done += 1

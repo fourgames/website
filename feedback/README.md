@@ -72,6 +72,7 @@ This repo is public, so this data is too. Valve lets developers share their own 
 
 `/fb-dash` is a page of the site (`src/views/FeedbackView.vue`, with the dashboard itself in `src/lib/feedback/`, loaded only on that page). Nothing links to it except a header link that appears in browsers that have opened it once, it's `noindex`, and it isn't in the sitemap. It reads `feedback/data` straight from the repo on raw.githubusercontent.com, so new data shows up without a site redeploy (allow for a few minutes of CDN cache).
 
+- **Status bar:** which services the last run could and couldn't reach (Claude, Steam, discussions, sales, Discord), each with a button to the fix. "Out of Anthropic API credit" links straight to billing. It's recorded in `data/index.json` → `status` only when something changes.
 - **Top bar:** players now, review score, open bugs, issues still happening, new posts, and the latest update.
 - **Issues:** bug issues sorted by priority. Each has *Copy fix prompt*, the original posts with their translations and Steam links, and the draft replies with copy buttons.
 - **Suggestions:** the same view for suggestions.

@@ -20,6 +20,7 @@ import sys
 import time
 from pathlib import Path
 
+import status
 import steam
 
 HERE = Path(__file__).resolve().parent
@@ -197,6 +198,7 @@ def record_players(state, game):
         count = steam.player_count(game["appId"])
     except steam.HttpError as error:
         print(f"[steam] {game['name']} players: {error}")
+        status.fail("steam", f"Couldn't read the player count ({error}).")
         return
     if count is None:
         return
@@ -254,10 +256,14 @@ def triage_pending(state, game, run, budget):
         except Exception as error:  # noqa: BLE001 - leave it pending and try again next run
             failures += 1
             print(f"[triage] {item['id']}: {type(error).__name__}: {error}")
-            if failures >= 5:
-                print("[triage] too many failures, stopping for this run")
+            message, fatal = triage.describe_error(error)
+            waiting = sum(1 for i in pending if i.get("pending"))
+            status.fail("claude", f"{message} {waiting} post{'s' if waiting != 1 else ''} wait to be translated and triaged.")
+            if fatal or failures >= 5:
+                print("[triage] stopping for this run")
                 break
             continue
+        status.ok("claude")
         budget["left"] -= 1
         result = t.model_dump(exclude={"existing_issue", "new_issue_title"})
         if result["language"] == "English" and result["english"].strip() == (item.get("text") or "").strip():
@@ -403,6 +409,7 @@ def check_releases(state, game, events):
             matches = triage.match_release(game["name"], {**release, "body": release.get("notes", "")}, issue_digest(candidates))
         except Exception as error:  # noqa: BLE001 - try again next run
             print(f"[release] {release['name']}: {type(error).__name__}: {error}")
+            status.fail("claude", f"{triage.describe_error(error)[0]} Patch notes wait to be matched against issues.")
             break
         label = f"v{release['version']}" if release["version"] else release["name"]
         for m in matches:
@@ -514,6 +521,10 @@ def full_run():
 
     if not triage.DRY_RUN and not os.environ.get("ANTHROPIC_API_KEY"):
         sys.exit("ANTHROPIC_API_KEY is not set (add it as a GitHub secret, or set FEEDBACK_DRY_RUN=1 locally)")
+    import notify
+
+    if not notify.WEBHOOK:
+        status.fail("discord", "No DISCORD_WEBHOOK_URL secret is set, so alerts aren't sent.")
     index = load(DATA / "index.json", {"schemaVersion": SCHEMA_VERSION, "games": [], "dailyReportAt": None})
     index["games"] = steam.fetch_games(index["games"])
     budget = {"left": MAX_TRIAGE_PER_RUN}
@@ -527,12 +538,15 @@ def full_run():
             events = steam.update_events(game["appId"])
         except steam.HttpError as error:
             print(f"[steam] {game['name']} events: {error}")
+            status.fail("steam", f"Couldn't read the update posts ({error}).")
             events = []
         if game["status"] == "released":
             try:
                 ingest_reviews(state, game, run)
+                status.ok("steam")
             except steam.HttpError as error:
                 print(f"[steam] {game['name']} reviews: {error}")
+                status.fail("steam", f"Couldn't read the reviews ({error}).")
             record_players(state, game)
         import discussions
 
@@ -566,6 +580,7 @@ def full_run():
             index["dailyReportAt"] = now()
     elif not last:
         index["dailyReportAt"] = now()  # first ever run: start counting from here
+    index["status"] = status.merge(index.get("status"))
     save(DATA / "index.json", index)
     save(RUN_STATE, {"lastFullRun": now()})
     print(f"[run] changed: {', '.join(changed) or 'nothing'}")

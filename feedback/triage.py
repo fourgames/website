@@ -23,6 +23,23 @@ def client():
     return _client
 
 
+def describe_error(error):
+    """(message for the dashboard, whether retrying this run is pointless) for a failed Claude call."""
+    import anthropic
+
+    if isinstance(error, anthropic.BadRequestError) and "credit balance" in str(error):
+        return "Out of Anthropic API credit.", True
+    if isinstance(error, anthropic.AuthenticationError):
+        return "The ANTHROPIC_API_KEY secret is invalid or was revoked.", True
+    if isinstance(error, anthropic.PermissionDeniedError):
+        return "The Anthropic API key isn't allowed to use this model.", True
+    if isinstance(error, anthropic.RateLimitError):
+        return "Anthropic rate-limited the requests; they'll be retried next run.", True
+    if isinstance(error, anthropic.APIConnectionError):
+        return "Couldn't reach the Anthropic API.", True
+    return f"Claude calls are failing ({type(error).__name__}).", False
+
+
 class DraftReply(BaseModel):
     text: str = Field(description="One friendly sentence from the developer, in the player's language.")
     english: str = Field(description="What that sentence means in English.")

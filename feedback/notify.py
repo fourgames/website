@@ -9,6 +9,8 @@ import time
 import urllib.error
 import urllib.request
 
+import status
+
 WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
 # A Discord user or role to ping: "<@123>", "<@&456>", or a bare user ID.
 MENTION = os.environ.get("DISCORD_MENTION", "").strip()
@@ -42,6 +44,7 @@ def send(embeds, ping=False):
         payload["content"] = mention
     if not WEBHOOK:
         print("[discord] (no webhook) " + json.dumps(payload, ensure_ascii=False)[:2000])
+        status.fail("discord", "No DISCORD_WEBHOOK_URL secret is set, so alerts aren't sent.")
         return True
     body = json.dumps(payload).encode()
     for attempt in range(5):
@@ -50,6 +53,7 @@ def send(embeds, ping=False):
         )
         try:
             with urllib.request.urlopen(req, timeout=30):
+                status.ok("discord")
                 return True
         except urllib.error.HTTPError as error:
             if error.code == 429 and attempt < 4:
@@ -60,9 +64,11 @@ def send(embeds, ping=False):
                 time.sleep(min(wait, 60))
                 continue
             print(f"[discord] webhook returned HTTP {error.code}")
+            status.fail("discord", f"The Discord webhook returned HTTP {error.code}; it may have been deleted.")
             return False
         except urllib.error.URLError as error:
             print(f"[discord] webhook failed: {type(error).__name__}")
+            status.fail("discord", "Couldn't reach Discord.")
             return False
     return False
 

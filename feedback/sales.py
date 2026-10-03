@@ -12,6 +12,7 @@ import os
 import time
 from decimal import Decimal
 
+import status
 import steam
 
 KEY = (os.environ.get("STEAM_FINANCIAL_KEY") or os.environ.get("STEAM_PUBLISHER_KEY") or "").strip()
@@ -94,11 +95,13 @@ def _round(t):
 def sync(sales):
     """Updates `sales` in place ({highwatermark, days: {date: {appId: totals}}, apps: {appId: name}})."""
     if not KEY:
+        status.fail("sales", "No Steam key is set (STEAM_PUBLISHER_KEY or STEAM_FINANCIAL_KEY).")
         return False
     try:
         res = steam.request(f"{BASE}/GetChangedDatesForPartner/v001/", params={"key": KEY, "highwatermark": sales.get("highwatermark", "0")})
     except steam.HttpError as error:
         print(f"[sales] {error}")
+        status.fail("sales", f"Steam's sales API failed ({error}).")
         return False
     res = res.get("response", {})
     dates = res.get("dates") or []
@@ -108,11 +111,14 @@ def sync(sales):
         # with an empty list, not an error.
         print("::warning::Steam returned no sales data at all. Tick the Financial permission on the Steam Web API key "
               "(Users & Permissions → Manage Groups → the group's key), or set STEAM_FINANCIAL_KEY to a Financial API Group key.")
+        status.fail("sales", "Steam returns no sales data for this key: it needs the Financial permission, or a Financial API Group key as STEAM_FINANCIAL_KEY.")
+        return True
     for date in dates:
         try:
             day, names = fetch_day(date)
         except steam.HttpError as error:
             print(f"[sales] {date}: {error}; trying again next run")
+            status.fail("sales", f"Steam's sales API failed ({error}).")
             return True
         key = date.replace("/", "-")
         if day:
@@ -125,4 +131,5 @@ def sync(sales):
     # failure would skip days for good.
     sales["highwatermark"] = str(res.get("result_highwatermark") or sales.get("highwatermark", "0"))
     sales["days"] = dict(sorted(sales["days"].items()))
+    status.ok("sales")
     return True

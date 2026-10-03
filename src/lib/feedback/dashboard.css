@@ -713,3 +713,64 @@
 	min-height: 30px;
 	padding: 4px 12px;
 }
+
+/* Status bar: which services the last run could reach */
+.fb .status {
+	margin-bottom: 1.25rem;
+}
+.fb .status-ok {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	color: var(--fb-muted);
+	font-size: 0.8125rem;
+}
+.fb .status-ok .dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #2f9e6a;
+}
+.fb .status-bad {
+	background: var(--fb-card);
+	box-shadow: var(--fb-shadow), inset 4px 0 0 var(--fb-critical);
+	border-radius: var(--radius-card);
+	padding: 0.875rem 1rem 0.5rem 1.25rem;
+}
+.fb .status-head {
+	font-family: var(--font-heading);
+	font-weight: 700;
+	color: var(--fb-critical);
+	margin-bottom: 4px;
+}
+.fb .status-fine {
+	margin-left: 10px;
+	font-family: var(--font-sans);
+	font-weight: 400;
+	font-size: 0.75rem;
+	color: var(--fb-muted);
+}
+.fb .status-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 12px;
+	padding: 8px 0;
+	border-top: 1px solid var(--fb-line);
+}
+.fb .status-row:first-of-type {
+	border-top: 0;
+}
+.fb .status-msg {
+	color: var(--fb-ink);
+}
+.fb .status-since {
+	color: var(--fb-muted);
+	font-size: 0.75rem;
+}
+.fb .status-row .btn {
+	flex: none;
+	text-decoration: none;
+	display: inline-flex;
+	align-items: center;
+}

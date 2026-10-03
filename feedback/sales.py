@@ -102,7 +102,12 @@ def sync(sales):
         return False
     res = res.get("response", {})
     dates = res.get("dates") or []
-    print(f"[sales] {len(dates)} changed day(s)")
+    print(f"[sales] {len(dates)} changed day(s), high-water mark {res.get('result_highwatermark')}")
+    if not dates and str(sales.get("highwatermark", "0")) == "0":
+        # A first sync that finds nothing at all: Steam answers a key without the Financial permission
+        # with an empty list, not an error.
+        print("::warning::Steam returned no sales data at all. Tick the Financial permission on the Steam Web API key "
+              "(Users & Permissions → Manage Groups → the group's key), or set STEAM_FINANCIAL_KEY to a Financial API Group key.")
     for date in dates:
         try:
             day, names = fetch_day(date)

@@ -605,7 +605,7 @@ function salesDays() {
 }
 
 function salesView() {
-  if (!state.sales) {
+  if (!state.sales || !Object.keys(state.sales.days || {}).length) {
     return h("div.card", h("p", "No sales data yet."), h("p.meta", "Tick the Financial permission on the Steam Web API key (or add STEAM_FINANCIAL_KEY) and the next run fills this in. See feedback/README.md."));
   }
   const f = state.filters.sales;

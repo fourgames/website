@@ -546,7 +546,10 @@ function postParts(item) {
     ].filter(Boolean),
     tags: [t.category ? h("span.badge", t.category) : null, t.urgency ? urgencyBadge(t.urgency) : null].filter(Boolean),
     body: [
-      parent ? h("div.meta", "in “", parent.title || "thread", "”") : null,
+      // Where it was posted (a comment can sit under an older announcement than the version it was
+      // written on, shown in the header).
+      parent ? h("div.meta", parent.forum === "Events & Announcements" ? "Comment on the “" : "Reply in “", parent.title || "thread",
+        parent.forum === "Events & Announcements" ? "” announcement" : "”") : null,
       item.title ? h("div", h("b", item.title)) : null,
       // Every post leads with its points (what kind of thing it says), most actionable first.
       ...(t.points?.length ? [
@@ -634,7 +637,7 @@ function postView(item) {
           p.verdict ? h(`span.${p.verdict[0]}`, h("img.thumb", { src: up ? STEAM_THUMB.up : STEAM_THUMB.down, alt: "" }), p.verdict[2]) : item.kind !== "review" ? h("span", KIND[item.kind]) : null,
           p.hours ? h("span", `${p.hours} on record`, p.atReview ? ` (${p.atReview})` : "") : null,
           h("span", p.when),
-          versionAt(item.created) ? h("span.pc-version", { title: "The version that was live when this was posted (from the update dates)" }, `on ${versionAt(item.created)}`) : null))),
+          versionAt(item.created) ? h("span.pc-version", { title: "The version that was live when this was posted (from the update dates)" }, `written on ${versionAt(item.created)}`) : null))),
     ...p.body,
     h("div.meta", ...p.flags, item.forum && item.kind !== "review" ? h("span", item.forum) : null, p.link));
 }

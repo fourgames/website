@@ -498,15 +498,20 @@ function urgencyBadge(u) {
   return h(`span.badge.u-${u}`, h("span.dot", { "aria-hidden": "true" }), URGENCY[u] || u);
 }
 
+// Everything updates did about an issue: the fix (or, once players say it's still there, a fix that
+// only partly worked, plus "still happening") and every update that partly addressed it.
 function statusBadge(issue) {
+  const link = (cls, url, title, text) => h(`a.badge.${cls}`, { href: url, target: "_blank", rel: "noopener", title: title || "" }, text);
+  const partly = (issue.partly || []).filter((p) => p.in !== issue.fixedIn);
+  const partlyBadge = partly.length
+    ? link("s-partly", partly.at(-1).url, partly.map((p) => `${p.in}: ${p.reason}`).join("\n"), `◐ Partly addressed in ${partly.map((p) => p.in).join(", ")}`)
+    : null;
   if (issue.status === "likely_fixed")
-    return h("a.badge.s-fixed", { href: issue.fixedUrl, target: "_blank", rel: "noopener", title: issue.fixReason || "" }, "✓ Likely fixed in " + issue.fixedIn);
+    return [link("s-fixed", issue.fixedUrl, issue.fixReason, "✓ Likely fixed in " + issue.fixedIn)];
   if (issue.status === "still_happening")
-    return h("span.badge.s-still", { title: issue.fixReason || "" }, `↻ Still happening after ${issue.fixedIn}`);
-  const partly = (issue.partly || []).at(-1);
-  if (partly)
-    return h("a.badge.s-partly", { href: partly.url, target: "_blank", rel: "noopener", title: partly.reason || "" }, "◐ Partly addressed in " + partly.in);
-  return null;
+    return [link("s-partly", issue.fixedUrl, issue.fixReason, `◐ Worked on in ${issue.fixedIn}`), partlyBadge,
+      h("span.badge.s-still", { title: "A player says it's still there after the fix" }, "↻ Still happening")];
+  return [partlyBadge];
 }
 
 // A post as its own card: click to open the whole post (selecting it for the Speak Selection key),

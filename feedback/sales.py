@@ -112,6 +112,7 @@ def sync(sales):
         print("::warning::Steam returned no sales data at all. Tick the Financial permission on the Steam Web API key "
               "(Users & Permissions → Manage Groups → the group's key), or set STEAM_FINANCIAL_KEY to a Financial API Group key.")
         status.fail("sales", "Steam returns no sales data for this key: it needs the Financial permission, or a Financial API Group key as STEAM_FINANCIAL_KEY.")
+        diagnose()
         return True
     for date in dates:
         try:
@@ -133,3 +134,17 @@ def sync(sales):
     sales["days"] = dict(sorted(sales["days"].items()))
     status.ok("sales")
     return True
+
+
+def diagnose():
+    """Logs which apps the key can see (never the key itself), to tell a wrong key from a missing
+    permission when sales come back empty."""
+    try:
+        res = steam.request(
+            "https://partner.steam-api.com/ISteamApps/GetPartnerAppListForWebAPIKey/v2/", params={"key": KEY}
+        )
+        apps = (res.get("applist") or {}).get("apps", {}).get("app") or []
+        print(f"[sales] this key is a publisher key covering {len(apps)} app(s): "
+              + ", ".join(f"{a.get('appid')} {a.get('app_name')}" for a in apps[:20]))
+    except steam.HttpError as error:
+        print(f"[sales] the key isn't accepted as a publisher key either ({error})")

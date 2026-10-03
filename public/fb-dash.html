@@ -692,6 +692,8 @@ function breakdown(title, start, key) {
     h("div.bars", ...rows.flatMap(([k, v]) => [h("span", k), h("div", h("div.bar", { style: `width:${(100 * v) / max}%` })), h("span.n", v)])));
 }
 
+// Lets the site's header show a "Feedback" link in this browser from now on (SiteHeader.vue).
+store.set("visited", "1");
 init();
 </script>
 </body>

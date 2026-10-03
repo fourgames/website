@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import Icon from "@/components/ui/Icon.vue";
 import LogoMark from "@/components/ui/LogoMark.vue";
@@ -25,6 +25,18 @@ watch(
 	() => route.fullPath,
 	() => (open.value = false),
 );
+
+// The private feedback dashboard (public/fb-dash.html) isn't linked anywhere, but once a browser has
+// opened it, it marks itself in localStorage and gets a header link back to it. Read after mount
+// only, so the prerendered HTML (and every other visitor) never has the link.
+const showFeedback = ref(false);
+onMounted(() => {
+	try {
+		showFeedback.value = localStorage.getItem("fb-dash:visited") === "1";
+	} catch {
+		// Storage blocked: no link.
+	}
+});
 
 // The hero keeps one screenshot for the whole session, so clicking the logo is the way to ask for
 // another — whether that is a real navigation home or a no-op click while already there.
@@ -109,6 +121,10 @@ function onLogoClick() {
 							{{ t(link.label) }}
 							<span class="sr-only">{{ t("a11y.newTab") }}</span>
 						</a>
+					</li>
+					<!-- Private and English-only, so not translated. -->
+					<li v-if="showFeedback">
+						<a href="/fb-dash" class="nav-link" @click="open = false">Feedback</a>
 					</li>
 					<LanguageMenu />
 					<li class="fund hidden nav:block">

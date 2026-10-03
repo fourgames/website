@@ -158,6 +158,13 @@ async function dataBase() {
     DATA = `${RAW}/${c.sha}/feedback/data`;
     state.dataChanged = Date.parse(c.commit.committer.date) / 1000;
   } catch {}
+  // Whether checks are running: data is only committed when something changed, so its date alone
+  // can look stale.
+  try {
+    const res = await fetch("https://api.github.com/repos/fourgames/website/actions/workflows/feedback.yml/runs?per_page=1", { cache: "no-store" });
+    const run = (await res.json()).workflow_runs?.[0];
+    if (run) state.checks = { running: run.status !== "completed", ok: run.conclusion !== "failure", at: Date.parse(run.updated_at) / 1000 };
+  } catch {}
 }
 
 async function init() {
@@ -269,7 +276,8 @@ function renderHeader() {
   const release = (g.releases || []).filter((r) => r.version).at(-1) || (g.releases || []).at(-1);
   document.getElementById("fb-updated").replaceChildren([
     release ? `Latest update ${release.version ? "v" + release.version : release.name}, ${ago(release.time)}` : null,
-    state.dataChanged ? `data updated ${ago(state.dataChanged)}` : null,
+    state.dataChanged ? `last change ${ago(state.dataChanged)}` : null,
+    state.checks ? (state.checks.running ? "checking every 20 min" : state.checks.ok ? `last checked ${ago(state.checks.at)}` : "checks stopped (see GitHub Actions)") : null,
   ].filter(Boolean).join(" · "));
   const id = state.game.appId;
   const links = [

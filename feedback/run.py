@@ -26,7 +26,6 @@ HERE = Path(__file__).resolve().parent
 DATA = Path(os.environ.get("FEEDBACK_DATA_DIR") or HERE / "data")  # override for local test runs
 SCHEMA_VERSION = 1
 
-DAILY_REPORT_HOUR = 7  # UTC; the first run after this posts the daily report
 MAX_TRIAGE_PER_RUN = 400  # bounds the first backfill; the rest is picked up next run
 CLUSTER_LEVELS = [3, 5, 10, 25, 50, 100, 250, 500]
 URGENCY = ["low", "medium", "high", "urgent"]
@@ -669,66 +668,9 @@ def send_alerts(state, game, run, first_run):
                 posts = sorted((items[i] for i in issue["items"]), key=lambda p: p["created"], reverse=True)
                 clusters.append(notify.cluster(game, issue, posts))
     # Urgent issues and clusters @mention; flips arrive quietly.
-    for batch, ping in ((urgent, True), (clusters, True), (flips, False)):
+    for batch in (urgent, clusters, flips):
         for start in range(0, len(batch), 10):
-            notify.send(batch[start : start + 10], ping=ping)
-
-
-def daily_report(index, states):
-    import notify
-
-    lines = daily_lines(index, states)
-    return bool(lines) and notify.send([notify.daily(lines)])
-
-
-def daily_lines(index, states):
-    since = max(index.get("dailyReportAt") or 0, now() - 36 * 3600) or now() - DAY
-    lines = []
-    for game in index["games"]:
-        state = states.get(game["appId"])
-        if not state:
-            continue
-        items = state["items"].values()
-        new_reviews = [i for i in items if i["kind"] == "review" and i["created"] >= since]
-        up = sum(1 for i in new_reviews if i["votedUp"])
-        flips = sum(1 for i in items for f in i.get("flips", []) if f["at"] >= since)
-        threads = sum(1 for i in items if i["kind"] == "topic" and i["created"] >= since and not i.get("dev"))
-        replies = sum(1 for i in items if i["kind"] == "reply" and i["created"] >= since and not i.get("dev"))
-        new_issues = [i for i in state["issues"].values() if i["created"] >= since and i["kind"] != "praise"]
-        to_reply = [i for i in items if i.get("fixReply") and not i.get("devResponse")
-                    and state["issues"].get(i["fixReply"]["issue"], {}).get("status") == "likely_fixed"]
-        open_bugs = [i for i in state["issues"].values() if i["kind"] == "bug" and i["status"] != "likely_fixed"]
-        still = [i for i in state["issues"].values() if i["status"] == "still_happening"]
-        players = [n for t, n in state["players"] if t >= since]
-        last_players = state["players"][-1][1] if state["players"] else None
-        peak = max(players + ([last_players] if last_players is not None else []), default=None)
-        totals = state["reviewTotals"].get(max(state["reviewTotals"], default=""), {})
-
-        line = f"**{game['name']}**"
-        if last_players is not None:
-            line += f" · 👥 {last_players} now, {peak} peak"
-        if totals:
-            line += f" · ⭐ {totals.get('desc') or ''} ({totals.get('positive', 0)}👍 {totals.get('negative', 0)}👎)"
-        parts = [f"{len(new_reviews)} new review{'s' if len(new_reviews) != 1 else ''} ({up}👍 {len(new_reviews) - up}👎)"]
-        if flips:
-            parts.append(f"{flips} flipped")
-        if threads or replies:
-            parts.append(f"{threads} new thread{'s' if threads != 1 else ''}, {replies} repl{'ies' if replies != 1 else 'y'}")
-        parts.append(f"{len(open_bugs)} open bug{'s' if len(open_bugs) != 1 else ''}")
-        if to_reply:
-            parts.append(f"{len(to_reply)} worth a reply (fixed since)")
-        if still:
-            parts.append(f"{len(still)} still happening after a fix")
-        line += "\n" + " · ".join(parts)
-        for issue in sorted(new_issues, key=lambda i: i["priority"], reverse=True)[:3]:
-            line += f"\n• New {issue['kind']}: {issue['title']} ({issue['mentions']})"
-        lines.append(line)
-    return lines
-
-
-# ---------------------------------------------------------------------------
-# Main
-# ---------------------------------------------------------------------------
+            notify.send(batch[start : start + 10], ping=True)
 
 
 def full_run():
@@ -739,7 +681,7 @@ def full_run():
     import notify
 
     notify.check()
-    index = load(DATA / "index.json", {"schemaVersion": SCHEMA_VERSION, "games": [], "dailyReportAt": None})
+    index = load(DATA / "index.json", {"schemaVersion": SCHEMA_VERSION, "games": []})
     # The store data the website shows about each game; when any of it changes (a new store page, a
     # release, a sale, new screenshots or text), loop.sh starts a site rebuild instead of waiting for
     # the daily one. Games from before the fingerprint existed don't count as changed.
@@ -752,7 +694,7 @@ def full_run():
         (HERE / ".cache" / "rebuild-site").touch()
         print("[site] store data changed: the website will be rebuilt")
     budget = {"left": MAX_TRIAGE_PER_RUN}
-    states, changed = {}, []
+    changed = []
     for game in index["games"]:
         path = game_path(game["appId"])
         state = load(path, None) or new_state(game)
@@ -790,21 +732,11 @@ def full_run():
             f"[run] {game['name']}: {len(run['new'])} new, {len(run['edited'])} edited, "
             f"{len(run['flips'])} flipped negative, {len(state['issues'])} issues"
         )
-        states[game["appId"]] = state
         # The dashboard lists games by their newest player post.
         game["lastPost"] = max((i["created"] for i in state["items"].values() if not i.get("dev")), default=None)
         if save(path, state):
             changed.append(game["name"])
 
-    hour = time.gmtime().tm_hour
-    today = time.strftime("%Y-%m-%d", time.gmtime())
-    last = index.get("dailyReportAt")
-    if last and hour >= DAILY_REPORT_HOUR and time.strftime("%Y-%m-%d", time.gmtime(last)) != today:
-        if daily_report(index, states):
-            index["dailyReportAt"] = now()
-            status.active("discord", "sent the daily report")
-    elif not last:
-        index["dailyReportAt"] = now()  # first ever run: start counting from here
     index["status"] = status.merge(index.get("status"))
     # When anything last changed, for the dashboard's "last change" (it needs no GitHub API call).
     without_time = lambda i: {k: v for k, v in i.items() if k != "changedAt"}
@@ -836,8 +768,7 @@ def test_discord():
     sent.append(notify.send([notify.cluster(game, issue, posts)], ping=True, note="**2. Repeated reports** (pings you):"))
     if negative:
         owner = next(games[a] for a, s in states.items() if negative["id"] in s["items"])
-        sent.append(notify.send([notify.flip(owner, negative)], note="**3. Review flipped to negative** (no ping):"))
-    sent.append(notify.send([notify.daily(daily_lines(index, states))], note="**4. Daily report** (no ping):"))
+        sent.append(notify.send([notify.flip(owner, negative)], ping=True, note="**3. Review flipped to negative** (pings you):"))
     print(f"[discord] test: {sum(sent)} of {len(sent)} messages accepted")
     if not all(sent):
         sys.exit(1)

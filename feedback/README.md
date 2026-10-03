@@ -16,13 +16,14 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
    - sets urgency and the game area;
    - merges duplicates, across languages, into *issues* with mention counts. A mention is one distinct player.
 6. **Issues.** Every issue gets a priority score. Every bug issue gets a ready-to-paste Claude Code fix prompt.
-7. **Releases.** When a game publishes an update or patch-notes event, which `/ship` does, Claude Haiku 4.5 matches the open issues against the patch notes and marks matches **likely fixed in vX**. If new reports of a likely-fixed issue arrive after that release, the issue becomes **still happening**.
+7. **Releases.** When a game publishes an update or patch-notes event, Claude Haiku 4.5 compares the patch notes with what players said about each open issue. A line that does exactly what they asked marks the issue **likely fixed in vX**; a line that only helps marks it **partly addressed**. It becomes **still happening** only when a player says the problem is still there after the fix.
    - For every negative review and every thread in an issue that a release fixed, Claude drafts a one- or two-sentence reply in the player's language, saying what was fixed and in which version. Steam's moderation guide suggests replying only in cases like that. The drafts show in the dashboard's **Replies** view until you reply on Steam.
 8. **Discord.** It posts webhook embeds that link to the original post for:
-   - urgent issues (with an @mention);
+   - urgent issues;
    - reviews flipped to negative;
-   - repeated reports, at 3, 5, 10, 25… players (with an @mention);
-   - one daily report, sent on the first run after 07:00 UTC.
+   - repeated reports, at 3, 5, 10, 25… players.
+
+   Every alert @mentions `DISCORD_MENTION`.
 
    A game's first run only records a baseline, so the backfill doesn't flood Discord.
 
@@ -49,7 +50,7 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
 
 ## Data
 
-- `data/index.json` holds the game list and the time of the last daily report.
+- `data/index.json` holds the game list and the status of each service.
 - `data/games/<appid>.json` holds one game:
   - `items`: every post, keyed `r<id>` (review), `t<id>` (thread) or `c<id>` (reply);
   - `issues`;

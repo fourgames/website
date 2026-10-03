@@ -17,7 +17,7 @@ WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL", "").strip()
 MENTION = os.environ.get("DISCORD_MENTION", "").strip()
 DASHBOARD_URL = "https://fourgames.se/fb-dash/"
 
-COLORS = {"urgent": 0xE5484D, "flip": 0xF76B15, "cluster": 0xFFC53D, "daily": 0x3E63DD, "still": 0xD6409F}
+COLORS = {"urgent": 0xE5484D, "flip": 0xF76B15, "cluster": 0xFFC53D, "still": 0xD6409F}
 
 
 def _mention():
@@ -195,16 +195,6 @@ def cluster(game, issue, items):
         ],
         "footer": {"text": f"Latest report · {game['name']}"},
         "timestamp": _iso(items[0]["created"]) if items else None,
-    }
-
-
-def daily(lines):
-    return {
-        "title": "📊 Daily player feedback",
-        "url": DASHBOARD_URL,
-        "description": _clip("\n".join(lines), 4000),
-        "color": COLORS["daily"],
-        "timestamp": _iso(time.time()),
     }
 
 

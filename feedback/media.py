@@ -95,6 +95,36 @@ def mentions(name, *texts):
     return any(needle in f" {norm(t)} " for t in texts if t)
 
 
+# A game's name can also be a place, a product or a phrase ("Pomo Valley" is a valley in India): a
+# video, article or post has to be about a game too. YouTube's Gaming category counts as that.
+GAME_WORDS = re.compile(
+    r"\b(games?|gaming|gamer|gameplay|play(s|ing|ed|through|test)?|let s play|walkthrough|steam|indie|trailer|demo|"
+    r"early access|wishlists?|roguelike|roguelite|sim|simulator|strategy|tower defen[cs]e|rpg|pc|switch|xbox|"
+    r"playstation|ps[45]|nintendo|godot|unity|speedrun|dlc|patch|update|devlog|achievements?|boss)\b")
+YOUTUBE_GAMING = "20"
+
+
+def about_games(*texts):
+    return any(GAME_WORDS.search(norm(t)) for t in texts if t)
+
+
+_own = None
+
+
+def own(author):
+    """Our own channel or account (the site's Steam publisher or developer name), never an alert."""
+    global _own
+    if _own is None:
+        import steam
+
+        try:
+            config = steam.site_config()
+            _own = {norm(config.get("publisher")), norm(config.get("developer"))} - {""}
+        except Exception:  # node missing (local runs): just don't recognise our own
+            _own = set()
+    return norm(author) in _own
+
+
 def iso_time(text):
     return calendar.timegm(time.strptime(text[:19], "%Y-%m-%dT%H:%M:%S")) if text else None
 
@@ -261,6 +291,14 @@ def _video_stats(item, v):
         item.pop("viewers", None)
 
 
+def relevant_video(game, v):
+    """It names the game (the search matches loosely) and is about a game."""
+    sn = v.get("snippet") or {}
+    tags = " ".join(sn.get("tags") or [])
+    return mentions(game["name"], sn.get("title"), sn.get("description"), tags) and (
+        sn.get("categoryId") == YOUTUBE_GAMING or about_games(sn.get("title"), sn.get("description"), tags))
+
+
 def collect_youtube(media, game, found, games):
     if not YOUTUBE_KEY:
         status.fail("youtube", "Add the YOUTUBE_API_KEY secret to find new videos.")
@@ -277,8 +315,9 @@ def collect_youtube(media, game, found, games):
         params["publishedAfter"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(marks["youtube"] - 86400))
     results = youtube("search", params).get("items") or []
     new_ids = [r["id"]["videoId"] for r in results if r.get("id", {}).get("videoId") and f"yt{r['id']['videoId']}" not in items]
-    # Fresh numbers for the newest videos too, at no search cost (50 videos per call, 1 unit).
-    recent = [i["id"][2:] for i in items.values() if i["source"] == "youtube" and now() - i["at"] < REFRESH_DAYS * 86400]
+    # Fresh numbers for the newest videos too, at no search cost (50 videos per call, 1 unit). Videos
+    # saved before the game check existed (no `category`) are checked again.
+    recent = [i["id"][2:] for i in items.values() if i["source"] == "youtube" and (now() - i["at"] < REFRESH_DAYS * 86400 or "category" not in i)]
     videos = {}
     ids = new_ids + [v for v in recent if v not in new_ids]
     for start in range(0, len(ids), 50):
@@ -289,10 +328,9 @@ def collect_youtube(media, game, found, games):
         v = videos.get(vid)
         if not v:
             continue
-        sn = v["snippet"]
-        # The search matches loosely: keep only videos that actually name the game.
-        if not mentions(game["name"], sn.get("title"), sn.get("description"), " ".join(sn.get("tags") or [])):
+        if not relevant_video(game, v):
             continue
+        sn = v["snippet"]
         key = f"yt{vid}"
         items[key] = {
             "id": key, "source": "youtube",
@@ -305,11 +343,18 @@ def collect_youtube(media, game, found, games):
             "thumb": ((sn.get("thumbnails") or {}).get("medium") or {}).get("url"),
             "lang": sn.get("defaultAudioLanguage") or sn.get("defaultLanguage"),
             "duration": _duration((v.get("contentDetails") or {}).get("duration")),
+            "own": own(sn.get("channelTitle")) or None,
         }
         new.append(key)
     for vid, v in videos.items():
-        if f"yt{vid}" in items:
-            _video_stats(items[f"yt{vid}"], v)
+        item = items.get(f"yt{vid}")
+        if not item:
+            continue
+        if "category" not in item and not relevant_video(game, v):
+            del items[item["id"]]
+            continue
+        item["category"] = (v.get("snippet") or {}).get("categoryId")
+        _video_stats(item, v)
     # Each new channel's size, in one call.
     channels = list(dict.fromkeys(items[k]["channelId"] for k in new if items[k].get("channelId")))
     if channels:
@@ -412,7 +457,7 @@ def collect_news(media, game, found):
     for a in articles:
         key = _id("nw", a["key"])
         # The same story reached through Google News and an alert (different links) counts once.
-        if key in items or not a["url"] or a["title"].lower() in seen:
+        if key in items or not a["url"] or a["title"].lower() in seen or not about_games(a["title"], a.get("text")):
             continue
         seen.add(a["title"].lower())
         items[key] = {"id": key, "source": "news", "url": a["url"], "title": _clip(a["title"], 300),
@@ -464,12 +509,15 @@ def collect_reddit(media, game, found):
             continue
         if not mentions(game["name"], p.get("title"), p.get("selftext"), p.get("url")):
             continue
+        # About a game: says so, or is in a subreddit about games.
+        if not (about_games(p.get("title"), p.get("selftext")) or re.search(r"gam|steam|indie", (p.get("subreddit") or "").lower())):
+            continue
         thumb = p.get("thumbnail") if (p.get("thumbnail") or "").startswith("http") else None
         items[key] = {"id": key, "source": "reddit", "url": f"https://www.reddit.com{p['permalink']}",
                       "title": _clip(p.get("title"), 300), "text": _clip(p.get("selftext"), 400) or None,
                       "author": p.get("subreddit_name_prefixed"), "authorUrl": f"https://www.reddit.com/{p.get('subreddit_name_prefixed')}/",
                       "by": p.get("author"), "subscribers": p.get("subreddit_subscribers"),
-                      "at": int(p.get("created_utc") or now()), "thumb": thumb}
+                      "at": int(p.get("created_utc") or now()), "thumb": thumb, "own": own(p.get("author")) or None}
         _reddit_stats(items[key], p)
         found.append(key)
         status.active("reddit", "new post")
@@ -511,7 +559,7 @@ def collect(state, game, games):
             continue
         if started.get(source) or source == "twitch":
             # Search results can surface something old; that's not news.
-            alert.extend(k for k in found if now() - media["items"][k]["at"] < ALERT_DAYS * 86400)
+            alert.extend(k for k in found if now() - media["items"][k]["at"] < ALERT_DAYS * 86400 and not media["items"][k].get("own"))
         started.setdefault(source, now())
     if alert:
         print(f"[media] {game['name']}: {len(alert)} new ({', '.join(sorted({media['items'][k]['source'] for k in alert}))})")

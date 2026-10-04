@@ -16,7 +16,7 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
    - **News:** Google News search, every 30 minutes, plus any Google Alerts feeds you add (they also cover blogs and other sites).
    - **Reddit:** posts that name the game, every 20 minutes, with their score and comments.
 
-   Search results must name the game exactly. A source's first search for a game only records what's already out there; only new finds get alerts, and only when they're from the last 3 days. When each source last searched is kept in `feedback/.cache`, so a fresh workflow run searches once more.
+   Search results must name the game exactly and be about a game (YouTube's Gaming category, or words like *gameplay*, *Steam* or *trailer*), since a game's name can also be a place or a product. Your own channel's videos and posts are listed but never alerted. A source's first search for a game only records what's already out there; only new finds get alerts, and only when they're from the last 3 days. When each source last searched is kept in `feedback/.cache`, so a fresh workflow run searches once more.
 6. **Triage.** It sends each new or edited post to Claude Haiku 4.5, with no extended thinking. Haiku:
    - translates the post to English;
    - sorts it as bug, suggestion, question or praise;

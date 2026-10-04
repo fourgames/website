@@ -1484,6 +1484,7 @@ function mediaCard(m) {
       h("h3", link({}, m.title || "(no title)")),
       h("div.md-who",
         m.authorUrl ? h("a", { href: m.authorUrl, target: "_blank", rel: "noopener" }, m.author) : m.author,
+        m.own ? " · you" : null,
         m.by ? ` · u/${m.by}` : null,
         m.lang ? ` · ${m.lang.slice(0, 2).toUpperCase()}` : null),
       facts.length ? h("div.md-facts", facts.join(" · ")) : null,

@@ -1845,29 +1845,6 @@
 	stroke: var(--fb-card);
 	stroke-width: 1;
 }
-/* Twitch, YouTube, news and Reddit on the streams and media card */
-.fb .svc-parts {
-	display: flex;
-	flex-wrap: wrap;
-	gap: 4px 10px;
-	margin: 6px 0 2px;
-	font-size: 0.75rem;
-	color: var(--fb-ink-2);
-}
-.fb .svc-parts > span {
-	display: inline-flex;
-	align-items: center;
-	gap: 5px;
-}
-.fb .svc-parts i {
-	width: 7px;
-	height: 7px;
-	border-radius: 50%;
-	background: #23a559;
-}
-.fb .svc-parts .part-bad i {
-	background: var(--fb-critical);
-}
 @media (max-width: 640px) {
 	.fb .md-card {
 		flex-direction: column;

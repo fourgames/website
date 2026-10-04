@@ -799,10 +799,21 @@
 .fb .svc-bad .svc-dot {
 	background: var(--fb-critical);
 }
+/* Two rows of four; two columns on narrow screens, one on phones */
 .fb .svc-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(11.5rem, 1fr));
+	grid-template-columns: repeat(4, minmax(0, 1fr));
 	gap: 10px;
+}
+@media (max-width: 900px) {
+	.fb .svc-grid {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+@media (max-width: 420px) {
+	.fb .svc-grid {
+		grid-template-columns: minmax(0, 1fr);
+	}
 }
 /* A card per service; the last-activity line sits at the bottom so the cards line up */
 .fb .svc {

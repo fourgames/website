@@ -847,15 +847,33 @@ function render() {
     overview: attention().length || null,
     media: liveNow().length ? `${liveNow().length} live` : mediaItems().filter((m) => m.at > now() - 7 * DAY).length || null,
   };
+  // The view on screen counts as seen now; any other view with something from the last 48 hours
+  // that's newer than when you last opened it gets "New", like a new post.
+  store.set(`seen:${state.game.appId}:${state.tab}`, now());
   const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["updates", "Updates"], ["media", "Media"], ["feed", "All posts"]];
   const buttons = () => tabs.map(([id, label]) =>
     h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
-      icon(id), h("span", label), counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : ""}`, counts[id]) : null));
+      icon(id), h("span", label), id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : ""}`, counts[id]) : null));
   document.getElementById("fb-nav-side").replaceChildren(...buttons());
   document.getElementById("fb-nav-top").replaceChildren(...buttons());
   setHash();
   const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
+}
+
+// When the newest thing in each view arrived (the overview only sums up the others).
+const NEWEST = {
+  issues: () => issues("bug").filter(isActive).map((i) => i.lastSeen),
+  suggestions: () => issues("suggestion").filter(isActive).map((i) => i.lastSeen),
+  loved: () => issues("praise").map((i) => i.lastSeen),
+  replies: () => toReply().map((i) => i.fixReply.at || i.created),
+  updates: () => (state.game.releases || []).map((r) => r.time),
+  media: () => mediaItems().filter((m) => !m.own).map((m) => m.at),
+  feed: () => items().filter((i) => !i.dev).map((i) => i.created),
+};
+function hasNew(view) {
+  const newest = Math.max(0, ...(NEWEST[view]?.() || []).filter(Boolean));
+  return isRecent(newest) && newest > Number(store.get(`seen:${state.game.appId}:${view}`) || 0);
 }
 
 function issueView(kind) {

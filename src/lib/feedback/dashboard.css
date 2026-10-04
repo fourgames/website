@@ -1461,6 +1461,11 @@
 	white-space: nowrap;
 }
 
+/* The same on a view that has something you haven't opened it for yet */
+.fb .nav-new {
+	margin-left: -4px;
+}
+
 /* Marking bugs and ideas fixed (dashboard.js: setFixed). */
 .fb .check-btn {
 	margin-left: auto;

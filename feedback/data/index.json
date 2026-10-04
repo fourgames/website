@@ -111,14 +111,42 @@
    "active": 1791097377,
    "activeWhat": "new post"
   },
+  "news": {
+   "ok": true,
+   "message": null,
+   "since": 1791147868,
+   "active": null,
+   "activeWhat": null
+  },
+  "reddit": {
+   "ok": false,
+   "message": "Add the REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET secrets to find Reddit posts.",
+   "since": 1791147868,
+   "active": null,
+   "activeWhat": null
+  },
   "steam": {
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791141868,
+   "active": 1791147868,
    "activeWhat": "players changed"
+  },
+  "twitch": {
+   "ok": false,
+   "message": "Add the TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET secrets to see who's streaming.",
+   "since": 1791147868,
+   "active": null,
+   "activeWhat": null
+  },
+  "youtube": {
+   "ok": false,
+   "message": "Add the YOUTUBE_API_KEY secret to find new videos.",
+   "since": 1791147868,
+   "active": null,
+   "activeWhat": null
   }
  },
- "changedAt": 1791141868,
+ "changedAt": 1791147868,
  "creditAlert": null
 }

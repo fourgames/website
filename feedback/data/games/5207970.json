@@ -17,5 +17,6 @@
  "threads": {},
  "devAccounts": [],
  "mergedAt": 1,
- "newPostAlertsFrom": 1791061931
+ "newPostAlertsFrom": 1791061931,
+ "manualFixes": {}
 }

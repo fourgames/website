@@ -19,15 +19,16 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
    **Names:** once a day it reads the game's name in each of Steam's 30 languages from its store page and keeps every name it has ever had (a changed translation still finds what was written under the old one). YouTube searches use the English name and a few localized ones at a time, in turn; Google News is searched in each language's country edition, every 2 hours, by the English name and that language's names (the US edition every 30 minutes). Names waiting for Valve to set them aren't on the store yet, so they're picked up once they are.
 
    Search results must name the game exactly and be about a game (YouTube's Gaming category, or words like *gameplay*, *Steam* or *trailer*, also in the other languages: *Spiel*, *jeu*, 게임, ゲーム…), since a game's name can also be a place or a product. Your own channel's videos and posts are listed but never alerted. A source's first search for a game only records what's already out there; only new finds get alerts, and only when they're from the last 3 days. When each source last searched is kept in `feedback/.cache`, so a fresh workflow run searches once more.
-6. **Triage.** It sends each new or edited post to Claude Haiku 4.5, with no extended thinking. Haiku:
+6. **Community** (`community.py`, no keys). Hourly, each game's **followers** on Steam (its community hub, which moves with wishlists) and the studio's **Discord** members and members online (from the invite link in `src/data/site.js`, kept in `index.json`). Daily, each game's **achievements**: name, icon and the share of players who unlocked each, from its public stats page.
+7. **Triage.** It sends each new or edited post to Claude Haiku 4.5, with no extended thinking. Haiku:
    - translates the post to English;
    - sorts it as bug, suggestion, question or praise;
    - sets urgency and the game area;
    - merges duplicates, across languages, into *issues* with mention counts. A mention is one distinct player.
-7. **Issues.** Every issue gets a priority score. Every bug issue gets a ready-to-paste Claude Code fix prompt.
-8. **Releases.** When a game publishes an update or patch-notes event, Claude Haiku 4.5 compares the patch notes with what players said about each open issue. A line that does exactly what they asked marks the issue **likely fixed in vX**; a line that only helps marks it **partly addressed**. It becomes **still happening** only when a player says the problem is still there after the fix.
+8. **Issues.** Every issue gets a priority score. Every bug issue gets a ready-to-paste Claude Code fix prompt.
+9. **Releases.** When a game publishes an update or patch-notes event, Claude Haiku 4.5 compares the patch notes with what players said about each open issue. A line that does exactly what they asked marks the issue **likely fixed in vX**; a line that only helps marks it **partly addressed**. It becomes **still happening** only when a player says the problem is still there after the fix.
    - For every negative review and every thread in an issue that a release fixed, Claude drafts a one- or two-sentence reply in the player's language, saying what was fixed and in which version. Steam's moderation guide suggests replying only in cases like that. The drafts show in the dashboard's **Replies** view until you reply on Steam.
-9. **Discord.** It posts webhook embeds that link to the original post for:
+10. **Discord.** It posts webhook embeds that link to the original post for:
    - urgent issues;
    - every new negative review, and every new post that reports a bug;
    - reviews flipped to negative;
@@ -72,6 +73,8 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
   - `reviewTotals`: per day;
   - `releases`.
   - `manualFixes`: Claude's verdict on each fix you marked.
+  - `followers`: `[time, count]`, stored only when it changes.
+  - `achievements`: `{at, list: [{name, desc, icon, percent}]}`.
   - `media`: `items` (streams, videos, articles and Reddit posts, keyed `tw`, `yt`, `nw`, `rd`), the game's Twitch `category`, and when each source `started`.
 - `data/cleared.json` holds what you marked fixed on the dashboard, per game.
 
@@ -84,7 +87,10 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 - **Claude costs:** every Claude call's tokens are counted per game, per day and per task (sorting posts, translating your posts, checking patch notes and your fixes, merging duplicates, drafting replies), with the cost estimated at list price (`PRICES` in `triage.py`; it matches the bill when the collector is all that uses the key). The time before counting started is estimated once from the saved posts (`estimate_past_usage` in `run.py`), on the low side. The Claude card shows credit left and what it's cost; clicking it opens a 30-day chart and the breakdown per game. Set your credit balance there from the billing page whenever you top up (`data/credit.json`, written only by the dashboard); it counts down from that, and Discord pings you once when it's below $2.
 - **Status bar:** folded into one line (each service's mark and a dot) while everything works; it opens by itself when anything needs attention, and stays open in your browser once you open it. It shows which services the last run could and couldn't reach (Claude, Steam, discussions, Discord, Twitch, YouTube, news), each with a button to the fix; a missing key also gets a button to where it's made. "Out of Anthropic API credit" links straight to billing. It's recorded in `data/index.json` → `status` only when something changes.
 - **Steam links:** buttons for the store page, reviews, discussions, news, Steamworks and the Steamworks sales report (sales aren't mirrored here).
-- **Stat cards:** players now, positive reviews, open bugs and new posts. Players and reviews open their chart (with update dates marked) when clicked.
+- **Stat cards:** players now, positive reviews, followers on Steam, Discord members, open bugs and new posts. Players, reviews, followers and Discord open their chart (with update dates, sales and media marked) when clicked; followers and Discord show the change over 7 and 30 days.
+- **Achievements:** the share of players who unlocked each, most common first, with the biggest step down marked: where many players stop.
+- **In-game:** a placeholder for data the games will send themselves (sessions, where players quit, crashes, hardware). Nothing is collected yet.
+- **Steam links on the site** carry `utm_source=fourgames.se&utm_medium=website` (`src/lib/games.js`), so Steamworks' **UTM Analytics** for each game counts the visits that came from the website.
 - **Issues:** bug issues sorted by priority. Each has *Copy fix prompt* and the original posts with their translations and Steam links.
 - **Suggestions:** the same view for suggestions.
 - **Marking fixed:** each bug and idea has a round ✓. It asks what you changed (prefilled as a patch-notes line) and where the fix is: *in the next update*, or *already out in* an update you pick. The card leaves the list at once (the *Marked fixed* filter shows it; click the ✓ again to undo). The next run has Claude judge your line like patch notes, against just that issue (`apply_manual_fixes` in `run.py`): a real fix marks it **likely fixed**, with reply drafts and **still happening** as after a release; anything less marks it **partly addressed** and puts it back on the list. A fix in the next update takes that update's name when it's posted, and its reply drafts wait until then. A player reporting it again brings it back. It's saved in `data/cleared.json`, which only the dashboard writes, through GitHub's API with a fine-grained token (this repo only, *Contents: Read and write*) that you paste once per browser and that stays in that browser. Those commits say `[skip ci]`, so they don't redeploy the site. With `?data=` (a test copy), nothing is saved.

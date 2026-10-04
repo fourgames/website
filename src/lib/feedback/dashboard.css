@@ -1500,3 +1500,13 @@
 	justify-content: flex-end;
 	margin-top: 14px;
 }
+.fb-dialog textarea.dlg-input {
+	resize: vertical;
+	min-height: 4.5em;
+}
+.fb-dialog .dlg-label {
+	display: grid;
+	gap: 4px;
+	margin-top: 10px;
+	color: var(--fb-ink-2);
+}

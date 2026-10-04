@@ -594,6 +594,52 @@ def match_release(state, game, release):
     return True
 
 
+def apply_manual_fixes(state, game):
+    """Your Done notes from the dashboard (data/cleared.json, which only the dashboard writes). Claude
+    judges each note like a patch-notes line, against just that issue: a direct fix marks it likely
+    fixed (reply drafts and "still happening" follow as after a release), anything less notes it as
+    partly addressed and it stays on the list. A note you take back (Put back, or a new Done)
+    undoes what it did. Returns False when Claude can't be reached."""
+    import triage
+
+    cleared = load(DATA / "cleared.json", {}).get(str(game["appId"]), {})
+    wanted = {f"{issue_id}@{c['at']}": (issue_id, c) for issue_id, c in cleared.items() if c.get("as") == "done" and c.get("note")}
+    done = state.setdefault("manualFixes", {})
+    for key in [k for k in done if k not in wanted]:
+        issue = state["issues"].get(done.pop(key)["issue"])
+        if not issue:
+            continue
+        if issue.get("manualFix") == key:
+            for k in ("manualFix", "fixedIn", "fixedAt", "fixedUrl", "fixReason", "stillSince"):
+                issue.pop(k, None)
+            issue["status"] = "open"
+        issue["partly"] = [p for p in issue.get("partly", []) if p.get("manual") != key]
+        print(f"[fix] {game['name']} {issue['id']}: your fix was taken back")
+    for key, (issue_id, c) in wanted.items():
+        issue = state["issues"].get(issue_id)
+        if key in done or not issue:
+            continue
+        version = (c.get("version") or "").strip().lstrip("vV")
+        label = f"v{version}" if version else "the latest update"
+        try:
+            matches = triage.match_release(game["name"], {"version": version or None, "name": "a developer's note", "body": c["note"]},
+                                           issue_digest([issue], state))
+        except Exception as error:  # noqa: BLE001 - try again next run
+            print(f"[fix] {issue_id}: {type(error).__name__}: {error}")
+            status.fail("claude", f"{triage.describe_error(error)[0]} Your Done notes wait to be checked.")
+            return False
+        status.active("claude", "checked your fix")
+        fit = matches[0]["fit"] if matches else "none"
+        reason = matches[0]["reason"] if matches else f"Your note doesn't seem to do what players asked: \"{c['note']}\""
+        if fit == "direct":
+            issue.update(status="likely_fixed", fixedIn=label, fixedAt=c["at"], fixedUrl=None, fixReason=reason, manualFix=key)
+        else:
+            issue["partly"] = [p for p in issue.get("partly", []) if p.get("in") != label] + [{"in": label, "url": None, "reason": reason, "manual": key}]
+        done[key] = {"issue": issue_id, "fit": fit, "reason": reason}
+        print(f"[fix] {game['name']} {issue_id}: your fix is {fit}")
+    return True
+
+
 def draft_all_fix_replies(state, game):
     for issue in state["issues"].values():
         if issue["status"] == "likely_fixed":
@@ -737,6 +783,8 @@ def full_run():
         add_tone(state, game, budget)
         add_profiles(state)
         translate_own(state, budget)
+        refresh_issues(state, game)
+        apply_manual_fixes(state, game)
         refresh_issues(state, game)
         draft_all_fix_replies(state, game)
         refresh_issues(state, game)

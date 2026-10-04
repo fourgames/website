@@ -532,7 +532,15 @@
     "HP meter was bugged at time of playing; unclear if still present or what the bug was."
    ],
    "priority": 0.3,
-   "fixPrompt": null
+   "fixPrompt": null,
+   "partly": [
+    {
+     "in": "Forg QoL Update! + New Level",
+     "url": "https://store.steampowered.com/news/app/2807130/view/509567431915603800",
+     "reason": "Clarifies that secondary fire mode is hammer-only ('your secondary fire is the hammer its not planned to make it for rifle also'), addressing the Pop gun secondary fire mechanic but not implementing the requested close quarters mode",
+     "manual": "I27@1791120954"
+    }
+   ]
   },
   "I28": {
    "id": "I28",
@@ -783,6 +791,12 @@
    "fit": "direct",
    "reason": "Fixed: HP meter bug the player mistook a heart icon for the hammer as health but it now uses different icon",
    "pending": false
+  },
+  "I27@1791120954": {
+   "issue": "I27",
+   "fit": "partial",
+   "reason": "Clarifies that secondary fire mode is hammer-only ('your secondary fire is the hammer its not planned to make it for rifle also'), addressing the Pop gun secondary fire mechanic but not implementing the requested close quarters mode",
+   "pending": false
   }
  },
  "past": {
@@ -819,5 +833,36 @@
     "cost": 0.0155
    }
   }
+ },
+ "usage": {
+  "since": 1791121419,
+  "days": {
+   "2026-10-04": {
+    "input": 605,
+    "output": 70,
+    "calls": 1,
+    "cost": 0.000955,
+    "tasks": {
+     "patch": {
+      "input": 605,
+      "output": 70,
+      "calls": 1,
+      "cost": 0.000955
+     }
+    }
+   }
+  },
+  "tasks": {
+   "patch": {
+    "input": 605,
+    "output": 70,
+    "calls": 1,
+    "cost": 0.000955
+   }
+  },
+  "input": 605,
+  "output": 70,
+  "calls": 1,
+  "cost": 0.000955
  }
 }

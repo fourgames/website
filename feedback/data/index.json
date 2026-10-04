@@ -12,13 +12,17 @@
    "lastPost": 1751640136,
    "lastDevPost": 1791073295,
    "claude": {
-    "since": null,
-    "input": 0,
-    "output": 0,
-    "calls": 0,
-    "cost": 0,
-    "days": {},
-    "tasks": {},
+    "since": 1791121419,
+    "input": 605,
+    "output": 70,
+    "calls": 1,
+    "cost": 0.000955,
+    "days": {
+     "2026-10-04": 0.001
+    },
+    "tasks": {
+     "patch": 0.001
+    },
     "past": {
      "input": 13460,
      "output": 1670,
@@ -90,7 +94,7 @@
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791117221,
+   "active": 1791121421,
    "activeWhat": "checked your fix"
   },
   "discord": {
@@ -111,10 +115,10 @@
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791114218,
+   "active": 1791121421,
    "activeWhat": "players changed"
   }
  },
- "changedAt": 1791120817,
+ "changedAt": 1791121421,
  "creditAlert": null
 }

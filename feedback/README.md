@@ -76,7 +76,7 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 - **Overview:** the week in one line, what needs attention, and the latest posts.
 - **Bugs / Ideas sorting:** by priority, by negative reviews (what's costing you reviews), by most players, or only what came up in the first 2 hours of play (Steam's refund window). Each card has a *Copy patch-note line* button, e.g. "Fixed: … (reported by 3 players)".
 - **Loved:** praise grouped like ideas, most players first, with a button to copy the list for store pages and trailers.
-- **Updates:** each update with negative reviews before and after it, what it fixed and whether those reports stopped, and what came up since.
+- **Updates:** each update with what changed (the bullet lines of its patch notes, without roadmap sections), how players took it, which player reports it fixed (from the patch notes or your ✓) and whether those reports stopped, and what came up since.
 - **Replies:** negative reviews and threads about something an update has since fixed, each with a drafted reply (Copy reply, Reply on Steam, Done).
 - **Feed:** every post, newest first, with filters and search.
 

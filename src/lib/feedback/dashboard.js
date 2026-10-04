@@ -720,6 +720,21 @@ function lovedView() {
 
 // How each update landed: negative reviews before and after it, what it fixed and whether those
 // reports stopped, and what's new since.
+// The changes an update's patch notes list: their bullet lines, grouped under any headings, leaving
+// out roadmap and "coming soon" sections (plans, not changes).
+function patchLines(notes) {
+  // Steam's bullets often break after the dash ("- \nController support…"): join them up first.
+  const lines = (notes || "").replace(/^[ \t]*[-•*][ \t]*\n+/gm, "- ").split("\n").map((l) => l.trim()).filter(Boolean);
+  const groups = [{ heading: null, items: [] }];
+  for (const line of lines) {
+    const bullet = line.match(/^[-•*]\s*(.+)/);
+    if (bullet) groups.at(-1).items.push(bullet[1]);
+    // A short line that isn't a sentence is a heading ("Patch Notes:", "New Features", "ROADMAP").
+    else if (line.length < 50 && !/[.!?]$/.test(line)) groups.push({ heading: line.replace(/:$/, ""), items: [] });
+  }
+  return groups.filter((g) => g.items.length && !/roadmap|coming|planned|future|known issues/i.test(g.heading || ""));
+}
+
 function updatesView() {
   // Every update post, numbered or not (older ones are often only named).
   const all = (state.game.releases || []).slice().sort((a, b) => a.time - b.time);
@@ -739,7 +754,11 @@ function updatesView() {
     const i = all.indexOf(r);
     const next = all[i + 1]?.time ?? now();
     const after = tally(r.time, next);
-    const fixed = (r.matched || []).map((id) => state.game.issues?.[id]).filter(Boolean);
+    // What the patch notes fixed, and what you marked fixed in this update.
+    const fixed = [...new Set([...(r.matched || []).map((id) => state.game.issues?.[id]),
+      ...Object.values(state.game.issues || {}).filter((x) => x.manualFix && x.status === "likely_fixed" && x.fixedUrl === r.url)])].filter(Boolean);
+    const changes = patchLines(r.notes);
+    const changeCount = changes.reduce((n, g) => n + g.items.length, 0);
     const partly = (r.partly || []).map((id) => state.game.issues?.[id]).filter((x) => x && x.status !== "likely_fixed");
     const since = Object.values(state.game.issues || {}).filter((x) => x.kind !== "praise" && x.firstSeen >= r.time && x.firstSeen < next);
     const reportsAfter = (x) => x.items.map((id) => state.game.items[id]).filter((p) => p && p.created > r.time).length;
@@ -748,7 +767,8 @@ function updatesView() {
         h("div.pc-main", h("span.pc-type", isLaunch(r) ? "Launch" : r.version ? `v${r.version}` : r.name), h("span.pc-prio", fmtDate(r.time))),
         h("div.pc-aside.impact",
           reception(after, !all[i + 1]))),
-      fixed.length ? h("div.upd-section", h("b", "Fixed by this update"),
+      changeCount ? changesSection(changes, changeCount) : null,
+      fixed.length ? h("div.upd-section", h("b", "Player reports it fixed"),
         h("ul.pc-points", ...fixed.map((x) => h("li", h(`span.pk.pk-${x.kind === "bug" ? "bug" : "suggestion"}`, x.kind === "bug" ? "Bug" : "Idea"),
           h("span", x.title, " · ", reportsAfter(x) ? h("span.vote-down", `${plural(reportsAfter(x), "report")} since`) : h("span.s-fixed", "no reports since")))))) : null,
       partly.length ? h("div.upd-section", h("b", "Partly addressed (still open)"),
@@ -758,8 +778,24 @@ function updatesView() {
       h("div.meta", h("a", { href: r.url, target: "_blank", rel: "noopener" }, "Patch notes ↗")));
   });
   return h("div",
-    h("p.updated", { style: "margin:0 0 12px" }, "Each update: how players took it (the reviews written after it), what it fixed (and whether those reports stopped), what it only partly addressed, and what came up since."),
+    h("p.updated", { style: "margin:0 0 12px" }, "Each update: what changed, how players took it (the reviews written after it), which player reports it fixed (and whether they stopped), what it only partly addressed, and what came up since."),
     ...(cards.length ? cards : [h("p.empty", "No updates yet.")]));
+}
+
+// The update's own list of changes; long lists show the first few with a button for the rest.
+function changesSection(groups, count) {
+  const SHOWN = 6;
+  let left = SHOWN;
+  const list = h("div.upd-changes");
+  for (const g of groups) {
+    if (g.heading && groups.length > 1) list.append(h("div.upd-heading", g.heading));
+    list.append(h("ul.upd-list", ...g.items.map((text) => h(`li${left-- > 0 ? "" : ".later"}`, text))));
+  }
+  const toggle = count > SHOWN ? h("button.btn.upd-more", { type: "button", onclick: () => {
+    const open = list.classList.toggle("open");
+    toggle.textContent = open ? "Show fewer" : `Show all ${count} changes`;
+  } }, `Show all ${count} changes`) : null;
+  return h("div.upd-section", h("b", "What changed"), list, toggle);
 }
 
 function urgencyBadge(u) {

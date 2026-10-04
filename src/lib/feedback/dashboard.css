@@ -1563,3 +1563,27 @@
 	color: var(--fb-ink);
 	font: inherit;
 }
+
+/* An update's own list of changes, from its patch notes (dashboard.js: changesSection). */
+.fb .upd-heading {
+	margin-top: 6px;
+	color: var(--fb-ink-2);
+	font-size: 0.8125rem;
+	font-weight: 600;
+}
+.fb .upd-list {
+	margin: 4px 0 0;
+	padding-left: 1.2em;
+	list-style: disc;
+	color: var(--fb-ink);
+}
+.fb .upd-list li {
+	margin: 2px 0;
+}
+.fb .upd-changes:not(.open) li.later,
+.fb .upd-changes:not(.open) .upd-heading:not(:has(+ .upd-list li:not(.later))) {
+	display: none;
+}
+.fb .upd-more {
+	margin-top: 6px;
+}

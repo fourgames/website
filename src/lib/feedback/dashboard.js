@@ -612,8 +612,8 @@ function renderStatus() {
         h("span.svc-state", h("span.svc-dot"), { ok: "Working", bad: "Needs attention", idle: "Unknown" }[kind])),
       h("div.svc-what", what),
       key === "claude" ? claudeCard() : null,
-      h("div.svc-last", s?.active ? `${s.activeWhat || "last activity"} ${ago(s.active)}` : none),
       key === "github" ? siteBuilt() : null,
+      h("div.svc-last", s?.active ? `${s.activeWhat || "last activity"} ${ago(s.active)}` : none),
       key === "github" && kind === "idle" ? h("div.svc-msg", "GitHub's hourly request limit is used up; back within the hour.") : null,
       kind === "bad" ? h("div.svc-msg", s.message || "Failed.", s.since ? h("span.svc-since", ` · since ${ago(s.since)}`) : null) : null,
       kind === "bad" ? h("a.btn.primary.svc-fix", { href: fix[0], target: "_blank", rel: "noopener" }, fix[1], " ↗") : null);

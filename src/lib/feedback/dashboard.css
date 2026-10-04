@@ -1712,10 +1712,14 @@
 }
 
 /* When the site was last built (dashboard.js: siteBuilt) */
+/* Sits at the bottom of the card, just above "data changed". */
 .fb .svc-built {
-	margin-top: 8px;
+	margin-top: auto;
 	font-size: 0.75rem;
 	color: var(--fb-ink-2);
+}
+.fb .svc-built + .svc-last {
+	margin-top: 2px;
 }
 .fb .svc-built .linkish {
 	font-size: inherit;

@@ -749,6 +749,8 @@ def full_run():
         )
         # The dashboard lists games by their newest player post.
         game["lastPost"] = max((i["created"] for i in state["items"].values() if not i.get("dev")), default=None)
+        # And your own newest post (update notes, replies), shown next to it.
+        game["lastDevPost"] = max((i["created"] for i in state["items"].values() if i.get("dev")), default=None)
         if save(path, state):
             changed.append(game["name"])
 

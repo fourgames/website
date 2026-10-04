@@ -280,7 +280,8 @@ function orderedGames() {
 
 function renderGames() {
   const games = orderedGames();
-  const sub = (g) => g.lastPost ? `last post ${ago(g.lastPost)}` : g.status === "upcoming" ? "coming soon, no posts yet" : "no posts yet";
+  const players = (g) => g.lastPost ? `last player post ${ago(g.lastPost)}` : g.status === "upcoming" ? "coming soon, no player posts yet" : "no player posts yet";
+  const sub = (g) => players(g) + (g.lastDevPost > (g.lastPost || 0) ? ` · you posted ${ago(g.lastDevPost)}` : "");
   const item = (g) => h("button.g-item", { type: "button", title: g.name, "aria-current": String(state.game?.appId === g.appId), onclick: () => pickGame(g.appId) },
     g.capsule ? h("img.g-thumb", { src: g.capsule, alt: "", loading: "lazy" }) : h("span.g-thumb"),
     h("span.g-name", g.name, h("span.g-sub", sub(g))));

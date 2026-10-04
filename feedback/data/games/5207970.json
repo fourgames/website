@@ -18,5 +18,14 @@
  "devAccounts": [],
  "mergedAt": 1,
  "newPostAlertsFrom": 1791061931,
- "manualFixes": {}
+ "manualFixes": {},
+ "past": {
+  "until": 1791119617,
+  "input": 0,
+  "output": 0,
+  "calls": 0,
+  "cost": 0.0,
+  "days": {},
+  "tasks": {}
+ }
 }

@@ -10,7 +10,31 @@
    "discount": 40,
    "store": "f6234bda5a32",
    "lastPost": 1751640136,
-   "lastDevPost": 1791073295
+   "lastDevPost": 1791073295,
+   "claude": {
+    "since": null,
+    "input": 0,
+    "output": 0,
+    "calls": 0,
+    "cost": 0,
+    "days": {},
+    "tasks": {},
+    "past": {
+     "input": 13460,
+     "output": 1670,
+     "calls": 10,
+     "cost": 0.02181,
+     "until": 1791119615,
+     "days": {
+      "2026-10-03": 0.0202,
+      "2026-10-04": 0.0016
+     },
+     "tasks": {
+      "sort": 0.0063,
+      "patch": 0.0155
+     }
+    }
+   }
   },
   {
    "appId": 5207970,
@@ -21,7 +45,8 @@
    "discount": 0,
    "store": "0256056a3896",
    "lastPost": null,
-   "lastDevPost": null
+   "lastDevPost": null,
+   "claude": null
   },
   {
    "appId": 3958210,
@@ -32,7 +57,32 @@
    "discount": 40,
    "store": "2368e71db23a",
    "lastPost": 1791096785,
-   "lastDevPost": 1791019038
+   "lastDevPost": 1791019038,
+   "claude": {
+    "since": null,
+    "input": 0,
+    "output": 0,
+    "calls": 0,
+    "cost": 0,
+    "days": {},
+    "tasks": {},
+    "past": {
+     "input": 38721,
+     "output": 7154,
+     "calls": 22,
+     "cost": 0.074491,
+     "until": 1791119618,
+     "days": {
+      "2026-10-03": 0.0699,
+      "2026-10-04": 0.0045
+     },
+     "tasks": {
+      "sort": 0.0555,
+      "translate": 0.0027,
+      "patch": 0.0163
+     }
+    }
+   }
   }
  ],
  "status": {
@@ -65,5 +115,6 @@
    "activeWhat": "players changed"
   }
  },
- "changedAt": 1791117221
+ "changedAt": 1791119618,
+ "creditAlert": null
 }

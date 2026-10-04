@@ -1714,5 +1714,46 @@
  ],
  "mergedAt": 64,
  "newPostAlertsFrom": 1791061932,
- "manualFixes": {}
+ "manualFixes": {},
+ "past": {
+  "until": 1791119618,
+  "input": 38721,
+  "output": 7154,
+  "calls": 22,
+  "cost": 0.074491,
+  "days": {
+   "2026-10-03": {
+    "input": 36225,
+    "output": 6744,
+    "calls": 21,
+    "cost": 0.069945
+   },
+   "2026-10-04": {
+    "input": 2496,
+    "output": 410,
+    "calls": 1,
+    "cost": 0.004546
+   }
+  },
+  "tasks": {
+   "sort": {
+    "input": 26013,
+    "output": 5890,
+    "calls": 11,
+    "cost": 0.055463
+   },
+   "translate": {
+    "input": 1324,
+    "output": 284,
+    "calls": 4,
+    "cost": 0.002744
+   },
+   "patch": {
+    "input": 11384,
+    "output": 980,
+    "calls": 7,
+    "cost": 0.016284
+   }
+  }
+ }
 }

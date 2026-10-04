@@ -1925,3 +1925,17 @@
 		width: 100%;
 	}
 }
+
+/* The names the media search uses (dashboard.js names()) */
+.fb .md-names {
+	margin: 0 0 12px;
+	font-size: 0.8125rem;
+	color: var(--fb-ink-2);
+}
+.fb .md-names summary {
+	cursor: pointer;
+}
+.fb .md-names ul {
+	margin: 6px 0;
+	padding-left: 18px;
+}

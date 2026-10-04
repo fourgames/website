@@ -36,7 +36,7 @@ ALERT_FEEDS = [u.strip() for u in os.environ.get("GOOGLE_ALERTS_FEEDS", "").spli
 
 MINUTE = 60
 # How often each source is searched per game. Twitch is checked every run: a stream is worth catching early.
-EVERY = {"news": 30 * MINUTE}
+EVERY = {"news": 30 * MINUTE, "news-local": 120 * MINUTE}
 # YouTube's free quota is 10,000 units a day and a search costs 100 (the video and channel details 1
 # each), so all games together get about 75 searches a day: hourly with up to 3 games, less often with more.
 YOUTUBE_DAILY_SEARCHES = 75
@@ -84,26 +84,92 @@ def now():
 
 
 def norm(text):
-    """Lowercase letters and digits only, so "Reforge: Front!" matches "reforge front"."""
-    return re.sub(r"[^a-z0-9]+", " ", (text or "").lower()).strip()
+    """Lowercase letters and digits only (any script), so "Reforge: Front!" matches "reforge front"."""
+    return re.sub(r"[\W_]+", " ", (text or "").lower()).strip()
 
 
-def mentions(name, *texts):
-    needle = f" {norm(name)} "
-    return any(needle in f" {norm(t)} " for t in texts if t)
+# Scripts written without spaces between words (Chinese, Japanese, Thai), and Korean, whose words
+# take endings: a name in them is matched anywhere, not only as whole words.
+UNSPACED = re.compile(r"[\u0e00-\u0e7f\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]")
+
+
+def mentions(names, *texts):
+    """Any of the game's names (one, or a list) in any of the texts."""
+    for name in [names] if isinstance(names, str) else names:
+        needle = norm(name)
+        if not needle:
+            continue
+        for t in texts:
+            hay = norm(t)
+            if hay and (needle in hay if UNSPACED.search(needle) else f" {needle} " in f" {hay} "):
+                return True
+    return False
 
 
 # A game's name can also be a place, a product or a phrase ("Pomo Valley" is a valley in India): a
 # video, article or post has to be about a game too. YouTube's Gaming category counts as that.
+# Also "game" in the languages the games are localized into, since a localized name can be a plain
+# phrase too ("Gräva ett hål i isen med motorsåg" is also what an ice-fishing video is about).
 GAME_WORDS = re.compile(
     r"\b(games?|gaming|gamer|gameplay|play(s|ing|ed|through|test)?|let s play|walkthrough|steam|indie|trailer|demo|"
     r"early access|wishlists?|roguelike|roguelite|sim|simulator|strategy|tower defen[cs]e|rpg|pc|switch|xbox|"
-    r"playstation|ps[45]|nintendo|godot|unity|speedrun|dlc|patch|update|devlog|achievements?|boss)\b")
+    r"playstation|ps[45]|nintendo|godot|unity|speedrun|dlc|patch|update|devlog|achievements?|boss|"
+    r"spiel(e|en|s)?|videospiel\w*|jeux?|juegos?|videojuegos?|gioco|giochi|videogioc\w*|jogos?|gr(a|y|ze|ę)|"
+    r"hr(a|y|u|ou)|spil(let|lene)?|spel(et|en)?|spill(et)?|peli(n|ä|t)?|joc(ul|uri)?|játék\w*|permainan|"
+    r"trò chơi|oyun\w*|игр\w*|гр(а|и|у|і)|παιχνίδι\w*)\b")
+GAME_CHARS = re.compile(r"게임|ゲーム|游戏|遊戲|游戲|遊戏|เกม")
 YOUTUBE_GAMING = "20"
 
 
 def about_games(*texts):
-    return any(GAME_WORDS.search(norm(t)) for t in texts if t)
+    return any(GAME_WORDS.search(norm(t)) or GAME_CHARS.search(t) for t in texts if t)
+
+
+# ---------------------------------------------------------------------------
+# The game's names: English and every localized name it has (or had) on Steam
+# ---------------------------------------------------------------------------
+
+# Steam's languages and the Google News edition for each (hl, gl, ceid). Danish gets Norway's.
+LANGS = {
+    "english": ("en-US", "US", "US:en"), "bulgarian": ("bg", "BG", "BG:bg"), "czech": ("cs", "CZ", "CZ:cs"),
+    "danish": ("da", "DK", "DK:da"), "dutch": ("nl", "NL", "NL:nl"), "finnish": ("fi", "FI", "FI:fi"),
+    "french": ("fr", "FR", "FR:fr"), "german": ("de", "DE", "DE:de"), "greek": ("el", "GR", "GR:el"),
+    "hungarian": ("hu", "HU", "HU:hu"), "indonesian": ("id", "ID", "ID:id"), "italian": ("it", "IT", "IT:it"),
+    "japanese": ("ja", "JP", "JP:ja"), "koreana": ("ko", "KR", "KR:ko"), "malay": ("ms", "MY", "MY:ms"),
+    "norwegian": ("no", "NO", "NO:no"), "polish": ("pl", "PL", "PL:pl"), "portuguese": ("pt-PT", "PT", "PT:pt-150"),
+    "brazilian": ("pt-BR", "BR", "BR:pt-419"), "romanian": ("ro", "RO", "RO:ro"), "russian": ("ru", "RU", "RU:ru"),
+    "spanish": ("es", "ES", "ES:es"), "latam": ("es-419", "MX", "MX:es-419"), "swedish": ("sv", "SE", "SE:sv"),
+    "thai": ("th", "TH", "TH:th"), "turkish": ("tr", "TR", "TR:tr"), "ukrainian": ("uk", "UA", "UA:uk"),
+    "vietnamese": ("vi", "VN", "VN:vi"), "schinese": ("zh-CN", "CN", "CN:zh-Hans"), "tchinese": ("zh-TW", "TW", "TW:zh-Hant"),
+}
+
+
+def update_names(media, game):
+    """Once a day, the game's name in each language from its Steam store page. Every name it has ever
+    had is kept (a renamed translation still finds what was written under the old one)."""
+    app_id = game["appId"]
+    if not _due("names", app_id, 86400):
+        return
+    names = media.setdefault("names", {})
+    for lang in LANGS:
+        if lang == "english":
+            continue
+        try:
+            res = request("https://store.steampowered.com/api/appdetails", params={"appids": app_id, "l": lang, "filters": "basic"})
+        except HttpError as error:
+            print(f"[names] {game['name']} {lang}: {error}")
+            return  # try again next run
+        name = (((res or {}).get(str(app_id)) or {}).get("data") or {}).get("name")
+        # Without a localized name Steam shows the English one.
+        if name and norm(name) != norm(game["name"]) and name not in names.get(lang, []):
+            names.setdefault(lang, []).append(name)
+        time.sleep(0.3)
+    _ran("names", app_id)
+
+
+def all_names(media, game):
+    """[(language, name)]: English first, then every localized name."""
+    return [("english", game["name"])] + [(lang, n) for lang, ns in sorted((media.get("names") or {}).items()) for n in ns]
 
 
 _own = None
@@ -289,11 +355,11 @@ def _video_stats(item, v):
         item.pop("viewers", None)
 
 
-def relevant_video(game, v):
+def relevant_video(names, v):
     """It names the game (the search matches loosely) and is about a game."""
     sn = v.get("snippet") or {}
     tags = " ".join(sn.get("tags") or [])
-    return mentions(game["name"], sn.get("title"), sn.get("description"), tags) and (
+    return mentions(names, sn.get("title"), sn.get("description"), tags) and (
         sn.get("categoryId") == YOUTUBE_GAMING or about_games(sn.get("title"), sn.get("description"), tags))
 
 
@@ -307,7 +373,14 @@ def collect_youtube(media, game, found, games):
         return False
     items = media["items"]
     marks = media.setdefault("watermarks", {})
-    params = {"part": "snippet", "q": f'"{game["name"]}"', "type": "video", "order": "date", "maxResults": 25}
+    # The English name every time, and the localized ones a few at a time, in turn (a search costs
+    # the same however many names it has, but a long one finds less).
+    names = [n for _, n in all_names(media, game)]
+    local = names[1:]
+    turn = _cache.get(f"youtube-turn:{app_id}", 0) if _cache else 0
+    batch = local[turn * 4 % len(local):][:4] if local else []
+    _cache[f"youtube-turn:{app_id}"] = turn + 1
+    params = {"part": "snippet", "q": " | ".join(f'"{n}"' for n in [names[0], *batch]), "type": "video", "order": "date", "maxResults": 25}
     if marks.get("youtube"):
         # A day back: YouTube's search lists some videos hours after they're published.
         params["publishedAfter"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(marks["youtube"] - 86400))
@@ -326,7 +399,7 @@ def collect_youtube(media, game, found, games):
         v = videos.get(vid)
         if not v:
             continue
-        if not relevant_video(game, v):
+        if not relevant_video(names, v):
             continue
         sn = v["snippet"]
         key = f"yt{vid}"
@@ -348,7 +421,7 @@ def collect_youtube(media, game, found, games):
         item = items.get(f"yt{vid}")
         if not item:
             continue
-        if "category" not in item and not relevant_video(game, v):
+        if "category" not in item and not relevant_video(names, v):
             del items[item["id"]]
             continue
         item["category"] = (v.get("snippet") or {}).get("categoryId")
@@ -396,9 +469,10 @@ def _rfc822(text):
         return None
 
 
-def google_news(name):
-    """Articles from Google News that name the game exactly."""
-    xml = request("https://news.google.com/rss/search", params={"q": f'"{name}"', "hl": "en-US", "gl": "US", "ceid": "US:en"}, as_json=False)
+def google_news(names, lang="english"):
+    """Articles from one Google News edition that name the game exactly, by any of `names`."""
+    hl, gl, ceid = LANGS[lang]
+    xml = request("https://news.google.com/rss/search", params={"q": " OR ".join(f'"{n}"' for n in names), "hl": hl, "gl": gl, "ceid": ceid}, as_json=False)
     out = []
     for item in ET.fromstring(xml).iter("item"):
         source = item.find("source")
@@ -411,6 +485,7 @@ def google_news(name):
             "url": _text(item, "link"), "title": title, "author": site,
             "authorUrl": source.get("url") if source is not None else None,
             "at": _rfc822(_text(item, "pubDate")),
+            "lang": hl.split("-")[0],
         })
     return out
 
@@ -445,11 +520,20 @@ def google_alerts():
 
 def collect_news(media, game, found):
     app_id = game["appId"]
-    if not _due("news", app_id, EVERY["news"]):
+    names = all_names(media, game)
+    every = [n for _, n in names]
+    # The US edition every 30 minutes; every other country's every 2 hours, by the English name
+    # and the names in its language (local sites often keep the English one).
+    editions = [lang for lang in LANGS if _due(f"news-{lang}", app_id, EVERY["news"] if lang == "english" else EVERY["news-local"])]
+    if not editions:
         return False
-    articles = google_news(game["name"])
+    articles = []
+    for lang in editions:
+        articles += google_news([game["name"]] + [n for l, n in names if l == lang], lang)
+        _ran(f"news-{lang}", app_id)
+        time.sleep(0.3)
     try:
-        articles += [e for query, e in google_alerts() if norm(query).strip('"') == norm(game["name"]) or mentions(game["name"], e["title"], e["text"])]
+        articles += [e for query, e in google_alerts() if norm(query).strip('"') == norm(game["name"]) or mentions(every, e["title"], e["text"])]
     except (HttpError, ET.ParseError) as error:
         status.fail("news", f"Couldn't read a Google Alerts feed ({error}); check GOOGLE_ALERTS_FEEDS.")
     items = media["items"]
@@ -470,10 +554,9 @@ def collect_news(media, game, found):
                       "text": _clip(a.get("text"), 400) or None,
                       "author": sub.group(1) if sub else a["author"],
                       "authorUrl": f"https://www.reddit.com/{sub.group(1)}/" if sub else a.get("authorUrl"),
-                      "at": a["at"] or now()}
+                      "at": a["at"] or now(), "lang": a.get("lang") if a.get("lang") != "en" else None}
         found.append(key)
         status.active("news", "new Reddit post" if sub else "new article")
-    _ran("news", app_id)
     status.ok("news")
     return True
 
@@ -494,6 +577,7 @@ def collect(state, game, games):
     media.setdefault("items", {})
     started = media.setdefault("started", {})
     alert = []
+    update_names(media, game)
     for source, run in (("twitch", collect_twitch), ("youtube", collect_youtube), ("news", collect_news)):
         found = []
         try:

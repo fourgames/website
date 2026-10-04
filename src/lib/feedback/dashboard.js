@@ -1555,8 +1555,21 @@ function mediaView() {
     h("p.updated", { style: "margin:0 0 12px" },
       "Streams, videos, articles and Reddit threads that name the game. Twitch is checked every 10 minutes, news every 30 (Reddit threads come from your Google Alerts) and YouTube about hourly; Discord pings you for each new stream, video and article. They're marked along the bottom of the player and review charts, so you can see what caused a jump."),
     twitch && twitch.category === null ? h("p.ov-calm", { style: "margin:0 0 12px" }, "Twitch has no category for this game yet, so its streams can't be found. Twitch adds games from IGDB: once the game is on igdb.com, it shows up within a day.") : null,
+    names(),
     h("div.filters", filter),
     list);
+}
+
+// The names it searches for: English and every localized name Steam has (or had) for the game.
+const STEAM_LANG_NAME = { koreana: "Korean", schinese: "Simplified Chinese", tchinese: "Traditional Chinese", latam: "Spanish (Latin America)",
+  spanish: "Spanish (Spain)", brazilian: "Portuguese (Brazil)", portuguese: "Portuguese (Portugal)" };
+const langName = (lang) => STEAM_LANG_NAME[lang] || lang[0].toUpperCase() + lang.slice(1);
+function names() {
+  const local = Object.entries(state.game.media?.names || {}).flatMap(([lang, ns]) => ns.map((n) => [lang, n]));
+  if (!local.length) return null;
+  return h("details.md-names", h("summary", `Searches for ${plural(local.length + 1, "name")}: English and every localized name on Steam`),
+    h("ul", h("li", h("b", "English"), " ", state.game.meta?.name || ""), ...local.map(([lang, n]) => h("li", h("b", langName(lang)), " ", n))),
+    h("p.ov-calm", "Each language's names are searched in its own country's Google News. A name Steam had before (a changed translation) is kept."));
 }
 
 // Streams, videos, articles and posts along the bottom of a chart: a stream as a bar for as long

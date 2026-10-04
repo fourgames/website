@@ -1423,7 +1423,8 @@
 	text-decoration-thickness: 1.5px;
 	color: var(--fb-muted);
 }
-.fb .pc-points li.pt-fixed .pk {
+.fb .pc-points li.pt-fixed .pk,
+.fb .pc-points li.pt-partly .pk {
 	opacity: 0.55;
 	text-decoration: none;
 }
@@ -1695,15 +1696,12 @@
 	color: var(--fb-muted);
 }
 
-/* A point an update only partly fixed: a dashed amber line through it, and where */
+/* A point an update only partly fixed: like a fixed one, but the line through it is dashed (the
+   label next to it says where, in amber) */
 .fb .pc-points li.pt-partly > span {
 	text-decoration: line-through dashed;
-	text-decoration-color: var(--fb-warning);
 	text-decoration-thickness: 1.5px;
 	color: var(--fb-muted);
-}
-.fb .pc-points li.pt-partly > span.pk {
-	text-decoration: none;
 }
 .fb .pt-partly-in {
 	margin-left: 8px;

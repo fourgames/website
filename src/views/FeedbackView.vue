@@ -7,8 +7,34 @@ import PageHeader from "@/components/layout/PageHeader.vue";
 // loaded only here and only in the browser, so the rest of the site never ships it.
 const root = ref(null);
 onMounted(async () => {
-	const { mount } = await import("@/lib/feedback/dashboard.js");
-	mount(root.value);
+	// Each deploy renames the dashboard's file, so a page from before the latest deploy (or a cached
+	// one) asks for a file that's gone: load the current page instead, once, rather than staying on
+	// "Loading…".
+	const tried = () => {
+		try {
+			return sessionStorage.getItem("fb-reloaded") === "1";
+		} catch {
+			return true;
+		}
+	};
+	let dashboard;
+	try {
+		dashboard = await import("@/lib/feedback/dashboard.js");
+	} catch {
+		if (!tried()) {
+			try {
+				sessionStorage.setItem("fb-reloaded", "1");
+			} catch {}
+			location.reload();
+			return;
+		}
+		root.value.textContent = "Couldn't load the dashboard. Reload the page to try again.";
+		return;
+	}
+	try {
+		sessionStorage.removeItem("fb-reloaded");
+	} catch {}
+	dashboard.mount(root.value);
 });
 </script>
 

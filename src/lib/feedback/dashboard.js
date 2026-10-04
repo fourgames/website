@@ -946,9 +946,10 @@ const SOON = [
   {
     title: "Data from inside the game",
     why: "Reviews say what players think; this would show what they do.",
-    shows: ["Sessions: how many play each day, and for how long", "Where players quit: the level, wave or menu they closed the game in",
-      "Crashes and errors: Godot's error logs, grouped like bugs, with a fix prompt", "Hardware and settings: resolution, frame rate, graphics settings"],
-    needs: "A small add-on in each Godot game that sends anonymous events, a place to receive them, and a line in the privacy policy (with a way to opt out).",
+    shows: ["Per player (those who say yes): their whole journey across sessions, so you see what kept a player going after something went wrong, and who your biggest fans are",
+      "A/B tests: two versions of a level, tutorial or price, and which keeps more players (bold changes show first: there are few players per version)",
+      "From everyone: where players quit, how long sessions last, crashes with Godot's error logs grouped like bugs, and hardware and settings"],
+    needs: "A small add-on in each Godot game and a place to receive the events. At first launch it asks once: \"Help make the game better? Share your gameplay with Four Games so we can see how people play. [Sure!] [Only anonymous stats]\". Yes: events carry a random ID per install (not the Steam ID). No: events carry no ID, nothing is saved on the player's computer and the server keeps no IP addresses, so they can't be linked to anyone. Plus a privacy policy page saying what's collected and how to have it deleted; worth a check by someone who knows EU privacy law before launch.",
   },
   {
     title: "Web search for every name",

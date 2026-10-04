@@ -77,6 +77,11 @@
 .fb .fb-main {
 	min-width: 0;
 }
+/* At least a screen tall, so switching from a long view to a short one doesn't pull the footer up
+   and jump the page. */
+.fb #fb-view {
+	min-height: 100vh;
+}
 
 /* Games: one click in the side card (or the chip strip on phones) */
 .fb .g-item {

@@ -6,7 +6,7 @@
   "reviews": 1751640136,
   "forums": {
    "0": 0,
-   "event:18446744073709551615": 1790893073
+   "event:18446744073709551615": 1791073295
   }
  },
  "items": {
@@ -270,6 +270,40 @@
    "updated": 1790893073,
    "text": "View full event information here:\nhttps://steamcommunity.com/ogg/2807130/announcements/detail/684140727200908156",
    "title": "Update 1.03",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  },
+  "t583936001036000339": {
+   "id": "t583936001036000339",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/2807130/eventcomments/583936001036000339/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1791073156,
+   "updated": 1791073156,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/2807130/announcements/detail/684140727200909098",
+   "title": "Reforge Front on Steam Deck",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  },
+  "t583936001036000516": {
+   "id": "t583936001036000516",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/2807130/eventcomments/583936001036000516/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1791073295,
+   "updated": 1791073295,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/2807130/announcements/detail/684140727200909100",
+   "title": "Update 2.1",
    "forum": "Events & Announcements",
    "dev": true,
    "versions": [],
@@ -547,6 +581,10 @@
   [
    1791072747,
    1
+  ],
+  [
+   1791073347,
+   0
   ]
  ],
  "reviewTotals": {
@@ -653,6 +691,18 @@
    "matched": [],
    "checked": true,
    "partly": []
+  },
+  {
+   "gid": "684140727200909099",
+   "name": "Update 2.1",
+   "version": "2.1",
+   "launch": false,
+   "time": 1791073260,
+   "url": "https://store.steampowered.com/news/app/2807130/view/684140727200909099",
+   "notes": "A smaller update with two things controller and Steam Deck players will notice right away.\n\nImprovements\n\n- \nAim assist reworked: on controller, shots near a goblin now go to it, at the height you aimed (headshots still count) and leading its movement. Your camera is never moved\n\n- \nMuch smaller game: the download is about a third smaller (about 198 MB instead of 305 MB) and it takes nearly half the storage (about 306 MB instead of 539 MB), great on a Steam Deck\n\nFound a bug or have an idea? Tell us in the Steam discussions.\n\n— Danny",
+   "matched": [],
+   "checked": true,
+   "partly": []
   }
  ],
  "threads": {
@@ -698,6 +748,16 @@
   },
   "583935635494226410": {
    "lastPost": 1790893073,
+   "replies": 0,
+   "forum": "Events & Announcements"
+  },
+  "583936001036000339": {
+   "lastPost": 1791073156,
+   "replies": 0,
+   "forum": "Events & Announcements"
+  },
+  "583936001036000516": {
+   "lastPost": 1791073295,
    "replies": 0,
    "forum": "Events & Announcements"
   }

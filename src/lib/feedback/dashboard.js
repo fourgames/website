@@ -194,17 +194,11 @@ function askToken() {
 // What you changed and where, for Claude to judge like a patch-notes line.
 function askFix(issue) {
   const note = h("textarea.dlg-input", { rows: 2, required: true }, `Fixed: ${issue.title}`);
-  // Every update, but only the ones from after it was first reported can be picked: an older one
-  // can't have fixed it (a post is only crossed out when it's from before the fix).
+  // Every update, older ones too: a player can report something on an old build after it was fixed
+  // (feedback/run.py then counts the reports as from before the fix).
   const list = updates();
   const pick = h("select.dlg-select", { "aria-label": "Update", onchange: () => { out.checked = true; } },
-    ...list.map((r) => {
-      const before = r.time <= issue.firstSeen;
-      return h("option", { value: r.gid, disabled: before, title: `${r.name}, ${fmtDate(r.time)}` },
-        `${r.name} · ${agoWords(r.time)}${before ? " · before the first report" : ""}`);
-    }));
-  // Start on the newest update it could be in.
-  pick.value = list.find((r) => r.time > issue.firstSeen)?.gid ?? "";
+    ...list.map((r) => h("option", { value: r.gid, title: `${r.name}, ${fmtDate(r.time)}` }, `${r.name} · ${agoWords(r.time)}`)));
   const next = h("input", { type: "radio", name: "fix-where", checked: true });
   const out = h("input", { type: "radio", name: "fix-where" });
   return formDialog("Mark fixed", [
@@ -213,8 +207,7 @@ function askFix(issue) {
     h("p.dlg-hint", "Like a patch-notes line. Claude checks it against what players said."),
     h("div.dlg-label", "Where is the fix?"),
     h("label.dlg-opt", next, h("span", "In the next update ", h("span.dlg-hint", "(not out yet)"))),
-    list.some((r) => r.time > issue.firstSeen) ? h("label.dlg-opt", out, h("span", "Already out in"), pick)
-      : list.length ? h("p.dlg-hint", "No update has come out since it was first reported, so the fix can only be in the next one.") : null,
+    list.length ? h("label.dlg-opt", out, h("span", "Already out in"), pick) : null,
   ], "Mark fixed", () => {
     if (!note.value.trim()) throw new Error("Write what you changed first.");
     return { note: note.value.trim(), release: out.checked ? pick.value : null };

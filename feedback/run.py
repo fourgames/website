@@ -631,8 +631,15 @@ def apply_manual_fixes(state, game):
         if not issue:
             continue
         release = release_for(c)
-        label, url, at = label_of(release), release["url"] if release else None, release["time"] if release else c["at"]
+        label, url = label_of(release), release["url"] if release else None
+        # When the fix counts from: the update's date, unless you picked an update older than reports
+        # you marked it fixed over (players on an old build); then those reports count as before the
+        # fix (crossed out, replied to) and only later ones can say it's still happening.
+        reported = max((state["items"][i]["created"] for i in issue["items"] if i in state["items"] and state["items"][i]["created"] <= c["at"]), default=0)
+        at = (release["time"] if release["time"] > reported else c["at"]) if release else c["at"]
         if key in done:
+            if issue.get("manualFix") == key and release and not done[key].get("pending") and issue.get("fixedAt") != at:
+                issue["fixedAt"] = at
             # Waiting for the next update, and it's out now: the fix takes its name, replies can follow.
             if done[key].get("pending") and release:
                 if issue.get("manualFix") == key:

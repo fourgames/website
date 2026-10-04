@@ -101,12 +101,12 @@ const REPO_API = "https://api.github.com/repos/fourgames/website";
 const CLEARED_PATH = "feedback/data/cleared.json";
 const TOKEN_URL = "https://github.com/settings/personal-access-tokens/new?name=Feedback%20dashboard&target_name=fourgames&expires_in=366&contents=write";
 
+// The files only the dashboard writes: what you marked fixed, and your Claude credit.
 async function loadCleared() {
-  try {
-    state.cleared = await getJson("cleared.json");
-  } catch {
-    state.cleared ||= {}; // none saved yet (or a test copy of the data without it)
-  }
+  const [cleared, credit] = await Promise.allSettled([getJson("cleared.json"), getJson("credit.json")]);
+  // None saved yet (or a test copy of the data without them): keep what's on screen.
+  state.cleared = cleared.value || state.cleared || {};
+  state.credit = credit.value || state.credit || null;
 }
 
 const clearedEntry = (issue) => state.cleared?.[state.game.appId]?.[issue.id] || null;
@@ -194,7 +194,8 @@ function askToken() {
 // What you changed and where, for Claude to judge like a patch-notes line.
 function askFix(issue) {
   const note = h("textarea.dlg-input", { rows: 2, required: true }, `Fixed: ${issue.title}`);
-  const list = updates();
+  // Only updates from after it was first reported: an older one can't have fixed it.
+  const list = updates().filter((r) => r.time > issue.firstSeen);
   const pick = h("select.dlg-select", { "aria-label": "Update", onchange: () => { out.checked = true; } },
     ...list.map((r) => h("option", { value: r.gid, title: `${r.name}, ${fmtDate(r.time)}` }, `${r.name} · ${agoWords(r.time)}`)));
   const next = h("input", { type: "radio", name: "fix-where", checked: true });
@@ -216,45 +217,49 @@ function askFix(issue) {
 async function setFixed(issue, fixed) {
   const fix = fixed ? await askFix(issue) : {};
   if (!fix) return;
-  const token = DATA_OVERRIDE ? "test" : store.get("token") || await askToken();
-  if (!token) return;
   const as = fixed ? "fixed" : null;
   const appId = String(state.game.appId);
   const at = Math.max(now(), issue.lastSeen);
-  const change = (data) => {
+  await saveData("cleared", CLEARED_PATH, (data) => {
     const game = (data[appId] ||= {});
     if (as) game[issue.id] = { as, at, title: issue.title, ...fix };
     else delete game[issue.id];
     if (!Object.keys(game).length) delete data[appId];
     return data;
-  };
-  const before = structuredClone(state.cleared || {});
-  state.cleared = change(structuredClone(before));
+  }, `Feedback: ${as ? "fixed" : "reopen"} "${issue.title}" [skip ci]`, as ? "Marked fixed: Claude checks it within 10 min" : "Back on the list");
+}
+
+// Changes one of the files only the dashboard writes (state[key], saved at path in the repo): shown
+// at once, then saved through GitHub's API with your token. When something else saved the file in
+// between, GitHub refuses and it goes again; when saving fails, the change is taken back.
+async function saveData(key, path, change, message, done) {
+  const token = DATA_OVERRIDE ? "test" : store.get("token") || await askToken();
+  if (!token) return;
+  const before = structuredClone(state[key] || {});
+  state[key] = change(structuredClone(before));
   redraw();
-  toast(as ? "Marked fixed: Claude checks it within 10 min" : "Back on the list");
+  toast(done);
   if (DATA_OVERRIDE) return toast("Test copy of the data: not saved");
   try {
-    // Read, change, write; when something else saved in between, GitHub refuses and it goes again.
     for (let attempt = 0; ; attempt++) {
-      const res = await github(`contents/${CLEARED_PATH}?ref=main`, token);
+      const res = await github(`contents/${path}?ref=main`, token);
       if (!res.ok && res.status !== 404) throw res;
       const file = res.ok ? await res.json() : null;
       const data = change(file ? JSON.parse(b64.decode(file.content)) : {});
-      const message = `Feedback: ${as ? "fixed" : "reopen"} "${issue.title}" [skip ci]`;
-      const put = await github(`contents/${CLEARED_PATH}`, token, { method: "PUT",
+      const put = await github(`contents/${path}`, token, { method: "PUT",
         body: JSON.stringify({ message, branch: "main", sha: file?.sha, content: b64.encode(JSON.stringify(data, null, 1) + "\n") }) });
       if (put.ok) {
         // Read the data from this commit on, so a refresh doesn't show the old file for a minute.
         const { commit } = await put.json();
         DATA = DATA_OVERRIDE || `${RAW}/${commit.sha}/feedback/data`;
         store.del("api");
-        state.cleared = data;
+        state[key] = data;
         return;
       }
       if (![409, 422].includes(put.status) || attempt >= 2) throw put;
     }
   } catch (err) {
-    state.cleared = before;
+    state[key] = before;
     redraw();
     if (err.status === 401 || err.status === 403 || err.status === 404) {
       store.del("token");
@@ -263,9 +268,10 @@ async function setFixed(issue, fixed) {
   }
 }
 
-// Redraws in place after clearing, keeping the scroll position.
+// Redraws in place after a change, keeping the scroll position.
 function redraw() {
   const y = window.scrollY;
+  renderStatus();
   render();
   window.scrollTo(0, y);
 }
@@ -429,6 +435,133 @@ const SERVICES = {
   github: ["GitHub", "Runs it all every 10 min, saves the data, rebuilds the site on store changes", "no changes yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
 };
 
+// ---------------------------------------------------------------------------
+// What Claude costs. feedback/run.py counts every call's tokens per game, per day and per task
+// (record_usage) and, once, estimates the time before counting started from the saved posts
+// (estimate_past_usage); each game's summary is in index.json. The cost is estimated from the
+// token counts at list price, which matches the bill when the collector is all that uses the key.
+// Your credit: set it from the billing page (data/credit.json: {balance, at, spent}, `spent` being
+// every game's counted cost then); what's left is that minus what's been counted since.
+// ---------------------------------------------------------------------------
+
+const TASKS = { sort: "Sorting posts", translate: "Translating your posts", patch: "Checking patch notes and your fixes", merge: "Merging duplicates", reply: "Drafting replies" };
+const fmtTokens = (n) => n < 1000 ? String(Math.round(n)) : n < 1e6 ? `${Math.round(n / 1000)}k` : `${(n / 1e6).toFixed(n < 1e7 ? 1 : 0)}M`;
+const fmtCost = (usd) => usd > 0 && usd < 0.01 ? "< $0.01" : `$${usd.toFixed(2)}`;
+const isoDay = (t) => new Date(t * 1000).toISOString().slice(0, 10);
+const claudeGames = () => (state.index?.games || []).filter((g) => g.claude);
+
+// Cost per day, counted and estimated, for one game's summary or all of them.
+function costDays(list = claudeGames().map((g) => g.claude)) {
+  const days = {};
+  for (const c of list) {
+    for (const [d, v] of Object.entries(c.days || {})) (days[d] ||= { counted: 0, past: 0 }).counted += v;
+    for (const [d, v] of Object.entries(c.past?.days || {})) (days[d] ||= { counted: 0, past: 0 }).past += v;
+  }
+  return days;
+}
+const totalCost = (c) => (c.cost || 0) + (c.past?.cost || 0);
+const monthCost = (days) => Object.entries(days).filter(([d]) => d.startsWith(isoDay(now()).slice(0, 7))).reduce((n, [, v]) => n + v.counted + v.past, 0);
+// The average day over the last two weeks (or since the first day with any cost, if sooner).
+function dailyRate(days) {
+  const first = Object.keys(days).sort()[0];
+  if (!first) return 0;
+  const span = Math.min(14, Math.max(1, Math.round((now() - Date.parse(first) / 1000) / DAY) + 1));
+  const from = isoDay(now() - (span - 1) * DAY);
+  return Object.entries(days).filter(([d]) => d >= from).reduce((n, [, v]) => n + v.counted + v.past, 0) / span;
+}
+function creditLeft() {
+  if (!state.credit) return null;
+  const counted = claudeGames().reduce((n, g) => n + (g.claude.cost || 0), 0);
+  return state.credit.balance - (counted - (state.credit.spent || 0));
+}
+function lasts(left, rate) {
+  if (!rate) return null;
+  const days = left / rate;
+  return days < 1 ? "runs out today" : days < 14 ? `lasts about ${plural(Math.round(days), "day")}` : days < 120 ? `lasts about ${plural(Math.round(days / 7), "week")}` : "lasts months";
+}
+
+// Under a game's name: what Claude has cost for it.
+function gameCost(c) {
+  if (!c) return null;
+  const days = costDays([c]);
+  const estimated = c.past?.cost ? ` Includes ≈ ${fmtCost(c.past.cost)} estimated for the time before counting started${c.since ? ` (${fmtDate(c.since)})` : ""}.` : "";
+  return h("div.usage", { title: `${plural((c.calls || 0) + (c.past?.calls || 0), "Claude call")}, estimated at list price.${estimated}` },
+    `Claude: ${fmtCost(totalCost(c))} total · ${fmtCost(monthCost(days))} this month · ${fmtTokens((c.input || 0) + (c.past?.input || 0))} tokens in, ${fmtTokens((c.output || 0) + (c.past?.output || 0))} out`);
+}
+
+// In the Claude card: credit left (or a button to set it) and what it's cost.
+function claudeCard() {
+  const days = costDays();
+  const left = creditLeft();
+  const credit = left == null
+    ? h("button.linkish", { type: "button", onclick: setCredit }, "Set your credit to see what's left")
+    : h(`div.svc-credit${left < 2 ? ".low" : ""}`, h("b", `≈ ${fmtCost(Math.max(left, 0))} left`), lasts(Math.max(left, 0), dailyRate(days)) ? ` · ${lasts(Math.max(left, 0), dailyRate(days))}` : "");
+  return h("div.svc-cost", credit,
+    claudeGames().length ? h("div", `${fmtCost(monthCost(days))} this month · ${fmtCost(claudeGames().reduce((n, g) => n + totalCost(g.claude), 0))} total`) : null,
+    claudeGames().length ? h("span.kpi-more.svc-more", state.costsOpen ? "Hide chart ▴" : "Chart ▾") : null);
+}
+
+function setCredit() {
+  const input = h("input.dlg-input", { type: "number", min: "0", step: "0.01", required: true, placeholder: "10.00", value: creditLeft() != null ? Math.max(creditLeft(), 0).toFixed(2) : null });
+  formDialog("Your Claude credit", [
+    h("p", "What your ", h("a", { href: "https://platform.claude.com/settings/billing", target: "_blank", rel: "noopener" }, "billing page ↗"), " shows as your credit balance now. Set it again whenever you top up; the dashboard counts down from it, and Discord pings you once when it's below $2."),
+    h("label.dlg-label", "Credit balance ($)", input),
+  ], "Save", () => {
+    const balance = Number(input.value);
+    if (!(balance >= 0)) throw new Error("Enter the amount, like 10.00.");
+    return balance;
+  }).then((balance) => {
+    if (balance == null) return;
+    const spent = claudeGames().reduce((n, g) => n + (g.claude.cost || 0), 0);
+    saveData("credit", "feedback/data/credit.json", () => ({ balance, at: now(), spent: Math.round(spent * 1e6) / 1e6 }),
+      `Feedback: Claude credit $${balance.toFixed(2)} [skip ci]`, "Credit saved");
+  });
+}
+
+// Under the service cards: cost per day for the last 30 days, and per game and task.
+function costPanel() {
+  const days = costDays();
+  const n = 30;
+  const list = Array.from({ length: n }, (_, k) => { const d = isoDay(now() - (n - 1 - k) * DAY); return { d, ...(days[d] || { counted: 0, past: 0 }) }; });
+  const max = Math.max(0.01, ...list.map((x) => x.counted + x.past));
+  const W = 600, H = 120, bw = W / n;
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, preserveAspectRatio: "none", class: "cost-chart", role: "img", "aria-label": "Claude cost per day, last 30 days" });
+  list.forEach((x, k) => {
+    const hp = (x.past / max) * H, hc = (x.counted / max) * H;
+    const g = svgEl("g");
+    const title = svgEl("title");
+    title.textContent = `${x.d}: ${fmtCost(x.counted + x.past)}${x.past ? ` (≈ ${fmtCost(x.past)} estimated)` : ""}`;
+    g.append(title, svgEl("rect", { x: k * bw + 1, y: 0, width: bw - 2, height: H, class: "cost-hit" }));
+    if (hp) g.append(svgEl("rect", { x: k * bw + 2, y: H - hp - hc, width: bw - 4, height: hp, class: "cost-past", rx: 2 }));
+    if (hc) g.append(svgEl("rect", { x: k * bw + 2, y: H - hc, width: bw - 4, height: hc, class: "cost-bar", rx: 2 }));
+    svg.append(g);
+  });
+  const rate = dailyRate(days);
+  const stat = (label, value) => h("div.cost-stat", h("b", value), h("span", label));
+  const games = claudeGames().slice().sort((a, b) => totalCost(b.claude) - totalCost(a.claude));
+  const row = (g) => {
+    const c = g.claude;
+    const tasks = {};
+    for (const src of [c.tasks || {}, c.past?.tasks || {}]) for (const [t, v] of Object.entries(src)) tasks[t] = (tasks[t] || 0) + v;
+    return h("div.cost-game",
+      h("div.cost-game-head", h("b", g.name), h("span", `${fmtCost(totalCost(c))} total · ${fmtCost(monthCost(costDays([c])))} this month`)),
+      h("div.cost-tasks", ...Object.entries(tasks).sort((a, b) => b[1] - a[1]).map(([t, v]) => h("span", `${TASKS[t] || t} ${fmtCost(v)}`))));
+  };
+  const left = creditLeft();
+  return h("section.cost-panel",
+    h("div.cost-stats",
+      stat("today", fmtCost((days[isoDay(now())]?.counted || 0) + (days[isoDay(now())]?.past || 0))),
+      stat("a day, on average", fmtCost(rate)),
+      stat("this month", fmtCost(monthCost(days))),
+      left != null ? stat(lasts(Math.max(left, 0), rate) || "left", `≈ ${fmtCost(Math.max(left, 0))}`) : null),
+    svg,
+    h("div.cost-axis", h("span", fmtShort(Date.parse(list[0].d) / 1000)), h("span", "today")),
+    h("p.cost-note", h("span.cost-key"), " counted  ", h("span.cost-key.past"), " estimated for the time before counting started (on the low side: it can't see posts sorted twice or failed calls)"),
+    ...games.map(row),
+    h("div.actions", h("button.btn", { type: "button", onclick: setCredit }, left == null ? "Set your credit" : "Update your credit"),
+      h("a.btn.link-btn", { href: "https://platform.claude.com/settings/billing", target: "_blank", rel: "noopener" }, "Billing ↗")));
+}
+
 // In the page header: a card per service, saying whether it works and when it last did something.
 function renderStatus() {
   const el = document.getElementById("fb-status");
@@ -458,15 +591,26 @@ function renderStatus() {
     mark.append(svgEl("path", { d: BRAND[key === "forums" ? "steam" : key] }));
     // A card: mark, name and state; what it does; and at the bottom (so every card lines up) what it
     // last did and when. Problems get their message and fix below that.
-    return h(`div.svc.svc-${kind}`,
-      h("div.svc-head", mark, h("b", name), h("span.svc-state", h("span.svc-dot"), { ok: "Working", bad: "Needs attention", idle: "Unknown" }[kind])),
+    // The Claude card opens its cost chart below, like the players and reviews cards do theirs.
+    const opens = key === "claude" && claudeGames().length;
+    const toggle = (e) => {
+      if (e.type === "keydown" && e.key !== "Enter" && e.key !== " ") return;
+      if (e.target.closest("a, button")) return;
+      e.preventDefault();
+      state.costsOpen = !state.costsOpen;
+      renderStatus();
+    };
+    return h(`div.svc.svc-${kind}${opens ? ".svc-open" : ""}`, opens ? { role: "button", tabindex: "0", "aria-expanded": String(!!state.costsOpen), onclick: toggle, onkeydown: toggle } : null,
+      h("div.svc-head", mark, h("b", name),
+        h("span.svc-state", h("span.svc-dot"), { ok: "Working", bad: "Needs attention", idle: "Unknown" }[kind])),
       h("div.svc-what", what),
+      key === "claude" ? claudeCard() : null,
       h("div.svc-last", s?.active ? `${s.activeWhat || "last activity"} ${ago(s.active)}` : none),
       key === "github" && kind === "idle" ? h("div.svc-msg", "GitHub's hourly request limit is used up; back within the hour.") : null,
       kind === "bad" ? h("div.svc-msg", s.message || "Failed.", s.since ? h("span.svc-since", ` · since ${ago(s.since)}`) : null) : null,
       kind === "bad" ? h("a.btn.primary.svc-fix", { href: fix[0], target: "_blank", rel: "noopener" }, fix[1], " ↗") : null);
   };
-  el.replaceChildren(h("div.svc-grid", ...Object.entries(SERVICES).map(card)));
+  el.replaceChildren(...[h("div.svc-grid", ...Object.entries(SERVICES).map(card)), state.costsOpen && claudeGames().length ? costPanel() : null].filter(Boolean));
 }
 
 // Released games first, newest release on top; then coming-soon games, soonest first.
@@ -534,9 +678,10 @@ function renderHeader() {
   const g = state.game;
   // The newest numbered update; a launch post or an unnumbered one only when there's nothing else.
   const release = (g.releases || []).filter((r) => r.version).at(-1) || (g.releases || []).at(-1);
-  document.getElementById("fb-updated").replaceChildren([
+  document.getElementById("fb-updated").replaceChildren(...[
     release ? `Latest update ${release.version ? "v" + release.version : release.name}, ${ago(release.time)}` : null,
-  ].filter(Boolean).join(" · "));
+    gameCost(g.meta?.claude),
+  ].filter(Boolean));
   const id = state.game.appId;
   const links = [
     ["Store page", `https://store.steampowered.com/app/${id}/`],

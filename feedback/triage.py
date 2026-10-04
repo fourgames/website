@@ -23,6 +23,27 @@ def client():
     return _client
 
 
+# What each model costs, in dollars per million tokens (input, output). Update when MODEL changes.
+PRICES = {"claude-haiku-4-5": (1.00, 5.00)}
+
+# Tokens used by the Claude calls of this process, added up, in total and per task; run.py reads it
+# before and after each game to keep a running total per game, per day and per task.
+USAGE = {"input": 0, "output": 0, "calls": 0, "cost": 0.0, "tasks": {}}
+
+
+def _parse(task, **kwargs):
+    """messages.parse, counting what the call used under `task` (a failed parse was still billed)."""
+    response = client().messages.parse(**kwargs)
+    usage = response.usage
+    tokens_in = usage.input_tokens + (usage.cache_creation_input_tokens or 0) + (usage.cache_read_input_tokens or 0)
+    price_in, price_out = PRICES.get(kwargs["model"], (0, 0))
+    used = {"input": tokens_in, "output": usage.output_tokens, "calls": 1, "cost": (tokens_in * price_in + usage.output_tokens * price_out) / 1e6}
+    for bucket in (USAGE, USAGE["tasks"].setdefault(task, {"input": 0, "output": 0, "calls": 0, "cost": 0.0})):
+        for k, v in used.items():
+            bucket[k] += v
+    return response
+
+
 def describe_error(error):
     """(message for the dashboard, whether retrying this run is pointless) for a failed Claude call."""
     import anthropic
@@ -136,7 +157,7 @@ def triage(game_name, item, issues, context=None):
         + f"\n\nOpen issues:\n{issue_lines or '(none yet)'}"
         + f"\n\n<post>\n{text[:12000]}\n</post>"
     )
-    response = client().messages.parse(
+    response = _parse("sort",
         model=MODEL,
         max_tokens=4000,
         system=TRIAGE_SYSTEM,
@@ -209,7 +230,7 @@ def fix_reply(game_name, item, issue_title, version, change):
         f"Post type: {item['kind']}{' (negative review)' if item['kind'] == 'review' and not item.get('votedUp') else ''}\n"
         f"Player's language: {t.get('language') or 'unknown'}\n\n<post>\n{(item.get('text') or '')[:6000]}\n</post>"
     )
-    response = client().messages.parse(
+    response = _parse("reply",
         model=MODEL,
         max_tokens=1000,
         system=FIX_REPLY_SYSTEM,
@@ -241,7 +262,7 @@ def match_release(game_name, release, issues):
         "tutorial needs a tutorial, hint or explanation; cheaper upgrades don't explain anything); a line that helps "
         "without doing what they asked is partial. Leave out everything else."
     )
-    response = client().messages.parse(
+    response = _parse("patch",
         model=MODEL,
         max_tokens=4000,
         messages=[{"role": "user", "content": prompt}],
@@ -279,7 +300,7 @@ def find_duplicates(game_name, issues):
         "settle (e.g. \"game too short\" and \"needs more content\"). Don't group issues that are only related or "
         "about different items. Only list groups of two or more; leave everything else out."
     )
-    response = client().messages.parse(
+    response = _parse("merge",
         model=MODEL,
         max_tokens=2000,
         messages=[{"role": "user", "content": prompt}],
@@ -306,7 +327,7 @@ def translate(text):
     """Just a translation, for the developer's own posts and replies (they aren't triaged)."""
     if DRY_RUN:
         return Translation(language="English", english="")
-    response = client().messages.parse(
+    response = _parse("translate",
         model=MODEL,
         max_tokens=4000,
         system="Translate the developer's post on Steam to English, keeping its meaning and tone. If it is already "

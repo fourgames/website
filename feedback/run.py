@@ -762,6 +762,113 @@ def send_alerts(state, game, run, first_run):
             notify.send(batch[start : start + 10], ping=True)
 
 
+USAGE_KEYS = ("input", "output", "calls", "cost")
+
+
+def _add(bucket, used):
+    for k in USAGE_KEYS:
+        bucket[k] = round(bucket.get(k, 0) + used[k], 6) if k == "cost" else bucket.get(k, 0) + used[k]
+
+
+def record_usage(state, before):
+    """Adds what this game's Claude calls used this run to its running total, today's and each
+    task's (the dashboard shows them, with the estimated cost). Counting started when this was added;
+    estimate_past_usage fills in the time before."""
+    import triage
+
+    used = {k: triage.USAGE[k] - before[k] for k in USAGE_KEYS}
+    if not used["calls"]:
+        return
+    usage = state.setdefault("usage", {"since": now(), "days": {}, "tasks": {}})
+    day = usage["days"].setdefault(time.strftime("%Y-%m-%d", time.gmtime()), {})
+    _add(usage, used)
+    _add(day, used)
+    for task, now_used in triage.USAGE["tasks"].items():
+        was = before["tasks"].get(task, {})
+        diff = {k: now_used[k] - was.get(k, 0) for k in USAGE_KEYS}
+        if diff["calls"]:
+            _add(usage["tasks"].setdefault(task, {}), diff)
+            _add(day.setdefault("tasks", {}).setdefault(task, {}), diff)
+
+
+def estimate_past_usage(state):
+    """A one-off estimate of what Claude used before counting started, from the posts, patch notes
+    and replies already saved: roughly what each call sends and gets back, by text length (about 3.5
+    characters a token) plus the fixed parts of each prompt. It can't see posts sorted more than once
+    or calls that failed, so it's on the low side. Put on the day each call most likely ran."""
+    import triage
+
+    usage = state.get("usage") or {}
+    if "past" in state:
+        return
+    until = usage.get("since") or now()
+    start = state.get("newPostAlertsFrom") or until  # about when collecting began for this game
+    price_in, price_out = triage.PRICES.get(triage.MODEL, (0, 0))
+    tokens = lambda text: len(text or "") / 3.5
+    calls = []  # (when, task, tokens in, tokens out)
+    items = sorted(state["items"].values(), key=lambda i: i["created"])
+    for n, item in enumerate(items):
+        when = min(max(item["created"], start), until)
+        t = item.get("triage") or {}
+        if item.get("dev"):
+            for field in (item.get("translatedOwn") or {}):
+                text = item.get("text") if field == "text" else item.get("devResponse")
+                calls.append((when, "translate", 300 + tokens(text), 40 + tokens(text)))
+        elif t:
+            open_issues = min(150, sum(1 for i in state["issues"].values() if i.get("created", 0) <= item.get("updated", item["created"])) or n)
+            calls.append((when, "sort", 1800 + tokens(item.get("text")) + 45 * open_issues, 350 + 60 * len(t.get("points") or [])))
+        if item.get("fixReply"):
+            calls.append((min(max(item["fixReply"].get("at", until), start), until), "reply", 700 + tokens(item.get("text")), 120))
+    for release in state["releases"]:
+        if release.get("checked"):
+            found = len(release.get("matched") or []) + len(release.get("partly") or [])
+            calls.append((min(max(release["time"], start), until), "patch", 600 + tokens(release.get("notes")) + 60 * len(state["issues"]), 80 + 60 * found))
+    past = {"until": until, "input": 0, "output": 0, "calls": 0, "cost": 0.0, "days": {}, "tasks": {}}
+    for when, task, tin, tout in calls:
+        used = {"input": round(tin), "output": round(tout), "calls": 1, "cost": (tin * price_in + tout * price_out) / 1e6}
+        _add(past, used)
+        _add(past["tasks"].setdefault(task, {}), used)
+        _add(past["days"].setdefault(time.strftime("%Y-%m-%d", time.gmtime(when)), {}), used)
+    state["past"] = past
+
+
+def usage_summary(state):
+    """What the dashboard's game list and Claude card need (they don't load every game's file):
+    totals, cost per day and per task, counted and estimated."""
+    usage, past = state.get("usage") or {}, state.get("past") or {}
+    if not usage and not past.get("calls"):
+        return None
+    return {
+        "since": usage.get("since"),
+        **{k: usage.get(k, 0) for k in USAGE_KEYS},
+        "days": {d: round(v["cost"], 4) for d, v in sorted(usage.get("days", {}).items())},
+        "tasks": {t: round(v["cost"], 4) for t, v in usage.get("tasks", {}).items()},
+        "past": {**{k: past.get(k, 0) for k in USAGE_KEYS}, "until": past.get("until"),
+                 "days": {d: round(v["cost"], 4) for d, v in sorted(past.get("days", {}).items())},
+                 "tasks": {t: round(v["cost"], 4) for t, v in past.get("tasks", {}).items()}},
+    }
+
+
+def check_credit(index):
+    """Your Claude credit, as you last set it on the dashboard (data/credit.json: {balance, at,
+    spent}, `spent` being every game's counted cost at that moment), minus what's been spent since.
+    Below $2, Discord pings you once for that balance."""
+    import notify
+
+    credit = load(DATA / "credit.json", None)
+    if not credit:
+        return
+    spent = sum((g.get("claude") or {}).get("cost", 0) for g in index["games"])
+    left = credit["balance"] - (spent - credit.get("spent", 0))
+    alerted = index.setdefault("creditAlert", None)
+    if left < 2 and alerted != credit["at"]:
+        index["creditAlert"] = credit["at"]
+        notify.send([{"title": f"Claude credit is running low: about ${max(left, 0):.2f} left",
+                      "description": "Estimated from what the feedback collector has used since you last set your balance on the dashboard. Top up before it runs out, or posts stop being sorted.",
+                      "url": "https://platform.claude.com/settings/billing", "color": 0xFAB219}], ping=True)
+        print(f"[credit] about ${left:.2f} left: pinged")
+
+
 def full_run():
     import triage
 
@@ -789,6 +896,7 @@ def full_run():
         state = load(path, None) or new_state(game)
         first_run = not state["initialized"]
         run = {"new": [], "edited": [], "flips": [], "urgent": [], "triaged": [], "touched": set()}
+        used_before = json.loads(json.dumps(triage.USAGE))  # a copy, tasks included
         try:
             events = steam.update_events(game["appId"])
         except steam.HttpError as error:
@@ -827,9 +935,14 @@ def full_run():
         game["lastPost"] = max((i["created"] for i in state["items"].values() if not i.get("dev")), default=None)
         # And your own newest post (update notes, replies), shown next to it.
         game["lastDevPost"] = max((i["created"] for i in state["items"].values() if i.get("dev")), default=None)
+        record_usage(state, used_before)
+        estimate_past_usage(state)
+        # The totals, for the dashboard's game list and its Claude card (which sums every game).
+        game["claude"] = usage_summary(state)
         if save(path, state):
             changed.append(game["name"])
 
+    check_credit(index)
     index["status"] = status.merge(index.get("status"))
     # When anything last changed, for the dashboard's "last change" (it needs no GitHub API call).
     without_time = lambda i: {k: v for k, v in i.items() if k != "changedAt"}

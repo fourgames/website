@@ -1448,19 +1448,37 @@
 	white-space: nowrap;
 }
 
-/* Clearing bugs and ideas off the list (dashboard.js: setCleared). */
-.fb .s-cleared {
+/* Marking bugs and ideas fixed (dashboard.js: setFixed). */
+.fb .check-btn {
+	margin-left: auto;
+	width: 36px;
+	height: 36px;
+	flex: none;
+	display: grid;
+	place-items: center;
+	border: 2px solid var(--fb-line);
+	border-radius: 50%;
+	background: transparent;
 	color: var(--fb-muted);
+	transition: border-color 0.15s, color 0.15s, background 0.15s;
 }
-.fb .clear-btns {
-	display: contents;
+.fb .check-btn svg {
+	width: 18px;
+	height: 18px;
 }
-.fb .clear-btn {
-	color: var(--fb-ink-2);
+.fb .check-btn:hover {
+	border-color: var(--fb-good-text);
+	color: var(--fb-good-text);
+}
+.fb .check-btn.on {
+	border-color: var(--fb-good-text);
+	background: var(--fb-good-text);
+	color: var(--fb-card);
 }
 .fb-dialog {
 	margin: auto; /* the site's reset removes a dialog's own centering */
-	max-width: min(440px, calc(100vw - 32px));
+	width: min(440px, calc(100vw - 32px));
+	box-sizing: border-box;
 	border: 0;
 	border-radius: var(--radius-card, 12px);
 	background: var(--fb-card);
@@ -1509,4 +1527,39 @@
 	gap: 4px;
 	margin-top: 10px;
 	color: var(--fb-ink-2);
+}
+.fb-dialog .dlg-sub {
+	color: var(--fb-ink-2);
+	margin-top: -4px;
+}
+.fb-dialog .dlg-hint {
+	color: var(--fb-muted);
+	font-size: 0.8rem;
+	margin: 4px 0 0;
+}
+.fb-dialog .dlg-opt {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	margin-top: 6px;
+	padding: 8px 10px;
+	border: 1px solid var(--fb-line);
+	border-radius: 8px;
+	cursor: pointer;
+}
+.fb-dialog .dlg-opt:has(input:checked) {
+	border-color: var(--fb-accent);
+}
+.fb-dialog .dlg-opt input {
+	accent-color: var(--fb-accent);
+}
+.fb-dialog .dlg-select {
+	margin-left: auto;
+	max-width: 55%;
+	padding: 4px 8px;
+	border: 1px solid var(--fb-line);
+	border-radius: 8px;
+	background: var(--fb-card-2);
+	color: var(--fb-ink);
+	font: inherit;
 }

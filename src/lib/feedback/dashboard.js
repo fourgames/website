@@ -47,6 +47,14 @@ function ago(t) {
   if (s < 30 * DAY) return Math.round(s / DAY) + " d ago";
   return fmtDate(t);
 }
+// The same in words, for menus: "today", "yesterday", "2 days ago", "3 weeks ago"…
+function agoWords(t) {
+  const days = Math.floor((now() - t) / DAY);
+  if (days < 1) return "today";
+  if (days < 2) return "yesterday";
+  const [n, unit] = days < 14 ? [days, "day"] : days < 60 ? [Math.round(days / 7), "week"] : days < 730 ? [Math.round(days / 30), "month"] : [Math.round(days / 365), "year"];
+  return `${plural(n, unit)} ago`;
+}
 // Posted or reported in the last 48 hours: tagged "New", like recent posts on the rest of the site.
 const isRecent = (t) => t && now() - t < 2 * DAY;
 const plural = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
@@ -76,22 +84,21 @@ async function getJson(path) {
 }
 
 // ---------------------------------------------------------------------------
-// Clearing bugs and ideas you've dealt with (or won't), like ticking off a to-do list. Saved in
-// feedback/data/cleared.json ({appId: {issueId: {as, at, title, note?, version?}}}) so every browser
-// sees it; the collecting workflow only reads that file, so the two never conflict. The site is
-// static, so saving goes straight to GitHub's API with a fine-grained token you paste once per
-// browser: the token is the password, and only someone who can write to the repo has one.
-// "[skip ci]" keeps a save from redeploying the site.
-// Done comes with a line about what you changed. The next collecting run has Claude judge it like a
-// patch-notes line (feedback/run.py: apply_manual_fixes, which records its verdict in the game's
-// manualFixes): a real fix becomes "likely fixed", with reply drafts and "still happening" as after
-// a release; anything less is "partly addressed" and back on the list. Won't do just hides it. Either
-// way, a player reporting it again brings it back.
+// Ticking off bugs and ideas you've fixed, to get the bug count to 0. Saved in
+// feedback/data/cleared.json ({appId: {issueId: {as: "fixed", at, title, note, release}}}, release
+// being the gid of the update it's in, or null for the next one) so every browser sees it; the
+// collecting workflow only reads that file, so the two never conflict. The site is static, so saving
+// goes straight to GitHub's API with a fine-grained token you paste once per browser: the token is
+// the password, and only someone who can write to the repo has one. "[skip ci]" keeps a save from
+// redeploying the site. With ?data= (a test copy) nothing is saved.
+// The next collecting run has Claude judge your line like a patch-notes line (feedback/run.py:
+// apply_manual_fixes, which records its verdict in the game's manualFixes): a real fix becomes
+// "likely fixed", with reply drafts (once the update is out) and "still happening" as after a
+// release; anything less is "partly addressed" and back on the list.
 // ---------------------------------------------------------------------------
 
 const REPO_API = "https://api.github.com/repos/fourgames/website";
 const CLEARED_PATH = "feedback/data/cleared.json";
-const CLEARED = { done: "Done", wontfix: "Won't do" };
 const TOKEN_URL = "https://github.com/settings/personal-access-tokens/new?name=Feedback%20dashboard&target_name=fourgames&expires_in=366&contents=write";
 
 async function loadCleared() {
@@ -104,16 +111,26 @@ async function loadCleared() {
 
 const clearedEntry = (issue) => state.cleared?.[state.game.appId]?.[issue.id] || null;
 const fixKey = (issue, c) => `${issue.id}@${c.at}`;
-// A Done note Claude hasn't judged yet.
-const waitingForClaude = (issue, c) => c.as === "done" && c.note && !state.game.manualFixes?.[fixKey(issue, c)];
+// The updates you can say a fix is in, newest first.
+const releaseLabel = (r) => r.version ? `v${r.version}` : r.name;
+const updates = () => (state.game.releases || []).slice().sort((a, b) => b.time - a.time);
+const fixedWhere = (c) => {
+  const r = c.release && updates().find((u) => u.gid === c.release);
+  return r ? `in ${releaseLabel(r)}` : "in the next update";
+};
 
-// How you cleared an issue, while it's off the list for that: Won't do, or a Done still waiting for
-// Claude (after that, Claude's verdict shows instead). Not once a player has reported it again.
+// Your fix, while it's waiting for Claude (after that, Claude's verdict shows instead), and not once
+// a player has reported it again.
 function clearedAs(issue) {
   const c = clearedEntry(issue);
-  if (!c || issue.lastSeen > c.at) return null;
-  return c.as === "wontfix" || !c.note || waitingForClaude(issue, c) ? c : null;
+  if (!c || c.as === "wontfix" || issue.lastSeen > c.at) return null;
+  return state.game.manualFixes?.[fixKey(issue, c)] ? null : c;
 }
+// Your fix, waiting for Claude or taken by Claude as the fix: the check button shows it ticked.
+const ticked = (issue) => {
+  const c = clearedEntry(issue);
+  return !!(clearedAs(issue) || (c && issue.status === "likely_fixed" && issue.manualFix === fixKey(issue, c)));
+};
 
 const b64 = {
   encode: (text) => { let s = ""; for (const b of new TextEncoder().encode(text)) s += String.fromCharCode(b); return btoa(s); },
@@ -174,29 +191,39 @@ function askToken() {
   });
 }
 
-// What you changed, for Claude to judge like a patch-notes line.
+// What you changed and where, for Claude to judge like a patch-notes line.
 function askFix(issue) {
-  const note = h("textarea.dlg-input", { rows: 3, required: true, placeholder: issue.kind === "bug" ? "e.g. Fixed the HP bar not updating after healing" : "e.g. Added a short tutorial on the first dive" });
-  const version = h("input.dlg-input", { placeholder: "e.g. 1.5 (optional)", autocomplete: "off" });
-  return formDialog("What did you change?", [
-    h("p", h("b", issue.title)),
-    h("p", "Write it like a patch-notes line. Claude checks it against what players said within 10 minutes: a real fix marks it likely fixed and drafts replies to those players; anything less marks it partly addressed and keeps it on the list."),
-    note,
-    h("label.dlg-label", "In version", version),
-  ], "Done", () => ({ note: note.value.trim(), version: version.value.trim().replace(/^v/i, "") || null }));
+  const note = h("textarea.dlg-input", { rows: 2, required: true }, `Fixed: ${issue.title}`);
+  const list = updates();
+  const pick = h("select.dlg-select", { "aria-label": "Update", onchange: () => { out.checked = true; } },
+    ...list.map((r) => h("option", { value: r.gid, title: `${r.name}, ${fmtDate(r.time)}` }, `${r.name} · ${agoWords(r.time)}`)));
+  const next = h("input", { type: "radio", name: "fix-where", checked: true });
+  const out = h("input", { type: "radio", name: "fix-where" });
+  return formDialog("Mark fixed", [
+    h("p.dlg-sub", issue.title),
+    h("label.dlg-label", "What did you change?", note),
+    h("p.dlg-hint", "Like a patch-notes line. Claude checks it against what players said."),
+    h("div.dlg-label", "Where is the fix?"),
+    h("label.dlg-opt", next, h("span", "In the next update ", h("span.dlg-hint", "(not out yet)"))),
+    list.length ? h("label.dlg-opt", out, h("span", "Already out in"), pick) : null,
+  ], "Mark fixed", () => {
+    if (!note.value.trim()) throw new Error("Write what you changed first.");
+    return { note: note.value.trim(), release: out.checked ? pick.value : null };
+  });
 }
 
-// Clears an issue (as "done" or "wontfix"), or brings it back (as null). Shown at once, then saved.
-async function setCleared(issue, as) {
-  const fix = as === "done" ? await askFix(issue) : {};
+// Marks an issue fixed (asking what and where), or undoes that. Shown at once, then saved.
+async function setFixed(issue, fixed) {
+  const fix = fixed ? await askFix(issue) : {};
   if (!fix) return;
-  const token = store.get("token") || await askToken();
+  const token = DATA_OVERRIDE ? "test" : store.get("token") || await askToken();
   if (!token) return;
+  const as = fixed ? "fixed" : null;
   const appId = String(state.game.appId);
   const at = Math.max(now(), issue.lastSeen);
   const change = (data) => {
     const game = (data[appId] ||= {});
-    if (as) game[issue.id] = { as, at, title: issue.title, ...(fix.note ? fix : {}) };
+    if (as) game[issue.id] = { as, at, title: issue.title, ...fix };
     else delete game[issue.id];
     if (!Object.keys(game).length) delete data[appId];
     return data;
@@ -204,7 +231,8 @@ async function setCleared(issue, as) {
   const before = structuredClone(state.cleared || {});
   state.cleared = change(structuredClone(before));
   redraw();
-  toast(as === "done" ? "Done: Claude checks it within 10 min" : as ? `Cleared: ${CLEARED[as]}` : "Back on the list");
+  toast(as ? "Marked fixed: Claude checks it within 10 min" : "Back on the list");
+  if (DATA_OVERRIDE) return toast("Test copy of the data: not saved");
   try {
     // Read, change, write; when something else saved in between, GitHub refuses and it goes again.
     for (let attempt = 0; ; attempt++) {
@@ -212,7 +240,7 @@ async function setCleared(issue, as) {
       if (!res.ok && res.status !== 404) throw res;
       const file = res.ok ? await res.json() : null;
       const data = change(file ? JSON.parse(b64.decode(file.content)) : {});
-      const message = `Feedback: ${as ? CLEARED[as].toLowerCase() : "reopen"} "${issue.title}" [skip ci]`;
+      const message = `Feedback: ${as ? "fixed" : "reopen"} "${issue.title}" [skip ci]`;
       const put = await github(`contents/${CLEARED_PATH}`, token, { method: "PUT",
         body: JSON.stringify({ message, branch: "main", sha: file?.sha, content: b64.encode(JSON.stringify(data, null, 1) + "\n") }) });
       if (put.ok) {
@@ -664,7 +692,7 @@ function issueView(kind) {
       .sort(SORTS[f.sort] || SORTS.priority);
     list.replaceChildren(...(shown.length ? shown.map((i) => issueCard(i)) : [h("p.empty", kind === "bug" ? "No issues here." : "No suggestions here.")]));
   };
-  const status = chips([["active", "Open"], ["still", "Still happening"], ["fixed", "Likely fixed"], ["cleared", "Cleared"], ["all", "All"]], f.status, (v) => { f.status = v; draw(); }, "Status");
+  const status = chips([["active", "Open"], ["still", "Still happening"], ["fixed", "Likely fixed"], ["cleared", "Marked fixed"], ["all", "All"]], f.status, (v) => { f.status = v; draw(); }, "Status");
   // What costs the most reviews, what most players hit, or what turns new players away.
   const sort = chips([["priority", "Priority"], ["negative", "Negative reviews"], ["players", "Most players"], ["first", "First 2 hours"]], f.sort, (v) => { f.sort = v; draw(); }, "Sort");
   const search = h("input", { type: "search", placeholder: "Search issues", value: f.q, oninput: (e) => { f.q = e.target.value; draw(); } });
@@ -747,13 +775,13 @@ function statusBadge(issue) {
     ? link("s-partly", partly.at(-1).url, partly.map((p) => `${p.in}: ${p.reason}`).join("\n"), `◐ Partly addressed in ${partly.map((p) => p.in).join(", ")}`)
     : null;
   const cleared = clearedAs(issue);
-  if (cleared) return [h("span.badge.s-cleared", { title: [`You cleared this on ${fmtDate(cleared.at)}`, cleared.note].filter(Boolean).join("\n") },
-    cleared.as === "wontfix" ? "✕ Won't do" : cleared.note ? "✓ Done · Claude checks it within 10 min" : "✓ Done")];
+  if (cleared) return [h("span.badge.s-fixed", { title: [`You marked this fixed on ${fmtDate(cleared.at)}`, cleared.note].filter(Boolean).join("\n") },
+    `✓ Fixed ${fixedWhere(cleared)} · Claude is checking`)];
   // Cleared, then reported again: back on the list.
   const entry = clearedEntry(issue);
   // (After Claude took your note as the fix, it's Claude's "still happening" that says so.)
   const back = entry && issue.lastSeen > entry.at && issue.manualFix !== fixKey(issue, entry)
-    ? h("span.badge.s-still", { title: `You cleared this on ${fmtDate(entry.at)}` }, "↻ Reported again since you cleared it") : null;
+    ? h("span.badge.s-still", { title: `You marked this fixed on ${fmtDate(entry.at)}` }, "↻ Reported again since you marked it fixed") : null;
   if (issue.status === "likely_fixed")
     return [link("s-fixed", issue.fixedUrl, issue.fixReason, "✓ Likely fixed in " + issue.fixedIn), back];
   if (issue.status === "still_happening")
@@ -832,20 +860,22 @@ function issueCard(issue) {
         issue.area,
       ].filter(Boolean).join(" · ")),
       summary ? h("ul.pc-points", h("li", summaryLabel, summary)) : null,
-      h("div.actions", issue.kind === "praise" ? null : copyBtn, toggle, patchBtn, issue.kind === "praise" ? null : clearButtons(issue))),
+      h("div.actions", issue.kind === "praise" ? null : copyBtn, toggle, patchBtn, issue.kind === "praise" ? null : checkButton(issue))),
     postList);
 }
 
-// Ticks a bug or idea off the list (fixed, or not going to happen), or puts it back.
-function clearButtons(issue) {
-  const entry = clearedEntry(issue);
-  // Undo: while it's cleared, and once Claude has marked your fix as the fix.
-  if (clearedAs(issue) || (entry && issue.status === "likely_fixed" && issue.manualFix === fixKey(issue, entry)))
-    return h("button.btn.clear-btn", { title: "Undo: back on the list", onclick: () => setCleared(issue, null) }, "Put back");
-  if (issue.status === "likely_fixed") return null; // an update already fixed it
-  return h("span.clear-btns",
-    h("button.btn.clear-btn", { title: "Dealt with: take it off the list", onclick: () => setCleared(issue, "done") }, "✓ Done"),
-    h("button.btn.clear-btn", { title: "Not going to happen: take it off the list", onclick: () => setCleared(issue, "wontfix") }, "✕ Won't do"));
+// The check: ticks a bug or idea off as fixed, or (ticked) undoes that.
+function checkButton(issue) {
+  if (issue.status === "likely_fixed" && !ticked(issue)) return null; // an update already fixed it
+  const on = ticked(issue);
+  return h(`button.check-btn${on ? ".on" : ""}`, { type: "button", "aria-pressed": String(on),
+    title: on ? "Marked fixed. Click to undo" : "Mark fixed", "aria-label": on ? "Undo marked fixed" : "Mark fixed",
+    onclick: () => setFixed(issue, !on) }, svgCheck());
+}
+function svgCheck() {
+  const svg = svgEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2.5, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" });
+  svg.append(svgEl("path", { d: "M5 12.5l4.5 4.5L19 7.5" }));
+  return svg;
 }
 
 function suggestionText(issue, posts) {

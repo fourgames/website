@@ -595,54 +595,82 @@ def match_release(state, game, release):
 
 
 def apply_manual_fixes(state, game):
-    """Your Done notes from the dashboard (data/cleared.json, which only the dashboard writes). Claude
-    judges each note like a patch-notes line, against just that issue: a direct fix marks it likely
+    """What you marked fixed on the dashboard (data/cleared.json, which only the dashboard writes):
+    a patch-notes-style line and the update it's in (a release's gid, or none for the next update).
+    Claude judges the line like patch notes, against just that issue: a direct fix marks it likely
     fixed (reply drafts and "still happening" follow as after a release), anything less notes it as
-    partly addressed and it stays on the list. A note you take back (Put back, or a new Done)
-    undoes what it did. Returns False when Claude can't be reached."""
+    partly addressed and it stays on the list. A fix in the next update takes that update's name once
+    it's posted, and its reply drafts wait until then. A fix you take back (the check clicked again,
+    or marked fixed anew) undoes what it did. Returns False when Claude can't be reached."""
     import triage
 
     cleared = load(DATA / "cleared.json", {}).get(str(game["appId"]), {})
-    wanted = {f"{issue_id}@{c['at']}": (issue_id, c) for issue_id, c in cleared.items() if c.get("as") == "done" and c.get("note")}
+    wanted = {f"{issue_id}@{c['at']}": (issue_id, c) for issue_id, c in cleared.items() if c.get("as") in ("fixed", "done") and c.get("note")}
     done = state.setdefault("manualFixes", {})
     for key in [k for k in done if k not in wanted]:
         issue = state["issues"].get(done.pop(key)["issue"])
         if not issue:
             continue
         if issue.get("manualFix") == key:
-            for k in ("manualFix", "fixedIn", "fixedAt", "fixedUrl", "fixReason", "stillSince"):
+            for k in ("manualFix", "fixPending", "fixedIn", "fixedAt", "fixedUrl", "fixReason", "stillSince"):
                 issue.pop(k, None)
             issue["status"] = "open"
         issue["partly"] = [p for p in issue.get("partly", []) if p.get("manual") != key]
         print(f"[fix] {game['name']} {issue['id']}: your fix was taken back")
+
+    def release_for(c):
+        """The update the fix is in: the one you picked, or the first posted after you marked it."""
+        releases = sorted(state["releases"], key=lambda r: r["time"])
+        if c.get("release"):
+            return next((r for r in releases if r["gid"] == c["release"]), None)
+        return next((r for r in releases if r["time"] > c["at"]), None)
+
+    label_of = lambda r: (f"v{r['version']}" if r["version"] else r["name"]) if r else "the next update"
     for key, (issue_id, c) in wanted.items():
         issue = state["issues"].get(issue_id)
-        if key in done or not issue:
+        if not issue:
             continue
-        version = (c.get("version") or "").strip().lstrip("vV")
-        label = f"v{version}" if version else "the latest update"
+        release = release_for(c)
+        label, url, at = label_of(release), release["url"] if release else None, release["time"] if release else c["at"]
+        if key in done:
+            # Waiting for the next update, and it's out now: the fix takes its name, replies can follow.
+            if done[key].get("pending") and release:
+                if issue.get("manualFix") == key:
+                    issue.update(fixedIn=label, fixedUrl=url, fixedAt=at)
+                    issue.pop("fixPending", None)
+                for p in issue.get("partly", []):
+                    if p.get("manual") == key:
+                        p.update({"in": label, "url": url})
+                done[key]["pending"] = False
+                print(f"[fix] {game['name']} {issue_id}: your fix is out in {label}")
+            continue
         try:
-            matches = triage.match_release(game["name"], {"version": version or None, "name": "a developer's note", "body": c["note"]},
+            matches = triage.match_release(game["name"], {"version": release["version"] if release else None, "name": label, "body": c["note"]},
                                            issue_digest([issue], state))
         except Exception as error:  # noqa: BLE001 - try again next run
             print(f"[fix] {issue_id}: {type(error).__name__}: {error}")
-            status.fail("claude", f"{triage.describe_error(error)[0]} Your Done notes wait to be checked.")
+            status.fail("claude", f"{triage.describe_error(error)[0]} Fixes you marked wait to be checked.")
             return False
         status.active("claude", "checked your fix")
         fit = matches[0]["fit"] if matches else "none"
         reason = matches[0]["reason"] if matches else f"Your note doesn't seem to do what players asked: \"{c['note']}\""
         if fit == "direct":
-            issue.update(status="likely_fixed", fixedIn=label, fixedAt=c["at"], fixedUrl=None, fixReason=reason, manualFix=key)
+            issue.update(status="likely_fixed", fixedIn=label, fixedAt=at, fixedUrl=url, fixReason=reason, manualFix=key)
+            if release:
+                issue.pop("fixPending", None)
+            else:
+                issue["fixPending"] = True
         else:
-            issue["partly"] = [p for p in issue.get("partly", []) if p.get("in") != label] + [{"in": label, "url": None, "reason": reason, "manual": key}]
-        done[key] = {"issue": issue_id, "fit": fit, "reason": reason}
-        print(f"[fix] {game['name']} {issue_id}: your fix is {fit}")
+            issue["partly"] = [p for p in issue.get("partly", []) if p.get("in") != label] + [{"in": label, "url": url, "reason": reason, "manual": key}]
+        done[key] = {"issue": issue_id, "fit": fit, "reason": reason, "pending": not release}
+        print(f"[fix] {game['name']} {issue_id}: your fix is {fit} ({label})")
     return True
 
 
 def draft_all_fix_replies(state, game):
     for issue in state["issues"].values():
-        if issue["status"] == "likely_fixed":
+        # A fix you marked for the next update gets its replies once that update is out.
+        if issue["status"] == "likely_fixed" and not issue.get("fixPending"):
             if not draft_fix_replies(state, game, issue):
                 break
 

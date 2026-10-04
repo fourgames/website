@@ -58,8 +58,8 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
   - `players`: `[time, count]`, stored only when the count changes;
   - `reviewTotals`: per day;
   - `releases`.
-  - `manualFixes`: Claude's verdict on each of your Done notes.
-- `data/cleared.json` holds what you cleared on the dashboard, per game.
+  - `manualFixes`: Claude's verdict on each fix you marked.
+- `data/cleared.json` holds what you marked fixed on the dashboard, per game.
 
 This repo is public, so this data is too. It's all public on Steam anyway.
 
@@ -72,7 +72,7 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 - **Stat cards:** players now, positive reviews, open bugs and new posts. Players and reviews open their chart (with update dates marked) when clicked.
 - **Issues:** bug issues sorted by priority. Each has *Copy fix prompt* and the original posts with their translations and Steam links.
 - **Suggestions:** the same view for suggestions.
-- **Clearing:** each bug and idea has *✓ Done* and *✕ Won't do*, which take it off the list (the *Cleared* filter shows them, with *Put back* to undo). Done asks for a line about what you changed (and a version, if any); the next run has Claude judge it like a patch-notes line, against just that issue (`apply_manual_fixes` in `run.py`). A real fix marks it **likely fixed**, with reply drafts and **still happening** as after a release; anything less marks it **partly addressed** and puts it back on the list. Won't do only hides it. A player reporting it again brings it back. It's saved in `data/cleared.json`, which only the dashboard writes, through GitHub's API with a fine-grained token (this repo only, *Contents: Read and write*) that you paste once per browser and that stays in that browser. Those commits say `[skip ci]`, so they don't redeploy the site.
+- **Marking fixed:** each bug and idea has a round ✓. It asks what you changed (prefilled as a patch-notes line) and where the fix is: *in the next update*, or *already out in* an update you pick. The card leaves the list at once (the *Marked fixed* filter shows it; click the ✓ again to undo). The next run has Claude judge your line like patch notes, against just that issue (`apply_manual_fixes` in `run.py`): a real fix marks it **likely fixed**, with reply drafts and **still happening** as after a release; anything less marks it **partly addressed** and puts it back on the list. A fix in the next update takes that update's name when it's posted, and its reply drafts wait until then. A player reporting it again brings it back. It's saved in `data/cleared.json`, which only the dashboard writes, through GitHub's API with a fine-grained token (this repo only, *Contents: Read and write*) that you paste once per browser and that stays in that browser. Those commits say `[skip ci]`, so they don't redeploy the site. With `?data=` (a test copy), nothing is saved.
 - **Overview:** the week in one line, what needs attention, and the latest posts.
 - **Bugs / Ideas sorting:** by priority, by negative reviews (what's costing you reviews), by most players, or only what came up in the first 2 hours of play (Steam's refund window). Each card has a *Copy patch-note line* button, e.g. "Fixed: … (reported by 3 players)".
 - **Loved:** praise grouped like ideas, most players first, with a button to copy the list for store pages and trailers.

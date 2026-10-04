@@ -373,9 +373,12 @@ async function dataBase() {
     });
   // Both at once: the newest data commit, and whether the collecting workflow is running (data is
   // only committed when something changed, so its date alone can look stale).
-  const [commits, runs] = await Promise.allSettled([api("commits?path=feedback/data&per_page=1"), api("actions/workflows/feedback.yml/runs?per_page=1")]);
+  // And the newest site deploy, to say when the site was rebuilt (or that it's rebuilding now).
+  const [commits, runs, deploys] = await Promise.allSettled([api("commits?path=feedback/data&per_page=1"), api("actions/workflows/feedback.yml/runs?per_page=1"),
+    api("actions/workflows/static.yml/runs?per_page=1")]);
   const c = Array.isArray(commits.value) ? commits.value[0] : null;
   const run = runs.value?.workflow_runs?.[0];
+  const deploy = deploys.value?.workflow_runs?.[0];
   if (!c?.sha) {
     store.set("apiDownUntil", JSON.stringify(limitedUntil || Date.now() + 5 * 60 * 1000));
     return cached ? applyApi(cached, true) : null;
@@ -385,6 +388,8 @@ async function dataBase() {
     sha: c.sha,
     dataChanged: Date.parse(c.commit.committer.date) / 1000,
     checks: run ? { running: run.status !== "completed", ok: run.conclusion !== "failure", at: Date.parse(run.updated_at) / 1000 } : null,
+    deploy: deploy ? { running: deploy.status !== "completed", ok: deploy.conclusion !== "failure", sha: deploy.head_sha.slice(0, 7),
+      at: Date.parse(deploy.updated_at) / 1000, url: deploy.html_url } : null,
   };
   store.set("api", JSON.stringify(answer));
   applyApi(answer);
@@ -398,6 +403,7 @@ function applyApi(answer, stale = false) {
   if (!stale) DATA = `${RAW}/${answer.sha}/feedback/data`;
   state.dataChanged = answer.dataChanged;
   if (answer.checks) state.checks = answer.checks;
+  if (answer.deploy) state.deploy = answer.deploy;
 }
 
 async function init() {
@@ -607,11 +613,27 @@ function renderStatus() {
       h("div.svc-what", what),
       key === "claude" ? claudeCard() : null,
       h("div.svc-last", s?.active ? `${s.activeWhat || "last activity"} ${ago(s.active)}` : none),
+      key === "github" ? siteBuilt() : null,
       key === "github" && kind === "idle" ? h("div.svc-msg", "GitHub's hourly request limit is used up; back within the hour.") : null,
       kind === "bad" ? h("div.svc-msg", s.message || "Failed.", s.since ? h("span.svc-since", ` · since ${ago(s.since)}`) : null) : null,
       kind === "bad" ? h("a.btn.primary.svc-fix", { href: fix[0], target: "_blank", rel: "noopener" }, fix[1], " ↗") : null);
   };
   el.replaceChildren(...[h("div.svc-grid", ...Object.entries(SERVICES).map(card)), state.costsOpen && claudeGames().length ? costPanel() : null].filter(Boolean));
+}
+
+// When the site you're looking at was built, and whether a newer deploy is running, failed or is
+// already live (then a reload shows it). Handy after pushing a change to this dashboard.
+const BUILT = typeof __BUILD_TIME__ === "undefined" ? null : __BUILD_TIME__;
+const BUILT_SHA = typeof __BUILD_SHA__ === "undefined" ? "" : __BUILD_SHA__;
+function siteBuilt() {
+  const d = state.deploy;
+  const link = (text) => d?.url ? h("a", { href: d.url, target: "_blank", rel: "noopener" }, text) : text;
+  const line = [BUILT ? `site built ${ago(BUILT)}` : "site built just now (dev server)"];
+  if (d?.running) line.push(" · ", link("rebuilding now…"));
+  else if (d && !d.ok) line.push(" · ", h("span.svc-warn", link("last rebuild failed")));
+  else if (d && BUILT_SHA && d.sha !== BUILT_SHA && d.at > (BUILT || 0))
+    line.push(" · ", h("button.linkish", { type: "button", onclick: () => location.reload() }, "newer version live: reload"));
+  return h("div.svc-built", { title: BUILT_SHA ? `This page is commit ${BUILT_SHA}` : "" }, ...line);
 }
 
 // Released games first, newest release on top; then coming-soon games, soonest first.

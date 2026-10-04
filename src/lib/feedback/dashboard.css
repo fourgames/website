@@ -1710,3 +1710,16 @@
 	color: var(--fb-warning);
 	text-decoration: none;
 }
+
+/* When the site was last built (dashboard.js: siteBuilt) */
+.fb .svc-built {
+	margin-top: 8px;
+	font-size: 0.75rem;
+	color: var(--fb-ink-2);
+}
+.fb .svc-built .linkish {
+	font-size: inherit;
+}
+.fb .svc-warn {
+	color: var(--fb-warning);
+}

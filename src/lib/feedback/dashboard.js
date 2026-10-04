@@ -312,7 +312,7 @@ const ICONS = {
   updates: "M12 19V5M5 12l7-7 7 7M4 21h16",
   replies: "M9 17H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M14 19l2 2 5-5",
   achievements: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3",
-  ingame: "M6 11h4M8 9v4M15 12h.01M18 10h.01M17.32 5H6.68a4 4 0 0 0-3.98 3.59L2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.41-1.41A2 2 0 0 1 9.83 16h4.34a2 2 0 0 1 1.41.59L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3l-.7-7.41A4 4 0 0 0 17.32 5z",
+  soon: "M6 11h4M8 9v4M15 12h.01M18 10h.01M17.32 5H6.68a4 4 0 0 0-3.98 3.59L2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.41-1.41A2 2 0 0 1 9.83 16h4.34a2 2 0 0 1 1.41.59L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3l-.7-7.41A4 4 0 0 0 17.32 5z",
   media: "M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5M19.1 4.9C23 8.8 23 15.1 19.1 19M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
 };
 function icon(name) {
@@ -422,7 +422,7 @@ async function init() {
   const games = state.index.games || [];
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = Number(hash.get("app") || store.get("app"));
-  state.tab = ["overview", "issues", "suggestions", "loved", "replies", "updates", "media", "achievements", "ingame", "feed"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
+  state.tab = ["overview", "issues", "suggestions", "loved", "replies", "updates", "media", "achievements", "soon", "feed"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
   if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : orderedGames()[0].appId);
 }
 
@@ -903,20 +903,20 @@ function render() {
     replies: toReply().length,
     overview: attention().length || null,
     achievements: state.game.achievements?.list?.length || null,
-    ingame: "Soon",
+    soon: soonCount(),
     media: liveNow().length ? `${liveNow().length} live` : mediaItems().filter((m) => m.at > now() - 7 * DAY).length || null,
   };
   // The view on screen counts as seen now; any other view with something from the last 48 hours
   // that's newer than when you last opened it gets "New", like a new post.
   store.set(`seen:${state.game.appId}:${state.tab}`, now());
-  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["updates", "Updates"], ["media", "Media"], ["achievements", "Achievements"], ["feed", "All posts"], ["ingame", "In-game"]];
+  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["updates", "Updates"], ["media", "Media"], ["achievements", "Achievements"], ["feed", "All posts"], ["soon", "Coming soon"]];
   const buttons = () => tabs.map(([id, label]) =>
     h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
-      icon(id), h("span", label), id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : id === "ingame" ? ".count-soon" : ""}`, counts[id]) : null));
+      icon(id), h("span", label), id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : id === "soon" ? ".count-soon" : ""}`, counts[id]) : null));
   document.getElementById("fb-nav-side").replaceChildren(...buttons());
   document.getElementById("fb-nav-top").replaceChildren(...buttons());
   setHash();
-  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, achievements: achievementsView, ingame: ingameView, feed: feedView }[state.tab]();
+  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, achievements: achievementsView, soon: soonView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
 
@@ -940,20 +940,46 @@ function achievementsView() {
         h("div.ach-bar", h("i", { style: `width:${Math.max(0.5, x.percent)}%` }))))));
 }
 
-// A placeholder for data the games will send themselves, once they do.
-function ingameView() {
-  const plan = [
-    ["Sessions", "How many people play each day, and how long a session lasts."],
-    ["Where players quit", "The level, wave or menu people were in when they closed the game: the spot that loses them."],
-    ["Crashes and errors", "Godot's error logs with the version and system, grouped like bugs, with a fix prompt."],
-    ["Hardware and settings", "Resolution, frame rate and graphics settings, so you know what to optimize for."],
-  ];
+// Ideas for later, each with what it would show and what it needs, so none gets forgotten. Nothing
+// here is collected yet.
+const SOON = [
+  {
+    title: "Data from inside the game",
+    why: "Reviews say what players think; this would show what they do.",
+    shows: ["Sessions: how many play each day, and for how long", "Where players quit: the level, wave or menu they closed the game in",
+      "Crashes and errors: Godot's error logs, grouped like bugs, with a fix prompt", "Hardware and settings: resolution, frame rate, graphics settings"],
+    needs: "A small add-on in each Godot game that sends anonymous events, a place to receive them, and a line in the privacy policy (with a way to opt out).",
+  },
+  {
+    title: "Web search for every name",
+    why: "New pages anywhere on the web that name a game, in any of its languages: blogs, forums, store and download pages Google News doesn't cover.",
+    shows: ["New pages per game, sorted apart from news articles", "Copies of the game on download sites, with a link to Google's removal form"],
+    needs: "A Google Alert per game for all its names joined with OR (Deliver to: RSS feed), and the feed links in the GOOGLE_ALERTS_FEEDS secret. Free; the collector already reads them.",
+    link: ["https://www.google.com/alerts", "Google Alerts"],
+  },
+  {
+    title: "Competitor watch",
+    why: "Tells \"everyone dropped this weekend\" apart from \"only we dropped\".",
+    shows: ["Players, reviews and updates for 5 to 10 similar games, next to yours"],
+    needs: "A list of the games to compare against. The collector already reads players and reviews this way, so it's quick to add.",
+  },
+  {
+    title: "Steam curators",
+    why: "Curators who review a game, to thank them or reply.",
+    shows: ["Each curator's recommendation, with their follower count"],
+    needs: "Steam has no official way to read these, so it may not work well.",
+  },
+];
+const soonCount = () => SOON.length;
+
+function soonView() {
   return h("div",
-    h("div.card.soon",
-      h("h3", "Coming soon: data from inside the game"),
-      h("p", "Reviews say what players think; this would show what they do. It needs a small add-on in each Godot game that sends anonymous events, a place to receive them, and a line in the privacy policy (with a way to opt out)."),
-      h("p.ov-calm", "Nothing is collected yet.")),
-    h("div.soon-grid", ...plan.map(([t, d]) => h("div.card.soon-item", h("b", t), h("p", d)))));
+    h("p.updated", { style: "margin:0 0 12px" }, "Ideas for later: what each would show and what it needs. Nothing here is collected yet."),
+    ...SOON.map((idea) => h("div.card.soon",
+      h("h3", idea.title, h("span.count.count-soon", "Soon")),
+      h("p", idea.why),
+      h("ul.soon-list", ...idea.shows.map((line) => h("li", line))),
+      h("p.ov-calm", h("b", "Needs: "), idea.needs, idea.link ? [" ", h("a", { href: idea.link[0], target: "_blank", rel: "noopener" }, idea.link[1], " ↗")] : null))));
 }
 
 // When the newest thing in each view arrived (the overview only sums up the others).

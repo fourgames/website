@@ -1987,7 +1987,7 @@
 	background: var(--fb-accent);
 }
 
-/* The in-game placeholder (dashboard.js ingameView) */
+/* Ideas for later (dashboard.js soonView) */
 .fb .count-soon {
 	padding: 0 6px;
 	border: 1px dashed var(--fb-muted);
@@ -2003,17 +2003,13 @@
 .fb .soon p {
 	margin: 0 0 6px;
 }
-.fb .soon-grid {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
-	gap: 10px;
+.fb .soon h3 {
+	display: flex;
+	align-items: center;
+	gap: 8px;
 }
-.fb .soon-item {
-	opacity: 0.7;
-	margin: 0;
-}
-.fb .soon-item p {
-	margin: 4px 0 0;
-	font-size: 0.8125rem;
+.fb .soon-list {
+	margin: 0 0 8px;
+	padding-left: 18px;
 	color: var(--fb-ink-2);
 }

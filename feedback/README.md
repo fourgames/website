@@ -89,7 +89,7 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 - **Steam links:** buttons for the store page, reviews, discussions, news, Steamworks and the Steamworks sales report (sales aren't mirrored here).
 - **Stat cards:** players now, positive reviews, followers on Steam, Discord members, open bugs and new posts. Players, reviews, followers and Discord open their chart (with update dates, sales and media marked) when clicked; followers and Discord show the change over 7 and 30 days.
 - **Achievements:** the share of players who unlocked each, most common first, with the biggest step down marked: where many players stop.
-- **In-game:** a placeholder for data the games will send themselves (sessions, where players quit, crashes, hardware). Nothing is collected yet.
+- **Coming soon:** ideas for later, each with what it would show and what it needs: data from inside the games (sessions, where players quit, crashes, hardware), web search for every name (Google Alerts), competitor watch and Steam curators. Nothing there is collected yet.
 - **Steam links on the site** carry `utm_source=fourgames.se&utm_medium=website` (`src/lib/games.js`), so Steamworks' **UTM Analytics** for each game counts the visits that came from the website.
 - **Issues:** bug issues sorted by priority. Each has *Copy fix prompt* and the original posts with their translations and Steam links.
 - **Suggestions:** the same view for suggestions.

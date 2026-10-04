@@ -19,7 +19,7 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
    **Names:** once a day it reads the game's name in each of Steam's 30 languages from its store page and keeps every name it has ever had (a changed translation still finds what was written under the old one). YouTube searches use the English name and a few localized ones at a time, in turn; Google News is searched in each language's country edition, every 2 hours, by the English name and that language's names (the US edition every 30 minutes). Names waiting for Valve to set them aren't on the store yet, so they're picked up once they are.
 
    Search results must name the game exactly and be about a game (YouTube's Gaming category, or words like *gameplay*, *Steam* or *trailer*, also in the other languages: *Spiel*, *jeu*, 게임, ゲーム…), since a game's name can also be a place or a product. Your own channel's videos and posts are listed but never alerted. A source's first search for a game only records what's already out there; only new finds get alerts, and only when they're from the last 3 days. When each source last searched is kept in `feedback/.cache`, so a fresh workflow run searches once more.
-6. **Community** (`community.py`, no keys). Hourly, each game's **followers** on Steam (its community hub, which moves with wishlists) and the studio's **Discord** members and members online (from the invite link in `src/data/site.js`, kept in `index.json`). Daily, each game's **achievements**: name, icon and the share of players who unlocked each, from its public stats page.
+6. **Community** (`community.py`, no keys). Hourly, each game's **followers** on Steam (its community hub, which moves with wishlists) and the studio's **Discord** members and members online (from the invite link in `src/data/site.js`, kept in `index.json`). Daily, each game's **achievements**: name, icon and the share of players who unlocked each, from its public stats page. Also daily, the **bundles** each game is in (from its store page), and the store details of the games you want to bundle it with (added on the dashboard's **Bundles** view): name, developer, price and reviews. A game you just added is looked up on the next run.
 7. **Triage.** It sends each new or edited post to Claude Haiku 4.5, with no extended thinking. Haiku:
    - translates the post to English;
    - sorts it as bug, suggestion, question or praise;
@@ -75,8 +75,11 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
   - `manualFixes`: Claude's verdict on each fix you marked.
   - `followers`: `[time, count]`, stored only when it changes.
   - `achievements`: `{at, list: [{name, desc, icon, percent}]}`.
+  - `bundles`: `{at, list: [{id, name, image, apps, bundleDiscount, price, fullPrice}]}`, the Steam bundles it's in.
+  - `partners`: the games you want to bundle it with, keyed by app id: `{name, developers, publishers, capsule, released, price, reviews}`.
   - `media`: `items` (streams, videos, articles and Reddit posts, keyed `tw`, `yt`, `nw`, `rd`), the game's Twitch `category`, and when each source `started`.
 - `data/cleared.json` holds what you marked fixed on the dashboard, per game.
+- `data/bundles.json` holds the games you want to bundle each game with (`{appId: {otherAppId: {at, name, status, note}}}`), written by the dashboard.
 
 This repo is public, so this data is too. It's all public on Steam anyway.
 

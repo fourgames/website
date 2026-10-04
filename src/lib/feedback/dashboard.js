@@ -101,12 +101,14 @@ const REPO_API = "https://api.github.com/repos/fourgames/website";
 const CLEARED_PATH = "feedback/data/cleared.json";
 const TOKEN_URL = "https://github.com/settings/personal-access-tokens/new?name=Feedback%20dashboard&target_name=fourgames&expires_in=366&contents=write";
 
-// The files only the dashboard writes: what you marked fixed, and your Claude credit.
+// The files only the dashboard writes: what you marked fixed, your Claude credit and the games you
+// want to bundle with.
 async function loadCleared() {
-  const [cleared, credit] = await Promise.allSettled([getJson("cleared.json"), getJson("credit.json")]);
+  const [cleared, credit, bundleWith] = await Promise.allSettled([getJson("cleared.json"), getJson("credit.json"), getJson("bundles.json")]);
   // None saved yet (or a test copy of the data without them): keep what's on screen.
   state.cleared = cleared.value || state.cleared || {};
   state.credit = credit.value || state.credit || null;
+  state.bundleWith = bundleWith.value || state.bundleWith || {};
 }
 
 const clearedEntry = (issue) => state.cleared?.[state.game.appId]?.[issue.id] || null;
@@ -312,6 +314,7 @@ const ICONS = {
   updates: "M12 19V5M5 12l7-7 7 7M4 21h16",
   replies: "M9 17H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M14 19l2 2 5-5",
   achievements: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3",
+  bundles: "M16.5 9.4 7.5 4.2M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.3 7 12 12l8.7-5M12 22V12",
   soon: "M6 11h4M8 9v4M15 12h.01M18 10h.01M17.32 5H6.68a4 4 0 0 0-3.98 3.59L2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.41-1.41A2 2 0 0 1 9.83 16h4.34a2 2 0 0 1 1.41.59L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3l-.7-7.41A4 4 0 0 0 17.32 5z",
   media: "M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5M19.1 4.9C23 8.8 23 15.1 19.1 19M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
 };
@@ -422,7 +425,7 @@ async function init() {
   const games = state.index.games || [];
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = Number(hash.get("app") || store.get("app"));
-  state.tab = ["overview", "issues", "suggestions", "loved", "replies", "updates", "media", "achievements", "soon", "feed"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
+  state.tab = ["overview", "issues", "suggestions", "loved", "replies", "updates", "media", "achievements", "bundles", "soon", "feed"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
   if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : orderedGames()[0].appId);
 }
 
@@ -903,20 +906,21 @@ function render() {
     replies: toReply().length,
     overview: attention().length || null,
     achievements: state.game.achievements?.list?.length || null,
+    bundles: bundleWith().length || null,
     soon: soonCount(),
     media: liveNow().length ? `${liveNow().length} live` : mediaItems().filter((m) => m.at > now() - 7 * DAY).length || null,
   };
   // The view on screen counts as seen now; any other view with something from the last 48 hours
   // that's newer than when you last opened it gets "New", like a new post.
   store.set(`seen:${state.game.appId}:${state.tab}`, now());
-  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["updates", "Updates"], ["media", "Media"], ["achievements", "Achievements"], ["feed", "All posts"], ["soon", "Coming soon"]];
+  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["updates", "Updates"], ["media", "Media"], ["achievements", "Achievements"], ["bundles", "Bundles"], ["feed", "All posts"], ["soon", "Coming soon"]];
   const buttons = () => tabs.map(([id, label]) =>
     h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
       icon(id), h("span", label), id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : id === "soon" ? ".count-soon" : ""}`, counts[id]) : null));
   document.getElementById("fb-nav-side").replaceChildren(...buttons());
   document.getElementById("fb-nav-top").replaceChildren(...buttons());
   setHash();
-  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, achievements: achievementsView, soon: soonView, feed: feedView }[state.tab]();
+  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, achievements: achievementsView, bundles: bundlesView, soon: soonView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
 
@@ -938,6 +942,105 @@ function achievementsView() {
           h("span.ach-pct", `${x.percent.toFixed(1)}%`)),
         x.desc && x.desc !== x.name ? h("div.ach-desc", x.desc) : null,
         h("div.ach-bar", h("i", { style: `width:${Math.max(0.5, x.percent)}%` }))))));
+}
+
+// Bundles: the ones on Steam the game is in (feedback/community.py reads them daily from its store
+// page), and the games you'd like to bundle it with, saved in feedback/data/bundles.json
+// ({appId: {otherAppId: {at, name, status, note}}}). The collector looks each of those up on the
+// next run: name, developer, price and reviews.
+const BUNDLE_PATH = "feedback/data/bundles.json";
+const BUNDLE_STATUS = [["idea", "Idea"], ["contacted", "Contacted"], ["yes", "Said yes"], ["no", "Said no"]];
+// Steam's support form for a game: its first page lists how to reach the developer.
+const contactUrl = (appId) => `https://help.steampowered.com/en/wizard/HelpWithGameTechnicalIssue?appid=${appId}`;
+const bundleWith = () => Object.entries(state.bundleWith?.[state.game.appId] || {})
+  .map(([appId, w]) => ({ appId: Number(appId), ...w, info: state.game.partners?.[appId] || null }))
+  .sort((a, b) => b.at - a.at);
+
+function bundlesView() {
+  const id = state.game.appId;
+  const list = state.game.bundles?.list || [];
+  const bundled = new Set(list.flatMap((b) => b.apps.map((a) => a.appId)));
+  const wanted = bundleWith();
+  const storeLink = (appId, text) => h("a", { href: `https://store.steampowered.com/app/${appId}/`, target: "_blank", rel: "noopener" }, text);
+  const bundleCard = (b) => h("div.card.bundle",
+    b.image ? h("img.bundle-img", { src: b.image, alt: "", loading: "lazy" }) : null,
+    h("div.bundle-body",
+      h("div.bundle-head", h("b", b.name), b.bundleDiscount ? h("span.pill", `−${b.bundleDiscount}% bundle discount`) : null),
+      h("div.bundle-apps", plural(b.apps.length, "game"), ": ", ...b.apps.flatMap((a, i) => [i ? ", " : null, a.appId === id ? h("b", a.name || a.appId) : storeLink(a.appId, a.name || `App ${a.appId}`)])),
+      h("div.bundle-meta", b.price ? (b.fullPrice && b.fullPrice !== b.price ? [h("s", b.fullPrice), " ", b.price] : b.price) : null, b.price ? " · " : null,
+        h("a", { href: `https://store.steampowered.com/bundle/${b.id}/`, target: "_blank", rel: "noopener" }, "Store page ↗"))));
+  const wantCard = (w) => {
+    const info = w.info;
+    const name = info?.name || w.name || `App ${w.appId}`;
+    const makers = [...new Set([...(info?.developers || []), ...(info?.publishers || [])])];
+    const r = info?.reviews;
+    const facts = [
+      makers.length ? `by ${makers.join(", ")}` : null,
+      info?.comingSoon ? "coming soon" : info?.released ? `out ${info.released}` : null,
+      info?.price || null,
+      // Steam's word for the score, except when it has too few reviews for one ("7 user reviews").
+      r?.total ? `${/^\d/.test(r.desc || "") ? "" : `${r.desc}: `}${Math.round(100 * r.positive / r.total)}% of ${plural(r.total, "review")} positive` : info && !info.missing ? "no reviews yet" : null,
+    ].filter(Boolean);
+    return h("div.card.bundle",
+      h("img.bundle-img", { src: info?.capsule || `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${w.appId}/header.jpg`, alt: "", loading: "lazy", onerror: (e) => { e.currentTarget.hidden = true; } }),
+      h("div.bundle-body",
+        h("div.bundle-head", storeLink(w.appId, h("b", name)), bundled.has(w.appId) ? h("span.pill.pill-good", "In a bundle together") : null),
+        info?.missing ? h("div.bundle-meta", "Steam has no public store page for this app id.") : facts.length ? h("div.bundle-meta", facts.join(" · ")) : h("div.bundle-meta", "Looked up on the next run (within 10 min)."),
+        w.note ? h("p.bundle-note", w.note) : null,
+        h("div.bundle-actions",
+          h("a.btn.primary", { href: contactUrl(w.appId), target: "_blank", rel: "noopener" }, "Contact the developer ↗"),
+          chips(BUNDLE_STATUS, w.status || "idea", (v) => setBundleWith(w.appId, { status: v }, `${name}: ${BUNDLE_STATUS.find(([k]) => k === v)[1].toLowerCase()}`), "Status"),
+          h("button.linkish", { type: "button", onclick: () => askBundleWith(w) }, "Note"),
+          h("button.linkish", { type: "button", onclick: () => setBundleWith(w.appId, null, `${name} removed`) }, "Remove"))));
+  };
+  return h("div",
+    h("section.ov-section",
+      h("h3", "Bundles on Steam", h("span.ov-count", list.length)),
+      h("p.updated", { style: "margin:0 0 12px" }, "The bundles this game is in, from its store page, checked daily", state.game.bundles?.at ? `, last ${ago(state.game.bundles.at)}` : "", ". ",
+        h("a", { href: "https://partner.steamgames.com/doc/store/application/bundles", target: "_blank", rel: "noopener" }, "How bundles work ↗")),
+      ...(list.length ? list.map(bundleCard) : [h("p.empty", "Not in any bundle yet.")])),
+    h("section.ov-section",
+      h("h3", "Games to bundle with", h("span.ov-count", wanted.length), h("button.btn", { type: "button", style: "margin-left:auto", onclick: () => askBundleWith() }, "+ Add a game")),
+      h("p.updated", { style: "margin:0 0 12px" }, "Games you'd like to bundle this one with. Contact the developer opens Steam's support page for that game, which lists how to reach them; mark where each one stands."),
+      ...(wanted.length ? wanted.map(wantCard) : [h("p.empty", "None yet: add a game by its store link or app id.")])));
+}
+
+// Adds a game to bundle with (by its store link or app id), or edits the note on one.
+function askBundleWith(w) {
+  const input = w ? null : h("input.dlg-input", { type: "text", required: true, placeholder: "https://store.steampowered.com/app/3203590/… or 3203590", spellcheck: "false" });
+  const note = h("textarea.dlg-input", { rows: 2, placeholder: "Why it fits, who you talked to…" }, w?.note || "");
+  formDialog(w ? `Note: ${w.info?.name || w.name || `App ${w.appId}`}` : "Add a game to bundle with", [
+    input ? h("label.dlg-label", "Store link or app id", input) : null,
+    h("label.dlg-label", "Note (optional)", note),
+  ], w ? "Save" : "Add", () => {
+    if (!input) return { appId: w.appId };
+    const text = input.value.trim();
+    const m = text.match(/\/app\/(\d+)(?:\/([^/?#]+))?/) || text.match(/^(\d+)$/);
+    if (!m) throw new Error("Paste the game's Steam store link, or its app id (the number in the link).");
+    const appId = Number(m[1]);
+    if (appId === state.game.appId) throw new Error("That's this game.");
+    if (state.bundleWith?.[state.game.appId]?.[appId]) throw new Error("That game is already on the list.");
+    // A name from the link until the collector looks the game up.
+    let name = null;
+    try { name = m[2] ? decodeURIComponent(m[2]).replace(/_/g, " ") : null; } catch {}
+    return { appId, name };
+  }).then((got) => {
+    if (!got) return;
+    const fields = { note: note.value.trim() || null, ...(w ? {} : { name: got.name, status: "idea", at: now() }) };
+    setBundleWith(got.appId, fields, w ? "Note saved" : "Added: looked up on the next run");
+  });
+}
+
+// Changes one game on the list (null removes it).
+function setBundleWith(appId, fields, done) {
+  const game = String(state.game.appId);
+  saveData("bundleWith", BUNDLE_PATH, (data) => {
+    const list = (data[game] ||= {});
+    if (fields) list[appId] = { ...(list[appId] || {}), ...fields };
+    else delete list[appId];
+    if (!Object.keys(list).length) delete data[game];
+    return data;
+  }, `Feedback: bundle with ${appId} ${fields ? "updated" : "removed"} [skip ci]`, done);
 }
 
 // Ideas for later, each with what it would show and what it needs, so none gets forgotten. Nothing

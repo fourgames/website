@@ -2018,3 +2018,62 @@
 	padding-left: 18px;
 	color: var(--fb-ink-2);
 }
+
+/* Bundles (dashboard.js bundlesView): a capsule, then the name, details and what to do */
+.fb .bundle {
+	display: flex;
+	gap: 14px;
+	align-items: flex-start;
+}
+.fb .bundle-img {
+	width: 184px;
+	flex: none;
+	aspect-ratio: 460 / 215;
+	object-fit: cover;
+	border-radius: 6px;
+}
+.fb .bundle-body {
+	flex: 1;
+	min-width: 0;
+	display: grid;
+	gap: 4px;
+}
+.fb .bundle-head {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px;
+}
+.fb .bundle-head a {
+	color: var(--fb-title);
+}
+.fb .bundle-apps,
+.fb .bundle-meta {
+	font-size: 0.8125rem;
+	color: var(--fb-ink-2);
+}
+.fb .bundle-note {
+	margin: 2px 0 0;
+	font-size: 0.875rem;
+}
+.fb .bundle-actions {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 12px;
+	margin-top: 6px;
+}
+.fb .bundle-actions .btn {
+	text-decoration: none;
+}
+.fb .pill-good {
+	color: var(--fb-positive);
+}
+@media (max-width: 600px) {
+	.fb .bundle {
+		flex-direction: column;
+	}
+	.fb .bundle-img {
+		width: 100%;
+	}
+}

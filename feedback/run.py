@@ -900,6 +900,8 @@ def full_run():
         print("[site] store data changed: the website will be rebuilt")
     budget = {"left": MAX_TRIAGE_PER_RUN}
     changed = []
+    # The games you want to bundle each game with, which only the dashboard writes.
+    bundle_with = load(DATA / "bundles.json", {})
     for game in index["games"]:
         path = game_path(game["appId"])
         state = load(path, None) or new_state(game)
@@ -930,6 +932,7 @@ def full_run():
         run["media"] = media.collect(state, game, len(index["games"]))
         community.record_followers(state, game)
         community.record_achievements(state, game)
+        community.record_bundles(state, game, list(bundle_with.get(str(game["appId"])) or {}))
         process_in_order(state, game, run, budget, events)
         add_tone(state, game, budget)
         add_profiles(state)

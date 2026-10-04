@@ -1,16 +1,16 @@
 """Who's talking about each game outside Steam: Twitch streams live right now, new YouTube videos, news
-articles (Google News, plus any Google Alerts feeds you add) and Reddit posts. Saved in the game's
+articles (Google News, plus any Google Alerts feeds you add; links to Reddit from those are listed as
+Reddit posts, without alerts: Reddit's own API needs its approval). Saved in the game's
 file under `media`, so the dashboard can list them, mark them on the player and review charts and
 show who's live; new ones are sent to Discord (run.py send_media_alerts).
 
 Each source runs on its own schedule (YouTube's daily quota only allows a search about once an hour
 per game) and reports to the status bar on its own. A source with no keys reports what to add.
 
-Env (GitHub secrets): TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, YOUTUBE_API_KEY, REDDIT_CLIENT_ID,
-REDDIT_CLIENT_SECRET, GOOGLE_ALERTS_FEEDS (RSS feed URLs, one per line). Stdlib only.
+Env (GitHub secrets): TWITCH_CLIENT_ID, TWITCH_CLIENT_SECRET, YOUTUBE_API_KEY, GOOGLE_ALERTS_FEEDS (RSS
+feed URLs, one per line). Stdlib only.
 """
 
-import base64
 import calendar
 import hashlib
 import html
@@ -32,13 +32,11 @@ CACHE = Path(__file__).resolve().parent / ".cache" / "media.json"  # when each s
 TWITCH_ID = os.environ.get("TWITCH_CLIENT_ID", "").strip()
 TWITCH_SECRET = os.environ.get("TWITCH_CLIENT_SECRET", "").strip()
 YOUTUBE_KEY = os.environ.get("YOUTUBE_API_KEY", "").strip()
-REDDIT_ID = os.environ.get("REDDIT_CLIENT_ID", "").strip()
-REDDIT_SECRET = os.environ.get("REDDIT_CLIENT_SECRET", "").strip()
 ALERT_FEEDS = [u.strip() for u in os.environ.get("GOOGLE_ALERTS_FEEDS", "").split() if u.strip()]
 
 MINUTE = 60
 # How often each source is searched per game. Twitch is checked every run: a stream is worth catching early.
-EVERY = {"news": 30 * MINUTE, "reddit": 20 * MINUTE}
+EVERY = {"news": 30 * MINUTE}
 # YouTube's free quota is 10,000 units a day and a search costs 100 (the video and channel details 1
 # each), so all games together get about 75 searches a day: hourly with up to 3 games, less often with more.
 YOUTUBE_DAILY_SEARCHES = 75
@@ -384,7 +382,9 @@ def _text(el, tag):
 
 
 def _strip_tags(text):
-    return html.unescape(re.sub(r"<[^>]+>", " ", text or ""))
+    """Google's <b> around the search words goes without a trace; any other tag becomes a space."""
+    text = re.sub(r"</?(b|i|em|strong)>", "", text or "", flags=re.I)
+    return html.unescape(re.sub(r"<[^>]+>", " ", text))
 
 
 def _rfc822(text):
@@ -455,80 +455,26 @@ def collect_news(media, game, found):
     items = media["items"]
     seen = {i.get("title", "").lower() for i in items.values() if i["source"] == "news"}
     for a in articles:
-        key = _id("nw", a["key"])
-        # The same story reached through Google News and an alert (different links) counts once.
-        if key in items or not a["url"] or a["title"].lower() in seen or not about_games(a["title"], a.get("text")):
+        # A Reddit thread (from an alert like site:reddit.com "Game name") is listed as Reddit, under its subreddit.
+        sub = re.match(r"https?://(?:[a-z]+\.)?reddit\.com/(r/[^/]+)", a["url"] or "")
+        source = "reddit" if sub else "news"
+        key = _id("rd" if sub else "nw", a["key"])
+        # The same story reached through Google News and an alert (different links) counts once. A
+        # Reddit thread is about a game when it says so or its subreddit is about games.
+        if key in items or not a["url"] or a["title"].lower() in seen:
+            continue
+        if not (about_games(a["title"], a.get("text")) or (sub and re.search(r"gam|steam|indie", sub.group(1).lower()))):
             continue
         seen.add(a["title"].lower())
-        items[key] = {"id": key, "source": "news", "url": a["url"], "title": _clip(a["title"], 300),
-                      "text": _clip(a.get("text"), 400) or None, "author": a["author"], "authorUrl": a.get("authorUrl"),
+        items[key] = {"id": key, "source": source, "url": a["url"], "title": _clip(re.sub(r"\s*:\s*r/\w+$", "", a["title"]), 300),
+                      "text": _clip(a.get("text"), 400) or None,
+                      "author": sub.group(1) if sub else a["author"],
+                      "authorUrl": f"https://www.reddit.com/{sub.group(1)}/" if sub else a.get("authorUrl"),
                       "at": a["at"] or now()}
         found.append(key)
-        status.active("news", "new article")
+        status.active("news", "new Reddit post" if sub else "new article")
     _ran("news", app_id)
     status.ok("news")
-    return True
-
-
-# ---------------------------------------------------------------------------
-# Reddit: posts that name the game
-# ---------------------------------------------------------------------------
-
-_reddit_token = None
-
-
-def reddit(path, params):
-    global _reddit_token
-    if _reddit_token is None:
-        auth = base64.b64encode(f"{REDDIT_ID}:{REDDIT_SECRET}".encode()).decode()
-        res = request("https://www.reddit.com/api/v1/access_token", data={"grant_type": "client_credentials"},
-                      headers={"Authorization": f"Basic {auth}"})
-        _reddit_token = res["access_token"]
-    return request(f"https://oauth.reddit.com/{path}", params={**params, "raw_json": 1}, headers={"Authorization": f"Bearer {_reddit_token}"})
-
-
-def _reddit_stats(item, p):
-    item["score"] = p.get("score", 0)
-    item["comments"] = p.get("num_comments", 0)
-
-
-def collect_reddit(media, game, found):
-    if not (REDDIT_ID and REDDIT_SECRET):
-        # Reddit turns away scripts without an app (HTTP 403/429), so there's no keyless fallback.
-        status.fail("reddit", "Add the REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET secrets to find Reddit posts.")
-        return False
-    app_id = game["appId"]
-    if not _due("reddit", app_id, EVERY["reddit"]):
-        return False
-    items = media["items"]
-    posts = [c["data"] for c in reddit("search", {"q": f'"{game["name"]}"', "sort": "new", "limit": 25, "type": "link"}).get("data", {}).get("children", [])]
-    for p in posts:
-        key = f"rd{p['id']}"
-        if key in items:
-            _reddit_stats(items[key], p)
-            continue
-        if not mentions(game["name"], p.get("title"), p.get("selftext"), p.get("url")):
-            continue
-        # About a game: says so, or is in a subreddit about games.
-        if not (about_games(p.get("title"), p.get("selftext")) or re.search(r"gam|steam|indie", (p.get("subreddit") or "").lower())):
-            continue
-        thumb = p.get("thumbnail") if (p.get("thumbnail") or "").startswith("http") else None
-        items[key] = {"id": key, "source": "reddit", "url": f"https://www.reddit.com{p['permalink']}",
-                      "title": _clip(p.get("title"), 300), "text": _clip(p.get("selftext"), 400) or None,
-                      "author": p.get("subreddit_name_prefixed"), "authorUrl": f"https://www.reddit.com/{p.get('subreddit_name_prefixed')}/",
-                      "by": p.get("author"), "subscribers": p.get("subreddit_subscribers"),
-                      "at": int(p.get("created_utc") or now()), "thumb": thumb, "own": own(p.get("author")) or None}
-        _reddit_stats(items[key], p)
-        found.append(key)
-        status.active("reddit", "new post")
-    # Scores and comment counts of the last two weeks' posts that dropped out of the search.
-    older = [i["id"][2:] for i in items.values() if i["source"] == "reddit" and now() - i["at"] < REFRESH_DAYS * 86400
-             and i["id"][2:] not in {p["id"] for p in posts}]
-    for start in range(0, len(older), 100):
-        for c in reddit("api/info", {"id": ",".join(f"t3_{i}" for i in older[start:start + 100])}).get("data", {}).get("children", []):
-            _reddit_stats(items[f"rd{c['data']['id']}"], c["data"])
-    _ran("reddit", app_id)
-    status.ok("reddit")
     return True
 
 
@@ -536,7 +482,8 @@ def collect_reddit(media, game, found):
 # A run
 # ---------------------------------------------------------------------------
 
-SOURCES = {"twitch": "Twitch", "youtube": "YouTube", "news": "news", "reddit": "Reddit"}
+SOURCES = {"twitch": "Twitch", "youtube": "YouTube", "news": "news"}
+QUIET = {"reddit"}  # listed, never alerted
 
 
 def collect(state, game, games):
@@ -547,7 +494,7 @@ def collect(state, game, games):
     media.setdefault("items", {})
     started = media.setdefault("started", {})
     alert = []
-    for source, run in (("twitch", collect_twitch), ("youtube", collect_youtube), ("news", collect_news), ("reddit", collect_reddit)):
+    for source, run in (("twitch", collect_twitch), ("youtube", collect_youtube), ("news", collect_news)):
         found = []
         try:
             searched = run(media, game, found, games) if source == "youtube" else run(media, game, found)
@@ -559,7 +506,8 @@ def collect(state, game, games):
             continue
         if started.get(source) or source == "twitch":
             # Search results can surface something old; that's not news.
-            alert.extend(k for k in found if now() - media["items"][k]["at"] < ALERT_DAYS * 86400 and not media["items"][k].get("own"))
+            alert.extend(k for k in found if now() - media["items"][k]["at"] < ALERT_DAYS * 86400 and not media["items"][k].get("own")
+                         and media["items"][k]["source"] not in QUIET)
         started.setdefault(source, now())
     if alert:
         print(f"[media] {game['name']}: {len(alert)} new ({', '.join(sorted({media['items'][k]['source'] for k in alert}))})")

@@ -226,7 +226,6 @@ MEDIA = {
     "twitch": (0x9146FF, "🔴 Live on Twitch"),
     "youtube": (0xFF0033, "▶️ New YouTube video"),
     "news": (0x3E63DD, "📰 New article"),
-    "reddit": (0xFF4500, "💬 New Reddit post"),
 }
 
 
@@ -235,7 +234,7 @@ def _count(n):
 
 
 def media(game, item):
-    """Someone streaming, a video, an article or a Reddit post about a game: who, how big, and a link
+    """Someone streaming, a video or an article about a game: who, how big, and a link
     straight to it (for a stream: the channel, to join the chat)."""
     color, title = MEDIA[item["source"]]
     if item["source"] == "youtube" and item.get("live"):
@@ -254,11 +253,6 @@ def media(game, item):
         if item.get("duration") and not item.get("live"):
             add("Length", f"{item['duration'] // 60}:{item['duration'] % 60:02d}")
         link = f"[Watch and comment]({item['url']})"
-    elif item["source"] == "reddit":
-        add("Subreddit members", _count(item.get("subscribers")))
-        add("Score", _count(item.get("score")))
-        add("Comments", _count(item.get("comments")))
-        link = f"[Open the thread]({item['url']})"
     else:
         link = f"[Read it]({item['url']})"
     quote = f"> {_clip(item['text'], 300)}\n" if item.get("text") and item["source"] != "youtube" else ""
@@ -269,7 +263,6 @@ def media(game, item):
         "color": color,
         "author": {"name": who, "url": item["authorUrl"]} if item.get("authorUrl") else {"name": who},
         "image": {"url": item["thumb"]} if item.get("thumb") and item["source"] in ("twitch", "youtube") else None,
-        "thumbnail": {"url": item["thumb"]} if item.get("thumb") and item["source"] == "reddit" else None,
         "fields": fields or None,
         "footer": {"text": f"{game['name']}"},
         "timestamp": _iso(item.get("at")),

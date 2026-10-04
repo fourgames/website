@@ -764,7 +764,7 @@ def send_alerts(state, game, run, first_run):
         if first_run or item_id in run["urgent"] or not (negative or bugs):
             continue
         posts.append(notify.new_post(game, item, negative, bugs))
-    # Streams, videos, articles and Reddit posts about the game (media.py), newest last.
+    # Streams, videos and articles about the game (media.py), newest last.
     coverage = [notify.media(game, state["media"]["items"][i]) for i in sorted(run.get("media") or [], key=lambda i: state["media"]["items"][i]["at"])]
     for batch in (urgent, posts, clusters, flips, coverage):
         for start in range(0, len(batch), 10):
@@ -955,6 +955,7 @@ def full_run():
             changed.append(game["name"])
 
     check_credit(index)
+    (index.get("status") or {}).pop("reddit", None)  # Reddit's own API isn't used any more (media.py)
     index["status"] = status.merge(index.get("status"))
     # When anything last changed, for the dashboard's "last change" (it needs no GitHub API call).
     without_time = lambda i: {k: v for k, v in i.items() if k != "changedAt"}
@@ -999,7 +1000,7 @@ def test_discord():
     for a, s in states.items():
         for m in sorted((s.get("media") or {}).get("items", {}).values(), key=lambda m: m["at"], reverse=True):
             covered.setdefault(m["source"], (games[a], m))
-    for n, source in enumerate(("twitch", "youtube", "news", "reddit"), 6):
+    for n, source in enumerate(("twitch", "youtube", "news"), 6):
         if source in covered:
             sent.append(notify.send([notify.media(*covered[source])], ping=True, note=f"**{n}. {notify.MEDIA[source][1]}** (pings you):"))
     print(f"[discord] test: {sum(sent)} of {len(sent)} messages accepted")

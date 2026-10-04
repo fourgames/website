@@ -6,6 +6,13 @@
    "title": "HP meter bug",
    "note": "Fixed: HP meter bug the player mistook a heart icon for the hammer as health but it now uses different icon",
    "release": "509567431915603800"
+  },
+  "I27": {
+   "as": "fixed",
+   "at": 1791120954,
+   "title": "Pop gun secondary fire mode",
+   "note": "Fixed: your secondary fire is the hammer its not planned to make it for rifle also",
+   "release": "509567431915603800"
   }
  }
 }

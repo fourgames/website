@@ -799,6 +799,62 @@
 .fb .svc-bad .svc-dot {
 	background: var(--fb-critical);
 }
+/* Folded: one line with each service's mark and state (dashboard.js renderStatus) */
+.fb .svc-bar {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	gap: 8px 16px;
+	width: 100%;
+	background: var(--fb-card);
+	box-shadow: var(--fb-shadow);
+	border: 0;
+	border-radius: var(--radius-card);
+	padding: 10px 14px;
+	text-align: left;
+}
+.fb .svc-bar:hover {
+	background: var(--fb-hover);
+}
+.fb .svc-bar-items {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px 12px;
+}
+.fb .svc-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+}
+.fb .svc-chip .svc-mark {
+	width: 14px;
+	height: 14px;
+}
+.fb .svc-chip .svc-dot {
+	width: 6px;
+	height: 6px;
+}
+/* Calm while folded: no pulsing */
+.fb .svc-chip .svc-dot::after {
+	display: none;
+}
+.fb .svc-bar-note {
+	font-size: 0.8125rem;
+	color: var(--fb-ink-2);
+}
+.fb .svc-bar-more {
+	margin-left: auto;
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--fb-link);
+}
+.fb .svc-top {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 6px;
+	font-size: 0.8125rem;
+}
+
 /* Two rows of four; two columns on narrow screens, one on phones */
 .fb .svc-grid {
 	display: grid;

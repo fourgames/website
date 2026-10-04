@@ -598,13 +598,39 @@ function renderStatus() {
     active: Math.max(state.index.changedAt || 0, state.dataChanged || 0) || null,
     activeWhat: "data changed",
   };
-  const card = ([key, [name, what, none, href, action, keyPage]]) => {
-    const s = status[key];
-    const kind = !s || s.ok === undefined ? "idle" : s.ok ? "ok" : "bad";
-    // Out of credit is the one with a fix behind a button; other services link to where they're fixed.
-    const fix = key === "claude" && s && !/credit/i.test(s.message || "") ? ["https://platform.claude.com/settings/keys", "API keys"] : [href, action];
+  const kindOf = (key) => { const s = status[key]; return !s || s.ok === undefined ? "idle" : s.ok ? "ok" : "bad"; };
+  const brandMark = (key) => {
     const mark = svgEl("svg", { viewBox: "0 0 24 24", class: "svc-mark", "aria-hidden": "true", fill: "currentColor" });
     mark.append(svgEl("path", { d: BRAND[key === "forums" ? "steam" : key], "fill-rule": key === "news" ? "evenodd" : "nonzero" }));
+    return mark;
+  };
+  const STATE = { ok: "Working", bad: "Needs attention", idle: "Unknown" };
+  // Folded into one line while everything works (they're mostly a distraction then); open by
+  // themselves when anything needs attention, or when you've opened them (remembered).
+  const keys = Object.keys(SERVICES);
+  const bad = keys.filter((k) => kindOf(k) === "bad");
+  const open = bad.length > 0 || store.get("statusOpen") === "1";
+  const toggleAll = () => {
+    store.set("statusOpen", open ? "0" : "1");
+    if (open) state.costsOpen = false;
+    renderStatus();
+  };
+  if (!open) {
+    const working = keys.filter((k) => kindOf(k) === "ok").length;
+    const unknown = keys.filter((k) => kindOf(k) === "idle").map((k) => SERVICES[k][0]);
+    el.replaceChildren(h("button.svc-bar", { type: "button", "aria-expanded": "false", onclick: toggleAll },
+      h("span.svc-bar-items", ...keys.map((k) => h(`span.svc-chip.svc-${kindOf(k)}`, { title: `${SERVICES[k][0]}: ${STATE[kindOf(k)]}` }, brandMark(k), h("span.svc-dot")))),
+      h("span.svc-bar-note", working === keys.length ? `All ${keys.length} working` : `${working} of ${keys.length} working${unknown.length ? ` · ${unknown.join(", ")} unknown` : ""}`,
+        status.github.active ? ` · data changed ${ago(status.github.active)}` : ""),
+      h("span.svc-bar-more", "Details ▾")));
+    return;
+  }
+  const card = ([key, [name, what, none, href, action, keyPage]]) => {
+    const s = status[key];
+    const kind = kindOf(key);
+    // Out of credit is the one with a fix behind a button; other services link to where they're fixed.
+    const fix = key === "claude" && s && !/credit/i.test(s.message || "") ? ["https://platform.claude.com/settings/keys", "API keys"] : [href, action];
+    const mark = brandMark(key);
     // A card: mark, name and state; what it does; and at the bottom (so every card lines up) what it
     // last did and when. Problems get their message and fix below that.
     // The Claude card opens its cost chart below, like the players and reviews cards do theirs.
@@ -618,7 +644,7 @@ function renderStatus() {
     };
     return h(`div.svc.svc-${kind}${opens ? ".svc-open" : ""}`, opens ? { role: "button", tabindex: "0", "aria-expanded": String(!!state.costsOpen), onclick: toggle, onkeydown: toggle } : null,
       h("div.svc-head", mark, h("b", name),
-        h("span.svc-state", h("span.svc-dot"), { ok: "Working", bad: "Needs attention", idle: "Unknown" }[kind])),
+        h("span.svc-state", h("span.svc-dot"), STATE[kind])),
       h("div.svc-what", what),
       key === "claude" ? claudeCard() : null,
       key === "github" ? siteBuilt() : null,
@@ -629,7 +655,11 @@ function renderStatus() {
       kind === "bad" && keyPage && /secret/i.test(s.message || "") ? h("a.btn.svc-fix", { href: keyPage, target: "_blank", rel: "noopener" }, "Get a key ↗") : null,
       kind === "bad" ? h("a.btn.primary.svc-fix", { href: fix[0], target: "_blank", rel: "noopener" }, fix[1], " ↗") : null);
   };
-  el.replaceChildren(...[h("div.svc-grid", ...Object.entries(SERVICES).map(card)), state.costsOpen && claudeGames().length ? costPanel() : null].filter(Boolean));
+  el.replaceChildren(...[
+    bad.length ? null : h("div.svc-top", h("button.linkish", { type: "button", "aria-expanded": "true", onclick: toggleAll }, "Hide details ▴")),
+    h("div.svc-grid", ...Object.entries(SERVICES).map(card)),
+    state.costsOpen && claudeGames().length ? costPanel() : null,
+  ].filter(Boolean));
 }
 
 // When the site you're looking at was built, and whether a newer deploy is running, failed or is

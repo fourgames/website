@@ -118,18 +118,11 @@
    "active": null,
    "activeWhat": null
   },
-  "reddit": {
-   "ok": false,
-   "message": "Add the REDDIT_CLIENT_ID and REDDIT_CLIENT_SECRET secrets to find Reddit posts.",
-   "since": 1791147868,
-   "active": null,
-   "activeWhat": null
-  },
   "steam": {
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791151238,
+   "active": 1791152433,
    "activeWhat": "players changed"
   },
   "twitch": {
@@ -147,6 +140,6 @@
    "activeWhat": "new video"
   }
  },
- "changedAt": 1791151238,
+ "changedAt": 1791152433,
  "creditAlert": null
 }

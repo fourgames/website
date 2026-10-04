@@ -5,7 +5,7 @@
  "watermarks": {
   "reviews": 1790875183,
   "forums": {
-   "0": 1791019038,
+   "0": 1791096785,
    "event:18446744073709551615": 1790966789
   }
  },
@@ -927,6 +927,47 @@
    "dev": true,
    "versions": [],
    "pending": false
+  },
+  "t594069100231151619": {
+   "id": "t594069100231151619",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/discussions/0/594069100231151619/",
+   "author": {
+    "id": "435237095",
+    "name": "thedead817",
+    "profile": "https://steamcommunity.com/profiles/76561198395502823",
+    "avatar": "https://avatars.fastly.steamstatic.com/8bbf3dbea8e385c611ae4d8b2c79f43279b59035_medium.jpg",
+    "games": null
+   },
+   "created": 1791096785,
+   "updated": 1791096785,
+   "text": "I dont understand the Achievements.... 0,25% ? 100% ? what i have to do?",
+   "title": "Achievements",
+   "forum": "General Discussions",
+   "dev": false,
+   "versions": [],
+   "pending": false,
+   "issues": [],
+   "issue": null,
+   "triage": {
+    "language": "English",
+    "summary": "The player is confused about what the achievement requirements are, noting the percentage values shown.",
+    "category": "question",
+    "urgency": "low",
+    "area": "achievements",
+    "details": null,
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "question",
+      "text": "Unclear what achievement percentages like 0.25% and 100% mean or what is required to unlock achievements.",
+      "urgency": "low",
+      "quote": "I dont understand the Achievements.... 0,25% ? 100% ? what i have to do?"
+     }
+    ],
+    "note": null
+   },
+   "alertedNew": true
   }
  },
  "issues": {
@@ -1633,6 +1674,11 @@
    "lastPost": 1790966789,
    "replies": 0,
    "forum": "Events & Announcements"
+  },
+  "594069100231151619": {
+   "lastPost": 1791096785,
+   "replies": 0,
+   "forum": "General Discussions"
   }
  },
  "devAccounts": [],

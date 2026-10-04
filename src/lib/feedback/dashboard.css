@@ -1694,3 +1694,21 @@
 	font-size: 0.75rem;
 	color: var(--fb-muted);
 }
+
+/* A point an update only partly fixed: a dashed amber line through it, and where */
+.fb .pc-points li.pt-partly > span {
+	text-decoration: line-through dashed;
+	text-decoration-color: var(--fb-warning);
+	text-decoration-thickness: 1.5px;
+	color: var(--fb-muted);
+}
+.fb .pc-points li.pt-partly > span.pk {
+	text-decoration: none;
+}
+.fb .pt-partly-in {
+	margin-left: 8px;
+	font-size: 12px;
+	white-space: nowrap;
+	color: var(--fb-warning);
+	text-decoration: none;
+}

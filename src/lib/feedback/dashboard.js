@@ -909,12 +909,23 @@ function updatesView() {
     ...(cards.length ? cards : [h("p.empty", "No updates yet.")]));
 }
 
-// A bug or idea that came up after an update: crossed out, with where, once a later update fixed it.
+// A bug or idea that came up after an update: crossed out, with where, once a later update fixed it
+// (dashed when one only partly fixed it).
 function sinceLine(x) {
   const fixed = x.status === "likely_fixed";
-  return h(`li${fixed ? ".pt-fixed" : ""}`, h(`span.pk.pk-${x.kind === "bug" ? "bug" : "suggestion"}`, x.kind === "bug" ? "Bug" : "Idea"),
+  const partly = !fixed && partlyFixed(x);
+  return h(`li${fixed ? ".pt-fixed" : partly ? ".pt-partly" : ""}`, h(`span.pk.pk-${x.kind === "bug" ? "bug" : "suggestion"}`, x.kind === "bug" ? "Bug" : "Idea"),
     h("span", `${x.title} (${plural(x.mentions, "player")})`),
-    fixed ? h("a.pt-fixed-in", { href: x.fixedUrl || null, target: "_blank", rel: "noopener", title: x.fixReason || "" }, `✓ fixed in ${x.fixedIn}`) : null);
+    fixed ? h("a.pt-fixed-in", { href: x.fixedUrl || null, target: "_blank", rel: "noopener", title: x.fixReason || "" }, `✓ fixed in ${x.fixedIn}`) : null,
+    partly ? partlyLink(partly) : null);
+}
+
+// The updates (or your fixes) that helped with an issue without doing what players asked, while
+// it isn't fixed.
+const partlyFixed = (issue) => issue && issue.status !== "likely_fixed" && issue.partly?.length ? issue.partly : null;
+function partlyLink(partly) {
+  return h("a.pt-partly-in", { href: partly.at(-1).url || null, target: "_blank", rel: "noopener", title: partly.map((p) => `${p.in}: ${p.reason}`).join("\n") },
+    `◐ partly fixed in ${partly.map((p) => p.in).join(", ")}`);
 }
 
 function urgencyBadge(u) {
@@ -1134,11 +1145,14 @@ function postParts(item, focus = null) {
               window.getSelection().removeAllRanges();
               window.getSelection().addRange(range);
             });
-            // Struck through once an update fixed the issue it belongs to (for posts from before the fix).
+            // Struck through once an update fixed the issue it belongs to (for posts from before the fix);
+            // a dashed amber line when one only partly fixed it.
             const issue = pt.issue ? state.game.issues?.[pt.issue] : null;
             const fixed = issue?.status === "likely_fixed" && item.created < issue.fixedAt;
-            return h(`li${fixed ? ".pt-fixed" : ""}`, label, sentence,
-              fixed ? h("a.pt-fixed-in", { href: issue.fixedUrl, target: "_blank", rel: "noopener", title: issue.fixReason || "" }, `✓ fixed in ${issue.fixedIn}`) : null);
+            const partly = !fixed && partlyFixed(issue);
+            return h(`li${fixed ? ".pt-fixed" : partly ? ".pt-partly" : ""}`, label, sentence,
+              fixed ? h("a.pt-fixed-in", { href: issue.fixedUrl, target: "_blank", rel: "noopener", title: issue.fixReason || "" }, `✓ fixed in ${issue.fixedIn}`) : null,
+              partly ? partlyLink(partly) : null);
           })),
         others ? h("div.meta", `+ ${plural(others, "other point")} about other things, in the full post`) : null,
         // Long posts fold away under their points; short ones stay readable as they are, except

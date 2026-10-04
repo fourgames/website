@@ -12,7 +12,7 @@ let DATA = DATA_OVERRIDE || `${RAW}/main/feedback/data`;
 const DAY = 86400;
 const URGENCY = { urgent: "Urgent", high: "High", medium: "Medium", low: "Low" };
 const KIND = { review: "Review", topic: "Thread", reply: "Reply" };
-const state = { index: null, games: {}, game: null, tab: "overview", filters: { issues: { status: "active", q: "", sort: "priority" }, suggestions: { status: "active", q: "", sort: "priority" }, feed: { kind: "all", category: "all", q: "", shown: 50 }, stats: { range: 0 }, replies: { show: "open" } } };
+const state = { index: null, games: {}, game: null, tab: "overview", filters: { issues: { status: "active", q: "", sort: "priority" }, suggestions: { status: "active", q: "", sort: "priority" }, feed: { kind: "all", category: "all", q: "", shown: 50 }, stats: { range: 0 }, replies: { show: "open" }, media: { source: "all", shown: 30 } } };
 
 const store = {
   get(k) { try { return localStorage.getItem("fb-dash:" + k); } catch { return null; } },
@@ -311,6 +311,7 @@ const ICONS = {
   loved: "M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z",
   updates: "M12 19V5M5 12l7-7 7 7M4 21h16",
   replies: "M9 17H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M14 19l2 2 5-5",
+  media: "M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5M19.1 4.9C23 8.8 23 15.1 19.1 19M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
 };
 function icon(name) {
   const svg = svgEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2, "stroke-linecap": "round", "stroke-linejoin": "round", class: "icon", "aria-hidden": "true" });
@@ -419,7 +420,7 @@ async function init() {
   const games = state.index.games || [];
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = Number(hash.get("app") || store.get("app"));
-  state.tab = ["overview", "issues", "suggestions", "loved", "replies", "updates", "feed"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
+  state.tab = ["overview", "issues", "suggestions", "loved", "replies", "updates", "media", "feed"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
   if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : orderedGames()[0].appId);
 }
 
@@ -429,6 +430,8 @@ const BRAND = {
   steam: "M11.98 0C5.68 0 .51 4.86.02 11.04l6.43 2.66c.55-.37 1.2-.59 1.92-.59h.19l2.86-4.14V8.9a4.53 4.53 0 1 1 4.52 4.53h-.1l-4.08 2.91v.16a3.4 3.4 0 0 1-6.72.67L.44 15.27A12 12 0 1 0 11.98 0zM7.54 18.21l-1.47-.61a2.55 2.55 0 1 0 1.42-3.34l1.52.63a1.88 1.88 0 1 1-1.47 3.32zm11.42-9.3a3.02 3.02 0 1 0-6.03 0 3.02 3.02 0 0 0 6.03 0zm-5.28 0a2.27 2.27 0 1 1 4.53 0 2.27 2.27 0 0 1-4.53 0z",
   discord: "M20.32 4.37a19.8 19.8 0 0 0-4.89-1.52.07.07 0 0 0-.08.04c-.21.38-.44.87-.61 1.25a18.27 18.27 0 0 0-5.49 0 12.64 12.64 0 0 0-.62-1.25.08.08 0 0 0-.08-.04 19.74 19.74 0 0 0-4.89 1.52.07.07 0 0 0-.03.03C.53 9.05-.32 13.58.1 18.06a.08.08 0 0 0 .03.05 19.9 19.9 0 0 0 5.99 3.03.08.08 0 0 0 .08-.03c.46-.63.87-1.3 1.23-1.99a.08.08 0 0 0-.04-.1 13.1 13.1 0 0 1-1.87-.9.08.08 0 0 1-.01-.12l.37-.3a.07.07 0 0 1 .08-.01c3.93 1.8 8.18 1.8 12.06 0a.07.07 0 0 1 .08.01l.37.3a.08.08 0 0 1-.01.12c-.6.35-1.22.65-1.87.9a.08.08 0 0 0-.04.1c.36.7.77 1.36 1.22 1.99a.08.08 0 0 0 .08.03 19.84 19.84 0 0 0 6.01-3.03.08.08 0 0 0 .03-.05c.5-5.18-.84-9.68-3.55-13.66a.06.06 0 0 0-.03-.03zM8.02 15.33c-1.18 0-2.16-1.09-2.16-2.42 0-1.33.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.33-.96 2.42-2.16 2.42zm7.97 0c-1.18 0-2.16-1.09-2.16-2.42 0-1.33.96-2.42 2.16-2.42 1.21 0 2.18 1.1 2.16 2.42 0 1.33-.95 2.42-2.16 2.42z",
   github: "M12 .3a12 12 0 0 0-3.8 23.38c.6.12.83-.26.83-.57L9 21.07c-3.34.72-4.04-1.61-4.04-1.61-.55-1.39-1.34-1.76-1.34-1.76-1.08-.74.09-.73.09-.73 1.2.09 1.84 1.24 1.84 1.24 1.07 1.83 2.8 1.3 3.49 1 .1-.78.42-1.31.76-1.61-2.67-.3-5.47-1.33-5.47-5.93 0-1.31.47-2.38 1.24-3.22-.14-.3-.54-1.52.1-3.18 0 0 1-.32 3.3 1.23a11.5 11.5 0 0 1 6 0c2.28-1.55 3.29-1.23 3.29-1.23.64 1.66.24 2.88.12 3.18a4.65 4.65 0 0 1 1.23 3.22c0 4.61-2.8 5.63-5.48 5.92.42.36.81 1.1.81 2.22l-.01 3.29c0 .31.2.69.82.57A12 12 0 0 0 12 .3",
+  // Twitch (Simple Icons, CC0), for the streams and media card.
+  media: "M11.571 4.714h1.715v5.143H11.57zm4.715 0H18v5.143h-1.714zM6 0L1.714 4.286v15.428h5.143V24l4.286-4.286h3.428L22.286 12V0zm14.571 11.143l-3.428 3.428h-3.429l-3 3v-3H6.857V1.714h13.714Z",
   claude: "m4.7144 15.9555 4.7174-2.6471.079-.2307-.079-.1275h-.2307l-.7893-.0486-2.6956-.0729-2.3375-.0971-2.2646-.1214-.5707-.1215-.5343-.7042.0546-.3522.4797-.3218.686.0608 1.5179.1032 2.2767.1578 1.6514.0972 2.4468.255h.3886l.0546-.1579-.1336-.0971-.1032-.0972L6.973 9.8356l-2.55-1.6879-1.3356-.9714-.7225-.4918-.3643-.4614-.1578-1.0078.6557-.7225.8803.0607.2246.0607.8925.686 1.9064 1.4754 2.4893 1.8336.3643.3035.1457-.1032.0182-.0728-.164-.2733-1.3539-2.4467-1.445-2.4893-.6435-1.032-.17-.6194c-.0607-.255-.1032-.4674-.1032-.7285L6.287.1335 6.6997 0l.9957.1336.419.3642.6192 1.4147 1.0018 2.2282 1.5543 3.0296.4553.8985.2429.8318.091.255h.1579v-.1457l.1275-1.706.2368-2.0947.2307-2.6957.0789-.7589.3764-.9107.7468-.4918.5828.2793.4797.686-.0668.4433-.2853 1.8517-.5586 2.9021-.3643 1.9429h.2125l.2429-.2429.9835-1.3053 1.6514-2.0643.7286-.8196.85-.9046.5464-.4311h1.0321l.759 1.1293-.34 1.1657-1.0625 1.3478-.8804 1.1414-1.2628 1.7-.7893 1.36.0729.1093.1882-.0183 2.8535-.607 1.5421-.2794 1.8396-.3157.8318.3886.091.3946-.3278.8075-1.967.4857-2.3072.4614-3.4364.8136-.0425.0304.0486.0607 1.5482.1457.6618.0364h1.621l3.0175.2247.7892.522.4736.6376-.079.4857-1.2142.6193-1.6393-.3886-3.825-.9107-1.3113-.3279h-.1822v.1093l1.0929 1.0686 2.0035 1.8092 2.5075 2.3314.1275.5768-.3218.4554-.34-.0486-2.2039-1.6575-.85-.7468-1.9246-1.621h-.1275v.17l.4432.6496 2.3436 3.5214.1214 1.0807-.17.3521-.6071.2125-.6679-.1214-1.3721-1.9246L14.38 17.959l-1.1414-1.9428-.1397.079-.674 7.2552-.3156.3703-.7286.2793-.6071-.4614-.3218-.7468.3218-1.4753.3886-1.9246.3157-1.53.2853-1.9004.17-.6314-.0121-.0425-.1397.0182-1.4328 1.9672-2.1796 2.9446-1.7243 1.8456-.4128.164-.7164-.3704.0667-.6618.4008-.5889 2.386-3.0357 1.4389-1.882.929-1.0868-.0062-.1579h-.0546l-6.3385 4.1164-1.1293.1457-.4857-.4554.0608-.7467.2307-.2429 1.9064-1.3114Z",
 };
 
@@ -439,6 +442,7 @@ const SERVICES = {
   forums: ["Discussions", "Threads, replies and comments on your announcements", "no new posts yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
   claude: ["Claude", "Translates posts, sorts them into bugs and ideas, matches patch notes", "nothing sorted yet", "https://platform.claude.com/settings/billing", "Add credit"],
   discord: ["Discord", "Pings you for new negative reviews and bug reports, urgent issues, flipped reviews and shared complaints", "no alerts sent yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
+  media: ["Streams & media", "Who's live on Twitch, new YouTube videos, news and Reddit posts about your games", "nothing found yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
   github: ["GitHub", "Runs it all every 10 min, saves the data, rebuilds the site on store changes", "no changes yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
 };
 
@@ -589,6 +593,13 @@ function renderStatus() {
     active: Math.max(state.index.changedAt || 0, state.dataChanged || 0) || null,
     activeWhat: "data changed",
   };
+  // Twitch, YouTube, news and Reddit each report on their own (feedback/media.py); one card for all.
+  const parts = MEDIA_SOURCES.map((k) => [k, status[k]]).filter(([, s]) => s);
+  if (parts.length) {
+    const bad = parts.filter(([, s]) => !s.ok);
+    const last = parts.filter(([, s]) => s.active).sort((a, b) => b[1].active - a[1].active)[0]?.[1];
+    status.media = { ok: !bad.length, message: bad.map(([, s]) => s.message).join(" "), since: Math.max(0, ...bad.map(([, s]) => s.since || 0)) || null, active: last?.active, activeWhat: last?.activeWhat };
+  }
   const card = ([key, [name, what, none, href, action]]) => {
     const s = status[key];
     const kind = !s || s.ok === undefined ? "idle" : s.ok ? "ok" : "bad";
@@ -613,6 +624,7 @@ function renderStatus() {
       h("div.svc-what", what),
       key === "claude" ? claudeCard() : null,
       key === "github" ? siteBuilt() : null,
+      key === "media" && parts.length ? h("div.svc-parts", ...parts.map(([k, p]) => h(`span.part-${p.ok ? "ok" : "bad"}`, h("i"), MEDIA[k].name))) : null,
       h("div.svc-last", s?.active ? `${s.activeWhat || "last activity"} ${ago(s.active)}` : none),
       key === "github" && kind === "idle" ? h("div.svc-msg", "GitHub's hourly request limit is used up; back within the hour.") : null,
       kind === "bad" ? h("div.svc-msg", s.message || "Failed.", s.since ? h("span.svc-since", ` · since ${ago(s.since)}`) : null) : null,
@@ -834,15 +846,16 @@ function render() {
     loved: issues("praise").length,
     replies: toReply().length,
     overview: attention().length || null,
+    media: liveNow().length ? `${liveNow().length} live` : mediaItems().filter((m) => m.at > now() - 7 * DAY).length || null,
   };
-  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["updates", "Updates"], ["feed", "All posts"]];
+  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["updates", "Updates"], ["media", "Media"], ["feed", "All posts"]];
   const buttons = () => tabs.map(([id, label]) =>
     h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
-      icon(id), h("span", label), counts[id] != null ? h("span.count", counts[id]) : null));
+      icon(id), h("span", label), counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : ""}`, counts[id]) : null));
   document.getElementById("fb-nav-side").replaceChildren(...buttons());
   document.getElementById("fb-nav-top").replaceChildren(...buttons());
   setHash();
-  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, feed: feedView }[state.tab]();
+  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
 
@@ -1361,7 +1374,10 @@ function overviewView() {
     .sort((a, b) => b.negativeReviews - a.negativeReviews || b.mentions - a.mentions).slice(0, 3);
   const replies = toReply();
   const latest = items().filter((i) => !i.dev).sort((a, b) => b.created - a.created).slice(0, 5);
+  const live = liveNow();
+  const coverage = mediaItems().filter((m) => !isLive(m) && m.at > now() - 7 * DAY).sort((a, b) => b.at - a.at).slice(0, 3);
   return h("div",
+    live.length ? section("🔴 Live now", live.length, ...live.map(mediaCard)) : null,
     urgent.length
       ? section("Needs attention", urgent.length, ...urgent.slice(0, 5).map((i) => issueCard(i)), urgent.length > 5 || issues("bug").filter(isActive).length > urgent.length ? go("issues", "All bugs") : null)
       : section("Needs attention", null, h("p.ov-calm", "Nothing urgent: no high-priority bugs, and nothing came back after a fix.")),
@@ -1370,6 +1386,9 @@ function overviewView() {
       : null,
     replies.length
       ? section("Worth a reply", replies.length, h("p.ov-calm", `${plural(replies.length, "post")} about something an update has since fixed. `, go("replies", "Replies")))
+      : null,
+    coverage.length
+      ? section("New this week", null, h("p.ov-calm", "Videos, articles and posts about the game outside Steam."), ...coverage.map(mediaCard), go("media", "All media"))
       : null,
     section("Latest posts", null,
       // Long reviews are cut to a few lines here; a click shows the whole post.
@@ -1403,6 +1422,123 @@ function feedView() {
     list);
   draw();
   return wrap;
+}
+
+
+// ---------------------------------------------------------------------------
+// Media: Twitch streams, YouTube videos, news articles and Reddit posts that name the game
+// (feedback/media.py, in the game's file under `media`).
+// ---------------------------------------------------------------------------
+
+const MEDIA = {
+  twitch: { name: "Twitch", color: "#9146ff" },
+  youtube: { name: "YouTube", color: "#ff0033" },
+  news: { name: "News", color: "#3e63dd" },
+  reddit: { name: "Reddit", color: "#ff4500" },
+};
+const MEDIA_SOURCES = Object.keys(MEDIA);
+const mediaItems = () => Object.values(state.game?.media?.items || {});
+// Live: a run saw it live in the last half hour (the data can be a few minutes behind).
+const isLive = (m) => !!m.live && now() - (m.end || m.at) < 1800;
+const liveNow = () => mediaItems().filter(isLive).sort((a, b) => (b.viewers || 0) - (a.viewers || 0));
+const fmtNum = (n) => n < 1000 ? String(n) : n < 1e6 ? `${+(n / 1000).toFixed(n < 1e4 ? 1 : 0)}k` : `${+(n / 1e6).toFixed(1)}M`;
+const fmtLength = (s) => s >= 3600 ? `${Math.floor(s / 3600)} h ${Math.round((s % 3600) / 60)} min` : `${Math.max(1, Math.round(s / 60))} min`;
+// How many people it reached (peak viewers, views or score), for the size of its chart mark.
+const reach = (m) => m.peak || m.views || m.score || 0;
+
+function mediaFacts(m) {
+  const f = [];
+  if (m.source === "twitch") {
+    if (isLive(m)) f.push(`${fmtNum(m.viewers || 0)} watching now`, `live for ${fmtLength(now() - m.at)}`);
+    else f.push(`streamed ${fmtLength(Math.max(60, (m.end || m.at) - m.at))}`, m.peak ? `peak ${plural(m.peak, "viewer")}` : null);
+    if (m.followers != null) f.push(`${fmtNum(m.followers)} followers`);
+  } else if (m.source === "youtube") {
+    if (m.live && m.viewers) f.push(`${fmtNum(m.viewers)} watching now`);
+    if (m.views != null) f.push(`${fmtNum(m.views)} views`);
+    if (m.likes) f.push(`${fmtNum(m.likes)} likes`);
+    if (m.comments) f.push(`${fmtNum(m.comments)} comments`);
+    if (m.duration && !m.live) f.push(fmtLength(m.duration));
+    if (m.subscribers != null) f.push(`${fmtNum(m.subscribers)} subscribers`);
+  } else if (m.source === "reddit") {
+    f.push(`${fmtNum(m.score || 0)} points`, `${fmtNum(m.comments || 0)} comments`);
+    if (m.subscribers) f.push(`${fmtNum(m.subscribers)} members`);
+  }
+  return f.filter(Boolean);
+}
+
+function mediaCard(m) {
+  const live = isLive(m);
+  const src = MEDIA[m.source];
+  const link = (props, ...kids) => h("a", { href: m.url, target: "_blank", rel: "noopener", ...props }, ...kids);
+  // Twitch's preview picture only exists while the stream is live.
+  const thumb = m.thumb && (m.source !== "twitch" || live)
+    ? link({ class: "md-thumb", tabindex: "-1", "aria-hidden": "true" }, h("img", { src: m.thumb, alt: "", loading: "lazy", onerror: (e) => e.currentTarget.parentElement.remove() }))
+    : null;
+  const action = { twitch: live ? "Watch and chat" : "Channel", youtube: live ? "Watch and chat" : "Watch and comment", reddit: "Open the thread", news: "Read it" }[m.source];
+  const facts = mediaFacts(m);
+  return h(`div.card.md-card${live ? ".md-live" : ""}`, { style: `--md:${src.color}` },
+    thumb,
+    h("div.md-body",
+      h("div.md-src", live ? h("span.md-dot") : null, h("b", src.name, live ? " · Live" : ""), h("span", { title: new Date(m.at * 1000).toLocaleString() }, ` · ${live ? "started " : ""}${ago(m.at)}`)),
+      h("h3", link({}, m.title || "(no title)")),
+      h("div.md-who",
+        m.authorUrl ? h("a", { href: m.authorUrl, target: "_blank", rel: "noopener" }, m.author) : m.author,
+        m.by ? ` · u/${m.by}` : null,
+        m.lang ? ` · ${m.lang.slice(0, 2).toUpperCase()}` : null),
+      facts.length ? h("div.md-facts", facts.join(" · ")) : null,
+      m.text && m.source !== "youtube" ? h("p.md-text", m.text) : null,
+      link({ class: `btn${live ? " primary" : ""} md-go` }, action, " ↗")));
+}
+
+function mediaView() {
+  const f = state.filters.media;
+  const all = mediaItems();
+  const live = liveNow();
+  const list = h("div");
+  const draw = () => {
+    // What's live is already at the top.
+    const shown = all.filter((m) => !isLive(m) && (f.source === "all" || m.source === f.source)).sort((a, b) => b.at - a.at);
+    list.replaceChildren(...(shown.length ? shown.slice(0, f.shown).map(mediaCard) : [h("p.empty", "Nothing found yet.")]));
+    if (shown.length > f.shown) list.append(h("button.btn.more", { onclick: () => { f.shown += 30; draw(); } }, `Show more (${shown.length - f.shown} left)`));
+  };
+  const count = (s) => all.filter((m) => m.source === s).length;
+  const filter = chips([["all", `All (${all.length})`], ...MEDIA_SOURCES.map((s) => [s, `${MEDIA[s].name} (${count(s)})`])], f.source, (v) => { f.source = v; f.shown = 30; draw(); }, "Source");
+  const twitch = state.game.media?.twitch;
+  draw();
+  return h("div",
+    live.length ? h("section.ov-section", h("h3", "🔴 Live now", h("span.ov-count", live.length)), ...live.map(mediaCard)) : null,
+    h("p.updated", { style: "margin:0 0 12px" },
+      "Streams, videos, articles and Reddit posts that name the game. Twitch is checked every 10 minutes, Reddit every 20, news every 30 and YouTube about hourly; Discord pings you for each new one. They're marked along the bottom of the player and review charts, so you can see what caused a jump."),
+    twitch && twitch.category === null ? h("p.ov-calm", { style: "margin:0 0 12px" }, "Twitch has no category for this game yet, so its streams can't be found. Twitch adds games from IGDB: once the game is on igdb.com, it shows up within a day.") : null,
+    h("div.filters", filter),
+    list);
+}
+
+// Streams, videos, articles and posts along the bottom of a chart: a stream as a bar for as long
+// as it ran, anything else as a dot that's bigger the more people it reached. Returns the sources
+// shown, for the legend.
+function mediaMarks(svg, x, start, end) {
+  const list = mediaItems().filter((m) => (m.end || m.at) >= start && m.at <= end).sort((a, b) => reach(a) - reach(b));
+  const y = H - M.bottom - 6;
+  for (const m of list) {
+    const color = MEDIA[m.source].color;
+    if (m.source === "twitch") {
+      const from = x(Math.max(start, m.at)), to = x(Math.min(end, isLive(m) ? end : m.end || m.at));
+      svg.append(svgEl("rect", { x: from, y: y - 3, width: Math.max(4, to - from), height: 6, rx: 3, fill: color, opacity: 0.85, class: "md-mark" }));
+    } else {
+      svg.append(svgEl("circle", { cx: x(m.at), cy: y, r: 3 + Math.min(4, Math.log10(reach(m) + 1)), fill: color, opacity: 0.85, class: "md-mark" }));
+    }
+  }
+  return MEDIA_SOURCES.filter((s) => list.some((m) => m.source === s));
+}
+const mediaLegend = (sources) => sources.map((s) => h("span", h("i", { style: `background:${MEDIA[s].color}` }), MEDIA[s].name));
+// What was going on at a point of a chart: streams running then, anything else posted within `span`.
+function mediaAt(t, span) {
+  return mediaItems()
+    .filter((m) => m.source === "twitch" ? t >= m.at - span && t <= (isLive(m) ? now() : m.end || m.at) + span : Math.abs(m.at - t) <= span)
+    .sort((a, b) => reach(b) - reach(a))
+    .slice(0, 4)
+    .map((m) => h("div.t.md-tip", { style: `--md:${MEDIA[m.source].color}` }, `${MEDIA[m.source].name}: ${m.author || ""}${mediaFacts(m)[m.source === "twitch" ? 1 : 0] ? ` · ${mediaFacts(m)[m.source === "twitch" ? 1 : 0]}` : ""}`));
 }
 
 // ---------------------------------------------------------------------------
@@ -1521,6 +1657,7 @@ function playersChart(start, end, releases) {
   yAxis(svg, y, max);
   timeAxis(svg, x, start, end);
   releaseMarkers(svg, x, releases);
+  const covered = mediaMarks(svg, x, start, end);
   if (pts.length) {
     let d = `M${x(pts[0][0])},${y(pts[0][1])}`;
     for (let i = 1; i < pts.length; i++) d += `H${x(pts[i][0])}V${y(pts[i][1])}`;
@@ -1531,19 +1668,21 @@ function playersChart(start, end, releases) {
   svg.append(cross, dot);
   const table = h("details", h("summary", "Data table"),
     h("table.data", h("tr", h("th", "Time"), h("th", "Players")), ...series.filter(([t]) => t >= start).slice(-200).reverse().map(([t, n]) => h("tr", h("td", new Date(t * 1000).toLocaleString()), h("td", n)))));
-  const { card, tip } = chartCard("Concurrent players", pts.length ? "Steam's current player count, sampled every run. Dashed lines are updates." : "No player data in this range.",
-    onSale ? h("div.legend", saleLegend()) : null, svg, table);
+  const { card, tip } = chartCard("Concurrent players", pts.length ? `Steam's current player count, sampled every run. Dashed lines are updates${covered.length ? "; marks along the bottom are streams, videos and posts" : ""}.` : "No player data in this range.",
+    onSale || covered.length ? h("div.legend", onSale ? saleLegend() : null, ...mediaLegend(covered)) : null, svg, table);
   svg.addEventListener("pointermove", (e) => {
     if (!pts.length) return;
     const box = svg.getBoundingClientRect();
     const px = ((e.clientX - box.left) / box.width) * W;
     const t = Math.min(end, Math.max(start, start + ((px - M.left) / (W - M.left - M.right)) * (end - start)));
     const v = playersAt(pts, t);
-    if (v == null) return;
+    const span = ((end - start) / (W - M.left - M.right)) * 6; // 6 px either side
+    const media = mediaAt(t, span);
+    if (v == null && !media.length) return;
     cross.setAttribute("x1", x(t)); cross.setAttribute("x2", x(t)); cross.setAttribute("visibility", "visible");
-    dot.setAttribute("cx", x(t)); dot.setAttribute("cy", y(v)); dot.setAttribute("visibility", "visible");
+    dot.setAttribute("cx", x(t)); dot.setAttribute("cy", y(v ?? 0)); dot.setAttribute("visibility", v == null ? "hidden" : "visible");
     const near = releases.find((r) => Math.abs(x(r.time) - x(t)) < 6);
-    showTip(card, tip, svg, x(t), y(v), [h("div", h("b", v), " players"), h("div.t", new Date(t * 1000).toLocaleString()), near ? h("div.t", "Update: " + (near.version ? "v" + near.version : near.name)) : null].filter(Boolean));
+    showTip(card, tip, svg, x(t), y(v ?? 0), [v == null ? null : h("div", h("b", v), " players"), h("div.t", new Date(t * 1000).toLocaleString()), near ? h("div.t", "Update: " + (near.version ? "v" + near.version : near.name)) : null, ...media].filter(Boolean));
   });
   svg.addEventListener("pointerleave", () => { tip.style.display = "none"; cross.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden"); });
   return card;
@@ -1575,6 +1714,7 @@ function reviewsChart(start, end, releases) {
   }
   const onSale = saleBands(svg, x, start, end);
   releaseMarkers(svg, x, releases);
+  const covered = mediaMarks(svg, x, start, end);
   // Each day (or week) gets its own bar, centred in its slot with a clear gap to the next, and its
   // count printed on it, so neighbouring days never run together.
   const slot = (k) => {
@@ -1613,7 +1753,7 @@ function reviewsChart(start, end, releases) {
   svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: mid, y2: mid, class: "base" }));
   const hit = svgEl("rect", { x: M.left, y: M.top, width: W - M.left - M.right, height: H - M.top - M.bottom, fill: "transparent" });
   svg.append(hit);
-  const legend = h("div.legend", h("span", h("i", { style: "background:var(--fb-positive)" }), "Recommended"), h("span", h("i", { style: "background:var(--fb-negative)" }), "Not recommended"), onSale ? saleLegend() : null);
+  const legend = h("div.legend", h("span", h("i", { style: "background:var(--fb-positive)" }), "Recommended"), h("span", h("i", { style: "background:var(--fb-negative)" }), "Not recommended"), onSale ? saleLegend() : null, ...mediaLegend(covered));
   const total = up.reduce((a, b) => a + b, 0) + down.reduce((a, b) => a + b, 0);
   const table = h("details", h("summary", "Data table"),
     h("table.data", h("tr", h("th", bucket === DAY ? "Day" : "Week of"), h("th", "👍"), h("th", "👎")),
@@ -1629,6 +1769,7 @@ function reviewsChart(start, end, releases) {
       h("div.t", (bucket === DAY ? "" : "Week of ") + fmtDate(b0 + k * bucket)),
       h("div", h("b", up[k]), " recommended"),
       h("div", h("b", down[k]), " not recommended"),
+      ...mediaAt(b0 + k * bucket + bucket / 2, bucket / 2),
     ]);
   });
   svg.addEventListener("pointerleave", () => { tip.style.display = "none"; });

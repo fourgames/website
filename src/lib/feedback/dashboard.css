@@ -1727,3 +1727,152 @@
 .fb .svc-warn {
 	color: var(--fb-warning);
 }
+
+/* Media: streams, videos, articles and Reddit posts (mediaCard in dashboard.js). --md is the
+   source's colour. */
+.fb .md-card {
+	display: flex;
+	gap: 14px;
+	align-items: flex-start;
+	box-shadow: var(--fb-shadow), inset 3px 0 0 var(--md);
+}
+.fb .md-thumb {
+	flex: none;
+	width: 176px;
+	aspect-ratio: 16 / 9;
+	border-radius: 0.5rem;
+	overflow: hidden;
+	background: var(--fb-card-2);
+}
+.fb .md-thumb img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+	display: block;
+}
+.fb .md-body {
+	flex: 1;
+	min-width: 0;
+}
+.fb .md-src {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 0.75rem;
+	color: var(--fb-muted);
+	margin-bottom: 2px;
+}
+.fb .md-src b {
+	color: var(--md);
+}
+.fb .md-card h3 a {
+	color: var(--fb-title);
+	text-decoration: none;
+}
+.fb .md-card h3 a:hover {
+	text-decoration: underline;
+}
+.fb .md-who {
+	color: var(--fb-ink-2);
+	font-size: 0.8125rem;
+}
+.fb .md-who a {
+	color: inherit;
+	font-weight: 600;
+}
+.fb .md-facts {
+	color: var(--fb-muted);
+	font-size: 0.8125rem;
+	margin-top: 2px;
+}
+.fb .md-text {
+	margin: 6px 0 0;
+	color: var(--fb-ink-2);
+	display: -webkit-box;
+	-webkit-line-clamp: 2;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+.fb .md-go {
+	display: inline-flex;
+	margin-top: 8px;
+	text-decoration: none;
+}
+.fb .md-dot,
+.fb .count-live::before {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: #e5484d;
+	animation: fb-live 1.4s ease-in-out infinite;
+}
+.fb .count-live {
+	display: inline-flex;
+	align-items: center;
+	gap: 4px;
+	color: #e5484d;
+	font-weight: 700;
+}
+.fb .count-live::before {
+	content: "";
+	width: 6px;
+	height: 6px;
+}
+@keyframes fb-live {
+	50% {
+		opacity: 0.35;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.fb .md-dot,
+	.fb .count-live::before {
+		animation: none;
+	}
+}
+.fb .md-live {
+	box-shadow: var(--fb-shadow), inset 3px 0 0 var(--md), 0 0 0 1px color-mix(in srgb, var(--md) 45%, transparent);
+}
+.fb .md-tip::before {
+	content: "";
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	background: var(--md);
+	margin-right: 5px;
+}
+.fb svg.chart .md-mark {
+	stroke: var(--fb-card);
+	stroke-width: 1;
+}
+/* Twitch, YouTube, news and Reddit on the streams and media card */
+.fb .svc-parts {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 10px;
+	margin: 6px 0 2px;
+	font-size: 0.75rem;
+	color: var(--fb-ink-2);
+}
+.fb .svc-parts > span {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+}
+.fb .svc-parts i {
+	width: 7px;
+	height: 7px;
+	border-radius: 50%;
+	background: #23a559;
+}
+.fb .svc-parts .part-bad i {
+	background: var(--fb-critical);
+}
+@media (max-width: 640px) {
+	.fb .md-card {
+		flex-direction: column;
+	}
+	.fb .md-thumb {
+		width: 100%;
+	}
+}

@@ -221,6 +221,61 @@ def cluster(game, issue, items):
     }
 
 
+MEDIA = {
+    # source → (color, title)
+    "twitch": (0x9146FF, "🔴 Live on Twitch"),
+    "youtube": (0xFF0033, "▶️ New YouTube video"),
+    "news": (0x3E63DD, "📰 New article"),
+    "reddit": (0xFF4500, "💬 New Reddit post"),
+}
+
+
+def _count(n):
+    return f"{n:,}" if n is not None else None
+
+
+def media(game, item):
+    """Someone streaming, a video, an article or a Reddit post about a game: who, how big, and a link
+    straight to it (for a stream: the channel, to join the chat)."""
+    color, title = MEDIA[item["source"]]
+    if item["source"] == "youtube" and item.get("live"):
+        title = "🔴 Live on YouTube"
+    who = item.get("author") or "Someone"
+    fields = []
+    add = lambda name, value: fields.append({"name": name, "value": value, "inline": True}) if value else None
+    if item["source"] == "twitch":
+        add("Viewers", _count(item.get("viewers")))
+        add("Followers", _count(item.get("followers")))
+        add("Language", (item.get("lang") or "").upper() or None)
+        link = f"[Watch and chat]({item['url']})"
+    elif item["source"] == "youtube":
+        add("Subscribers", _count(item.get("subscribers")))
+        add("Views", _count(item.get("views")))
+        if item.get("duration") and not item.get("live"):
+            add("Length", f"{item['duration'] // 60}:{item['duration'] % 60:02d}")
+        link = f"[Watch and comment]({item['url']})"
+    elif item["source"] == "reddit":
+        add("Subreddit members", _count(item.get("subscribers")))
+        add("Score", _count(item.get("score")))
+        add("Comments", _count(item.get("comments")))
+        link = f"[Open the thread]({item['url']})"
+    else:
+        link = f"[Read it]({item['url']})"
+    quote = f"> {_clip(item['text'], 300)}\n" if item.get("text") and item["source"] != "youtube" else ""
+    return {
+        "title": _clip(f"{title} · {game['name']}: {who}", 256),
+        "url": item["url"],
+        "description": _clip(f"**{item.get('title') or ''}**\n{quote}\n{link} · [Dashboard]({DASHBOARD_URL})", 4000),
+        "color": color,
+        "author": {"name": who, "url": item["authorUrl"]} if item.get("authorUrl") else {"name": who},
+        "image": {"url": item["thumb"]} if item.get("thumb") and item["source"] in ("twitch", "youtube") else None,
+        "thumbnail": {"url": item["thumb"]} if item.get("thumb") and item["source"] == "reddit" else None,
+        "fields": fields or None,
+        "footer": {"text": f"{game['name']}"},
+        "timestamp": _iso(item.get("at")),
+    }
+
+
 def _iso(ts):
     if not ts:
         return None

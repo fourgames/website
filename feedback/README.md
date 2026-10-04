@@ -10,19 +10,27 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
    - A changed recommendation is recorded in `flips`.
 3. **Discussions.** It reads new threads and new replies in every subforum.
 4. **Players.** It records the current player count.
-5. **Triage.** It sends each new or edited post to Claude Haiku 4.5, with no extended thinking. Haiku:
+5. **Media** (`media.py`). It finds who's talking about the game outside Steam:
+   - **Twitch:** streams live right now in the game's category, checked every run. The category is found through IGDB by the Steam app id, else by name. A game Twitch has no category for yet can't be followed.
+   - **YouTube:** new videos that name the game, about once an hour per game (the free quota is 10,000 units a day and a search costs 100, so it searches less often with more than 3 games). Views, likes and comments of the last two weeks' videos are kept current.
+   - **News:** Google News search, every 30 minutes, plus any Google Alerts feeds you add (they also cover blogs and other sites).
+   - **Reddit:** posts that name the game, every 20 minutes, with their score and comments.
+
+   Search results must name the game exactly. A source's first search for a game only records what's already out there; only new finds get alerts, and only when they're from the last 3 days. When each source last searched is kept in `feedback/.cache`, so a fresh workflow run searches once more.
+6. **Triage.** It sends each new or edited post to Claude Haiku 4.5, with no extended thinking. Haiku:
    - translates the post to English;
    - sorts it as bug, suggestion, question or praise;
    - sets urgency and the game area;
    - merges duplicates, across languages, into *issues* with mention counts. A mention is one distinct player.
-6. **Issues.** Every issue gets a priority score. Every bug issue gets a ready-to-paste Claude Code fix prompt.
-7. **Releases.** When a game publishes an update or patch-notes event, Claude Haiku 4.5 compares the patch notes with what players said about each open issue. A line that does exactly what they asked marks the issue **likely fixed in vX**; a line that only helps marks it **partly addressed**. It becomes **still happening** only when a player says the problem is still there after the fix.
+7. **Issues.** Every issue gets a priority score. Every bug issue gets a ready-to-paste Claude Code fix prompt.
+8. **Releases.** When a game publishes an update or patch-notes event, Claude Haiku 4.5 compares the patch notes with what players said about each open issue. A line that does exactly what they asked marks the issue **likely fixed in vX**; a line that only helps marks it **partly addressed**. It becomes **still happening** only when a player says the problem is still there after the fix.
    - For every negative review and every thread in an issue that a release fixed, Claude drafts a one- or two-sentence reply in the player's language, saying what was fixed and in which version. Steam's moderation guide suggests replying only in cases like that. The drafts show in the dashboard's **Replies** view until you reply on Steam.
-8. **Discord.** It posts webhook embeds that link to the original post for:
+9. **Discord.** It posts webhook embeds that link to the original post for:
    - urgent issues;
    - every new negative review, and every new post that reports a bug;
    - reviews flipped to negative;
-   - repeated reports, at 3, 5, 10, 25… players.
+   - repeated reports, at 3, 5, 10, 25… players;
+   - someone going live on Twitch (every new stream), a new YouTube video, article or Reddit post, with a link to join the chat or comment.
 
    Every alert @mentions `DISCORD_MENTION`.
 
@@ -48,6 +56,10 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `DISCORD_WEBHOOK_URL` | The channel's webhook URL |
 | `DISCORD_MENTION` | Who to ping: `<@USER_ID>`, `<@&ROLE_ID>` or a bare user ID (optional) |
+| `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` | A Twitch app from [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps): *Register Your Application*, OAuth redirect `http://localhost`, category *Analytics Tool*, client type *Confidential*. Also used for IGDB |
+| `YOUTUBE_API_KEY` | In [Google Cloud Console](https://console.cloud.google.com/): make a project, enable *YouTube Data API v3*, then *Credentials → Create credentials → API key* (restrict it to that API) |
+| `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET` | A Reddit app of type *script* from [reddit.com/prefs/apps](https://www.reddit.com/prefs/apps) (the id is under the app's name). Reddit turns away scripts without one |
+| `GOOGLE_ALERTS_FEEDS` | Optional. At [google.com/alerts](https://www.google.com/alerts), an alert per game for `"Game name"` with *Deliver to: RSS feed*; paste the feed URLs, one per line |
 
 ## Data
 
@@ -59,6 +71,7 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
   - `reviewTotals`: per day;
   - `releases`.
   - `manualFixes`: Claude's verdict on each fix you marked.
+  - `media`: `items` (streams, videos, articles and Reddit posts, keyed `tw`, `yt`, `nw`, `rd`), the game's Twitch `category`, and when each source `started`.
 - `data/cleared.json` holds what you marked fixed on the dashboard, per game.
 
 This repo is public, so this data is too. It's all public on Steam anyway.
@@ -68,7 +81,7 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 `/fb-dash` is a page of the site (`src/views/FeedbackView.vue`, with the dashboard itself in `src/lib/feedback/`, loaded only on that page). Nothing links to it except a header link that appears in browsers that have opened it once, it's `noindex`, and it isn't in the sitemap. It reads `feedback/data` straight from the repo on raw.githubusercontent.com, so new data shows up without a site redeploy (allow for a few minutes of CDN cache).
 
 - **Claude costs:** every Claude call's tokens are counted per game, per day and per task (sorting posts, translating your posts, checking patch notes and your fixes, merging duplicates, drafting replies), with the cost estimated at list price (`PRICES` in `triage.py`; it matches the bill when the collector is all that uses the key). The time before counting started is estimated once from the saved posts (`estimate_past_usage` in `run.py`), on the low side. The Claude card shows credit left and what it's cost; clicking it opens a 30-day chart and the breakdown per game. Set your credit balance there from the billing page whenever you top up (`data/credit.json`, written only by the dashboard); it counts down from that, and Discord pings you once when it's below $2.
-- **Status bar:** which services the last run could and couldn't reach (Claude, Steam, discussions, Discord), each with a button to the fix. "Out of Anthropic API credit" links straight to billing. It's recorded in `data/index.json` → `status` only when something changes.
+- **Status bar:** which services the last run could and couldn't reach (Claude, Steam, discussions, Discord, and Twitch, YouTube, news and Reddit together on one card), each with a button to the fix. "Out of Anthropic API credit" links straight to billing. It's recorded in `data/index.json` → `status` only when something changes.
 - **Steam links:** buttons for the store page, reviews, discussions, news, Steamworks and the Steamworks sales report (sales aren't mirrored here).
 - **Stat cards:** players now, positive reviews, open bugs and new posts. Players and reviews open their chart (with update dates marked) when clicked.
 - **Issues:** bug issues sorted by priority. Each has *Copy fix prompt* and the original posts with their translations and Steam links.
@@ -77,6 +90,7 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 - **Overview:** the week in one line, what needs attention, and the latest posts.
 - **Bugs / Ideas sorting:** by priority, by negative reviews (what's costing you reviews), by most players, or only what came up in the first 2 hours of play (Steam's refund window). Each card has a *Copy patch-note line* button, e.g. "Fixed: … (reported by 3 players)".
 - **Loved:** praise grouped like ideas, most players first, with a button to copy the list for store pages and trailers.
+- **Media:** who's live on Twitch now, then every stream, video, article and Reddit post, newest first, with the channel's size, views and a button to join the chat or comment. What's live and what's new this week also show on the overview, and everything is marked along the bottom of the player and review charts (a stream as a bar for as long as it ran, anything else as a dot sized by its reach), so a jump in players shows what caused it.
 - **Updates:** each update with negative reviews before and after it, what it fixed (from the patch notes or your ✓) and whether those reports stopped, and what came up since, crossed out once a later update fixed it.
 - **Replies:** negative reviews and threads about something an update has since fixed, each with a drafted reply (Copy reply, Reply on Steam, Done).
 - **Feed:** every post, newest first, with filters and search.

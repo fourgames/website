@@ -764,7 +764,9 @@ def send_alerts(state, game, run, first_run):
         if first_run or item_id in run["urgent"] or not (negative or bugs):
             continue
         posts.append(notify.new_post(game, item, negative, bugs))
-    for batch in (urgent, posts, clusters, flips):
+    # Streams, videos, articles and Reddit posts about the game (media.py), newest last.
+    coverage = [notify.media(game, state["media"]["items"][i]) for i in sorted(run.get("media") or [], key=lambda i: state["media"]["items"][i]["at"])]
+    for batch in (urgent, posts, clusters, flips, coverage):
         for start in range(0, len(batch), 10):
             notify.send(batch[start : start + 10], ping=True)
 
@@ -922,6 +924,9 @@ def full_run():
         import discussions
 
         discussions.ingest(state, game, run)
+        import media
+
+        run["media"] = media.collect(state, game, len(index["games"]))
         process_in_order(state, game, run, budget, events)
         add_tone(state, game, budget)
         add_profiles(state)
@@ -989,6 +994,14 @@ def test_discord():
         sent.append(notify.send([notify.new_post(owner(bug_post), bug_post, False, bug_points(bug_post))], ping=True, note="**4. New bug report** (pings you):"))
     if negative:
         sent.append(notify.send([notify.flip(owner(negative), negative)], ping=True, note="**5. Review flipped to negative** (pings you):"))
+    # One of each kind of coverage, from the data when there is one.
+    covered = {}
+    for a, s in states.items():
+        for m in sorted((s.get("media") or {}).get("items", {}).values(), key=lambda m: m["at"], reverse=True):
+            covered.setdefault(m["source"], (games[a], m))
+    for n, source in enumerate(("twitch", "youtube", "news", "reddit"), 6):
+        if source in covered:
+            sent.append(notify.send([notify.media(*covered[source])], ping=True, note=f"**{n}. {notify.MEDIA[source][1]}** (pings you):"))
     print(f"[discord] test: {sum(sent)} of {len(sent)} messages accepted")
     if not all(sent):
         sys.exit(1)

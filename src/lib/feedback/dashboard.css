@@ -1447,3 +1447,56 @@
 	color: #fb923c;
 	white-space: nowrap;
 }
+
+/* Clearing bugs and ideas off the list (dashboard.js: setCleared). */
+.fb .s-cleared {
+	color: var(--fb-muted);
+}
+.fb .clear-btns {
+	display: contents;
+}
+.fb .clear-btn {
+	color: var(--fb-ink-2);
+}
+.fb-dialog {
+	margin: auto; /* the site's reset removes a dialog's own centering */
+	max-width: min(440px, calc(100vw - 32px));
+	border: 0;
+	border-radius: var(--radius-card, 12px);
+	background: var(--fb-card);
+	color: var(--fb-ink);
+	box-shadow: var(--fb-shadow);
+	padding: 20px;
+}
+.fb-dialog::backdrop {
+	background: rgb(0 0 0 / 0.45);
+}
+.fb-dialog h3 {
+	margin: 0 0 8px;
+	color: var(--fb-title);
+	font-size: 1.1rem;
+	font-weight: 700;
+}
+.fb-dialog p,
+.fb-dialog ol {
+	margin: 0 0 10px;
+}
+.fb-dialog ol {
+	padding-left: 1.2em;
+	list-style: decimal;
+}
+.fb-dialog .dlg-input {
+	width: 100%;
+	padding: 8px 10px;
+	border: 1px solid var(--fb-line);
+	border-radius: 8px;
+	background: var(--fb-card-2);
+}
+.fb-dialog .dlg-error {
+	margin: 8px 0 0;
+	color: var(--fb-critical);
+}
+.fb-dialog .actions {
+	justify-content: flex-end;
+	margin-top: 14px;
+}

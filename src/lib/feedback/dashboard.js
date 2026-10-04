@@ -17,6 +17,7 @@ const state = { index: null, games: {}, game: null, tab: "overview", filters: { 
 const store = {
   get(k) { try { return localStorage.getItem("fb-dash:" + k); } catch { return null; } },
   set(k, v) { try { localStorage.setItem("fb-dash:" + k, v); } catch {} },
+  del(k) { try { localStorage.removeItem("fb-dash:" + k); } catch {} },
 };
 
 // DOM helper: h("div.card", {onclick}, child, "text"…). Text always goes in as text nodes.
@@ -72,6 +73,137 @@ async function getJson(path) {
   const res = await fetch(`${DATA}/${path}`, { cache: "no-store", signal: AbortSignal.timeout(20000) });
   if (!res.ok) throw new Error(`${path}: HTTP ${res.status}`);
   return res.json();
+}
+
+// ---------------------------------------------------------------------------
+// Clearing bugs and ideas you've dealt with (or won't), like ticking off a to-do list. Saved in
+// feedback/data/cleared.json ({appId: {issueId: {as, at, title}}}) so every browser sees it; the
+// collecting workflow never writes that file, so the two never conflict. The site is static, so
+// saving goes straight to GitHub's API with a fine-grained token you paste once per browser: the
+// token is the password, and only someone who can write to the repo has one. "[skip ci]" keeps a
+// save from redeploying the site. A player reporting it again brings it back.
+// ---------------------------------------------------------------------------
+
+const REPO_API = "https://api.github.com/repos/fourgames/website";
+const CLEARED_PATH = "feedback/data/cleared.json";
+const CLEARED = { done: "Done", wontfix: "Won't do" };
+const TOKEN_URL = "https://github.com/settings/personal-access-tokens/new?name=Feedback%20dashboard&target_name=fourgames&expires_in=366&contents=write";
+
+async function loadCleared() {
+  try {
+    state.cleared = await getJson("cleared.json");
+  } catch {
+    state.cleared ||= {}; // none saved yet (or a test copy of the data without it)
+  }
+}
+
+// How you cleared an issue, unless a player has reported it again since.
+function clearedAs(issue) {
+  const c = state.cleared?.[state.game.appId]?.[issue.id];
+  return c && issue.lastSeen <= c.at ? c : null;
+}
+
+const b64 = {
+  encode: (text) => { let s = ""; for (const b of new TextEncoder().encode(text)) s += String.fromCharCode(b); return btoa(s); },
+  decode: (data) => new TextDecoder().decode(Uint8Array.from(atob(data.replace(/\s/g, "")), (c) => c.charCodeAt(0))),
+};
+
+async function github(path, token, options = {}) {
+  return fetch(path ? `${REPO_API}/${path}` : REPO_API, { ...options, cache: "no-store", signal: AbortSignal.timeout(15000),
+    headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${token}`, ...(options.body ? { "Content-Type": "application/json" } : {}) } });
+}
+
+// Asks for the token in a small dialog; resolves to it, or null if you cancel.
+function askToken() {
+  return new Promise((resolve) => {
+    const input = h("input.dlg-input", { type: "password", placeholder: "github_pat_…", autocomplete: "off", spellcheck: "false", required: true });
+    const error = h("p.dlg-error", { hidden: true });
+    const submit = h("button.btn.primary", { type: "submit" }, "Unlock");
+    const form = h("form", { method: "dialog" },
+      h("h3", "Unlock clearing"),
+      h("p", "Clearing saves to the website repo on GitHub, so it needs a GitHub token that can write to it. It's kept in this browser only."),
+      h("ol",
+        h("li", h("a", { href: TOKEN_URL, target: "_blank", rel: "noopener" }, "Create a fine-grained token ↗"), " with owner ", h("b", "fourgames"), ", only the ", h("b", "website"), " repository, and ", h("b", "Contents: Read and write"), "."),
+        h("li", "Paste it here.")),
+      input, error,
+      h("div.actions", h("button.btn", { type: "button", onclick: () => dlg.close() }, "Cancel"), submit));
+    const dlg = h("dialog.fb-dialog", form);
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const token = input.value.trim();
+      submit.disabled = true;
+      error.hidden = true;
+      try {
+        const res = await github("", token);
+        const repo = res.ok ? await res.json() : null;
+        // Fine-grained tokens don't report their own permissions here; a save that's refused says so.
+        if (!repo || repo.permissions?.push === false) throw new Error(res.status === 401 ? "GitHub doesn't accept that token." : "That token can't see the website repo.");
+        store.set("token", token);
+        dlg.close(token);
+      } catch (err) {
+        error.textContent = err.name === "TimeoutError" ? "GitHub didn't answer; try again." : err.message;
+        error.hidden = false;
+        submit.disabled = false;
+      }
+    });
+    dlg.addEventListener("close", () => { dlg.remove(); resolve(dlg.returnValue && dlg.returnValue !== "cancel" ? dlg.returnValue : null); });
+    document.querySelector(".fb:has(#fb-view)").append(dlg);
+    dlg.showModal();
+    input.focus();
+  });
+}
+
+// Clears an issue (as "done" or "wontfix"), or brings it back (as null). Shown at once, then saved.
+async function setCleared(issue, as) {
+  const token = store.get("token") || await askToken();
+  if (!token) return;
+  const appId = String(state.game.appId);
+  const change = (data) => {
+    const game = (data[appId] ||= {});
+    if (as) game[issue.id] = { as, at: Math.max(now(), issue.lastSeen), title: issue.title };
+    else delete game[issue.id];
+    if (!Object.keys(game).length) delete data[appId];
+    return data;
+  };
+  const before = structuredClone(state.cleared || {});
+  state.cleared = change(structuredClone(before));
+  redraw();
+  toast(as ? `Cleared: ${CLEARED[as]}` : "Back on the list");
+  try {
+    // Read, change, write; when something else saved in between, GitHub refuses and it goes again.
+    for (let attempt = 0; ; attempt++) {
+      const res = await github(`contents/${CLEARED_PATH}?ref=main`, token);
+      if (!res.ok && res.status !== 404) throw res;
+      const file = res.ok ? await res.json() : null;
+      const data = change(file ? JSON.parse(b64.decode(file.content)) : {});
+      const message = `Feedback: ${as ? `${CLEARED[as].toLowerCase()}` : "reopen"} "${issue.title}" [skip ci]`;
+      const put = await github(`contents/${CLEARED_PATH}`, token, { method: "PUT",
+        body: JSON.stringify({ message, branch: "main", sha: file?.sha, content: b64.encode(JSON.stringify(data, null, 1) + "\n") }) });
+      if (put.ok) {
+        // Read the data from this commit on, so a refresh doesn't show the old file for a minute.
+        const { commit } = await put.json();
+        DATA = DATA_OVERRIDE || `${RAW}/${commit.sha}/feedback/data`;
+        store.del("api");
+        state.cleared = data;
+        return;
+      }
+      if (![409, 422].includes(put.status) || attempt >= 2) throw put;
+    }
+  } catch (err) {
+    state.cleared = before;
+    redraw();
+    if (err.status === 401 || err.status === 403 || err.status === 404) {
+      store.del("token");
+      toast("GitHub refused the token; clear it again to enter a new one");
+    } else toast("Couldn't save to GitHub; try again");
+  }
+}
+
+// Redraws in place after clearing, keeping the scroll position.
+function redraw() {
+  const y = window.scrollY;
+  render();
+  window.scrollTo(0, y);
 }
 
 
@@ -205,6 +337,7 @@ async function init() {
     document.getElementById("fb-updated").textContent = "No data yet: the feedback workflow hasn't committed anything. (" + e.message + ")";
     return;
   }
+  await loadCleared();
   renderStatus();
   const games = state.index.games || [];
   const hash = new URLSearchParams(location.hash.slice(1));
@@ -319,7 +452,8 @@ function setHash() {
 const items = () => Object.values(state.game.items || {});
 const issues = (kind) => Object.values(state.game.issues || {}).filter((i) => i.kind === kind);
 const english = (item) => (item.triage && item.triage.english) || item.text || "";
-const isActive = (i) => i.status !== "likely_fixed";
+// Still to do: not fixed by an update, and not cleared by you.
+const isActive = (i) => i.status !== "likely_fixed" && !clearedAs(i);
 
 function playersAt(series, t) {
   let v = null;
@@ -487,13 +621,14 @@ function issueView(kind) {
   const draw = () => {
     const q = f.q.toLowerCase();
     const shown = issues(kind)
-      .filter((i) => f.status === "all" || (f.status === "active" ? isActive(i) : f.status === "still" ? i.status === "still_happening" : i.status === "likely_fixed"))
+      .filter((i) => f.status === "all" || (f.status === "active" ? isActive(i) : f.status === "still" ? isActive(i) && i.status === "still_happening"
+        : f.status === "cleared" ? clearedAs(i) : i.status === "likely_fixed" && !clearedAs(i)))
       .filter((i) => !q || (i.title + " " + i.area + " " + (i.summary || "")).toLowerCase().includes(q))
       .filter((i) => f.sort !== "first" || i.firstSession > 0)
       .sort(SORTS[f.sort] || SORTS.priority);
     list.replaceChildren(...(shown.length ? shown.map((i) => issueCard(i)) : [h("p.empty", kind === "bug" ? "No issues here." : "No suggestions here.")]));
   };
-  const status = chips([["active", "Open"], ["still", "Still happening"], ["fixed", "Likely fixed"], ["all", "All"]], f.status, (v) => { f.status = v; draw(); }, "Status");
+  const status = chips([["active", "Open"], ["still", "Still happening"], ["fixed", "Likely fixed"], ["cleared", "Cleared"], ["all", "All"]], f.status, (v) => { f.status = v; draw(); }, "Status");
   // What costs the most reviews, what most players hit, or what turns new players away.
   const sort = chips([["priority", "Priority"], ["negative", "Negative reviews"], ["players", "Most players"], ["first", "First 2 hours"]], f.sort, (v) => { f.sort = v; draw(); }, "Sort");
   const search = h("input", { type: "search", placeholder: "Search issues", value: f.q, oninput: (e) => { f.q = e.target.value; draw(); } });
@@ -575,12 +710,17 @@ function statusBadge(issue) {
   const partlyBadge = partly.length
     ? link("s-partly", partly.at(-1).url, partly.map((p) => `${p.in}: ${p.reason}`).join("\n"), `◐ Partly addressed in ${partly.map((p) => p.in).join(", ")}`)
     : null;
+  const cleared = clearedAs(issue);
+  if (cleared) return [h("span.badge.s-cleared", { title: `You cleared this on ${fmtDate(cleared.at)}` }, `${cleared.as === "done" ? "✓" : "✕"} ${CLEARED[cleared.as]}`)];
+  // Cleared, then reported again: back on the list.
+  const back = state.cleared?.[state.game.appId]?.[issue.id]
+    ? h("span.badge.s-still", { title: `You cleared this on ${fmtDate(state.cleared[state.game.appId][issue.id].at)}` }, "↻ Reported again since you cleared it") : null;
   if (issue.status === "likely_fixed")
-    return [link("s-fixed", issue.fixedUrl, issue.fixReason, "✓ Likely fixed in " + issue.fixedIn)];
+    return [link("s-fixed", issue.fixedUrl, issue.fixReason, "✓ Likely fixed in " + issue.fixedIn), back];
   if (issue.status === "still_happening")
     return [link("s-partly", issue.fixedUrl, issue.fixReason, `◐ Worked on in ${issue.fixedIn}`), partlyBadge,
-      h("span.badge.s-still", { title: "A player says it's still there after the fix" }, "↻ Still happening")];
-  return [partlyBadge];
+      h("span.badge.s-still", { title: "A player says it's still there after the fix" }, "↻ Still happening"), back];
+  return [partlyBadge, back];
 }
 
 // A post as its own card: click to open the whole post (selecting it for the Speak Selection key),
@@ -653,8 +793,16 @@ function issueCard(issue) {
         issue.area,
       ].filter(Boolean).join(" · ")),
       summary ? h("ul.pc-points", h("li", summaryLabel, summary)) : null,
-      h("div.actions", issue.kind === "praise" ? null : copyBtn, toggle, patchBtn)),
+      h("div.actions", issue.kind === "praise" ? null : copyBtn, toggle, patchBtn, issue.kind === "praise" ? null : clearButtons(issue))),
     postList);
+}
+
+// Ticks a bug or idea off the list (fixed, or not going to happen), or puts it back.
+function clearButtons(issue) {
+  if (clearedAs(issue)) return h("button.btn.clear-btn", { onclick: () => setCleared(issue, null) }, "Put back");
+  return h("span.clear-btns",
+    h("button.btn.clear-btn", { title: "Dealt with: take it off the list", onclick: () => setCleared(issue, "done") }, "✓ Done"),
+    h("button.btn.clear-btn", { title: "Not going to happen: take it off the list", onclick: () => setCleared(issue, "wontfix") }, "✕ Won't do"));
 }
 
 function suggestionText(issue, posts) {
@@ -935,7 +1083,7 @@ function repliesView() {
 // Bugs that need you now: reported again after a fix, or high/urgent and still open.
 function attention() {
   return Object.values(state.game.issues || {})
-    .filter((i) => i.status === "still_happening" || (i.kind === "bug" && isActive(i) && (i.urgency === "urgent" || i.urgency === "high")))
+    .filter((i) => isActive(i) && (i.status === "still_happening" || (i.kind === "bug" && (i.urgency === "urgent" || i.urgency === "high"))))
     .sort((a, b) => b.priority - a.priority);
 }
 
@@ -1280,6 +1428,7 @@ async function refresh() {
       const index = await getJson("index.json");
       const appId = state.game.appId;
       const game = await getJson(`games/${appId}.json`);
+      await loadCleared();
       state.index = index;
       state.games = { [appId]: game }; // other games reload when picked
       state.game = { ...game, meta: index.games.find((g) => g.appId === appId) };

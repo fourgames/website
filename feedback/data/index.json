@@ -129,24 +129,24 @@
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791149067,
+   "active": 1791151238,
    "activeWhat": "players changed"
   },
   "twitch": {
-   "ok": false,
-   "message": "Add the TWITCH_CLIENT_ID and TWITCH_CLIENT_SECRET secrets to see who's streaming.",
-   "since": 1791147868,
+   "ok": true,
+   "message": null,
+   "since": 1791151238,
    "active": null,
    "activeWhat": null
   },
   "youtube": {
-   "ok": false,
-   "message": "Add the YOUTUBE_API_KEY secret to find new videos.",
-   "since": 1791147868,
-   "active": null,
-   "activeWhat": null
+   "ok": true,
+   "message": null,
+   "since": 1791151238,
+   "active": 1791151238,
+   "activeWhat": "new video"
   }
  },
- "changedAt": 1791149067,
+ "changedAt": 1791151238,
  "creditAlert": null
 }

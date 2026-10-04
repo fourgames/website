@@ -1,1 +1,11 @@
-{}
+{
+ "2807130": {
+  "I25": {
+   "as": "fixed",
+   "at": 1791116705,
+   "title": "HP meter bug",
+   "note": "Fixed: HP meter bug the player mistook a heart icon for the hammer as health but it now uses different icon",
+   "release": "509567431915603800"
+  }
+ }
+}

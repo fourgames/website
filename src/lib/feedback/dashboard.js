@@ -311,6 +311,8 @@ const ICONS = {
   loved: "M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z",
   updates: "M12 19V5M5 12l7-7 7 7M4 21h16",
   replies: "M9 17H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M14 19l2 2 5-5",
+  achievements: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3",
+  ingame: "M6 11h4M8 9v4M15 12h.01M18 10h.01M17.32 5H6.68a4 4 0 0 0-3.98 3.59L2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.41-1.41A2 2 0 0 1 9.83 16h4.34a2 2 0 0 1 1.41.59L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3l-.7-7.41A4 4 0 0 0 17.32 5z",
   media: "M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5M19.1 4.9C23 8.8 23 15.1 19.1 19M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
 };
 function icon(name) {
@@ -420,7 +422,7 @@ async function init() {
   const games = state.index.games || [];
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = Number(hash.get("app") || store.get("app"));
-  state.tab = ["overview", "issues", "suggestions", "loved", "replies", "updates", "media", "feed"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
+  state.tab = ["overview", "issues", "suggestions", "loved", "replies", "updates", "media", "achievements", "ingame", "feed"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
   if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : orderedGames()[0].appId);
 }
 
@@ -794,10 +796,22 @@ function renderStats() {
     tile("Players", current == null ? "–" : `${current}${current && current >= Math.max(...series.map(([, n]) => n)) ? " 🔥" : ""}`,
       current != null ? (current && current >= Math.max(...series.map(([, n]) => n)) ? "In-Game · all-time peak" : "In-Game") : "not released", peaks, undefined, "players"),
     tile("Reviews", score ? `${score.rating.toFixed(2)}%` : "–", score ? plural(score.total, "review") : "no reviews yet", reviewsPerDay, "var(--fb-positive)", "reviews"),
+    tile("Followers", g.followers?.length ? g.followers[g.followers.length - 1][1] : "–", g.followers?.length ? growthLine(g.followers) : "on Steam",
+      daily(14, (d) => playersAt(g.followers || [], d + DAY - 1) ?? 0), "var(--type-praise)", "followers"),
+    state.index.discord?.members?.length
+      ? tile("Discord", state.index.discord.members.at(-1)[1], [`${state.index.discord.online?.at(-1)?.[1] ?? 0} online`],
+        daily(14, (d) => playersAt(state.index.discord.members, d + DAY - 1) ?? 0), "#5865f2", "discord")
+      : null,
     tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent", openBugsPerDay, "var(--type-bug)"),
     tile("New posts", fresh.length, "last 24 h", postsPerDay),
   ].filter(Boolean));
   document.getElementById("fb-expand").replaceChildren(...(state.expanded ? [chartPanel(state.expanded)] : []));
+}
+
+// "+12 this week" (or "no change this week") under a count that's stored on change.
+function growthLine(series) {
+  const d = series[series.length - 1][1] - (playersAt(series, now() - 7 * DAY) ?? series[0][1]);
+  return d ? `${d > 0 ? "+" : ""}${d} this week` : "no change this week";
 }
 
 // SteamDB's rating: the positive share pulled towards 50% when there are few reviews,
@@ -828,6 +842,17 @@ function statHeader(which) {
       stat(`${day}${day && day >= best[1] ? " 🔥" : ""}`, "24-hour peak"),
       stat(`${best[1]} 🔥`, best[0] ? `all-time peak ${ago(best[0])}` : "all-time peak"));
   }
+  // Followers and Discord: now, and the change over a week and a month.
+  const growth = (series, unit) => {
+    const current = series.length ? series[series.length - 1][1] : 0;
+    const since = (days) => { const was = playersAt(series, t - days * DAY) ?? series[0]?.[1] ?? current; const d = current - was; return `${d >= 0 ? "+" : ""}${d}`; };
+    return [stat(current, unit), stat(since(7), "last 7 days"), stat(since(30), "last 30 days")];
+  };
+  if (which === "followers") return h("div.stat-header", ...growth(g.followers || [], "followers on Steam"));
+  if (which === "discord") {
+    const online = state.index.discord?.online || [];
+    return h("div.stat-header", ...growth(state.index.discord?.members || [], "Discord members"), stat(online.length ? online[online.length - 1][1] : 0, "online now"));
+  }
   const totalsKey = Object.keys(g.reviewTotals || {}).sort().pop();
   const score = reviewScore(totalsKey ? g.reviewTotals[totalsKey] : null);
   if (!score) return h("div.stat-header", stat("–", "no reviews yet"));
@@ -847,11 +872,13 @@ function chartPanel(which) {
     const end = now();
     // Never before the game's release (nothing to show there): "All" starts at the oldest data or
     // the release, whichever is later; the fixed ranges are cut at the release too.
-    const released = state.game.meta?.released || 0;
-    const oldest = Math.min(end - DAY, ...[...(state.game.players || []).map((p) => p[0]), ...items().map((i) => i.created)]);
+    // Followers and Discord count from before the release too (that's when wishlists build up).
+    const own = { followers: state.game.followers, discord: state.index.discord?.members }[which];
+    const released = own ? 0 : state.game.meta?.released || 0;
+    const oldest = Math.min(end - DAY, ...(own || []).map((p) => p[0]), ...(own ? [] : [...(state.game.players || []).map((p) => p[0]), ...items().map((i) => i.created)]));
     const start = Math.min(end - DAY, Math.max(released, f.range ? end - f.range * DAY : oldest));
     const releases = markers(start, end);
-    body.replaceChildren(which === "players" ? playersChart(start, end, releases) : reviewsChart(start, end, releases));
+    body.replaceChildren({ players: playersChart, reviews: reviewsChart, followers: followersChart, discord: discordChart }[which](start, end, releases));
   };
   const range = chips([[2, "48h"], [7, "1w"], [30, "1m"], [90, "3m"], [180, "6m"], [365, "1y"], [0, "max"]], f.range, (v) => { f.range = v; draw(); }, "Zoom");
   wrap.append(h("div.filters", h("span.zoom-label", "Zoom"), range), body);
@@ -875,20 +902,58 @@ function render() {
     loved: issues("praise").length,
     replies: toReply().length,
     overview: attention().length || null,
+    achievements: state.game.achievements?.list?.length || null,
+    ingame: "Soon",
     media: liveNow().length ? `${liveNow().length} live` : mediaItems().filter((m) => m.at > now() - 7 * DAY).length || null,
   };
   // The view on screen counts as seen now; any other view with something from the last 48 hours
   // that's newer than when you last opened it gets "New", like a new post.
   store.set(`seen:${state.game.appId}:${state.tab}`, now());
-  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["updates", "Updates"], ["media", "Media"], ["feed", "All posts"]];
+  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["updates", "Updates"], ["media", "Media"], ["achievements", "Achievements"], ["feed", "All posts"], ["ingame", "In-game"]];
   const buttons = () => tabs.map(([id, label]) =>
     h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
-      icon(id), h("span", label), id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : ""}`, counts[id]) : null));
+      icon(id), h("span", label), id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : id === "ingame" ? ".count-soon" : ""}`, counts[id]) : null));
   document.getElementById("fb-nav-side").replaceChildren(...buttons());
   document.getElementById("fb-nav-top").replaceChildren(...buttons());
   setHash();
-  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, feed: feedView }[state.tab]();
+  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, achievements: achievementsView, ingame: ingameView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
+}
+
+// How far players get: the share who unlocked each achievement (feedback/community.py), most common
+// first, so a big step down shows where many players stop.
+function achievementsView() {
+  const a = state.game.achievements;
+  if (!a?.list?.length) return h("p.empty", state.game.meta?.status === "upcoming" ? "Not out yet: achievement stats start once players have it." : "No achievement stats on Steam for this game.");
+  const list = a.list.slice().sort((x, y) => y.percent - x.percent);
+  let drop = null;
+  list.forEach((x, i) => { if (i && list[i - 1].percent - x.percent > (drop?.by || 0)) drop = { at: i, by: list[i - 1].percent - x.percent }; });
+  return h("div",
+    h("p.updated", { style: "margin:0 0 12px" }, `The share of players who unlocked each achievement, from Steam, most common first. If they follow the game's progress, a big step down is where many players stop. Updated daily, last ${ago(a.at)}.`),
+    ...list.map((x, i) => h("div.card.ach",
+      x.icon ? h("img.ach-icon", { src: x.icon, alt: "", loading: "lazy" }) : null,
+      h("div.ach-body",
+        h("div.ach-head", h("b", x.name),
+          drop && drop.at === i && drop.by >= 10 ? h("span.pc-new.ach-drop", { title: "The biggest step down from the achievement above" }, `−${drop.by.toFixed(1)} points: biggest drop`) : null,
+          h("span.ach-pct", `${x.percent.toFixed(1)}%`)),
+        x.desc && x.desc !== x.name ? h("div.ach-desc", x.desc) : null,
+        h("div.ach-bar", h("i", { style: `width:${Math.max(0.5, x.percent)}%` }))))));
+}
+
+// A placeholder for data the games will send themselves, once they do.
+function ingameView() {
+  const plan = [
+    ["Sessions", "How many people play each day, and how long a session lasts."],
+    ["Where players quit", "The level, wave or menu people were in when they closed the game: the spot that loses them."],
+    ["Crashes and errors", "Godot's error logs with the version and system, grouped like bugs, with a fix prompt."],
+    ["Hardware and settings", "Resolution, frame rate and graphics settings, so you know what to optimize for."],
+  ];
+  return h("div",
+    h("div.card.soon",
+      h("h3", "Coming soon: data from inside the game"),
+      h("p", "Reviews say what players think; this would show what they do. It needs a small add-on in each Godot game that sends anonymous events, a place to receive them, and a line in the privacy policy (with a way to opt out)."),
+      h("p.ov-calm", "Nothing is collected yet.")),
+    h("div.soon-grid", ...plan.map(([t, d]) => h("div.card.soon-item", h("b", t), h("p", d)))));
 }
 
 // When the newest thing in each view arrived (the overview only sums up the others).
@@ -1699,35 +1764,45 @@ function showTip(card, tip, svg, px, py, lines) {
   tip.style.top = box.top - cbox.top + Math.max(0, py * sy - 20) + "px";
 }
 
-function playersChart(start, end, releases) {
-  const series = state.game.players || [];
-  // A step line: each stored sample holds until the next one (samples are stored only on change).
-  const pts = [];
-  const first = playersAt(series, start);
-  if (first != null) pts.push([start, first]);
-  for (const [t, n] of series) if (t >= start && t <= end) pts.push([t, n]);
-  if (pts.length) pts.push([end, pts[pts.length - 1][1]]);
-  const max = niceMax(Math.max(1, ...pts.map((p) => p[1])));
+// A step chart of counts stored on change (players, followers, Discord members), with updates, sales
+// and media marked like on every chart. `lines`: [{series, color, unit, dashed}]; the first is the
+// main one (its data table, its dot).
+function stepChart(start, end, releases, { title, sub, empty, aria, lines }) {
+  const step = (series) => {
+    // Each stored sample holds until the next one (samples are stored only on change).
+    const pts = [];
+    const first = playersAt(series, start);
+    if (first != null) pts.push([start, first]);
+    for (const [t, n] of series) if (t >= start && t <= end) pts.push([t, n]);
+    if (pts.length) pts.push([end, pts[pts.length - 1][1]]);
+    return pts;
+  };
+  const drawn = lines.map((l) => ({ ...l, pts: step(l.series || []) }));
+  const pts = drawn[0].pts;
+  const max = niceMax(Math.max(1, ...drawn.flatMap((l) => l.pts.map((p) => p[1]))));
   const x = (t) => M.left + ((t - start) / (end - start)) * (W - M.left - M.right);
   const y = (v) => H - M.bottom - (v / max) * (H - M.top - M.bottom);
-  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": "Concurrent players over time" });
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": aria });
   const onSale = saleBands(svg, x, start, end);
   yAxis(svg, y, max);
   timeAxis(svg, x, start, end);
   releaseMarkers(svg, x, releases);
   const covered = mediaMarks(svg, x, start, end);
-  if (pts.length) {
-    let d = `M${x(pts[0][0])},${y(pts[0][1])}`;
-    for (let i = 1; i < pts.length; i++) d += `H${x(pts[i][0])}V${y(pts[i][1])}`;
-    svg.append(svgEl("path", { d, fill: "none", stroke: "var(--fb-accent)", "stroke-width": 2, "stroke-linejoin": "round" }));
+  for (const l of drawn.slice().reverse()) {
+    if (!l.pts.length) continue;
+    let d = `M${x(l.pts[0][0])},${y(l.pts[0][1])}`;
+    for (let i = 1; i < l.pts.length; i++) d += `H${x(l.pts[i][0])}V${y(l.pts[i][1])}`;
+    svg.append(svgEl("path", { d, fill: "none", stroke: l.color, "stroke-width": l.dashed ? 1.5 : 2, "stroke-dasharray": l.dashed ? "4 3" : "none", "stroke-linejoin": "round" }));
   }
   const cross = svgEl("line", { y1: M.top, y2: H - M.bottom, class: "cross", visibility: "hidden" });
-  const dot = svgEl("circle", { r: 4, fill: "var(--fb-accent)", stroke: "var(--fb-card)", "stroke-width": 2, visibility: "hidden" });
+  const dot = svgEl("circle", { r: 4, fill: drawn[0].color, stroke: "var(--fb-card)", "stroke-width": 2, visibility: "hidden" });
   svg.append(cross, dot);
+  const main = drawn[0];
   const table = h("details", h("summary", "Data table"),
-    h("table.data", h("tr", h("th", "Time"), h("th", "Players")), ...series.filter(([t]) => t >= start).slice(-200).reverse().map(([t, n]) => h("tr", h("td", new Date(t * 1000).toLocaleString()), h("td", n)))));
-  const { card, tip } = chartCard("Concurrent players", pts.length ? `Steam's current player count, sampled every run. Dashed lines are updates${covered.length ? "; marks along the bottom are streams, videos and posts" : ""}.` : "No player data in this range.",
-    onSale || covered.length ? h("div.legend", onSale ? saleLegend() : null, ...mediaLegend(covered)) : null, svg, table);
+    h("table.data", h("tr", h("th", "Time"), h("th", main.unit[0].toUpperCase() + main.unit.slice(1))), ...(main.series || []).filter(([t]) => t >= start).slice(-200).reverse().map(([t, n]) => h("tr", h("td", new Date(t * 1000).toLocaleString()), h("td", n)))));
+  const legend = [onSale ? saleLegend() : null, ...(drawn.length > 1 ? drawn.map((l) => h("span", h("i", { style: `background:${l.color}` }), l.unit)) : []), ...mediaLegend(covered)].filter(Boolean);
+  const { card, tip } = chartCard(title, pts.length ? `${sub} Dashed lines are updates${covered.length ? "; marks along the bottom are streams, videos and posts" : ""}.` : empty,
+    legend.length ? h("div.legend", ...legend) : null, svg, table);
   svg.addEventListener("pointermove", (e) => {
     if (!pts.length) return;
     const box = svg.getBoundingClientRect();
@@ -1740,11 +1815,27 @@ function playersChart(start, end, releases) {
     cross.setAttribute("x1", x(t)); cross.setAttribute("x2", x(t)); cross.setAttribute("visibility", "visible");
     dot.setAttribute("cx", x(t)); dot.setAttribute("cy", y(v ?? 0)); dot.setAttribute("visibility", v == null ? "hidden" : "visible");
     const near = releases.find((r) => Math.abs(x(r.time) - x(t)) < 6);
-    showTip(card, tip, svg, x(t), y(v ?? 0), [v == null ? null : h("div", h("b", v), " players"), h("div.t", new Date(t * 1000).toLocaleString()), near ? h("div.t", "Update: " + (near.version ? "v" + near.version : near.name)) : null, ...media].filter(Boolean));
+    const values = drawn.map((l) => [l, playersAt(l.pts, t)]).filter(([, n]) => n != null).map(([l, n]) => h("div", h("b", n), " ", l.unit));
+    showTip(card, tip, svg, x(t), y(v ?? 0), [...values, h("div.t", new Date(t * 1000).toLocaleString()), near ? h("div.t", "Update: " + (near.version ? "v" + near.version : near.name)) : null, ...media].filter(Boolean));
   });
   svg.addEventListener("pointerleave", () => { tip.style.display = "none"; cross.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden"); });
   return card;
 }
+
+const playersChart = (start, end, releases) => stepChart(start, end, releases, {
+  title: "Concurrent players", aria: "Concurrent players over time", sub: "Steam's current player count, sampled every run.", empty: "No player data in this range.",
+  lines: [{ series: state.game.players || [], color: "var(--fb-accent)", unit: "players" }],
+});
+// Followers of the game's Steam community hub (feedback/community.py), which move with wishlists.
+const followersChart = (start, end, releases) => stepChart(start, end, releases, {
+  title: "Followers on Steam", aria: "Steam followers over time", sub: "Who follows the game on Steam, checked hourly. It moves with wishlists.", empty: "No follower data in this range.",
+  lines: [{ series: state.game.followers || [], color: "var(--type-praise)", unit: "followers" }],
+});
+// The studio's Discord server (feedback/community.py, in index.json), the same on every game.
+const discordChart = (start, end, releases) => stepChart(start, end, releases, {
+  title: `Discord: ${state.index.discord?.name || "your server"}`, aria: "Discord members over time", sub: "Members and members online, checked hourly. The same server for every game.", empty: "No Discord data in this range.",
+  lines: [{ series: state.index.discord?.members || [], color: "#5865f2", unit: "members" }, { series: state.index.discord?.online || [], color: "#23a559", unit: "online", dashed: true }],
+});
 
 function reviewsChart(start, end, releases) {
   // New reviews per day (or week, for long ranges): recommended up, not recommended down.

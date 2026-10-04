@@ -1939,3 +1939,81 @@
 	margin: 6px 0;
 	padding-left: 18px;
 }
+
+/* Achievements (dashboard.js achievementsView): icon, name, share and a bar */
+.fb .ach {
+	display: flex;
+	gap: 12px;
+	align-items: center;
+	padding: 10px 12px;
+}
+.fb .ach-icon {
+	width: 40px;
+	height: 40px;
+	flex: none;
+	border-radius: 6px;
+}
+.fb .ach-body {
+	flex: 1;
+	min-width: 0;
+}
+.fb .ach-head {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+.fb .ach-pct {
+	margin-left: auto;
+	font-family: var(--font-heading);
+	font-weight: 700;
+	color: var(--fb-title);
+	font-variant-numeric: tabular-nums;
+}
+.fb .ach-desc {
+	font-size: 0.8125rem;
+	color: var(--fb-ink-2);
+}
+.fb .ach-bar {
+	height: 6px;
+	margin-top: 6px;
+	border-radius: 99px;
+	background: var(--fb-card-2);
+	overflow: hidden;
+}
+.fb .ach-bar i {
+	display: block;
+	height: 100%;
+	border-radius: 99px;
+	background: var(--fb-accent);
+}
+
+/* The in-game placeholder (dashboard.js ingameView) */
+.fb .count-soon {
+	padding: 0 6px;
+	border: 1px dashed var(--fb-muted);
+	border-radius: 99px;
+	font-size: 0.625rem;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+.fb .soon {
+	border: 1px dashed var(--fb-line);
+	box-shadow: none;
+}
+.fb .soon p {
+	margin: 0 0 6px;
+}
+.fb .soon-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+	gap: 10px;
+}
+.fb .soon-item {
+	opacity: 0.7;
+	margin: 0;
+}
+.fb .soon-item p {
+	margin: 4px 0 0;
+	font-size: 0.8125rem;
+	color: var(--fb-ink-2);
+}

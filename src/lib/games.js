@@ -11,6 +11,10 @@ export { byRecency, latestReleased };
 // games.js); GAMES is the offline fallback. Live Steam data wins; games.js covers the rest.
 // Steam's own translation of the store blurb, genres and release date is used where the build
 // fetched one (`live.i18n[code]`): name, capsule art, screenshots, blurb, genres and release date.
+// Store links say they came from this site, so Steamworks counts the visits in its UTM report
+// (Steamworks → your app → UTM Analytics): no tracking on the site itself.
+const fromSite = (url) => `${url}${url.includes("?") ? "&" : "?"}utm_source=fourgames.se&utm_medium=website`;
+
 export function getGames(i18n = defaultI18n) {
 	const { t, code } = i18n;
 	const ids = steam.appIds?.length ? steam.appIds : GAMES.map((g) => g.appId);
@@ -29,7 +33,7 @@ export function getGames(i18n = defaultI18n) {
 			description:
 				translated || live?.shortDescription || (code === "en" && tagline.en) || t("games.unannounced.tagline"),
 			image: local.headerImage || (live?.headerImage ?? fallback.image ?? null),
-			storeUrl: live?.storeUrl ?? `https://store.steampowered.com/app/${appId}/`,
+			storeUrl: fromSite(live?.storeUrl ?? `https://store.steampowered.com/app/${appId}/`),
 			price: live?.price ?? null,
 			isFree: live?.isFree ?? false,
 			// English, for sorting (byRecency parses it); releaseDateLabel is what the page shows.

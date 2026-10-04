@@ -924,9 +924,12 @@ def full_run():
         import discussions
 
         discussions.ingest(state, game, run)
+        import community
         import media
 
         run["media"] = media.collect(state, game, len(index["games"]))
+        community.record_followers(state, game)
+        community.record_achievements(state, game)
         process_in_order(state, game, run, budget, events)
         add_tone(state, game, budget)
         add_profiles(state)
@@ -955,6 +958,12 @@ def full_run():
             changed.append(game["name"])
 
     check_credit(index)
+    import community
+
+    try:
+        community.record_discord(index, steam.site_config().get("discord"))
+    except Exception as error:  # noqa: BLE001 - node missing locally, or a config hiccup
+        print(f"[community] Discord skipped ({error})")
     (index.get("status") or {}).pop("reddit", None)  # Reddit's own API isn't used any more (media.py)
     index["status"] = status.merge(index.get("status"))
     # When anything last changed, for the dashboard's "last change" (it needs no GitHub API call).

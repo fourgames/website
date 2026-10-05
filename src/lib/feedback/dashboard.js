@@ -1131,7 +1131,7 @@ const NEWEST = {
   issues: () => issues("bug").filter(isActive).map((i) => i.lastSeen),
   suggestions: () => issues("suggestion").filter(isActive).map((i) => i.lastSeen),
   loved: () => issues("praise").map((i) => i.lastSeen),
-  replies: () => toReply().map((i) => i.fixReply.at || i.created),
+  replies: () => toReply().map((i) => draftFor(i).at || i.created),
   updates: () => (state.game.releases || []).map((r) => r.time),
   media: () => mediaItems().filter((m) => !m.own).map((m) => m.at),
   feed: () => items().filter((i) => !i.dev).map((i) => i.created),
@@ -1562,9 +1562,10 @@ function postView(item, focus = null) {
 }
 
 // Posts worth a reply: a negative review or a thread about something a later update fixed (Steam's
-// guidance: reply to "a bug that has since been resolved"). Drafted by feedback/run.py when a patch
-// is matched; gone once you've replied on Steam, the issue turns out to be still happening, or you
-// press Done (remembered in this browser).
+// guidance: reply to "a bug that has since been resolved"), and recent positive reviews, thanked and
+// invited back to the newest update. Drafted by feedback/run.py; gone once you've replied on Steam,
+// the issue turns out to be still happening, the review turns negative, or you press Done
+// (remembered in this browser).
 function replied(item) {
   if (item.devResponse) return true;
   const thread = item.topic || item.id;
@@ -1574,20 +1575,26 @@ function replied(item) {
 function toReply() {
   const done = new Set((store.get("replied") || "").split(",").filter(Boolean));
   return items()
-    .filter((i) => i.fixReply && !done.has(i.id) && !replied(i))
-    .filter((i) => state.game.issues?.[i.fixReply.issue]?.status === "likely_fixed")
+    .filter((i) => draftFor(i) && !done.has(i.id) && !replied(i))
     .sort((a, b) => b.created - a.created);
+}
+function draftFor(item) {
+  if (item.fixReply && state.game.issues?.[item.fixReply.issue]?.status === "likely_fixed") return item.fixReply;
+  if (item.thanksReply && item.votedUp) return item.thanksReply;
+  return null;
 }
 
 function replyCard(item) {
-  const r = item.fixReply;
-  const issue = state.game.issues[r.issue];
+  const r = draftFor(item);
+  const issue = r.issue ? state.game.issues[r.issue] : null;
   const done = h("button.btn", { onclick: () => {
     store.set("replied", [...(store.get("replied") || "").split(",").filter(Boolean), item.id].join(","));
     render();
   } }, "Done");
   return h("div.card",
-    h("div.meta", h("span.badge.s-fixed", `✓ Fixed in ${r.version}`), h("b", issue?.title || "")),
+    r === item.fixReply
+      ? h("div.meta", h("span.badge.s-fixed", `✓ Fixed in ${r.version}`), h("b", issue?.title || ""))
+      : h("div.meta", h("span.badge.s-fixed", "👍 Positive review"), h("span", r.update ? `invites them back for ${r.update}` : "a thank-you")),
     h("div.reply",
       h("div.reply-row",
         h("div", h("div", "💬 ", ...withSpeak(r.text)), r.text !== r.english ? h("div.en", r.english) : null),
@@ -1623,7 +1630,7 @@ function repliesView() {
   const open = toReply();
   // Every player post you've answered, plus drafts you marked done here.
   const answered = items()
-    .filter((i) => !i.dev && (replied(i) || (i.fixReply && done.has(i.id))))
+    .filter((i) => !i.dev && (replied(i) || ((i.fixReply || i.thanksReply) && done.has(i.id))))
     .sort((a, b) => b.created - a.created);
   const list = h("div");
   const draw = () => {
@@ -1634,7 +1641,7 @@ function repliesView() {
     list.replaceChildren(...(cards.length ? cards : [h("p.empty", empty)]));
   };
   const intro = about(
-    "To reply: negative reviews and threads about something an update has since fixed. Steam suggests replying in cases like these, briefly: say what was fixed. Replied: posts you've already answered on Steam.");
+    "To reply: negative reviews and threads about something an update has since fixed (say what was fixed), and positive reviews from the last 60 days (thank them and invite them back for the newest update). Replied: posts you've already answered on Steam.");
   const filter = chips([["open", `To reply (${open.length})`], ["replied", `Replied (${answered.length})`], ["all", "All"]], f.show, (v) => { f.show = v; draw(); }, "Show");
   draw();
   return h("div", intro, h("div.filters", filter), list);
@@ -1667,7 +1674,7 @@ function overviewView() {
       ? section("Costing you reviews", costly.length, h("p.ov-calm", "The open complaints that come up most in negative reviews."), ...costly.map((i) => issueCard(i)), go("suggestions", "All ideas"))
       : null,
     replies.length
-      ? section("Worth a reply", replies.length, h("p.ov-calm", `${plural(replies.length, "post")} about something an update has since fixed. `, go("replies", "Replies")))
+      ? section("Worth a reply", replies.length, h("p.ov-calm", `${plural(replies.length, "post")}: fixes to tell players about and positive reviews to thank. `, go("replies", "Replies")))
       : null,
     coverage.length
       ? section("New this week", null, h("p.ov-calm", "Videos, articles and posts about the game outside Steam."), ...coverage.map(mediaCard), go("media", "All media"))

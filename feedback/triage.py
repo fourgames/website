@@ -242,6 +242,43 @@ def fix_reply(game_name, item, issue_title, version, change):
     return response.parsed_output
 
 
+THANKS_REPLY_SYSTEM = """You write a developer's reply to a positive Steam review. The goal is a warm thank-you \
+that gives the player a reason to come back and play again:
+- Two or three short sentences, in the player's own language, sounding like a small indie developer, not a brand.
+- Thank them, and mention one specific thing they said they liked, in their own terms.
+- If an update came out after their review, mention it by name and invite them to jump back in and try it. You may \
+name one or two changes from its patch notes, ideally ones related to what they liked; only describe what the notes \
+actually say. Without an update, you may say more is coming, but promise nothing specific.
+- If they mentioned a problem or wish, acknowledge it in a few words; never promise a fix or a date.
+- Never ask them to change, edit or upvote their review, and no hard selling (no other games, no sales, no links)."""
+
+
+def thanks_reply(game_name, item, name, since):
+    """A short thank-you to a positive review that invites the player back for update `name`, when
+    there is one; `since` is every update since the review, newest first, for its patch notes."""
+    if DRY_RUN:
+        text = f"Thanks so much for the review! {name} is out now, come take a look." if name else "Thanks so much for the review!"
+        return FixReply(text=text, english=text)
+    t = item.get("triage") or {}
+    notes = "\n\n".join(f"{r['name']}:\n{r.get('notes') or ''}" for r in since)[:3000]
+    update = f"Update to name: {name}\nPatch notes of every update since their review:\n{notes}" if name else "No update since their review."
+    content = (
+        f"Game: {game_name}\n{update}\n"
+        f"Hours played when reviewing: {item.get('playtime') or 'unknown'}\n"
+        f"Player's language: {t.get('language') or 'unknown'}\n\n<review>\n{(item.get('text') or '')[:6000]}\n</review>"
+    )
+    response = _parse("reply",
+        model=MODEL,
+        max_tokens=1000,
+        system=THANKS_REPLY_SYSTEM,
+        messages=[{"role": "user", "content": content}],
+        output_format=FixReply,
+    )
+    if response.stop_reason != "end_turn" or response.parsed_output is None:
+        raise RuntimeError(f"thanks reply stopped with {response.stop_reason}")
+    return response.parsed_output
+
+
 def match_release(game_name, release, issues):
     """IDs (with a one-line reason) of the open issues the patch notes most likely address."""
     if not issues:

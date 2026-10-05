@@ -28,6 +28,7 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
 8. **Issues.** Every issue gets a priority score. Every bug issue gets a ready-to-paste Claude Code fix prompt.
 9. **Releases.** When a game publishes an update or patch-notes event, Claude Haiku 4.5 compares the patch notes with what players said about each open issue. A line that does exactly what they asked marks the issue **likely fixed in vX**; a line that only helps marks it **partly addressed**. It becomes **still happening** only when a player says the problem is still there after the fix.
    - For every negative review and every thread in an issue that a release fixed, Claude drafts a one- or two-sentence reply in the player's language, saying what was fixed and in which version. Steam's moderation guide suggests replying only in cases like that. The drafts show in the dashboard's **Replies** view until you reply on Steam.
+   - For every positive review from the last 60 days you haven't answered, Claude drafts a short thank-you in the player's language that mentions what they liked and invites them back for the newest update since their review (`draft_thanks_replies` in `run.py`). It's drafted again when a newer update comes out first.
 10. **Discord.** It posts webhook embeds that link to the original post for:
    - urgent issues;
    - every new negative review, and every new post that reports a bug;
@@ -105,7 +106,7 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 - **Loved:** praise grouped like ideas, most players first, with a button to copy the list for store pages and trailers.
 - **Media:** who's live on Twitch now, then every stream, video, article and Reddit post, newest first, with the channel's size, views and a button to join the chat or comment. What's live and what's new this week also show on the overview, and everything is marked along the bottom of the player and review charts (a stream as a bar for as long as it ran, anything else as a dot sized by its reach), so a jump in players shows what caused it.
 - **Updates:** each update with negative reviews before and after it, what it fixed (from the patch notes or your ✓) and whether those reports stopped, and what came up since, crossed out once a later update fixed it.
-- **Replies:** negative reviews and threads about something an update has since fixed, each with a drafted reply (Copy reply, Reply on Steam, Done).
+- **Replies:** negative reviews and threads about something an update has since fixed, and recent positive reviews, each with a drafted reply (Copy reply, Reply on Steam, Done).
 - **Feed:** every post, newest first, with filters and search.
 
 To point it at another copy of the data, add `?data=<base url>`, e.g. a local test run served by the dev server.

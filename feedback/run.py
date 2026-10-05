@@ -717,6 +717,33 @@ def draft_fix_replies(state, game, issue):
     return True
 
 
+def draft_thanks_replies(state, game):
+    """A thank-you draft for each positive review from the last 60 days you haven't answered, inviting
+    the player back with the newest update since their review. Drafted again when a newer update
+    comes out before you reply, so the invitation names it: the newest one with a version number (an
+    announcement post if none has one), with the patch notes of every update since the review."""
+    import triage
+
+    updates = sorted((r for r in state["releases"] if not r.get("launch")), key=lambda r: r["time"])
+    for item_id, item in state["items"].items():
+        if (item["kind"] != "review" or not item.get("votedUp") or item.get("devResponse") or item.get("dev")
+                or item.get("pending") or item["created"] < now() - 60 * DAY):
+            continue
+        since = [r for r in reversed(updates) if r["time"] > item["created"]]
+        release = next((r for r in since if r.get("version")), since[0] if since else None)
+        name = release["name"] if release else None
+        if "thanksReply" in item and item["thanksReply"].get("update") == name:
+            continue
+        try:
+            reply = triage.thanks_reply(game["name"], item, name, since)
+        except Exception as error:  # noqa: BLE001 - a missing draft isn't worth failing the run
+            print(f"[reply] {item_id}: {type(error).__name__}: {error}")
+            status.fail("claude", f"{triage.describe_error(error)[0]} Reply drafts for positive reviews are missing.")
+            return
+        status.active("claude", "drafted a reply")
+        item["thanksReply"] = {"update": name, "at": release["time"] if release else item["created"], **reply.model_dump()}
+
+
 # ---------------------------------------------------------------------------
 # Alerts
 # ---------------------------------------------------------------------------
@@ -828,6 +855,8 @@ def estimate_past_usage(state):
             calls.append((when, "sort", 1800 + tokens(item.get("text")) + 45 * open_issues, 350 + 60 * len(t.get("points") or [])))
         if item.get("fixReply"):
             calls.append((min(max(item["fixReply"].get("at", until), start), until), "reply", 700 + tokens(item.get("text")), 120))
+        if item.get("thanksReply"):
+            calls.append((min(max(item["thanksReply"].get("at", until), start), until), "reply", 1200 + tokens(item.get("text")), 150))
     for release in state["releases"]:
         if release.get("checked"):
             found = len(release.get("matched") or []) + len(release.get("partly") or [])
@@ -941,6 +970,7 @@ def full_run():
         apply_manual_fixes(state, game)
         refresh_issues(state, game)
         draft_all_fix_replies(state, game)
+        draft_thanks_replies(state, game)
         refresh_issues(state, game)
         send_alerts(state, game, run, first_run)
         # The baseline lasts until the backfill is fully triaged, so old posts never trigger alerts.

@@ -1044,6 +1044,11 @@
 	stroke-dasharray: none;
 	opacity: 0.9;
 }
+.fb svg.chart .release.milestone {
+	stroke: var(--fb-warning);
+	stroke-dasharray: none;
+	opacity: 0.9;
+}
 
 /* Post card, laid out like Steam's review box */
 .fb .pv3-icon {

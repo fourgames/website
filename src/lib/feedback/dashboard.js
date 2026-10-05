@@ -858,8 +858,10 @@ function statHeader(which) {
   }
   const totalsKey = Object.keys(g.reviewTotals || {}).sort().pop();
   const score = reviewScore(totalsKey ? g.reviewTotals[totalsKey] : null);
-  if (!score) return h("div.stat-header", stat("–", "no reviews yet"));
-  return h("div.stat-header",
+  const left = REVIEW_GOAL - (score?.total || 0);
+  const toGoal = left > 0 ? stat(`${left} to go`, `until ${REVIEW_GOAL} reviews, when Steam shows a review score and starts showing the game in more places`) : null;
+  if (!score) return h("div.stat-header", stat("–", "no reviews yet"), toGoal);
+  return h("div.stat-header", toGoal,
     stat(score.label, "Steam's summary", `tone-${score.tone}`),
     stat(`${score.rating.toFixed(2)}%`, "rating (SteamDB's formula)"),
     stat(score.pos, `${score.share.toFixed(1)}% positive reviews`, "tone-good"),
@@ -1830,27 +1832,39 @@ function yAxis(svg, y, max, fmt = (v) => v) {
   }
 }
 
-// Updates and the launch as dashed lines, every one labelled: labels that would overlap move to
-// the next of three rows above the plot.
+// Updates, the launch and the 10th review as lines, every one labelled: labels that would overlap
+// move to the next of three rows above the plot.
 const isLaunch = (r) => r.launch || /\b(out now|available now|now available|launch(ed)?|released?)\b/i.test(r.name || "");
+// At 10 reviews Steam shows a review score and starts showing the game in more places (the
+// discovery queue, "more like this"), so it's marked like a release once it's reached.
+const REVIEW_GOAL = 10;
+function reviewGoalAt() {
+  const tenth = items().filter((i) => i.kind === "review").map((i) => i.created).sort((a, b) => a - b)[REVIEW_GOAL - 1];
+  if (tenth) return tenth;
+  // Fewer reviews collected than Steam counts: the first day Steam's own total reached 10.
+  const day = Object.keys(state.game.reviewTotals || {}).sort().find((d) => { const r = state.game.reviewTotals[d]; return r.positive + r.negative >= REVIEW_GOAL; });
+  return day ? Date.parse(day + "T12:00:00Z") / 1000 : null;
+}
 function markers(start, end) {
   const list = (state.game.releases || []).filter((r) => r.time >= start && r.time <= end);
   // No launch post: mark the store's release date instead.
   const released = state.game.meta?.released;
   if (!list.some(isLaunch) && released && released >= start && released <= end) list.push({ time: released, launch: true, name: "Release" });
+  const goal = reviewGoalAt();
+  if (goal && goal >= start && goal <= end) list.push({ time: goal, milestone: true, name: `${REVIEW_GOAL} reviews` });
   return list.sort((a, b) => a.time - b.time);
 }
 function releaseMarkers(svg, x, releases) {
   const rowEnd = [-1e9, -1e9, -1e9];
   for (const r of releases) {
     const px = x(r.time);
-    const label = isLaunch(r) ? "🚀 Launch" : r.version ? "v" + r.version : r.name.slice(0, 14);
+    const label = r.milestone ? "⭐ " + r.name : isLaunch(r) ? "🚀 Launch" : r.version ? "v" + r.version : r.name.slice(0, 14);
     const width = label.length * 6 + 8;
     let row = rowEnd.findIndex((e) => px - e > 4);
     if (row < 0) row = rowEnd.indexOf(Math.min(...rowEnd));
     rowEnd[row] = px + width;
     const y = M.top - 6 - row * 12;
-    svg.append(svgEl("line", { x1: px, x2: px, y1: y + 2, y2: H - M.bottom, class: isLaunch(r) ? "release launch" : "release" }));
+    svg.append(svgEl("line", { x1: px, x2: px, y1: y + 2, y2: H - M.bottom, class: r.milestone ? "release milestone" : isLaunch(r) ? "release launch" : "release" }));
     const t = svgEl("text", { x: px + 3, y, class: "release-label" });
     t.textContent = label;
     svg.append(t);
@@ -1946,7 +1960,7 @@ function stepChart(start, end, releases, { title, sub, empty, aria, lines }) {
     dot.setAttribute("cx", x(t)); dot.setAttribute("cy", y(v ?? 0)); dot.setAttribute("visibility", v == null ? "hidden" : "visible");
     const near = releases.find((r) => Math.abs(x(r.time) - x(t)) < 6);
     const values = drawn.map((l) => [l, playersAt(l.pts, t)]).filter(([, n]) => n != null).map(([l, n]) => h("div", h("b", n), " ", l.unit));
-    showTip(card, tip, svg, x(t), y(v ?? 0), [...values, h("div.t", new Date(t * 1000).toLocaleString()), near ? h("div.t", "Update: " + (near.version ? "v" + near.version : near.name)) : null, ...media].filter(Boolean));
+    showTip(card, tip, svg, x(t), y(v ?? 0), [...values, h("div.t", new Date(t * 1000).toLocaleString()), near ? h("div.t", near.milestone ? `⭐ Reached ${near.name}` : "Update: " + (near.version ? "v" + near.version : near.name)) : null, ...media].filter(Boolean));
   });
   svg.addEventListener("pointerleave", () => { tip.style.display = "none"; cross.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden"); });
   return card;

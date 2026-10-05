@@ -962,6 +962,16 @@ def full_run():
 
     check_credit(index)
     import community
+    import media
+    import sales as sales_api
+
+    # Steam's sales (sales.py), hourly: days settle over a while, so more often finds nothing new.
+    if media._due("sales", 0, 3600):
+        sales = load(DATA / "sales.json", {"highwatermark": "0", "days": {}, "apps": {}})
+        if sales_api.sync(sales):
+            media._ran("sales", 0)
+            if save(DATA / "sales.json", sales):
+                changed.append("sales")
 
     try:
         community.record_discord(index, steam.site_config().get("discord"))

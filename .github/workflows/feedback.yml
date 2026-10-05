@@ -64,6 +64,7 @@ jobs:
         env:
           FEEDBACK_HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
           STEAM_PUBLISHER_KEY: ${{ secrets.STEAM_PUBLISHER_KEY }}
+          STEAM_FINANCIAL_KEY: ${{ secrets.STEAM_FINANCIAL_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_MENTION: ${{ secrets.DISCORD_MENTION }}

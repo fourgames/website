@@ -4,7 +4,7 @@
     python feedback/run.py                  full run: fetch, triage, alert, write feedback/data/
     python feedback/run.py --test-discord   send one example of each Discord alert
 
-loop.sh runs it every 10 minutes. A run with nothing new only reads from Steam.
+loop.sh runs it every 5 minutes. A run with nothing new only reads from Steam.
 
 Env (GitHub secrets): STEAM_PUBLISHER_KEY, ANTHROPIC_API_KEY, DISCORD_WEBHOOK_URL, DISCORD_MENTION.
 None of them is ever written to feedback/data/. FEEDBACK_DRY_RUN=1 skips Claude (local testing).

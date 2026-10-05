@@ -235,7 +235,7 @@ async function setFixed(issue, fixed) {
     else delete game[issue.id];
     if (!Object.keys(game).length) delete data[appId];
     return data;
-  }, `Feedback: ${as ? "fixed" : "reopen"} "${issue.title}" [skip ci]`, as ? "Marked fixed: Claude checks it within 10 min" : "Back on the list");
+  }, `Feedback: ${as ? "fixed" : "reopen"} "${issue.title}" [skip ci]`, as ? "Marked fixed: Claude checks it within 5 min" : "Back on the list");
 }
 
 // Changes one of the files only the dashboard writes (state[key], saved at path in the repo): shown
@@ -460,10 +460,10 @@ const SERVICES = {
   claude: ["Claude", "Translates posts, sorts them into bugs and ideas, matches patch notes", "nothing sorted yet", "https://platform.claude.com/settings/billing", "Add credit"],
   discord: ["Discord", "Pings you for new negative reviews and bug reports, urgent issues, flipped reviews and shared complaints", "no alerts sent yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
   // Media (feedback/media.py). The last entry: where the key a missing secret needs is made.
-  twitch: ["Twitch", "Who's streaming your games right now, checked every 10 min", "no streams yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets", "https://dev.twitch.tv/console/apps"],
+  twitch: ["Twitch", "Who's streaming your games right now, checked every 5 min", "no streams yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets", "https://dev.twitch.tv/console/apps"],
   youtube: ["YouTube", "New videos about your games, about hourly", "no videos yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets", "https://console.cloud.google.com/apis/library/youtube.googleapis.com"],
   news: ["News", "Articles about your games on Google News, and articles and Reddit threads from your Google Alerts", "nothing found yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs", "https://www.google.com/alerts"],
-  github: ["GitHub", "Runs it all every 10 min, saves the data, rebuilds the site on store changes", "no changes yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
+  github: ["GitHub", "Runs it all every 5 min, saves the data, rebuilds the site on store changes", "no changes yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
 };
 
 // ---------------------------------------------------------------------------
@@ -1028,7 +1028,7 @@ function bundlesView() {
       h("img.bundle-img", { src: info?.capsule || `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${w.appId}/header.jpg`, alt: "", loading: "lazy", onerror: (e) => { e.currentTarget.hidden = true; } }),
       h("div.bundle-body",
         h("div.bundle-head", storeLink(w.appId, h("b", name)), bundled.has(w.appId) ? h("span.pill.pill-good", "In a bundle together") : null),
-        info?.missing ? h("div.bundle-meta", "Steam has no public store page for this app id.") : facts.length ? h("div.bundle-meta", facts.join(" · ")) : h("div.bundle-meta", "Looked up on the next run (within 10 min)."),
+        info?.missing ? h("div.bundle-meta", "Steam has no public store page for this app id.") : facts.length ? h("div.bundle-meta", facts.join(" · ")) : h("div.bundle-meta", "Looked up on the next run (within 5 min)."),
         w.note ? h("p.bundle-note", w.note) : null,
         h("div.bundle-actions",
           h("a.btn.primary", { href: contactUrl(w.appId), target: "_blank", rel: "noopener" }, "Contact the developer ↗"),
@@ -1173,7 +1173,7 @@ function competitorsView() {
           change != null ? h(`span.cmp-change.${change <= -0.15 ? "down" : change >= 0.15 ? "up" : "level"}`, { title: "Average daily peak players, the last 7 days against the 7 before" }, pct(change), " this week") : null),
         info?.missing ? h("div.bundle-meta", "Steam has no public store page for this app id.")
           : info || own ? h("div.bundle-meta", facts.join(" · ") || "Players and reviews show after the next hourly check.")
-          : h("div.bundle-meta", "Looked up on the next run (within 10 min)."),
+          : h("div.bundle-meta", "Looked up on the next run (within 5 min)."),
         lastUpdate ? h("div.bundle-meta", "Last update: ", h("a", { href: lastUpdate.url, target: "_blank", rel: "noopener" }, lastUpdate.version ? `v${lastUpdate.version}` : lastUpdate.name.slice(0, 50)), `, ${ago(lastUpdate.time)}`) : null,
         own ? null : h("div.bundle-actions", h("button.linkish", { type: "button", onclick: () => setCompareWith(appId, null, `${name} removed`) }, "Remove"))));
   };
@@ -1972,7 +1972,7 @@ function mediaView() {
   return h("div",
     live.length ? h("section.ov-section", h("h3", "🔴 Live now", h("span.ov-count", live.length)), ...live.map(mediaCard)) : null,
     about(
-      "Streams, videos, articles and Reddit threads that name the game. Twitch is checked every 10 minutes, news every 30 (Reddit threads come from your Google Alerts) and YouTube about hourly; Discord pings you for each new stream, video and article. They're marked along the bottom of the player and review charts, so you can see what caused a jump."),
+      "Streams, videos, articles and Reddit threads that name the game. Twitch is checked every 5 minutes, news every 30 (Reddit threads come from your Google Alerts) and YouTube about hourly; Discord pings you for each new stream, video and article. They're marked along the bottom of the player and review charts, so you can see what caused a jump."),
     twitch && twitch.category === null ? h("p.ov-calm", { style: "margin:0 0 12px" }, "Twitch has no category for this game yet, so its streams can't be found. Twitch adds games from IGDB: once the game is on igdb.com, it shows up within a day.") : null,
     names(),
     h("div.filters", filter),

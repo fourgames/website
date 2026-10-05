@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# A full run (collect, triage, commit) every 10 minutes for about 4 hours. The workflow starts the
+# A full run (collect, triage, commit) every 5 minutes for about 4 hours. The workflow starts the
 # next run when this one ends. See feedback/README.md.
 set -uo pipefail
 
@@ -9,7 +9,7 @@ if [ "${FEEDBACK_HAS_KEY:-true}" = "false" ]; then
 fi
 
 loop_seconds=${FEEDBACK_LOOP_SECONDS:-14400}
-tick=600
+tick=300
 end=$((SECONDS + loop_seconds))
 
 commit() {

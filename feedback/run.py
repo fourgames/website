@@ -81,9 +81,14 @@ def new_state(game):
 
 
 def ingest_reviews(state, game, run):
-    """New and edited reviews, newest first, down to the last one we've seen."""
+    """New and edited reviews, newest first, down to the last one we've seen. Hourly, every review
+    instead: your reply on Steam doesn't change a review's updated time, so only a full read sees it
+    (and when you sent it, for the dashboard's reply results)."""
+    import media
+
     app_id = game["appId"]
-    watermark = state["watermarks"].get("reviews", 0)
+    full = media._due("reviews-full", app_id, 3600)
+    watermark = 0 if full else state["watermarks"].get("reviews", 0)
     newest = watermark
     for page, (res, reviews) in enumerate(steam.review_pages(app_id)):
         summary = res.get("query_summary") or {}
@@ -103,7 +108,9 @@ def ingest_reviews(state, game, run):
             newest = max(newest, ts)
         if reached_old or page >= 200:
             break
-    state["watermarks"]["reviews"] = newest
+    state["watermarks"]["reviews"] = max(newest, state["watermarks"].get("reviews", 0))
+    if full:
+        media._ran("reviews-full", app_id)
 
 
 def upsert_review(state, game, r, run):
@@ -132,6 +139,7 @@ def upsert_review(state, game, r, run):
             "earlyAccess": bool(r.get("written_during_early_access")),
             "votesUp": r.get("votes_up", 0),
             "devResponse": r.get("developer_response") or None,
+            "devRespondedAt": r.get("timestamp_dev_responded") or None,
             "versions": [],
             "flips": [],
             "pending": True,
@@ -145,6 +153,7 @@ def upsert_review(state, game, r, run):
     item["steamPurchase"] = bool(r.get("steam_purchase"))
     item["receivedForFree"] = bool(r.get("received_for_free"))
     item["devResponse"] = r.get("developer_response") or None
+    item["devRespondedAt"] = (r.get("timestamp_dev_responded") or None) if item["devResponse"] else None
     if text == item["text"] and voted_up == item["votedUp"]:
         item["updated"] = max(item["updated"], updated)
         return

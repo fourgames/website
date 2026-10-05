@@ -2222,3 +2222,20 @@
 	color: var(--fb-good-text);
 }
 
+
+/* Reply results (dashboard.js: replyResults): flip rates side by side */
+.fb .reply-results {
+	margin-top: 24px;
+}
+.fb .reply-results h3 {
+	margin: 0 0 4px;
+}
+.fb .rr-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 16px 28px;
+	margin-top: 10px;
+}
+.fb .impact-stat.rr-stat {
+	align-items: flex-start;
+}

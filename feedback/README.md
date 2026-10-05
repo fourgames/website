@@ -5,7 +5,7 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
 ## What a run does
 
 1. **Games.** It gets the game list from the same publisher data the site uses. `games.mjs` reads `SITE.steam.publisher`/`.developer` and `GAMES`, and `steam.py` runs the same store search as `scripts/fetch-data.mjs`. New store pages are picked up automatically.
-2. **Reviews.** It reads new and edited reviews from the Steamworks `IUserReviewsService/GetAppReviews` endpoint with the publisher key and the *Updated* filter, in all languages. It retries on HTTP 429 and stops at the last review it has already seen.
+2. **Reviews.** It reads new and edited reviews from the Steamworks `IUserReviewsService/GetAppReviews` endpoint with the publisher key and the *Updated* filter, in all languages. It retries on HTTP 429 and stops at the last review it has already seen. Hourly it reads every review instead: your reply on Steam doesn't change a review's updated time, so only a full read sees it, and when you sent it (`devRespondedAt`).
    - An edit keeps the old text in `versions`.
    - A changed recommendation is recorded in `flips`.
 3. **Discussions.** It reads new threads and new replies in every subforum.
@@ -118,6 +118,7 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 - **Media:** who's live on Twitch now, then every stream, video, article, Reddit post, web page and download copy, newest first and filterable by source, with the channel's size, views and a button to join the chat or comment (on a download copy, also to Google's removal form). A card on top says when the game's Google Alert is missing or lacks a name, with a prompt to give Claude to fix it. What's live and what's new this week also show on the overview, and everything but download copies is marked along the bottom of the player and review charts (a stream as a bar for as long as it ran, anything else as a dot sized by its reach), so a jump in players shows what caused it.
 - **Updates:** each update with negative reviews before and after it, what it fixed (from the patch notes or your ✓) and whether those reports stopped, and what came up since, crossed out once a later update fixed it.
 - **Replies:** negative reviews and threads about something an update has since fixed, and recent positive reviews, each with a drafted reply (Copy reply, Reply on Steam, Done).
+- **Reply results** (bottom of Replies): of every review that was negative at some point, the share that turned positive when you replied and when you didn't, replied within an hour or later, and with replies that said what was fixed; then each review that turned positive after your reply, with how fast you replied. It says when there are too few reviews to tell yet (under about 10 on each side).
 - **Feed:** every post, newest first, with filters and search.
 
 To point it at another copy of the data, add `?data=<base url>`, e.g. a local test run served by the dev server.

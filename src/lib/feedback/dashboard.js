@@ -1884,7 +1884,48 @@ function repliesView() {
   const tone = chips([["negative", `Negative (${neg})`], ["positive", `Positive (${open.length - neg})`], ["all", "Both"]], f.tone,
     (v) => { f.tone = v; store.set("replyTone", v); draw(); }, "Tone");
   draw();
-  return h("div", intro, h("div.filters", filter, tone), list);
+  return h("div", intro, h("div.filters", filter, tone), list, replyResults());
+}
+
+// Do replies turn negative reviews around? Every review that was negative at some point: whether you
+// replied on Steam, how long after it turned negative, and whether it turned positive after your
+// reply (or at all, without one). Reply times come from Steam (feedback/run.py: devRespondedAt).
+const FAST_REPLY = 3600;
+function replyOutcomes() {
+  return items().filter((i) => i.kind === "review" && !i.dev && (!i.votedUp || (i.flips || []).some((f) => f.to === "positive"))).map((i) => {
+    const at = i.devResponse ? i.devRespondedAt || null : null;
+    // When it last turned negative before your reply (or now, without one): the review itself, or a flip.
+    const negSince = (i.flips || []).filter((f) => f.to === "negative" && (!at || f.at < at)).at(-1)?.at ?? i.created;
+    const flip = (i.flips || []).find((f) => f.to === "positive" && f.at > negSince && (!i.devResponse || !at || f.at > at));
+    return { item: i, replied: !!i.devResponse, at, wait: at ? Math.max(0, at - negSince) : null, fix: !!i.fixReply, turned: !!flip && !!i.votedUp, flipAt: flip?.at };
+  });
+}
+const fmtWait = (s) => s < 3600 ? `${Math.max(1, Math.round(s / 60))} min` : s < 2 * DAY ? `${Math.round(s / 3600)} h` : `${Math.round(s / DAY)} days`;
+function replyResults() {
+  const all = replyOutcomes();
+  if (!all.length) return null;
+  const rate = (list, label, cls = "") => {
+    const n = list.length, k = list.filter((o) => o.turned).length;
+    return h(`div.impact-stat.rr-stat${cls}`, h("b", n ? `${Math.round((100 * k) / n)}%` : "–"), h("span", label), h("span", n ? `${k} of ${n} turned positive` : "none yet"));
+  };
+  const replied = all.filter((o) => o.replied), timed = replied.filter((o) => o.wait != null);
+  const flips = replied.filter((o) => o.turned).sort((a, b) => b.flipAt - a.flipAt);
+  const few = replied.length < 10 || all.length - replied.length < 10;
+  return h("article.card.reply-results",
+    h("h3", "Do replies turn reviews around?"),
+    h("p.ov-calm", `Every review that was negative at some point (${all.length}), and how many turned positive.`,
+      few ? " Too few to tell yet: it means something from about 10 on each side." : ""),
+    h("div.rr-row",
+      rate(replied, "You replied"),
+      rate(all.filter((o) => !o.replied), "No reply"),
+      rate(timed.filter((o) => o.wait < FAST_REPLY), "Replied within 1 h"),
+      rate(timed.filter((o) => o.wait >= FAST_REPLY), "Replied later"),
+      rate(replied.filter((o) => o.fix), "Said what was fixed")),
+    flips.length ? h("div.upd-section", h("b", "Turned positive after your reply"),
+      h("ul.pc-points", ...flips.map((o) => h("li",
+        h("a", { href: o.item.url, target: "_blank", rel: "noopener" }, o.item.author?.name || "A player"),
+        h("span", [o.wait != null ? `you replied ${fmtWait(o.wait)} after the review` : "you replied",
+          `it turned positive ${fmtWait(Math.max(0, o.flipAt - (o.at || o.item.created)))} later`].join(", ")))))) : null);
 }
 
 // Bugs that need you now: reported again after a fix, or high/urgent and still open.

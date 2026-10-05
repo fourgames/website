@@ -118,6 +118,13 @@
    "active": null,
    "activeWhat": null
   },
+  "sales": {
+   "ok": true,
+   "message": null,
+   "since": 1791161907,
+   "active": null,
+   "activeWhat": null
+  },
   "steam": {
    "ok": true,
    "message": null,
@@ -140,7 +147,7 @@
    "activeWhat": "new video"
   }
  },
- "changedAt": 1791160833,
+ "changedAt": 1791161907,
  "creditAlert": null,
  "discord": {
   "members": [

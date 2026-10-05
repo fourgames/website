@@ -126,7 +126,7 @@ def sync(sales):
             sales["days"][key] = {str(app): t for app, t in day.items()}
         else:
             sales["days"].pop(key, None)
-        sales["apps"].update({str(app): name for app, name in names.items() if name})
+        sales["apps"].update({str(app): name for app, name in names.items() if app and name})
         time.sleep(0.3)
     # Only move the mark once every changed day is rebuilt (an error above returns early), or a
     # failure would skip days for good.

@@ -1620,6 +1620,11 @@
    "positive": 5,
    "negative": 2,
    "desc": "7 user reviews"
+  },
+  "2026-10-05": {
+   "positive": 5,
+   "negative": 2,
+   "desc": "7 user reviews"
   }
  },
  "releases": [
@@ -1966,6 +1971,29 @@
     "desc": "100%",
     "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
     "percent": 36.3
+   }
+  ]
+ },
+ "bundles": {
+  "at": 1791158434,
+  "list": [
+   {
+    "id": 86690,
+    "name": "Four Games Collection",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/92aa3baa82d27f20f72b412568cf3640e52e4f52/header_ratio.jpg?t=1790685958",
+    "apps": [
+     {
+      "appId": 2807130,
+      "name": "Reforge Front"
+     },
+     {
+      "appId": 3958210,
+      "name": "Digging A Hole In Ice With A Chainsaw"
+     }
+    ],
+    "bundleDiscount": 20,
+    "price": "$4.78",
+    "fullPrice": "$7.98"
    }
   ]
  }

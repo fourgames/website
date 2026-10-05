@@ -721,27 +721,39 @@ def draft_thanks_replies(state, game):
     """A thank-you draft for each positive review from the last 60 days you haven't answered, inviting
     the player back with the newest update since their review. Drafted again when a newer update
     comes out before you reply, so the invitation names it: the newest one with a version number (an
-    announcement post if none has one), with the patch notes of every update since the review."""
+    announcement post if none has one), with the patch notes of every update since the review.
+    A complaint in the review that an update has since fixed is named too, as in a fix reply; such a
+    review gets its draft at any age, and the draft changes when its fixes do (one turning out to be
+    still happening drops out)."""
     import triage
 
     updates = sorted((r for r in state["releases"] if not r.get("launch")), key=lambda r: r["time"])
+    fixed = {}  # item id -> the issues in it fixed after it was posted
+    for issue in state["issues"].values():
+        if issue["status"] == "likely_fixed" and not issue.get("fixPending"):
+            for i in issue["items"]:
+                if i in state["items"] and state["items"][i]["created"] < issue["fixedAt"]:
+                    fixed.setdefault(i, []).append(issue)
     for item_id, item in state["items"].items():
+        fixes = sorted(fixed.get(item_id, []), key=lambda i: i["id"])
         if (item["kind"] != "review" or not item.get("votedUp") or item.get("devResponse") or item.get("dev")
-                or item.get("pending") or item["created"] < now() - 60 * DAY):
+                or item.get("pending") or (item["created"] < now() - 60 * DAY and not fixes)):
             continue
         since = [r for r in reversed(updates) if r["time"] > item["created"]]
         release = next((r for r in since if r.get("version")), since[0] if since else None)
         name = release["name"] if release else None
-        if "thanksReply" in item and item["thanksReply"].get("update") == name:
+        ids = [f"{i['id']}@{i['fixedIn']}" for i in fixes]
+        if "thanksReply" in item and item["thanksReply"].get("update") == name and item["thanksReply"].get("fixes", []) == ids:
             continue
         try:
-            reply = triage.thanks_reply(game["name"], item, name, since)
+            reply = triage.thanks_reply(game["name"], item, name, since,
+                                        [(i["title"], i["fixedIn"], i.get("fixReason") or "") for i in fixes])
         except Exception as error:  # noqa: BLE001 - a missing draft isn't worth failing the run
             print(f"[reply] {item_id}: {type(error).__name__}: {error}")
             status.fail("claude", f"{triage.describe_error(error)[0]} Reply drafts for positive reviews are missing.")
             return
         status.active("claude", "drafted a reply")
-        item["thanksReply"] = {"update": name, "at": release["time"] if release else item["created"], **reply.model_dump()}
+        item["thanksReply"] = {"update": name, "fixes": ids, "at": release["time"] if release else item["created"], **reply.model_dump()}
 
 
 # ---------------------------------------------------------------------------

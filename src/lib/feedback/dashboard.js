@@ -1578,6 +1578,10 @@ function toReply() {
     .filter((i) => draftFor(i) && !done.has(i.id) && !replied(i))
     .sort((a, b) => b.created - a.created);
 }
+// The fixed complaints a positive review's thank-you names, while they're still fixed.
+function thanksFixes(r) {
+  return (r.fixes || []).map((f) => state.game.issues?.[f.split("@")[0]]).filter((i) => i?.status === "likely_fixed");
+}
 function draftFor(item) {
   if (item.fixReply && state.game.issues?.[item.fixReply.issue]?.status === "likely_fixed") return item.fixReply;
   if (item.thanksReply && item.votedUp) return item.thanksReply;
@@ -1594,7 +1598,9 @@ function replyCard(item) {
   return h("div.card",
     r === item.fixReply
       ? h("div.meta", h("span.badge.s-fixed", `✓ Fixed in ${r.version}`), h("b", issue?.title || ""))
-      : h("div.meta", h("span.badge.s-fixed", "👍 Positive review"), h("span", r.update ? `invites them back for ${r.update}` : "a thank-you")),
+      : h("div.meta", h("span.badge.s-fixed", "👍 Positive review"),
+        ...thanksFixes(r).flatMap((i) => [h("span.badge.s-fixed", `✓ Fixed in ${i.fixedIn}`), h("b", i.title)]),
+        h("span", r.update ? `invites them back for ${r.update}` : "a thank-you")),
     h("div.reply",
       h("div.reply-row",
         h("div", h("div", "💬 ", ...withSpeak(r.text)), r.text !== r.english ? h("div.en", r.english) : null),

@@ -2010,13 +2010,11 @@
 	margin: 6px 0;
 	padding-left: 18px;
 }
-.fb .md-query {
-	display: block;
-	padding: 8px 10px;
-	border-radius: 6px;
-	background: var(--fb-card-2);
-	overflow-wrap: anywhere;
-	user-select: all;
+.fb .md-alert {
+	margin-bottom: 12px;
+}
+.fb .md-alert h3 {
+	margin: 0 0 4px;
 }
 
 /* Achievements (dashboard.js achievementsView): icon, name, share and a bar */
@@ -2142,6 +2140,22 @@
 }
 .fb .pill-good {
 	color: var(--fb-positive);
+}
+.fb .pill-bad {
+	color: var(--fb-negative);
+}
+
+/* Curators (dashboard.js curatorsView): the bundle card's layout with a round avatar */
+.fb .cur {
+	display: flex;
+	gap: 14px;
+	align-items: flex-start;
+}
+.fb .cur-avatar {
+	width: 48px;
+	height: 48px;
+	flex: none;
+	border-radius: 50%;
 }
 @media (max-width: 600px) {
 	.fb .bundle {

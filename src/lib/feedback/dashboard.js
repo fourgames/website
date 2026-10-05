@@ -324,6 +324,7 @@ const ICONS = {
   soon: "M6 11h4M8 9v4M15 12h.01M18 10h.01M17.32 5H6.68a4 4 0 0 0-3.98 3.59L2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.41-1.41A2 2 0 0 1 9.83 16h4.34a2 2 0 0 1 1.41.59L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3l-.7-7.41A4 4 0 0 0 17.32 5z",
   competitors: "M3 3v18h18M7 15l4-4 3 3 6-6",
   sales: "M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
+  curators: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z",
   media: "M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5M19.1 4.9C23 8.8 23 15.1 19.1 19M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
 };
 function icon(name) {
@@ -926,7 +927,7 @@ function chartPanel(which) {
 const NAV = [
   [null, [["overview", "Overview"]]],
   ["Players", [["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["feed", "All posts"]]],
-  ["Game", [["updates", "Updates"], ["achievements", "Achievements"], ["media", "Media"]]],
+  ["Game", [["updates", "Updates"], ["achievements", "Achievements"], ["media", "Media"], ["curators", "Curators"]]],
   ["Business", [["sales", "Sales"], ["bundles", "Bundles"], ["competitors", "Competitors"]]],
   ["Later", [["soon", "Coming soon"]]],
 ];
@@ -947,6 +948,7 @@ function render() {
     replies: toReply().length,
     overview: attention().length || null,
     achievements: state.game.achievements?.list?.length || null,
+    curators: state.game.curators?.list?.length || null,
     bundles: bundleWith().length || null,
     competitors: competitors().length || null,
     soon: soonCount(),
@@ -963,7 +965,7 @@ function render() {
   document.getElementById("fb-nav-side").replaceChildren(...NAV.flatMap(([group, tabs]) => [...(group ? [h("div.nav-group", group)] : []), ...tabs.map(button)]));
   document.getElementById("fb-nav-top").replaceChildren(...NAV.flatMap(([, tabs], i) => [...(i ? [h("span.nav-gap")] : []), ...tabs.map(button)]));
   setHash();
-  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, achievements: achievementsView, bundles: bundlesView, competitors: competitorsView, sales: salesView, soon: soonView, feed: feedView }[state.tab]();
+  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, achievements: achievementsView, curators: curatorsView, bundles: bundlesView, competitors: competitorsView, sales: salesView, soon: soonView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
 
@@ -985,6 +987,37 @@ function achievementsView() {
           h("span.ach-pct", `${x.percent.toFixed(1)}%`)),
         x.desc && x.desc !== x.name ? h("div.ach-desc", x.desc) : null,
         h("div.ach-bar", h("i", { style: `width:${Math.max(0.5, x.percent)}%` }))))));
+}
+
+// Steam curators who reviewed the game (feedback/community.py, every 6 hours), most followers first,
+// with what they said and where to thank them or reply.
+const CURATOR_STATE = { recommended: ["Recommended", ".pill-good"], not_recommended: ["Not recommended", ".pill-bad"], informative: ["Informational", ""] };
+
+function curatorsView() {
+  const c = state.game.curators;
+  const list = c?.list || [];
+  const reach = list.reduce((n, x) => n + x.followers, 0);
+  const counts = Object.entries(CURATOR_STATE).map(([k, [label]]) => [list.filter((x) => x.state === k).length, label.toLowerCase()]).filter(([n]) => n);
+  const link = (href, text, primary) => href ? h(`a.btn${primary ? ".primary" : ""}`, { href, target: "_blank", rel: "noopener" }, text, " ↗") : null;
+  const card = (x) => {
+    const [label, cls] = CURATOR_STATE[x.state] || CURATOR_STATE.recommended;
+    return h("div.card.cur",
+      x.avatar ? h("img.cur-avatar", { src: x.avatar, alt: "", loading: "lazy", onerror: (e) => { e.currentTarget.hidden = true; } }) : null,
+      h("div.bundle-body",
+        h("div.bundle-head", h("a", { href: x.url, target: "_blank", rel: "noopener" }, h("b", x.name)), h(`span.pill${cls}`, label),
+          isRecent(x.seen) ? h("span.pc-new", "New") : null),
+        h("div.bundle-meta", [`${fmtNum(x.followers)} followers`, x.time ? h("span", { title: new Date(x.time * 1000).toLocaleString() }, fmtDate(x.time)) : null,
+          x.free ? "got the game free" : null, x.paid ? "paid to review" : null].filter(Boolean).flatMap((f, i) => i ? [" · ", f] : [f])),
+        x.blurb ? h("p.bundle-note", x.blurb) : null,
+        h("div.bundle-actions", link(x.link, "Their full review", true), link(x.url, "Curator page"), link(x.group, "Their Steam group"))));
+  };
+  return h("div",
+    about("The Steam curators who reviewed this game, most followers first, from the list on the store's ",
+      h("a", { href: `https://store.steampowered.com/curators/curatorsreviewing/?appid=${state.game.appId}`, target: "_blank", rel: "noopener" }, "Curators reviewing this game ↗"),
+      " page, checked every 6 hours", c?.at ? `, last change ${ago(c.at)}` : "", ". Discord pings you for each new one. To thank a curator or reply, use their full review if it links to one, or leave a comment in their Steam group. Steam has no official way to read this list, so it can stop working if Steam changes that page. ",
+      h("a", { href: "https://partner.steamgames.com/doc/marketing/curators", target: "_blank", rel: "noopener" }, "Curators and Curator Connect ↗")),
+    list.length ? h("p.ov-calm", { style: "margin:0 0 12px" }, `${plural(list.length, "curator")}: ${counts.map(([n, l]) => `${n} ${l}`).join(", ")}. ${fmtNum(reach)} followers in all.`) : null,
+    ...(list.length ? list.map(card) : [h("p.empty", c ? "No curator has reviewed this game yet." : "Looked up on the next run (within 5 min).")]));
 }
 
 // Bundles: the ones on Steam the game is in (feedback/community.py reads them daily from its store
@@ -1271,12 +1304,6 @@ const SOON = [
       "From everyone: where players quit, how long sessions last, crashes with Godot's error logs grouped like bugs, and hardware and settings"],
     needs: "A small add-on in each Godot game and a place to receive the events. At first launch it asks once: \"Help make the game better? Share your gameplay with Four Games so we can see how people play. [Sure!] [Only anonymous stats]\". Yes: events carry a random ID per install (not the Steam ID). No: events carry no ID, nothing is saved on the player's computer and the server keeps no IP addresses, so they can't be linked to anyone. Plus a privacy policy page saying what's collected and how to have it deleted; worth a check by someone who knows EU privacy law before launch.",
   },
-  {
-    title: "Steam curators",
-    why: "Curators who review a game, to thank them or reply.",
-    shows: ["Each curator's recommendation, with their follower count"],
-    needs: "Steam has no official way to read these, so it may not work well.",
-  },
 ];
 const soonCount = () => SOON.length;
 
@@ -1298,6 +1325,7 @@ const NEWEST = {
   replies: () => toReply().map((i) => draftFor(i).at || i.created),
   updates: () => (state.game.releases || []).map((r) => r.time),
   media: () => talk().filter((m) => !m.own).map((m) => m.at),
+  curators: () => (state.game.curators?.list || []).map((c) => c.seen),
   feed: () => items().filter((i) => !i.dev).map((i) => i.created),
 };
 function hasNew(view) {
@@ -1973,6 +2001,7 @@ function mediaView() {
     about(
       "Streams, videos, articles, Reddit threads and other web pages that name the game. Twitch is checked every 5 minutes, news every 30 and YouTube about hourly; Reddit threads, web pages and download copies come from your Google Alerts. Discord pings you for each new stream, video and article. They're marked along the bottom of the player and review charts, so you can see what caused a jump; download copies aren't, and each has a link to Google's removal form."),
     twitch && twitch.category === null ? h("p.ov-calm", { style: "margin:0 0 12px" }, "Twitch has no category for this game yet, so its streams can't be found. Twitch adds games from IGDB: once the game is on igdb.com, it shows up within a day.") : null,
+    alertSetup(),
     names(),
     h("div.filters", filter),
     list);
@@ -1986,10 +2015,33 @@ function names() {
   const local = Object.entries(state.game.media?.names || {}).flatMap(([lang, ns]) => ns.map((n) => [lang, n]));
   return h("details.md-names", h("summary", local.length ? `Searches for ${plural(local.length + 1, "name")}: English and every localized name on Steam` : "Searches for the English name (Steam has no localized ones)"),
     h("ul", h("li", h("b", "English"), " ", state.game.meta?.name || ""), ...local.map(([lang, n]) => h("li", h("b", langName(lang)), " ", n))),
-    h("p.ov-calm", "Each language's names are searched in its own country's Google News. A name Steam had before (a changed translation) is kept."),
-    h("p.ov-calm", "For web pages in every language, make a ", h("a", { href: "https://www.google.com/alerts", target: "_blank", rel: "noopener" }, "Google Alert ↗"),
-      " for this (Show options → Deliver to: RSS feed) and add its feed link to the GOOGLE_ALERTS_FEEDS secret:"),
-    h("code.md-query", [state.game.meta?.name || "", ...local.map(([, n]) => n)].filter((n, i, all) => n && all.indexOf(n) === i).map((n) => `"${n}"`).join(" OR ")));
+    h("p.ov-calm", "Each language's names are searched in its own country's Google News. A name Steam had before (a changed translation) is kept."));
+}
+
+// The Google Alert for every name (web pages, Reddit threads and download copies come from it):
+// one quiet line while it has every name, otherwise a prompt to give Claude, which makes or fixes it
+// in your Chrome and updates the GOOGLE_ALERTS_FEEDS secret.
+function alertQuery() {
+  const all = [state.game.meta?.name, ...Object.values(state.game.media?.names || {}).flat()].filter(Boolean);
+  return [...new Set(all)].map((n) => `"${n}"`).join(" OR ");
+}
+function alertSetup() {
+  const want = alertQuery();
+  const has = state.game.media?.alert;
+  const quoted = (q) => new Set([...(q || "").matchAll(/"([^"]+)"/g)].map((m) => m[1].toLowerCase()));
+  const missing = [...quoted(want)].filter((n) => !quoted(has).has(n));
+  if (has && !missing.length) return h("p.ov-calm", { style: "margin:0 0 12px" }, "Google Alert ✓ searching the web for every name.");
+  const game = state.game.meta?.name || "this game";
+  const prompt = `Set up the Google Alert for ${game} (Steam app ${state.game.appId}) for the feedback dashboard.
+1. Get the game's name in every Steam language: store.steampowered.com/api/appdetails?appids=${state.game.appId}&l=<language>&filters=basic for each language Steam has. Quote each distinct name and join them with OR (what the dashboard has now: ${want}).
+2. In my Chrome, open google.com/alerts. If there's already an alert for this game, edit it to that search; otherwise create one. Under Show options: How often As-it-happens, Language Any Language, How many All results, Deliver to RSS feed.
+3. Set the GOOGLE_ALERTS_FEEDS secret in fourgames/website (gh secret set) to every RSS feed link on the alerts page, one per line, so the other games' alerts stay in. Check each feed loads.`;
+  return h("div.card.md-alert",
+    h("h3", has ? "The Google Alert is missing names" : "No Google Alert for this game yet"),
+    h("p.ov-calm", has ? `It doesn't search for ${missing.map((n) => `"${n}"`).join(", ")}, so pages using ${missing.length === 1 ? "that name" : "those names"} aren't found.`
+      : "Web pages, Reddit threads and download copies of the game come from a Google Alert for all its names. Give Claude this prompt and it sets the alert up in your Chrome."),
+    h("div.actions", h("button.btn.primary", { onclick: (e) => copy(prompt, e.currentTarget) }, "Copy prompt for Claude"),
+      h("a.btn", { href: "https://www.google.com/alerts", target: "_blank", rel: "noopener" }, "Google Alerts ↗")));
 }
 
 // Streams, videos, articles and posts along the bottom of a chart: a stream as a bar for as long

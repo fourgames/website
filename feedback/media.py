@@ -555,9 +555,14 @@ def collect_news(media, game, found):
         _ran(f"news-{lang}", app_id)
         time.sleep(0.3)
     try:
-        # An alert is the game's when its search names the game (all its names joined with OR), or
-        # the page does.
-        articles += [{**e, "alert": True} for query, e in google_alerts() if mentions(every, query) or mentions(every, e["title"], e["text"])]
+        alerts = google_alerts()
+        # The game's own alert (its search names the game), so the dashboard can tell when it's
+        # missing or lacks a name. Google matches a Chinese or Japanese name loosely, so a page
+        # counts only when it names the game itself (or the alert is for the English name alone).
+        mine = sorted({q for q, _ in alerts if mentions(every, q)}, key=len)
+        media["alert"] = mine[-1] if mine else None
+        articles += [{**e, "alert": True} for query, e in alerts
+                     if mentions(every, e["title"], e["text"]) or norm(query).strip('"') == norm(game["name"])]
     except (HttpError, ET.ParseError) as error:
         status.fail("news", f"Couldn't read a Google Alerts feed ({error}); check GOOGLE_ALERTS_FEEDS.")
     items = media["items"]

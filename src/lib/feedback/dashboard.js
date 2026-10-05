@@ -802,6 +802,7 @@ function renderStats() {
   const score = reviewScore(totals);
   const byDay = new Map(salesDays());
   const revenue = daily(14, (d) => byDay.get(isoDay(d))?.net || 0);
+  const gross7 = daily(7, (d) => byDay.get(isoDay(d))?.gross || 0).reduce((a, b) => a + b, 0);
   // The two chart cards stay minimal, like SteamDB's: the number and what it is. Their details
   // (peaks, positive and negative counts) are in the panel that opens below.
   const cards = {
@@ -815,7 +816,7 @@ function renderStats() {
       ? tile("Discord", state.index.discord.members.at(-1)[1], [`${state.index.discord.online?.at(-1)?.[1] ?? 0} online`],
         daily(14, (d) => playersAt(state.index.discord.members, d + DAY - 1) ?? 0), "#5865f2", "discord")
       : null,
-    revenue: salesDays().length ? tile("Revenue", usd(revenue.slice(-7).reduce((a, b) => a + b, 0)), "net, last 7 days", revenue, "var(--fb-positive)") : null,
+    revenue: salesDays().length ? tile("Revenue", usd(revenue.slice(-7).reduce((a, b) => a + b, 0)), [`net, last 7 days`, `${usd(gross7)} gross`], revenue, "var(--fb-positive)") : null,
     bugs: tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent", openBugsPerDay, "var(--type-bug)"),
     posts: tile("New posts", fresh.length, "last 24 h", postsPerDay),
   };
@@ -1859,19 +1860,24 @@ function salesView() {
   const draw = () => {
     const days = salesDays();
     const end = now();
-    const start = f.range ? end - f.range * DAY : Math.min(end - 7 * DAY, dayTime(days[0][0]) - DAY);
+    // The chart starts at this game's first sale, never before (nothing to show there); the account
+    // card counts the whole range, since other games sold earlier.
+    const from = f.range ? end - f.range * DAY : 0;
+    const start = Math.min(end - 7 * DAY, Math.max(from, dayTime(days[0][0]) - DAY));
     const inRange = days.filter(([d]) => dayTime(d) >= start);
     const sum = (list, k) => list.reduce((a, [, t]) => a + (t[k] || 0), 0);
     const units = sum(inRange, "units"), refunded = sum(inRange, "returnedUnits");
     const tile = (label, value, sub) => h("div.kpi", h("div.label", label), h("div.value", value), sub ? h("div.sub", sub) : null);
     body.replaceChildren(
       h("section.kpis", { "aria-label": "Sales summary" },
+        tile("Gross revenue", usd(sum(inRange, "gross")), "what players paid, before refunds and tax"),
         tile("Net revenue", usd(sum(inRange, "net")), "after refunds and tax, before Steam's cut"),
         tile("Units sold", units - refunded, `${units} sold, ${refunded} refunded`),
         tile("Refund rate", units ? Math.round((100 * refunded) / units) + "%" : "–", "of units sold in this range"),
-        tile("Lifetime net", usd(sum(days, "net")), `${sum(days, "units") - sum(days, "returnedUnits")} units since launch`),
+        tile("Lifetime", usd(sum(days, "gross")), `gross · ${usd(sum(days, "net"))} net · ${sum(days, "units") - sum(days, "returnedUnits")} units`),
         sum(inRange, "activations") ? tile("Key activations", sum(inRange, "activations"), "keys from outside Steam") : null),
       revenueChart(inRange, start, end, markers(start, end)),
+      accountTotals(from),
       countryBreakdown(inRange));
   };
   const range = chips([[7, "1w"], [30, "1m"], [90, "3m"], [365, "1y"], [0, "max"]], f.range, (v) => { f.range = v; draw(); }, "Zoom");
@@ -1884,17 +1890,17 @@ function revenueChart(days, start, end, releases) {
   const bucket = end - start > 120 * DAY ? 7 * DAY : DAY;
   const b0 = Math.floor(start / bucket) * bucket;
   const n = Math.ceil((end - b0) / bucket);
-  const rows = Array.from({ length: n }, () => ({ net: 0, units: 0, refunded: 0, discount: 0 }));
+  const rows = Array.from({ length: n }, () => ({ gross: 0, net: 0, units: 0, refunded: 0, discount: 0 }));
   for (const [d, t] of days) {
     const k = Math.floor((dayTime(d) - b0) / bucket);
     if (k < 0 || k >= n) continue;
-    rows[k].net += t.net || 0; rows[k].units += t.units || 0; rows[k].refunded += t.returnedUnits || 0;
+    rows[k].gross += t.gross || 0; rows[k].net += t.net || 0; rows[k].units += t.units || 0; rows[k].refunded += t.returnedUnits || 0;
     rows[k].discount = Math.max(rows[k].discount, t.discount || 0);
   }
-  const max = niceMax(Math.max(1, ...rows.map((r) => r.net)));
+  const max = niceMax(Math.max(1, ...rows.map((r) => Math.max(r.gross, r.net))));
   const x = (t) => M.left + ((t - start) / (end - start)) * (W - M.left - M.right);
   const y = (v) => H - M.bottom - (Math.max(0, v) / max) * (H - M.top - M.bottom);
-  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": "Net revenue over time" });
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": "Gross and net revenue over time" });
   const bw = Math.max(1, (W - M.left - M.right) / n - 2);
   // Days sold at a discount, from the sales themselves.
   rows.forEach((r, k) => {
@@ -1903,27 +1909,33 @@ function revenueChart(days, start, end, releases) {
   yAxis(svg, y, max, (v) => usd(v));
   timeAxis(svg, x, start, end);
   releaseMarkers(svg, x, releases);
+  // Gross as a faint bar, net in front of it: the gap is refunds and tax.
+  const bar = (bx, v, fill, opacity = 1) => {
+    const top = y(v), base = H - M.bottom, rr = Math.min(4, bw / 2, base - top);
+    svg.append(svgEl("path", { d: `M${bx},${base}V${top + rr}Q${bx},${top} ${bx + rr},${top}H${bx + bw - rr}Q${bx + bw},${top} ${bx + bw},${top + rr}V${base}Z`, fill, opacity }));
+  };
   rows.forEach((r, k) => {
-    if (r.net <= 0) return;
-    const bx = Math.max(M.left, x(b0 + k * bucket)) + 1, top = y(r.net), base = H - M.bottom, rr = Math.min(4, bw / 2, base - top);
-    svg.append(svgEl("path", { d: `M${bx},${base}V${top + rr}Q${bx},${top} ${bx + rr},${top}H${bx + bw - rr}Q${bx + bw},${top} ${bx + bw},${top + rr}V${base}Z`, fill: "var(--fb-accent)" }));
+    const bx = Math.max(M.left, x(b0 + k * bucket)) + 1;
+    if (r.gross > 0) bar(bx, r.gross, "var(--fb-accent)", 0.3);
+    if (r.net > 0) bar(bx, r.net, "var(--fb-accent)");
   });
   svg.append(svgEl("rect", { x: M.left, y: M.top, width: W - M.left - M.right, height: H - M.top - M.bottom, fill: "transparent" }));
-  const legend = h("div.legend", h("span", h("i", { style: "background:var(--fb-accent)" }), "Net revenue"), saleLegend());
+  const legend = h("div.legend", h("span", h("i", { style: "background:var(--fb-accent);opacity:.3" }), "Gross"), h("span", h("i", { style: "background:var(--fb-accent)" }), "Net"), saleLegend());
   const table = h("details", h("summary", "Data table"),
-    h("table.data", h("tr", h("th", bucket === DAY ? "Day" : "Week of"), h("th", "Net"), h("th", "Sold"), h("th", "Refunded"), h("th", "Discount")),
+    h("table.data", h("tr", h("th", bucket === DAY ? "Day" : "Week of"), h("th", "Gross"), h("th", "Net"), h("th", "Sold"), h("th", "Refunded"), h("th", "Discount")),
       ...rows.map((r, k) => [k, r]).filter(([, r]) => r.units || r.net).reverse()
-        .map(([k, r]) => h("tr", h("td", fmtDate(b0 + k * bucket)), h("td", usd(r.net, 2)), h("td", r.units), h("td", r.refunded), h("td", r.discount ? r.discount + "%" : "")))));
-  const total = rows.reduce((a, r) => a + r.net, 0);
-  const { card, tip } = chartCard(`Net revenue per ${bucket === DAY ? "day" : "week"}`, total ? `${usd(total)} in this range. Dashed lines are updates; shaded days had a discount.` : "No sales in this range.", legend, svg, table);
+        .map(([k, r]) => h("tr", h("td", fmtDate(b0 + k * bucket)), h("td", usd(r.gross, 2)), h("td", usd(r.net, 2)), h("td", r.units), h("td", r.refunded), h("td", r.discount ? r.discount + "%" : "")))));
+  const total = rows.reduce((a, r) => a + r.net, 0), gross = rows.reduce((a, r) => a + r.gross, 0);
+  const { card, tip } = chartCard(`Revenue per ${bucket === DAY ? "day" : "week"}`, total || gross ? `${usd(gross)} gross, ${usd(total)} net in this range. Dashed lines are updates; shaded days had a discount.` : "No sales in this range.", legend, svg, table);
   svg.addEventListener("pointermove", (e) => {
     const box = svg.getBoundingClientRect();
     const px = ((e.clientX - box.left) / box.width) * W;
     const k = Math.floor((start + ((px - M.left) / (W - M.left - M.right)) * (end - start) - b0) / bucket);
     if (k < 0 || k >= n) return;
     const r = rows[k];
-    showTip(card, tip, svg, px, y(r.net), [
+    showTip(card, tip, svg, px, y(Math.max(r.gross, r.net)), [
       h("div.t", (bucket === DAY ? "" : "Week of ") + fmtDate(b0 + k * bucket)),
+      h("div", h("b", usd(r.gross, 2)), " gross"),
       h("div", h("b", usd(r.net, 2)), " net"),
       h("div", `${r.units} sold${r.refunded ? `, ${r.refunded} refunded` : ""}`),
       r.discount ? h("div.t", `On sale, up to ${r.discount}% off`) : null,
@@ -1931,6 +1943,35 @@ function revenueChart(days, start, end, releases) {
   });
   svg.addEventListener("pointerleave", () => { tip.style.display = "none"; });
   return card;
+}
+
+// Every game on the account together, in the range and since launch, and each game's share.
+function accountTotals(start) {
+  const per = new Map();
+  for (const [d, apps] of Object.entries(state.sales?.days || {})) {
+    for (const [id, t] of Object.entries(apps)) {
+      const g = per.get(id) || { gross: 0, net: 0, units: 0, all: { gross: 0, net: 0, units: 0 } };
+      const units = (t.units || 0) - (t.returnedUnits || 0);
+      g.all.gross += t.gross || 0; g.all.net += t.net || 0; g.all.units += units;
+      if (dayTime(d) >= start) { g.gross += t.gross || 0; g.net += t.net || 0; g.units += units; }
+      per.set(id, g);
+    }
+  }
+  const name = (id) => state.index.games.find((g) => String(g.appId) === id)?.name || state.sales.apps?.[id] || `App ${id}`;
+  const rows = [...per].filter(([, g]) => g.all.gross || g.all.net).sort((a, b) => b[1].gross - a[1].gross || b[1].all.gross - a[1].all.gross);
+  const total = (k, all) => rows.reduce((a, [, g]) => a + (all ? g.all[k] : g[k]), 0);
+  const max = Math.max(1, ...rows.map(([, g]) => g.gross));
+  const stat = (value, label) => h("div.sh-stat", h("div.sh-value", value), h("div.sh-label", label));
+  return h("div.chart-card", h("h3", "Your account"), h("div.sub", "Every game together"),
+    h("div.stat-header",
+      stat(usd(total("gross")), "gross in this range"),
+      stat(usd(total("net")), "net in this range"),
+      stat(usd(total("gross", true)), "gross, all time"),
+      stat(usd(total("net", true)), `net, all time · ${total("units", true)} units`)),
+    h("div.bars", ...rows.flatMap(([id, g]) => [
+      h("span", id === String(state.game.appId) ? h("b", name(id)) : name(id)),
+      h("div", h("div.bar", { style: `width:${(100 * g.gross) / max}%` })),
+      h("span.n", `${usd(g.gross)} gross · ${usd(g.net)} net · ${g.units}`)])));
 }
 
 function countryBreakdown(days) {

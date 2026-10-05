@@ -771,6 +771,8 @@ function renderHeader() {
     ["Steamworks", `https://partner.steamgames.com/apps/landing/${id}`],
     // Steamworks' own sales report, for what the Sales view doesn't show (packages, wishlists…).
     ["Sales", `https://partner.steampowered.com/app/details/${id}/`],
+    // Store traffic: impressions, visits and click-through per source (discovery queue, search…).
+    ["Traffic", `https://partner.steamgames.com/apps/navtrafficstats/${id}`],
   ];
   document.getElementById("fb-links").replaceChildren(
     h("details.steam-menu",

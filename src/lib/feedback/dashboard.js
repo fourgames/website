@@ -12,7 +12,7 @@ let DATA = DATA_OVERRIDE || `${RAW}/main/feedback/data`;
 const DAY = 86400;
 const URGENCY = { urgent: "Urgent", high: "High", medium: "Medium", low: "Low" };
 const KIND = { review: "Review", topic: "Thread", reply: "Reply" };
-const state = { index: null, games: {}, game: null, tab: "overview", filters: { issues: { status: "active", q: "", sort: "priority" }, suggestions: { status: "active", q: "", sort: "priority" }, feed: { kind: "all", category: "all", q: "", shown: 50 }, stats: { range: 0 }, replies: { show: "open" }, media: { source: "all", shown: 30 }, sales: { range: 90 } }, sales: null };
+const state = { index: null, games: {}, game: null, tab: "overview", filters: { issues: { status: "active", q: "", sort: "priority" }, suggestions: { status: "active", q: "", sort: "priority" }, feed: { kind: "all", category: "all", version: "all", q: "", shown: 50 }, stats: { range: 0 }, replies: { show: "open" }, media: { source: "all", shown: 30 }, sales: { range: 90 } }, sales: null };
 
 const store = {
   get(k) { try { return localStorage.getItem("fb-dash:" + k); } catch { return null; } },
@@ -1344,20 +1344,51 @@ function issueView(kind) {
         : f.status === "cleared" ? clearedAs(i) : i.status === "likely_fixed" && !clearedAs(i)))
       .filter((i) => !q || (i.title + " " + i.area + " " + (i.summary || "")).toLowerCase().includes(q))
       .filter((i) => f.sort !== "first" || i.firstSession > 0)
+      .filter((i) => f.sort !== "trending" || trend(i))
       .sort(SORTS[f.sort] || SORTS.priority);
     list.replaceChildren(...(shown.length ? shown.map((i) => issueCard(i)) : [h("p.empty", kind === "bug" ? "No issues here." : "No suggestions here.")]));
   };
   const status = chips([["active", "Open"], ["still", "Still happening"], ["fixed", "Likely fixed"], ["cleared", "Marked fixed"], ["all", "All"]], f.status, (v) => { f.status = v; draw(); }, "Status");
   // What costs the most reviews, what most players hit, or what turns new players away.
-  const sort = chips([["priority", "Priority"], ["negative", "Negative reviews"], ["players", "Most players"], ["first", "First 2 hours"]], f.sort, (v) => { f.sort = v; draw(); }, "Sort");
+  const sort = chips([["priority", "Priority"], ["trending", "Trending"], ["negative", "Negative reviews"], ["players", "Most players"], ["first", "First 2 hours"]], f.sort, (v) => { f.sort = v; draw(); }, "Sort");
   const search = h("input", { type: "search", placeholder: "Search issues", value: f.q, oninput: (e) => { f.q = e.target.value; draw(); } });
   wrap.append(h("div.filters", status, h("span.zoom-label", "Sort"), sort, search), list);
   draw();
   return wrap;
 }
 
+// The players who raised an issue between two times (one per player, like its mention count).
+function playersBetween(issue, from, to) {
+  const posts = issue.items.map((id) => state.game.items[id]).filter((p) => p && p.created >= from && p.created < to);
+  return new Set(posts.map((p) => p.author?.id || p.id)).size;
+}
+// Trending: at least 2 players this week, and at least twice as many as the week before. Only once
+// the game has two weeks of posts: before that, everything is up on an empty week.
+function trend(issue) {
+  const t = now();
+  if (!items().some((p) => !p.dev && p.created < t - 14 * DAY)) return null;
+  const week = playersBetween(issue, t - 7 * DAY, t + 1), before = playersBetween(issue, t - 14 * DAY, t - 7 * DAY);
+  return week >= 2 && week >= 2 * before ? { week, before } : null;
+}
+const trendScore = (i) => { const t = trend(i); return t ? t.week - t.before : -1; };
+function trendTag(issue) {
+  const t = trend(issue);
+  return t ? h("span.pc-trend", { title: `${plural(t.week, "player")} in the last 7 days, ${t.before} the 7 days before` }, "Trending") : null;
+}
+
+// The newest update (any update post), and whether an issue first came up after it, within its
+// first 30 days: what the update may have broken.
+const latestUpdate = () => (state.game.releases || []).reduce((a, r) => (!a || r.time > a.time ? r : a), null);
+const updateName = (r) => r.version ? `v${r.version}` : "the latest update";
+function sinceTag(issue) {
+  const r = latestUpdate();
+  if (!r || issue.kind === "praise" || issue.firstSeen < r.time || now() - r.time > 30 * DAY) return null;
+  return h("span.pc-since", { title: `First reported ${ago(issue.firstSeen)}, after ${r.name} (${fmtDate(r.time)})` }, `Since ${updateName(r)}`);
+}
+
 const SORTS = {
   priority: (a, b) => b.priority - a.priority,
+  trending: (a, b) => trendScore(b) - trendScore(a) || b.priority - a.priority,
   negative: (a, b) => (b.negativeReviews || 0) - (a.negativeReviews || 0) || b.mentions - a.mentions,
   players: (a, b) => b.mentions - a.mentions || (b.negativeReviews || 0) - (a.negativeReviews || 0),
   first: (a, b) => (b.firstSession || 0) - (a.firstSession || 0) || b.mentions - a.mentions,
@@ -1520,7 +1551,9 @@ function issueCard(issue) {
           u ? h("span.pc-prio", bars, `${URGENCY[u]} priority`) : null,
           statusBadge(issue),
           isRecent(issue.firstSeen) ? h("span.pc-new", { title: `First reported ${ago(issue.firstSeen)}` }, "New")
-            : isRecent(issue.lastSeen) ? h("span.pc-new", { title: `Last reported ${ago(issue.lastSeen)}` }, "New report") : null),
+            : isRecent(issue.lastSeen) ? h("span.pc-new", { title: `Last reported ${ago(issue.lastSeen)}` }, "New report") : null,
+          trendTag(issue),
+          sinceTag(issue)),
         // The impact, big: how many players reported it and how many negative reviews it's in.
         h("div.pc-aside.impact",
           h("div.impact-stat", h("b", issue.mentions), h("span", issue.kind === "praise" ? (issue.mentions === 1 ? "player loves it" : "players love it")
@@ -1859,6 +1892,9 @@ function overviewView() {
   // Next to anything urgent, the open complaints in the most negative reviews (not already above).
   const costly = Object.values(state.game.issues || {}).filter((i) => i.kind !== "praise" && isActive(i) && i.negativeReviews && !urgent.includes(i))
     .sort((a, b) => b.negativeReviews - a.negativeReviews || b.mentions - a.mentions).slice(0, 3);
+  // What more players are bringing up this week than last (bugs, ideas and praise), not already above.
+  const trending = Object.values(state.game.issues || {}).filter((i) => (i.kind === "praise" || isActive(i)) && trend(i) && !urgent.includes(i) && !costly.includes(i))
+    .sort(SORTS.trending).slice(0, 3);
   const replies = toReply();
   const latest = items().filter((i) => !i.dev).sort((a, b) => b.created - a.created).slice(0, 5);
   const live = liveNow();
@@ -1870,6 +1906,9 @@ function overviewView() {
       : section("Needs attention", null, h("p.ov-calm", "Nothing urgent: no high-priority bugs, and nothing came back after a fix.")),
     costly.length
       ? section("Costing you reviews", costly.length, h("p.ov-calm", "The open complaints that come up most in negative reviews."), ...costly.map((i) => issueCard(i)), go("suggestions", "All ideas"))
+      : null,
+    trending.length
+      ? section("Trending", trending.length, h("p.ov-calm", "Brought up by more players this week than the week before."), ...trending.map((i) => issueCard(i)))
       : null,
     replies.length
       ? section("Worth a reply", replies.length, h("p.ov-calm", `${plural(replies.length, "post")}: fixes to tell players about and positive reviews to thank. `, go("replies", "Replies")))
@@ -1888,12 +1927,15 @@ function feedView() {
   const f = state.filters.feed;
   const wrap = h("div");
   const list = h("div");
+  // Before or since the newest update: what players said about the build they're on now.
+  const update = latestUpdate();
   const draw = () => {
     const q = f.q.toLowerCase();
     const all = items()
       .filter((i) => !i.dev || !(i.kind === "topic" && i.forum === "Events & Announcements"))
       .filter((i) => f.kind === "all" || i.kind === f.kind)
       .filter((i) => f.category === "all" || (f.category === "pending" ? !i.triage && !i.dev : i.triage?.category === f.category))
+      .filter((i) => f.version === "all" || !update || (f.version === "since") === (i.created >= update.time))
       .filter((i) => !q || (english(i) + " " + (i.text || "") + " " + (i.title || "")).toLowerCase().includes(q))
       .sort((a, b) => Math.max(b.created, b.updated || 0) - Math.max(a.created, a.updated || 0));
     const shown = all.slice(0, f.shown);
@@ -1905,6 +1947,7 @@ function feedView() {
     h("div.filters",
       sel("Type", "kind", [["all", "All posts"], ["review", "Reviews"], ["topic", "Threads"], ["reply", "Replies"]]),
       sel("Category", "category", [["all", "Any category"], ["bug", "Bugs"], ["suggestion", "Suggestions"], ["question", "Questions"], ["praise", "Praise"], ["pending", "Not triaged yet"]]),
+      update ? sel("Update", "version", [["all", "Any version"], ["since", `Since ${updateName(update)}`], ["before", `Before ${updateName(update)}`]]) : null,
       h("input", { type: "search", placeholder: "Search posts", value: f.q, oninput: (e) => { f.q = e.target.value; f.shown = 50; draw(); } })),
     list);
   draw();

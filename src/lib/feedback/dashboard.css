@@ -1588,6 +1588,27 @@
 	white-space: nowrap;
 }
 
+/* "Trending" (more players this week than last) and "Since vX" (first reported after the newest
+   update), in the same outlined style */
+.fb .pc-trend,
+.fb .pc-since {
+	display: inline-flex;
+	align-items: center;
+	padding: 1px 5px;
+	border: 1px solid;
+	border-radius: 3px;
+	font-size: 0.6875rem;
+	font-weight: 600;
+	line-height: 1.4;
+	white-space: nowrap;
+}
+.fb .pc-trend {
+	color: var(--fb-serious);
+}
+.fb .pc-since {
+	color: var(--fb-positive);
+}
+
 /* The same on a view that has something you haven't opened it for yet */
 .fb .nav-new {
 	margin-left: -4px;

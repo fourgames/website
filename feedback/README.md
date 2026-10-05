@@ -37,7 +37,8 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
    - reviews flipped to negative;
    - repeated reports, at 3, 5, 10, 25… players;
    - someone going live on Twitch (every new stream), a new YouTube video or article, with a link to join the chat or comment;
-   - a new Steam curator review.
+   - a new Steam curator review;
+   - a **spike**: at least 3 players posting a negative review or a bug report in the last 24 hours, and at least 3 times their usual day (the 14 days before). It says which update went out just before, if one did, and which issues the posts are about. It pings once, then again a day later or when the count doubles (`check_spike` in `run.py`).
 
    Every alert @mentions `DISCORD_MENTION`.
 
@@ -108,6 +109,8 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 - **Issues:** bug issues sorted by priority. Each has *Copy fix prompt* and the original posts with their translations and Steam links.
 - **Suggestions:** the same view for suggestions.
 - **Marking fixed:** each bug and idea has a round ✓. It asks what you changed (prefilled as a patch-notes line) and where the fix is: *in the next update*, or *already out in* an update you pick. The card leaves the list at once (the *Marked fixed* filter shows it; click the ✓ again to undo). The next run has Claude judge your line like patch notes, against just that issue (`apply_manual_fixes` in `run.py`): a real fix marks it **likely fixed**, with reply drafts and **still happening** as after a release; anything less marks it **partly addressed** and puts it back on the list. A fix in the next update takes that update's name when it's posted, and its reply drafts wait until then. A player reporting it again brings it back. It's saved in `data/cleared.json`, which only the dashboard writes, through GitHub's API with a fine-grained token (this repo only, *Contents: Read and write*) that you paste once per browser and that stays in that browser. Those commits say `[skip ci]`, so they don't redeploy the site. With `?data=` (a test copy), nothing is saved.
+- **Trending:** a bug, idea or praise raised by at least 2 players in the last 7 days, and at least twice as many as the 7 days before, is tagged *Trending* (hover for the counts), once the game has two weeks of posts. The overview lists the top ones, and Bugs and Ideas can sort by it.
+- **Since the latest update:** an issue first reported after the newest update is tagged *Since vX*, so you see right away what an update may have broken. Each post shows the version live when it was written, and the feed can show only posts from before or since the newest update.
 - **New on views:** a view with something from the last 48 hours that's newer than when you last opened it (in this browser, per game) is tagged *New*, like a new post.
 - **Overview:** the week in one line, what needs attention, and the latest posts.
 - **Bugs / Ideas sorting:** by priority, by negative reviews (what's costing you reviews), by most players, or only what came up in the first 2 hours of play (Steam's refund window). Each card has a *Copy patch-note line* button, e.g. "Fixed: … (reported by 3 players)".

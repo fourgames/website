@@ -803,13 +803,54 @@ def send_alerts(state, game, run, first_run):
         if first_run or item_id in run["urgent"] or not (negative or bugs):
             continue
         posts.append(notify.new_post(game, item, negative, bugs))
+    spike = [] if first_run else check_spike(state, game)
     # Streams, videos and articles about the game (media.py), newest last.
     coverage = [notify.media(game, state["media"]["items"][i]) for i in sorted(run.get("media") or [], key=lambda i: state["media"]["items"][i]["at"])]
     # Curators who reviewed the game since the last look (community.py).
     curators = [] if first_run else [notify.curator(game, c) for c in run.get("curators") or []]
-    for batch in (urgent, posts, clusters, flips, coverage, curators):
+    for batch in (spike, urgent, posts, clusters, flips, coverage, curators):
         for start in range(0, len(batch), 10):
             notify.send(batch[start : start + 10], ping=True)
+
+
+SPIKE_MIN = 3  # bad posts in a day, from different players
+SPIKE_RATIO = 3  # times the usual day
+
+
+def check_spike(state, game):
+    """A spike: in the last 24 hours, at least SPIKE_MIN players posted a negative review or reported a
+    bug, and that's at least SPIKE_RATIO times their usual day (the 14 days before). Pings once, then
+    again only a day later or when the count doubles. Names the update that went out just before, if
+    any, and the issues those posts are about."""
+    import notify
+
+    def bad(item):
+        if item.get("dev") or item.get("pending"):
+            return False
+        return (item["kind"] == "review" and not item.get("votedUp")) or any(
+            pt["kind"] == "bug" for pt in (item.get("triage") or {}).get("points") or [])
+
+    t = now()
+    who = lambda posts: {(p.get("author") or {}).get("id") or p["id"] for p in posts}
+    recent = [i for i in state["items"].values() if t - DAY <= i["created"] and bad(i)]
+    before = [i for i in state["items"].values() if t - 15 * DAY <= i["created"] < t - DAY and bad(i)]
+    count, usual = len(who(recent)), len(who(before)) / 14
+    last = state.get("spike") or {}
+    if count < SPIKE_MIN or count < SPIKE_RATIO * usual:
+        return []
+    if last.get("at", 0) > t - DAY and count < 2 * last.get("count", 0):
+        return []
+    state["spike"] = {"at": t, "count": count}
+    release = max((r for r in state["releases"] if r["time"] > t - 2 * DAY), key=lambda r: r["time"], default=None)
+    tally = {}
+    for p in recent:
+        for issue_id in p.get("issues") or []:
+            issue = state["issues"].get(issue_id)
+            if issue and issue["kind"] != "praise":
+                tally.setdefault(issue_id, set()).add((p.get("author") or {}).get("id") or p["id"])
+    top = sorted(tally, key=lambda i: len(tally[i]), reverse=True)[:5]
+    print(f"[spike] {game['name']}: {count} bad posts in 24 h (usually {usual:.1f} a day)")
+    return [notify.spike(game, recent, count, usual, release, [(state["issues"][i], len(tally[i])) for i in top])]
 
 
 USAGE_KEYS = ("input", "output", "calls", "cost")
@@ -1065,6 +1106,9 @@ def test_discord():
         sent.append(notify.send([notify.new_post(owner(bug_post), bug_post, False, bug_points(bug_post))], ping=True, note="**4. New bug report** (pings you):"))
     if negative:
         sent.append(notify.send([notify.flip(owner(negative), negative)], ping=True, note="**5. Review flipped to negative** (pings you):"))
+    release = max(state["releases"], key=lambda r: r["time"], default=None)
+    sent.append(notify.send([notify.spike(game, posts, max(SPIKE_MIN, issue["mentions"]), 0.4, release, [(issue, issue["mentions"])])],
+                            ping=True, note="**5b. Spike in negative reviews and bug reports** (pings you):"))
     # One of each kind of coverage, from the data when there is one.
     covered = {}
     for a, s in states.items():

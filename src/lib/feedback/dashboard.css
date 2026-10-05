@@ -57,6 +57,10 @@
 .fb .fb-side {
 	position: sticky;
 	top: 1rem;
+	/* Never taller than the screen, so every view stays in reach however long the page is */
+	max-height: calc(100vh - 2rem);
+	overflow-y: auto;
+	scrollbar-width: thin;
 	background: var(--fb-card);
 	border-radius: var(--radius-card);
 	box-shadow: var(--fb-shadow);
@@ -216,7 +220,7 @@
 	color: var(--fb-muted);
 	font-size: 0.75rem;
 	font-weight: 600;
-	padding: 0.625rem 0.625rem 0.125rem;
+	padding: 0.5rem 0.625rem 0.125rem;
 }
 .fb .nav-top {
 	display: none;

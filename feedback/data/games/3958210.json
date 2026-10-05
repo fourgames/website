@@ -1640,6 +1640,10 @@
   [
    1791192565,
    1
+  ],
+  [
+   1791193166,
+   0
   ]
  ],
  "reviewTotals": {
@@ -1868,7 +1872,7 @@
     "thumb": "https://i.ytimg.com/vi/pE3oQXBlq7k/mqdefault.jpg",
     "lang": "en",
     "duration": 4008,
-    "views": 86,
+    "views": 91,
     "likes": 0,
     "comments": 0,
     "live": false,
@@ -1931,7 +1935,7 @@
     "thumb": "https://i.ytimg.com/vi/olVZxqu-lPo/mqdefault.jpg",
     "lang": "en",
     "duration": 17,
-    "views": 278,
+    "views": 279,
     "likes": 7,
     "comments": 1,
     "live": false,

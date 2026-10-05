@@ -2098,5 +2098,569 @@
   "output": 854,
   "calls": 5,
   "cost": 0.010618
+ },
+ "competitors": {
+  "3244220": {
+   "name": "A Game About Digging A Hole™",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3244220/header.jpg?t=1790868155",
+   "released": 1738886400,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1772488380,
+     "name": "Minor fix - Dynamite",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3244220/view/503977086274241443"
+    },
+    {
+     "time": 1765963860,
+     "name": "Small QoL Update",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3244220/view/518607443608993828"
+    },
+    {
+     "time": 1760378400,
+     "name": "💾 Autosave, Bugfixes & no more floating pixels!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3244220/view/536615496782446985"
+    },
+    {
+     "time": 1739356260,
+     "name": "Unbelievable Launch & First Updates!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3244220/view/502816306653824247"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 101
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 18028,
+     "negative": 2163
+    }
+   }
+  },
+  "3601800": {
+   "name": "Meltopia",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3601800/111fb1ae2b2c271fda8e7d4240f6d9315e923191/header_alt_assets_0.jpg?t=1790877293",
+   "released": 1777593600,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1790809200,
+     "name": "STEAM DECK VERIFIED",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3601800/view/688644326827229323"
+    },
+    {
+     "time": 1787870160,
+     "name": "Platform Update!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3601800/view/675130357246329175"
+    },
+    {
+     "time": 1782406860,
+     "name": "Expedition Generator Out Now! The First Big Update",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3601800/view/699894448411116029"
+    },
+    {
+     "time": 1780868400,
+     "name": "Ice Cubes Fixes",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3601800/view/702144344758420433"
+    },
+    {
+     "time": 1779830640,
+     "name": "Tesla Tutorial Fix",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3601800/view/705520776093107667"
+    },
+    {
+     "time": 1779487560,
+     "name": "Fast Refill",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3601800/view/705520776093106780"
+    },
+    {
+     "time": 1779116100,
+     "name": "A Gift for Your Help",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3601800/view/671743145166243020"
+    },
+    {
+     "time": 1779055260,
+     "name": "First DLC and some fixes",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3601800/view/671743145166242894"
+    },
+    {
+     "time": 1778795760,
+     "name": "Balance and Navigation",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3601800/view/671743145166242362"
+    },
+    {
+     "time": 1778624880,
+     "name": "Music album release, controller navigation changes and other tweaks",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3601800/view/655979911377323833"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 61
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 1515,
+     "negative": 249
+    }
+   }
+  },
+  "3585800": {
+   "name": "Keep Digging",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3585800/fa3971aab9b22af494e4ab0b3790d9bcb89dae71/header.jpg?t=1789527047",
+   "released": 1757548800,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1784528640,
+     "name": "[v2.1.1.10471] Memory Usage Reduction Update",
+     "version": "1.1.10471",
+     "url": "https://store.steampowered.com/news/app/3585800/view/686385550690616976"
+    },
+    {
+     "time": 1784136600,
+     "name": "[v2.1.0.10274] Bug Fix Update",
+     "version": "1.0.10274",
+     "url": "https://store.steampowered.com/news/app/3585800/view/686385550690615471"
+    },
+    {
+     "time": 1784096880,
+     "name": "[v2.1.0.9805] Major Performance Tuning Update",
+     "version": "1.0.9805",
+     "url": "https://store.steampowered.com/news/app/3585800/view/694264948876907135"
+    },
+    {
+     "time": 1777614420,
+     "name": "[v2.0.1.7360] Balance Adjustments, Bug Fixes, and Performance Improvements",
+     "version": "0.1.7360",
+     "url": "https://store.steampowered.com/news/app/3585800/view/684126775699047079"
+    },
+    {
+     "time": 1777404600,
+     "name": "[v2.0.0.7291] Patch Fixing Crashes Caused by Insufficient VRAM",
+     "version": "0.0.7291",
+     "url": "https://store.steampowered.com/news/app/3585800/view/538885053334160850"
+    },
+    {
+     "time": 1777356060,
+     "name": "Keep Digging Version 2.0 Is Out Now! Remade as a Survival Crafting Game!",
+     "version": "2.0",
+     "url": "https://store.steampowered.com/news/app/3585800/view/538885053334159974"
+    },
+    {
+     "time": 1757719740,
+     "name": "Bug Fixes / Optimization Update [v1.0.1.3523]",
+     "version": "0.1.3523",
+     "url": "https://store.steampowered.com/news/app/3585800/view/518598743413490059"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 50
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 2611,
+     "negative": 675
+    }
+   }
+  },
+  "3976500": {
+   "name": "The Spotter: Dig or Die",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3976500/851e66a5aa095eb63068128de719250296cc5be4/header.jpg?t=1786011334",
+   "released": 1775520000,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1782989400,
+     "name": "We Heard Your Feedback: Progression Improvements Are Now Live!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3976500/view/681880049901636920"
+    },
+    {
+     "time": 1782410880,
+     "name": "💰 Welcome to Las Veganos!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3976500/view/681880049901634103"
+    },
+    {
+     "time": 1776798780,
+     "name": "⚠️ UPDATE 1.0.5 is now available on Steam",
+     "version": "1.0.5",
+     "url": "https://store.steampowered.com/news/app/3976500/view/560276612041409576"
+    },
+    {
+     "time": 1776201900,
+     "name": "UPDATE 1.0.4.4 is now available on Steam",
+     "version": "1.0.4.4",
+     "url": "https://store.steampowered.com/news/app/3976500/view/510736286715220970"
+    },
+    {
+     "time": 1775868480,
+     "name": "UPDATE 1.0.4.3 and some news from us!",
+     "version": "1.0.4.3",
+     "url": "https://store.steampowered.com/news/app/3976500/view/510736286715219596"
+    },
+    {
+     "time": 1775762280,
+     "name": "⚠️ UPDATE 1.0.4 is now live!",
+     "version": "1.0.4",
+     "url": "https://store.steampowered.com/news/app/3976500/view/510736286715218599"
+    },
+    {
+     "time": 1775690160,
+     "name": "⚠️ Critical HOTFIX for 1.0.3 is live! ⚠️",
+     "version": "1.0.3",
+     "url": "https://store.steampowered.com/news/app/3976500/view/510736286715216765"
+    },
+    {
+     "time": 1775675940,
+     "name": "⚠️ Small Update 1.0.3 is now live",
+     "version": "1.0.3",
+     "url": "https://store.steampowered.com/news/app/3976500/view/510736286715216761"
+    },
+    {
+     "time": 1775665560,
+     "name": "⚠️ PATCH 1.0.2 is live!",
+     "version": "1.0.2",
+     "url": "https://store.steampowered.com/news/app/3976500/view/510736286715216746"
+    },
+    {
+     "time": 1775586180,
+     "name": "⚠️ PATCH 1.0.1 is live!",
+     "version": "1.0.1",
+     "url": "https://store.steampowered.com/news/app/3976500/view/503980253269461766"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 83
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 1617,
+     "negative": 287
+    }
+   }
+  },
+  "4210580": {
+   "name": "Ore Factory Squad ⛏️",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4210580/b305646840dc9db685bc40596da7bdaea388c694/header.jpg?t=1790879736",
+   "released": 1784160000,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1790877480,
+     "name": "After Hours | Major Patch Notes - v1.1.2",
+     "version": "1.2",
+     "url": "https://store.steampowered.com/news/app/4210580/view/679637128142914125"
+    },
+    {
+     "time": 1788863340,
+     "name": "Fixes & Improvements | Hotfix Patch Notes - v1.1.1",
+     "version": "1.1",
+     "url": "https://store.steampowered.com/news/app/4210580/view/701026688965806272"
+    },
+    {
+     "time": 1788541140,
+     "name": "Masters of Oil | Major Patch Notes - v1.1.0",
+     "version": "1.0",
+     "url": "https://store.steampowered.com/news/app/4210580/view/701026055100564140"
+    },
+    {
+     "time": 1787232120,
+     "name": "Fixes & Improvements | Patch Notes - v1.0.9",
+     "version": "0.9",
+     "url": "https://store.steampowered.com/news/app/4210580/view/704403121118380533"
+    },
+    {
+     "time": 1786667460,
+     "name": "Steam Cloud Support Temporarily Disabled | Important Notice",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/4210580/view/701024786320460009"
+    },
+    {
+     "time": 1786138860,
+     "name": "Excavator, Mobile Office & Roulette | Patch Notes - v1.0.6",
+     "version": "0.6",
+     "url": "https://store.steampowered.com/news/app/4210580/view/714534951362495023"
+    },
+    {
+     "time": 1785001800,
+     "name": "Smart Filters & Safer Squads | Patch Notes - v1.0.5",
+     "version": "0.5",
+     "url": "https://store.steampowered.com/news/app/4210580/view/687512084637813277"
+    },
+    {
+     "time": 1784591460,
+     "name": "Invite-Only Lobby Security #2 | Hotfix Patch Notes - v1.0.4",
+     "version": "0.4",
+     "url": "https://store.steampowered.com/news/app/4210580/view/703274049292207743"
+    },
+    {
+     "time": 1784573220,
+     "name": "Invite-Only Lobby Security | Hotfix Patch Notes - v1.0.3",
+     "version": "0.3",
+     "url": "https://store.steampowered.com/news/app/4210580/view/703274049292207730"
+    },
+    {
+     "time": 1784413500,
+     "name": "Fixes & Improvements | Patch Notes - v1.0.2",
+     "version": "0.2",
+     "url": "https://store.steampowered.com/news/app/4210580/view/703274049292207525"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 827
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 1738,
+     "negative": 222
+    }
+   }
+  },
+  "2764460": {
+   "name": "Sandustry",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2764460/985a3a20945ec9c8e3e898e16cdaffe99d00e884/header.jpg?t=1790846471",
+   "released": 1786579200,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1789369260,
+     "name": "Update #4 - Replumbed Pipes, Unstalled Buildings and Various Fixes",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2764460/view/670628025926156687"
+    },
+    {
+     "time": 1788454200,
+     "name": "Update #3 - Happier Critters, Hungrier Lava and Assorted Improvements",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2764460/view/710033888216351310"
+    },
+    {
+     "time": 1787154780,
+     "name": "Update #2 - Stability Improvements, Quality-of-Life and Bug Fixes",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2764460/view/677381523352060027"
+    },
+    {
+     "time": 1786923720,
+     "name": "Update #1 - Better Filter Editing, Tier 5 Softlock Fixes and Red Block Removal",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2764460/view/672877388439226809"
+    },
+    {
+     "time": 1786733160,
+     "name": "Hotfix - Better Logging, Memory Optimizations & Clearer Objectives",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2764460/view/672877388439226635"
+    },
+    {
+     "time": 1786633200,
+     "name": "Sandustry is Released!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2764460/view/686387453677799053"
+    },
+    {
+     "time": 1740130680,
+     "name": "Demo Hotfix 8 arrives to restore botanical order!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2764460/view/539972271823913164"
+    },
+    {
+     "time": 1739389440,
+     "name": "Demo Hotfix 7 is out!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2764460/view/510698240578945076"
+    },
+    {
+     "time": 1738973160,
+     "name": "A bunch of Demo Hotfixes",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2764460/view/533215604137526151"
+    },
+    {
+     "time": 1738513920,
+     "name": "Demo Hotfix",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2764460/view/533214970156941968"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 1610
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 5214,
+     "negative": 149
+    }
+   }
+  },
+  "4078200": {
+   "name": "Dwarf Eats Mountain",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078200/92169b31b645d10982a3bf281f94a4183f2cb12b/header.jpg?t=1789941732",
+   "released": 1779062400,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1789146780,
+     "name": "(v1.5.0) Japanese and Korean localization patch!",
+     "version": "5.0",
+     "url": "https://store.steampowered.com/news/app/4078200/view/702153223322993618"
+    },
+    {
+     "time": 1784665320,
+     "name": "(v1.4.0) Ritual hotbar and fixes",
+     "version": "4.0",
+     "url": "https://store.steampowered.com/news/app/4078200/view/708903548824324441"
+    },
+    {
+     "time": 1780855312,
+     "name": "(v1.3.1) Hotfix",
+     "version": "3.1",
+     "url": "https://store.steampowered.com/news/app/4078200/view/681878146434205129"
+    },
+    {
+     "time": 1780777351,
+     "name": "(v1.3.0.) Endless Artifacts, more QoF, Buffs and Fixes!",
+     "version": "3.0",
+     "url": "https://store.steampowered.com/news/app/4078200/view/681878146434205070"
+    },
+    {
+     "time": 1780170799,
+     "name": "(v1.2.2) Reinforced Saves and Some Tweaks",
+     "version": "2.2",
+     "url": "https://store.steampowered.com/news/app/4078200/view/694262411242244405"
+    },
+    {
+     "time": 1780069191,
+     "name": "(v1.2.1) PP Hotfix",
+     "version": "2.1",
+     "url": "https://store.steampowered.com/news/app/4078200/view/694262411242244127"
+    },
+    {
+     "time": 1779998460,
+     "name": "(v1.2.0) Chunky QoL, Buffs and Fixes Patch!",
+     "version": "2.0",
+     "url": "https://store.steampowered.com/news/app/4078200/view/694262411242243031"
+    },
+    {
+     "time": 1779571627,
+     "name": "(v1.1.0) Big Ascension Patch, and Other Buffs and Fixes!",
+     "version": "1.0",
+     "url": "https://store.steampowered.com/news/app/4078200/view/659358879913608193"
+    },
+    {
+     "time": 1779476551,
+     "name": "Removal Of Boss-Forced-Prestiging, and More Buffs & Fixes",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/4078200/view/659358879913608002"
+    },
+    {
+     "time": 1779404228,
+     "name": "Windowed Resizing and Linux Fixes, Plus Flamelord/Key Adjustments",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/4078200/view/659358879913607657"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 502
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 960,
+     "negative": 224
+    }
+   }
+  },
+  "2009350": {
+   "name": "Out of Ore",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2009350/header.jpg?t=1782294682",
+   "released": 1667174400,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1790954940,
+     "name": "Beta Update V0.36.5550",
+     "version": "36.5550",
+     "url": "https://store.steampowered.com/news/app/2009350/view/681888927386174451"
+    },
+    {
+     "time": 1789474500,
+     "name": "Beta Hotfix - Windows Smart App Control Launch Fix",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2009350/view/677383425371407706"
+    },
+    {
+     "time": 1789405980,
+     "name": "Beta Hotfix - Auto level HUD & Production elements audio/visuals",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2009350/view/677383425371407593"
+    },
+    {
+     "time": 1789219920,
+     "name": "Beta Hotfix - Save Loading Crash Fix",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2009350/view/677383425371407171"
+    },
+    {
+     "time": 1789144380,
+     "name": "Beta Hotfix Update!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2009350/view/677383425371407033"
+    },
+    {
+     "time": 1789047840,
+     "name": "Beta Update V0.36",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2009350/view/680760490643686997"
+    },
+    {
+     "time": 1787328180,
+     "name": "Main Update",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2009350/view/667248424192574484"
+    },
+    {
+     "time": 1787215500,
+     "name": "Beta Hotfix Update!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2009350/view/667248424192573921"
+    },
+    {
+     "time": 1786689060,
+     "name": "Beta Update!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2009350/view/680758587997290604"
+    },
+    {
+     "time": 1783674840,
+     "name": "Beta Hotfix Update!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2009350/view/696518197582495781"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 385
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 3603,
+     "negative": 621
+    }
+   }
+  }
  }
 }

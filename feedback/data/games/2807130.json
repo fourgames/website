@@ -994,5 +994,480 @@
     "fullPrice": "$7.98"
    }
   ]
+ },
+ "competitors": {
+  "210770": {
+   "name": "Sanctum 2",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/210770/75bbb195391cac2943e0b51468e0561fab1261f7/header.jpg?t=1774270979",
+   "released": 1368576000,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1443461128,
+     "name": "Sanctum Free Week / Autumn Sale 2015",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/210770/view/2874941632494085392"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 13
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 12940,
+     "negative": 1453
+    }
+   }
+  },
+  "1522820": {
+   "name": "Orcs Must Die! 3",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1522820/header.jpg?t=1726499308",
+   "released": 1626998400,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1716390600,
+     "name": "Hotfix 1.2.5.6",
+     "version": "1.2.5.6",
+     "url": "https://store.steampowered.com/news/app/1522820/view/4177730135009624399"
+    },
+    {
+     "time": 1716303660,
+     "name": "Hotfix 1.2.5.5",
+     "version": "1.2.5.5",
+     "url": "https://store.steampowered.com/news/app/1522820/view/4183358999831614695"
+    },
+    {
+     "time": 1714771260,
+     "name": "Hotfix 1.2.5.3",
+     "version": "1.2.5.3",
+     "url": "https://store.steampowered.com/news/app/1522820/view/4199120329636974156"
+    },
+    {
+     "time": 1714686300,
+     "name": "Hotfix 1.2.5.2",
+     "version": "1.2.5.2",
+     "url": "https://store.steampowered.com/news/app/1522820/view/4199120329633028342"
+    },
+    {
+     "time": 1714662240,
+     "name": "Patch 1.2.5.1",
+     "version": "1.2.5.1",
+     "url": "https://store.steampowered.com/news/app/1522820/view/4202497395530679833"
+    },
+    {
+     "time": 1686752720,
+     "name": "Hotfix 1.2.1.1",
+     "version": "1.2.1.1",
+     "url": "https://store.steampowered.com/news/app/1522820/view/3677799500817467313"
+    },
+    {
+     "time": 1685978280,
+     "name": "Patch 1.2.1.0",
+     "version": "1.2.1.0",
+     "url": "https://store.steampowered.com/news/app/1522820/view/5448836977157312315"
+    },
+    {
+     "time": 1650985076,
+     "name": "Hotfix 1.2.0.2",
+     "version": "1.2.0.2",
+     "url": "https://store.steampowered.com/news/app/1522820/view/3216142491814161909"
+    },
+    {
+     "time": 1649892480,
+     "name": "Hotfix 1.2.0.1",
+     "version": "1.2.0.1",
+     "url": "https://store.steampowered.com/news/app/1522820/view/3220645457115922266"
+    },
+    {
+     "time": 1649342940,
+     "name": "Patch 1.2.0.0 Update",
+     "version": "1.2.0.0",
+     "url": "https://store.steampowered.com/news/app/1522820/view/3215014689179377454"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 235
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 12829,
+     "negative": 2111
+    }
+   }
+  },
+  "2902540": {
+   "name": "KUNKUN Defender",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2902540/header.jpg?t=1777652277",
+   "released": 1714608000,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1747382400,
+     "name": "KUNKUN Defender 2 launches",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2902540/view/574882869963391268"
+    },
+    {
+     "time": 1745041320,
+     "name": "KUNKUN Defender 2 will be released in May. Add it to your wishlist now!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2902540/view/538851441440194989"
+    },
+    {
+     "time": 1730537460,
+     "name": "The collectible card game has been approved.",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2902540/view/4485115394663645384"
+    },
+    {
+     "time": 1715496780,
+     "name": "Update on May 12th.",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2902540/view/4194617370623144263"
+    },
+    {
+     "time": 1715003940,
+     "name": "Update on May 6th.",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2902540/view/4168721032158917548"
+    },
+    {
+     "time": 1714884840,
+     "name": "Update on May 5th.",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2902540/view/4168721032153943743"
+    },
+    {
+     "time": 1714824720,
+     "name": "Significantly increased the frame rate",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2902540/view/4168721032151428678"
+    },
+    {
+     "time": 1714799220,
+     "name": "Update on May 4th.",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2902540/view/4168721032150363058"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 10
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 1008,
+     "negative": 37
+    }
+   }
+  },
+  "1269690": {
+   "name": "Attack on Toys",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/1269690/b3f926d7a811d8f373ef778ad1b5ef0bef27a86e/header.jpg?t=1781956012",
+   "released": 1632441600,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1783616400,
+     "name": "🔧 Attack on Toys 9.54 Fix: Town Park Toy-Box & Fountain Pathfinding Fix",
+     "version": "9.54",
+     "url": "https://store.steampowered.com/news/app/1269690/view/715657047106919060"
+    },
+    {
+     "time": 1782132780,
+     "name": "🔧 Attack on Toys 9.53 Fix: Nuke AI Fix & Invasion Boss Balancing",
+     "version": "9.53",
+     "url": "https://store.steampowered.com/news/app/1269690/view/711152812511203722"
+    },
+    {
+     "time": 1782025320,
+     "name": "🔧 Attack on Toys 9.52 Fix: Pigeon Bird HP Nerf",
+     "version": "9.52",
+     "url": "https://store.steampowered.com/news/app/1269690/view/711152812511202659"
+    },
+    {
+     "time": 1781972160,
+     "name": "🔧 Attack on Toys 9.51 Fix: Tower Max Build",
+     "version": "9.51",
+     "url": "https://store.steampowered.com/news/app/1269690/view/711152812511202637"
+    },
+    {
+     "time": 1781957340,
+     "name": "★ SUMMER: BOSS BATTLE & NUKE@#!? & UP TO -50% ★",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/1269690/view/689758177396261398"
+    },
+    {
+     "time": 1781356920,
+     "name": "★ BOSS BATTLE & NUKE@#!? - MAJOR UPDATE 20.06.2026 ★",
+     "version": "20.06.2026",
+     "url": "https://store.steampowered.com/news/app/1269690/view/669492613289609112"
+    },
+    {
+     "time": 1780748700,
+     "name": "I HAVE 10 POUNDS OF CRAP! 💩 *UPDATE",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/1269690/view/669492613289609108"
+    },
+    {
+     "time": 1767746820,
+     "name": "🔧 Attack on Toys: 8.7 Fixed Player Select Hero Main Menu",
+     "version": "8.7",
+     "url": "https://store.steampowered.com/news/app/1269690/view/530992342584267111"
+    },
+    {
+     "time": 1767353100,
+     "name": "💰 TOY SCALPER ROOM *FREE MODS - HAPPY NEW YEAR 2026 🎉",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/1269690/view/530992342584265266"
+    },
+    {
+     "time": 1766238180,
+     "name": "👽 Attack on Toys 8.51 Fix: Camera, Price, Balancing",
+     "version": "8.51",
+     "url": "https://store.steampowered.com/news/app/1269690/view/530992342584264160"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 11
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 1139,
+     "negative": 85
+    }
+   }
+  },
+  "2239150": {
+   "name": "Thronefall",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2239150/56a72898995aa4c465c1882624565c48c502b62f/header_alt_assets_3.jpg?t=1790255548",
+   "released": 1728604800,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1782743160,
+     "name": "Thronefall | Quality of Life Update | v2.13 Live Now",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2239150/view/698766645034747267"
+    },
+    {
+     "time": 1738582860,
+     "name": "Update 2.11",
+     "version": "2.11",
+     "url": "https://store.steampowered.com/news/app/2239150/view/496059639612310631"
+    },
+    {
+     "time": 1729702380,
+     "name": "UPDATE 2.06",
+     "version": "2.06",
+     "url": "https://store.steampowered.com/news/app/2239150/view/4545913355788877893"
+    },
+    {
+     "time": 1728732551,
+     "name": "Hotfix 2.04 - Moorweg Boss Balancing",
+     "version": "2.04",
+     "url": "https://store.steampowered.com/news/app/2239150/view/4556045457162199730"
+    },
+    {
+     "time": 1728659091,
+     "name": "Hotfix 2.03",
+     "version": "2.03",
+     "url": "https://store.steampowered.com/news/app/2239150/view/7516036132726752254"
+    },
+    {
+     "time": 1728651120,
+     "name": "V1.0 Now Available!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2239150/view/7516036132726119019"
+    },
+    {
+     "time": 1723127520,
+     "name": "Hotfix 1.753",
+     "version": "1.753",
+     "url": "https://store.steampowered.com/news/app/2239150/view/4362384695862508980"
+    },
+    {
+     "time": 1723042200,
+     "name": "UPDATE 1.75",
+     "version": "1.75",
+     "url": "https://store.steampowered.com/news/app/2239150/view/4362384695858475525"
+    },
+    {
+     "time": 1721740620,
+     "name": "UPDATE 1.73",
+     "version": "1.73",
+     "url": "https://store.steampowered.com/news/app/2239150/view/4377019664796197529"
+    },
+    {
+     "time": 1720612020,
+     "name": "1.71 Hot Fix",
+     "version": "1.71",
+     "url": "https://store.steampowered.com/news/app/2239150/view/4258798098432871101"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 644
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 22888,
+     "negative": 929
+    }
+   }
+  },
+  "2459550": {
+   "name": "Emberward",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2459550/44e4e61c24c26440fa8deaab2299aab603e47958/header.jpg?t=1790056350",
+   "released": 1789603200,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1789657140,
+     "name": "Emberward 1.0 Is Out Now!!",
+     "version": "1.0",
+     "url": "https://store.steampowered.com/news/app/2459550/view/684137556498973785"
+    },
+    {
+     "time": 1776356820,
+     "name": "Game Update! (v0.4.12)",
+     "version": "4.12",
+     "url": "https://store.steampowered.com/news/app/2459550/view/542260850095818796"
+    },
+    {
+     "time": 1773072180,
+     "name": "Game Update! (v0.4.11)",
+     "version": "4.11",
+     "url": "https://store.steampowered.com/news/app/2459550/view/506228886086877673"
+    },
+    {
+     "time": 1770912240,
+     "name": "Game Update! (v0.4.10)",
+     "version": "4.10",
+     "url": "https://store.steampowered.com/news/app/2459550/view/490464385050870521"
+    },
+    {
+     "time": 1766071980,
+     "name": "Game Update! (v0.4.9)",
+     "version": "4.9",
+     "url": "https://store.steampowered.com/news/app/2459550/view/641329985757381957"
+    },
+    {
+     "time": 1763222700,
+     "name": "Game Update! (v0.4.8)",
+     "version": "4.8",
+     "url": "https://store.steampowered.com/news/app/2459550/view/604172764721447225"
+    },
+    {
+     "time": 1760718720,
+     "name": "Game Update! (v0.4.7)",
+     "version": "4.7",
+     "url": "https://store.steampowered.com/news/app/2459550/view/508468718738604309"
+    },
+    {
+     "time": 1757609340,
+     "name": "Game Update! (v0.4.6)",
+     "version": "4.6",
+     "url": "https://store.steampowered.com/news/app/2459550/view/539990024660191206"
+    },
+    {
+     "time": 1753978260,
+     "name": "Game Update! (v0.4.5)",
+     "version": "4.5",
+     "url": "https://store.steampowered.com/news/app/2459550/view/539986220231435170"
+    },
+    {
+     "time": 1750863780,
+     "name": "Game Update! (v0.4.4)",
+     "version": "4.4",
+     "url": "https://store.steampowered.com/news/app/2459550/view/539983049377448329"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 819
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 4245,
+     "negative": 147
+    }
+   }
+  },
+  "3976500": {
+   "name": "The Spotter: Dig or Die",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3976500/851e66a5aa095eb63068128de719250296cc5be4/header.jpg?t=1786011334",
+   "released": 1775520000,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1782989400,
+     "name": "We Heard Your Feedback: Progression Improvements Are Now Live!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3976500/view/681880049901636920"
+    },
+    {
+     "time": 1782410880,
+     "name": "💰 Welcome to Las Veganos!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3976500/view/681880049901634103"
+    },
+    {
+     "time": 1776798780,
+     "name": "⚠️ UPDATE 1.0.5 is now available on Steam",
+     "version": "1.0.5",
+     "url": "https://store.steampowered.com/news/app/3976500/view/560276612041409576"
+    },
+    {
+     "time": 1776201900,
+     "name": "UPDATE 1.0.4.4 is now available on Steam",
+     "version": "1.0.4.4",
+     "url": "https://store.steampowered.com/news/app/3976500/view/510736286715220970"
+    },
+    {
+     "time": 1775868480,
+     "name": "UPDATE 1.0.4.3 and some news from us!",
+     "version": "1.0.4.3",
+     "url": "https://store.steampowered.com/news/app/3976500/view/510736286715219596"
+    },
+    {
+     "time": 1775762280,
+     "name": "⚠️ UPDATE 1.0.4 is now live!",
+     "version": "1.0.4",
+     "url": "https://store.steampowered.com/news/app/3976500/view/510736286715218599"
+    },
+    {
+     "time": 1775690160,
+     "name": "⚠️ Critical HOTFIX for 1.0.3 is live! ⚠️",
+     "version": "1.0.3",
+     "url": "https://store.steampowered.com/news/app/3976500/view/510736286715216765"
+    },
+    {
+     "time": 1775675940,
+     "name": "⚠️ Small Update 1.0.3 is now live",
+     "version": "1.0.3",
+     "url": "https://store.steampowered.com/news/app/3976500/view/510736286715216761"
+    },
+    {
+     "time": 1775665560,
+     "name": "⚠️ PATCH 1.0.2 is live!",
+     "version": "1.0.2",
+     "url": "https://store.steampowered.com/news/app/3976500/view/510736286715216746"
+    },
+    {
+     "time": 1775586180,
+     "name": "⚠️ PATCH 1.0.1 is live!",
+     "version": "1.0.1",
+     "url": "https://store.steampowered.com/news/app/3976500/view/503980253269461766"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 83
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 1617,
+     "negative": 287
+    }
+   }
+  }
  }
 }

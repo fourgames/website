@@ -51,5 +51,599 @@
  "bundles": {
   "at": 1791158432,
   "list": []
+ },
+ "competitors": {
+  "2666510": {
+   "name": "Rusty's Retirement",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2666510/1b9c3e5c1a8a08354bed63fbeed798fcec74aff9/header.jpg?t=1790152289",
+   "released": 1714089600,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1759740130,
+     "name": "Build 1.1.6",
+     "version": "1.1.6",
+     "url": "https://store.steampowered.com/news/app/2666510/view/527607029268743899"
+    },
+    {
+     "time": 1759320660,
+     "name": "Autumn mini-update is out now!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2666510/view/527607029268742762"
+    },
+    {
+     "time": 1758890880,
+     "name": "Autumn mini-update coming October 1st!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2666510/view/527606395421328425"
+    },
+    {
+     "time": 1754572380,
+     "name": "Rusty's Retirement x Balatro!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2666510/view/511836185696408267"
+    },
+    {
+     "time": 1743582720,
+     "name": "Build 1.1.3",
+     "version": "1.1.3",
+     "url": "https://store.steampowered.com/news/app/2666510/view/511828575707463863"
+    },
+    {
+     "time": 1743519120,
+     "name": "Rusty's Retirement x Vampire Survivors!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2666510/view/524209673376629052"
+    },
+    {
+     "time": 1738674835,
+     "name": "Build 1.0.19",
+     "version": "1.0.19",
+     "url": "https://store.steampowered.com/news/app/2666510/view/511822871929032299"
+    },
+    {
+     "time": 1734108240,
+     "name": "Build 1.0.18",
+     "version": "1.0.18",
+     "url": "https://store.steampowered.com/news/app/2666510/view/571491226772046720"
+    },
+    {
+     "time": 1733946420,
+     "name": "Build 1.0.17",
+     "version": "1.0.17",
+     "url": "https://store.steampowered.com/news/app/2666510/view/547847229364240525"
+    },
+    {
+     "time": 1733860680,
+     "name": "New Winter update now available!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2666510/view/4465977636998349722"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 316
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 14390,
+     "negative": 492
+    }
+   }
+  },
+  "2113850": {
+   "name": "Spirit City: Lofi Sessions",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2113850/dde323de28b5db2af88e7fda53ed3c4dc34280bf/header.jpg?t=1787580099",
+   "released": 1712534400,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1787925407,
+     "name": "Hotfix 2.5.1",
+     "version": "2.5.1",
+     "url": "https://store.steampowered.com/news/app/2113850/view/710033254358450679"
+    },
+    {
+     "time": 1780342139,
+     "name": "Hotfix 2.4.1",
+     "version": "2.4.1",
+     "url": "https://store.steampowered.com/news/app/2113850/view/669492613289609868"
+    },
+    {
+     "time": 1779714300,
+     "name": "✨ The Lofi Girl Update is available now for FREE!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2113850/view/689758177396261500"
+    },
+    {
+     "time": 1774570037,
+     "name": "Garden DLC hotfix",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2113850/view/534379097557565445"
+    },
+    {
+     "time": 1763565480,
+     "name": "Hotfix 2.2.1",
+     "version": "2.2.1",
+     "url": "https://store.steampowered.com/news/app/2113850/view/609802806473261125"
+    },
+    {
+     "time": 1763388540,
+     "name": "Winter Update now live!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2113850/view/596291465285468706"
+    },
+    {
+     "time": 1759266420,
+     "name": "Hotfix 2.1.1",
+     "version": "2.1.1",
+     "url": "https://store.steampowered.com/news/app/2113850/view/511844430570849532"
+    },
+    {
+     "time": 1759148580,
+     "name": "Halloween update is now LIVE! 🔴🎃",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2113850/view/511844430570848769"
+    },
+    {
+     "time": 1757012490,
+     "name": "Hotfix 2.0.3",
+     "version": "2.0.3",
+     "url": "https://store.steampowered.com/news/app/2113850/view/525353325860751127"
+    },
+    {
+     "time": 1756262792,
+     "name": "Hotfix 2.0.2",
+     "version": "2.0.2",
+     "url": "https://store.steampowered.com/news/app/2113850/view/525352692558594062"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 1746
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 16475,
+     "negative": 407
+    }
+   }
+  },
+  "4030830": {
+   "name": "Focus Grove",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4030830/20e2394fe057290dabd54adb6f4c9c30c8f32a24/header.jpg?t=1790714535",
+   "released": 1780272000,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1789136160,
+     "name": "Update 1.1.21 - Flowtime is here!",
+     "version": "1.1.21",
+     "url": "https://store.steampowered.com/news/app/4030830/view/693146024068252080"
+    },
+    {
+     "time": 1788454920,
+     "name": "Update 1.1.17 - Main Menu Fixes",
+     "version": "1.1.17",
+     "url": "https://store.steampowered.com/news/app/4030830/view/714537487845819053"
+    },
+    {
+     "time": 1787237520,
+     "name": "Update 1.1.13 – Hats, Wildflowers & Skin Fixes",
+     "version": "1.1.13",
+     "url": "https://store.steampowered.com/news/app/4030830/view/712284420447404800"
+    },
+    {
+     "time": 1786122000,
+     "name": "🐝🐻🍯The Beekeeper Update 🍯🐻🐝",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/4030830/view/683009753971950122"
+    },
+    {
+     "time": 1785429960,
+     "name": "Update 1.0.49 - Rotatable Activities & Better Minimization",
+     "version": "1.0.49",
+     "url": "https://store.steampowered.com/news/app/4030830/view/711156617370927890"
+    },
+    {
+     "time": 1784282280,
+     "name": "Update 1.0.48 - Brown Noise and Clearer Delete Confirmations",
+     "version": "1.0.48",
+     "url": "https://store.steampowered.com/news/app/4030830/view/693140950130623093"
+    },
+    {
+     "time": 1783696500,
+     "name": "Update 1.0.44 - Multiple Groves and Linux Support",
+     "version": "1.0.44",
+     "url": "https://store.steampowered.com/news/app/4030830/view/715658496003015221"
+    },
+    {
+     "time": 1783100220,
+     "name": "Small Update 1.0.39 - Better Alerts and Statistics",
+     "version": "1.0.39",
+     "url": "https://store.steampowered.com/news/app/4030830/view/706649847851127185"
+    },
+    {
+     "time": 1782752058,
+     "name": "Update 1.0.37 - Shark Hats and Week Starts",
+     "version": "1.0.37",
+     "url": "https://store.steampowered.com/news/app/4030830/view/706649847851124141"
+    },
+    {
+     "time": 1782475020,
+     "name": "Update 1.0.36 - Smoother Tasks, Smarter Loading & Cleaner Building Previews",
+     "version": "1.0.36",
+     "url": "https://store.steampowered.com/news/app/4030830/view/706649847851123556"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 145
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 228,
+     "negative": 5
+    }
+   }
+  },
+  "2060480": {
+   "name": "PomoFarm",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2060480/header.jpg?t=1657155966",
+   "released": 1656979200,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1759679520,
+     "name": "hotfix! softlock + layout fix",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2060480/view/515222130291378098"
+    },
+    {
+     "time": 1759628268,
+     "name": "updates for 10/4/2025",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2060480/view/515222130291378070"
+    },
+    {
+     "time": 1707919992,
+     "name": "hotfix! macOS input issue",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2060480/view/4194609758012095375"
+    },
+    {
+     "time": 1657678556,
+     "name": "hotfix! time travel bug",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2060480/view/3385035089927090435"
+    },
+    {
+     "time": 1657578814,
+     "name": "hotfix! performance issues",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2060480/view/3362516632928635404"
+    },
+    {
+     "time": 1657561879,
+     "name": "updates for 7/11/2022",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2060480/view/3362516632927927215"
+    },
+    {
+     "time": 1657228027,
+     "name": "updates for 7/7/2022",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2060480/view/3362515187836739575"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 14
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 533,
+     "negative": 18
+    }
+   }
+  },
+  "3136330": {
+   "name": "Tiny Terraces",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3136330/header.jpg?t=1791148616",
+   "released": 1753920000,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1791144780,
+     "name": "Patch v0.93.1011.11122",
+     "version": "93.1011.11122",
+     "url": "https://store.steampowered.com/news/app/3136330/view/711162324968278011"
+    },
+    {
+     "time": 1791139920,
+     "name": "Rolling back Patch v0.93.997.11111",
+     "version": "93.997.11111",
+     "url": "https://store.steampowered.com/news/app/3136330/view/711162324968278008"
+    },
+    {
+     "time": 1791102300,
+     "name": "Patch v0.93.997.11111",
+     "version": "93.997.11111",
+     "url": "https://store.steampowered.com/news/app/3136330/view/711162324968277969"
+    },
+    {
+     "time": 1781540940,
+     "name": "Patch v0.93.987.10976",
+     "version": "93.987.10976",
+     "url": "https://store.steampowered.com/news/app/3136330/view/701019078932825940"
+    },
+    {
+     "time": 1778981640,
+     "name": "Patch v0.93.966.10754",
+     "version": "93.966.10754",
+     "url": "https://store.steampowered.com/news/app/3136330/view/675120844883624927"
+    },
+    {
+     "time": 1778652840,
+     "name": "Patch v0.93.953.10661",
+     "version": "93.953.10661",
+     "url": "https://store.steampowered.com/news/app/3136330/view/675120844883623962"
+    },
+    {
+     "time": 1778315940,
+     "name": "Patch v0.93.946.10593",
+     "version": "93.946.10593",
+     "url": "https://store.steampowered.com/news/app/3136330/view/675120209794696433"
+    },
+    {
+     "time": 1778219580,
+     "name": "Pickle Fun Time - v0.93",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3136330/view/675120209794695956"
+    },
+    {
+     "time": 1775363580,
+     "name": "Patch v0.92.927.10101",
+     "version": "92.927.10101",
+     "url": "https://store.steampowered.com/news/app/3136330/view/515239252335790192"
+    },
+    {
+     "time": 1775022780,
+     "name": "Patch v0.92.916.10027",
+     "version": "92.916.10027",
+     "url": "https://store.steampowered.com/news/app/3136330/view/515239252335788095"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 100
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 922,
+     "negative": 73
+    }
+   }
+  },
+  "3314340": {
+   "name": "Burgie's Cozy Kitchen",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3314340/3e9a2583ceec933763f7cb8130fecd53170d8a12/header.jpg?t=1790581353",
+   "released": 1739145600,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1789056900,
+     "name": "Dungeon DLC is Out Now!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3314340/view/698775523599319363"
+    },
+    {
+     "time": 1785005340,
+     "name": "Collectible card system - over 400 unique cards!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3314340/view/707778282962029179"
+    },
+    {
+     "time": 1783526280,
+     "name": "Gamepad Controls Update",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3314340/view/686383649529010335"
+    },
+    {
+     "time": 1782314340,
+     "name": "Gameplay improvements and motion sickness reduction",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3314340/view/686383649529004273"
+    },
+    {
+     "time": 1765907700,
+     "name": "Merry christmas and happy new update!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3314340/view/627819185726032213"
+    },
+    {
+     "time": 1761932760,
+     "name": "Burgie's Halloween DLC!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3314340/view/816966565908972429"
+    },
+    {
+     "time": 1759089000,
+     "name": "Warehouse, outdoors and new mechanics",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3314340/view/501711331410313872"
+    },
+    {
+     "time": 1756394580,
+     "name": "Sauces, stains, and keeping your kitchen clean",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3314340/view/518597293118587338"
+    },
+    {
+     "time": 1752070800,
+     "name": "New customers are arriving",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3314340/view/518591585136415398"
+    },
+    {
+     "time": 1749637320,
+     "name": "Play Burgie's in your language!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/3314340/view/541108317224697978"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 441
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 1526,
+     "negative": 62
+    }
+   }
+  },
+  "4216670": {
+   "name": "Typing Farmer",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4216670/5138776add9390abbbde1a179be9321a0cfe7a84/header.jpg?t=1784689229",
+   "released": 1776556800,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1789958280,
+     "name": "V1.2.4 Hotfix Update",
+     "version": "2.4",
+     "url": "https://store.steampowered.com/news/app/4216670/view/670628659676054281"
+    },
+    {
+     "time": 1788157380,
+     "name": "V1.2.1 - V1.2.3 Hotfix Update",
+     "version": "2.1",
+     "url": "https://store.steampowered.com/news/app/4216670/view/683011656593179287"
+    },
+    {
+     "time": 1785925620,
+     "name": "v1.1.33 Hotfix Updates",
+     "version": "1.33",
+     "url": "https://store.steampowered.com/news/app/4216670/view/692016953225642117"
+    },
+    {
+     "time": 1785823620,
+     "name": "v1.1.32 Hotfix Updates",
+     "version": "1.32",
+     "url": "https://store.steampowered.com/news/app/4216670/view/708904817558292677"
+    },
+    {
+     "time": 1784862840,
+     "name": "V 1.1.30 Hotfix Updates",
+     "version": "1.1.30",
+     "url": "https://store.steampowered.com/news/app/4216670/view/698771083706237660"
+    },
+    {
+     "time": 1784773320,
+     "name": "V 1.1.29 Hotfix Updates",
+     "version": "1.1.29",
+     "url": "https://store.steampowered.com/news/app/4216670/view/698771083706237507"
+    },
+    {
+     "time": 1783606500,
+     "name": "V 1.1.28 Hotfix Updates",
+     "version": "1.1.28",
+     "url": "https://store.steampowered.com/news/app/4216670/view/672872850646899209"
+    },
+    {
+     "time": 1783587060,
+     "name": "V 1.1.27 Hotfix Updates",
+     "version": "1.1.27",
+     "url": "https://store.steampowered.com/news/app/4216670/view/672872850646898993"
+    },
+    {
+     "time": 1783304160,
+     "name": "V 1.1.26 Hotfix Updates",
+     "version": "1.1.26",
+     "url": "https://store.steampowered.com/news/app/4216670/view/672872850646897095"
+    },
+    {
+     "time": 1780279860,
+     "name": "V 1.1.24 Hotfix Updates",
+     "version": "1.1.24",
+     "url": "https://store.steampowered.com/news/app/4216670/view/713402709657520121"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 740
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 470,
+     "negative": 61
+    }
+   }
+  },
+  "2943180": {
+   "name": "Virtual Cottage 2",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2943180/7676dc665eb0f64b90b0d045b3163ba8abdc8ffc/header.jpg?t=1783588382",
+   "released": 1774569600,
+   "comingSoon": false,
+   "updates": [
+    {
+     "time": 1787405820,
+     "name": "Special Update: Against The Storm Collab!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2943180/view/717913919982665855"
+    },
+    {
+     "time": 1786449060,
+     "name": "500 Reviews Celebration: New Items!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2943180/view/667247155276154293"
+    },
+    {
+     "time": 1783579440,
+     "name": "Summer Update 2026!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2943180/view/701021228894258376"
+    },
+    {
+     "time": 1780318500,
+     "name": "Patch #6",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2943180/view/672870313012234516"
+    },
+    {
+     "time": 1779647340,
+     "name": "Spring Update 2026!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2943180/view/685254577766793454"
+    },
+    {
+     "time": 1776775860,
+     "name": "Patch #4",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2943180/view/577165112126735207"
+    },
+    {
+     "time": 1776092520,
+     "name": "Patch #3",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2943180/view/534380184755769688"
+    },
+    {
+     "time": 1775824440,
+     "name": "Patch #2",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2943180/view/534380184755768155"
+    },
+    {
+     "time": 1774687680,
+     "name": "Day 1 Patch, fixing some minor bugs 🙂",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2943180/view/528749598024401084"
+    }
+   ],
+   "peaks": {
+    "2026-10-05": 367
+   },
+   "reviews": {
+    "2026-10-05": {
+     "positive": 677,
+     "negative": 18
+    }
+   }
+  }
  }
 }

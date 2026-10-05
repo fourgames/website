@@ -57,10 +57,6 @@
 .fb .fb-side {
 	position: sticky;
 	top: 1rem;
-	/* Never taller than the screen, so every view stays in reach however long the page is */
-	max-height: calc(100vh - 2rem);
-	overflow-y: auto;
-	scrollbar-width: thin;
 	background: var(--fb-card);
 	border-radius: var(--radius-card);
 	box-shadow: var(--fb-shadow);
@@ -85,6 +81,27 @@
    and jump the page. */
 .fb #fb-view {
 	min-height: 100vh;
+}
+/* Wide screens: the dashboard is a window-tall box inside the site, and the side card and the view
+   each scroll on their own, like an app. The site's header and footer stay outside it. */
+@media (width >= 56.25rem) {
+	.fb .fb-layout {
+		height: calc(100dvh - 2rem);
+		align-items: stretch;
+	}
+	.fb .fb-side,
+	.fb .fb-main {
+		position: static;
+		min-height: 0;
+		overflow-y: auto;
+		scrollbar-width: thin;
+	}
+	.fb .fb-main {
+		padding: 0 4px 1.5rem 0;
+	}
+	.fb #fb-view {
+		min-height: 0;
+	}
 }
 
 /* Games: one click in the side card (or the chip strip on phones) */

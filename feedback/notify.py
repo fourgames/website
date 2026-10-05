@@ -269,6 +269,25 @@ def media(game, item):
     }
 
 
+CURATOR = {"recommended": (0x2A78D6, "Recommended"), "not_recommended": (0xE5484D, "Not recommended"), "informative": (0x8B8D98, "Informational")}
+
+
+def curator(game, c):
+    """A Steam curator who reviewed a game: who, how many follow them, and what they said."""
+    color, verdict = CURATOR.get(c["state"], CURATOR["recommended"])
+    links = [f"[Their review]({c['link']})" if c.get("link") else None, f"[Curator page]({c['url']})" if c.get("url") else None, f"[Dashboard]({DASHBOARD_URL})"]
+    return {
+        "title": _clip(f"Steam curator · {game['name']}: {verdict} by {c['name']}", 256),
+        "url": c.get("url"),
+        "description": _clip((f"> {_clip(c['blurb'], 600)}\n\n" if c.get("blurb") else "") + " · ".join(l for l in links if l), 4000),
+        "color": color,
+        "author": {"name": c["name"], "url": c["url"], "icon_url": c.get("avatar")} if c.get("url") else {"name": c["name"]},
+        "fields": [{"name": "Followers", "value": _count(c.get("followers")), "inline": True}],
+        "footer": {"text": game["name"]},
+        "timestamp": _iso(c.get("time")),
+    }
+
+
 def _iso(ts):
     if not ts:
         return None

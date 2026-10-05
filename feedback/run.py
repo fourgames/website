@@ -805,7 +805,9 @@ def send_alerts(state, game, run, first_run):
         posts.append(notify.new_post(game, item, negative, bugs))
     # Streams, videos and articles about the game (media.py), newest last.
     coverage = [notify.media(game, state["media"]["items"][i]) for i in sorted(run.get("media") or [], key=lambda i: state["media"]["items"][i]["at"])]
-    for batch in (urgent, posts, clusters, flips, coverage):
+    # Curators who reviewed the game since the last look (community.py).
+    curators = [] if first_run else [notify.curator(game, c) for c in run.get("curators") or []]
+    for batch in (urgent, posts, clusters, flips, coverage, curators):
         for start in range(0, len(batch), 10):
             notify.send(batch[start : start + 10], ping=True)
 
@@ -977,6 +979,7 @@ def full_run():
         community.record_achievements(state, game)
         community.record_bundles(state, game, list(bundle_with.get(str(game["appId"])) or {}))
         community.record_competitors(state, game, list(compare_with.get(str(game["appId"])) or {}))
+        run["curators"] = community.record_curators(state, game)
         process_in_order(state, game, run, budget, events)
         add_tone(state, game, budget)
         add_profiles(state)

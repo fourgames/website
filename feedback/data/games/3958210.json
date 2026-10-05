@@ -160,7 +160,8 @@
      }
     ],
     "note": null
-   }
+   },
+   "devRespondedAt": null
   },
   "r236626239": {
    "id": "r236626239",
@@ -219,7 +220,8 @@
     "at": 1790966220,
     "text": "40분이면 엔딩 쌉가능한 게임이라니 재미있다는 평가 감사합니다! 최근 Hotfix 1.4.1에서 깊은 곳의 얼음 파괴 문제를 고쳤으니 다시 한번 플레이해 보시고 끝까지 내려가 보세요.",
     "english": "Thanks for the kind words about being able to finish the ending in 40 minutes! We just released Hotfix 1.4.1 that fixed a bug where ice couldn't be broken deep in the pit, so jump back in and dig all the way to the bottom."
-   }
+   },
+   "devRespondedAt": null
   },
   "r236624465": {
    "id": "r236624465",
@@ -278,7 +280,8 @@
     "at": 1790966220,
     "text": "리뷰 감사합니다! 최근에 Hotfix 1.4.1을 내놨는데, 400m 아래에서 얼음이 깨지지 않던 문제를 수정했으니 다시 한번 내려가 봐도 좋을 것 같습니다.",
     "english": "Thanks for the review! We've just released Hotfix 1.4.1, which fixes that frustrating ice problem you hit deep in the pit, so you might want to give it another go."
-   }
+   },
+   "devRespondedAt": null
   },
   "r236614813": {
    "id": "r236614813",
@@ -345,7 +348,8 @@
     "at": 1790966220,
     "text": "엔딩까지 가는 그 중독성 있는 느낌을 좋아해주셔서 감사합니다! Hotfix 1.4.1에서 깊은 곳의 채굴 문제를 고쳤으니 다시 한번 파내려가 보세요.",
     "english": "Thanks so much for loving that addictive rush all the way to the ending! We fixed the deep mining issues in Hotfix 1.4.1, so jump back in and dig down again."
-   }
+   },
+   "devRespondedAt": null
   },
   "r236561103": {
    "id": "r236561103",
@@ -356,7 +360,7 @@
     "profile": "https://steamcommunity.com/profiles/76561198318947652",
     "name": "Horror Heaven",
     "avatar": "https://avatars.fastly.steamstatic.com/8442685651231b08503c282a75c5f324df2ae085_medium.jpg",
-    "reviews": 1040,
+    "reviews": 1041,
     "games": 988
    },
    "lang": "german",
@@ -420,7 +424,8 @@
     "at": 1790966220,
     "text": "Danke für das Feedback – und sorry, dass der Sound dir anfangs so in die Ohren gegangen ist! Das haben wir in Update 1.3 überarbeitet. Schau doch mal wieder rein: Mit Update 1.2 haben wir die Grube fünfmal so tief gemacht, sodass es jetzt viel länger dauert, bis du alle Upgrades hast.",
     "english": "Thanks for the feedback—and sorry the sound was so rough on your ears at first! We reworked that in Update 1.3. Jump back in and see: Update 1.2 made the pit five times as deep, so now it takes much longer to get all the upgrades."
-   }
+   },
+   "devRespondedAt": null
   },
   "r236545405": {
    "id": "r236545405",
@@ -484,7 +489,8 @@
    "devResponseEnglish": "Thank you for the feedback! I sympathized with the comment about it ending too quickly, so in the 1.02 update I increased the pit depth from 100m to 500m. Now you can enjoy it much longer while obtaining all the upgrades. Since I'm developing it solo, there are many shortcomings, but I'd be really happy if you got a chance to play it again sometime haha",
    "translatedOwn": {
     "devResponse": "4a9faf7feada"
-   }
+   },
+   "devRespondedAt": 1790783687
   },
   "r236542076": {
    "id": "r236542076",
@@ -495,7 +501,7 @@
     "profile": "https://steamcommunity.com/profiles/76561198395502823",
     "name": "thedead817",
     "avatar": "https://avatars.fastly.steamstatic.com/8bbf3dbea8e385c611ae4d8b2c79f43279b59035_medium.jpg",
-    "reviews": 451,
+    "reviews": 455,
     "games": 237
    },
    "lang": "german",
@@ -510,7 +516,7 @@
    "versions": [],
    "flips": [],
    "pending": false,
-   "playtimeForever": 0.3,
+   "playtimeForever": 0.8,
    "steamPurchase": true,
    "receivedForFree": false,
    "issues": [
@@ -558,7 +564,8 @@
     "at": 1790966220,
     "text": "Vielen Dank für die Review! Freut uns, dass dir das entspannte Buddeln mit der Kettensäge gefällt – und gute Nachricht: Das Problem mit der fehlenden Erklärung am Anfang haben wir in Update 1.2 behoben, da gibt es jetzt einen Hinweis, wenn dein Inventar voll wird. Die Grube ist jetzt auch fünfmal tiefer, also viel mehr zum Erkunden und Upgraden – schau mal rein!",
     "english": "Thanks for the review! We're glad you're enjoying the relaxed digging with the chainsaw – and good news: we fixed that missing explanation at the start in Update 1.2, there's now a hint when your bag gets full. The pit is also five times deeper now, so plenty more to explore and upgrade – give it a try!"
-   }
+   },
+   "devRespondedAt": null
   },
   "t594068999055121855": {
    "id": "t594068999055121855",

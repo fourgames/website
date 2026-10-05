@@ -276,23 +276,12 @@ async function saveData(key, path, change, message, done) {
   }
 }
 
-// Wide screens scroll the view inside its own box (.fb-main), phones the whole page: keep both.
-function keepScroll(fn) {
-  const main = document.querySelector(".fb .fb-main");
-  const y = window.scrollY, top = main?.scrollTop;
-  fn();
-  window.scrollTo(0, y);
-  if (main) main.scrollTop = top;
-}
-// A new view starts at its top.
-function viewTop() {
-  const main = document.querySelector(".fb .fb-main");
-  if (main) main.scrollTop = 0;
-}
-
 // Redraws in place after a change, keeping the scroll position.
 function redraw() {
-  keepScroll(() => { renderStatus(); render(); });
+  const y = window.scrollY;
+  renderStatus();
+  render();
+  window.scrollTo(0, y);
 }
 
 
@@ -964,7 +953,7 @@ function render() {
   // that's newer than when you last opened it gets "New", like a new post.
   store.set(`seen:${state.game.appId}:${state.tab}`, now());
   const button = ([id, label]) =>
-    h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); viewTop(); } },
+    h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
       icon(id), h("span", label), id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : id === "soon" ? ".count-soon" : ""}`, counts[id]) : null);
   // The side card lists the views under their group's name; the phone tabs keep them in one row,
   // with a gap between groups.
@@ -1659,7 +1648,7 @@ function attention() {
 }
 
 function overviewView() {
-  const go = (tab, label) => h("button.btn", { onclick: () => { state.tab = tab; render(); viewTop(); window.scrollTo({ top: 0 }); } }, label, " →");
+  const go = (tab, label) => h("button.btn", { onclick: () => { state.tab = tab; render(); window.scrollTo({ top: 0 }); } }, label, " →");
   const section = (title, count, ...body) => h("section.ov-section", h("h3", title, count != null ? h("span.ov-count", count) : null), ...body);
   const urgent = attention();
   // Next to anything urgent, the open complaints in the most negative reviews (not already above).
@@ -2283,9 +2272,11 @@ function reviewsChart(start, end, releases) {
 const SHELL = `
 <div class="fb-layout">
   <aside class="fb-side" aria-label="Games and views">
-    <div id="fb-games-side"></div>
-    <div class="side-label">Views</div>
-    <nav class="nav-side" id="fb-nav-side" aria-label="Views"></nav>
+    <div class="side-card" id="fb-games-side"></div>
+    <div class="side-card side-views">
+      <div class="side-label">Views</div>
+      <nav class="nav-side" id="fb-nav-side" aria-label="Views"></nav>
+    </div>
   </aside>
   <div class="fb-main">
     <div class="strip" id="fb-games-strip" aria-label="Games"></div>
@@ -2351,7 +2342,10 @@ async function refresh() {
     return;
   }
   // New data: redraw, keeping the reader's place.
-  keepScroll(() => { renderStatus(); render(); });
+  const y = window.scrollY;
+  renderStatus();
+  render();
+  window.scrollTo(0, y);
 }
 
 export function mount(root) {

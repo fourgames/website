@@ -54,9 +54,15 @@
 	gap: 1.5rem;
 	align-items: start;
 }
+/* The side column runs the page's full height: the games card scrolls away with the page and the
+   views card stays on screen below it, so every view is in reach however long the page is. */
 .fb .fb-side {
-	position: sticky;
-	top: 1rem;
+	align-self: stretch;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+.fb .side-card {
 	background: var(--fb-card);
 	border-radius: var(--radius-card);
 	box-shadow: var(--fb-shadow);
@@ -64,6 +70,14 @@
 	display: flex;
 	flex-direction: column;
 	gap: 2px;
+}
+.fb .side-views {
+	position: sticky;
+	top: 1rem;
+	/* Only on a very short screen does it need a scroll of its own */
+	max-height: calc(100vh - 2rem);
+	overflow-y: auto;
+	scrollbar-width: thin;
 }
 .fb .side-label {
 	color: var(--fb-muted);
@@ -81,27 +95,6 @@
    and jump the page. */
 .fb #fb-view {
 	min-height: 100vh;
-}
-/* Wide screens: the dashboard is a window-tall box inside the site, and the side card and the view
-   each scroll on their own, like an app. The site's header and footer stay outside it. */
-@media (width >= 56.25rem) {
-	.fb .fb-layout {
-		height: calc(100dvh - 2rem);
-		align-items: stretch;
-	}
-	.fb .fb-side,
-	.fb .fb-main {
-		position: static;
-		min-height: 0;
-		overflow-y: auto;
-		scrollbar-width: thin;
-	}
-	.fb .fb-main {
-		padding: 0 4px 1.5rem 0;
-	}
-	.fb #fb-view {
-		min-height: 0;
-	}
 }
 
 /* Games: one click in the side card (or the chip strip on phones) */

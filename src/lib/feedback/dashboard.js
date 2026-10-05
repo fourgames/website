@@ -1863,19 +1863,28 @@ function repliesView() {
   const answered = items()
     .filter((i) => !i.dev && (replied(i) || ((i.fixReply || i.thanksReply) && done.has(i.id))))
     .sort((a, b) => b.created - a.created);
+  // Tone: positive is a thank-you draft or a positive review; negative is everything else (fixes).
+  // Negative by default, remembered in this browser.
+  f.tone ??= store.get("replyTone") || "negative";
+  const positive = (i) => (draftFor(i) ? draftFor(i) === i.thanksReply : i.kind === "review" && !!i.votedUp);
+  const toned = (list) => (f.tone === "all" ? list : list.filter((i) => positive(i) === (f.tone === "positive")));
   const list = h("div");
   const draw = () => {
-    const cards = f.show === "open" ? open.map(replyCard)
-      : f.show === "replied" ? answered.map(repliedCard)
-      : [...open.map(replyCard), ...answered.map(repliedCard)];
+    const o = toned(open), a = toned(answered);
+    const cards = f.show === "open" ? o.map(replyCard)
+      : f.show === "replied" ? a.map(repliedCard)
+      : [...o.map(replyCard), ...a.map(repliedCard)];
     const empty = { open: "Nothing to reply to right now.", replied: "You haven't replied to any posts yet.", all: "Nothing here yet." }[f.show];
     list.replaceChildren(...(cards.length ? cards : [h("p.empty", empty)]));
   };
   const intro = about(
     "To reply: negative reviews and threads about something an update has since fixed (say what was fixed), and positive reviews from the last 60 days (thank them and invite them back for the newest update). Replied: posts you've already answered on Steam.");
   const filter = chips([["open", `To reply (${open.length})`], ["replied", `Replied (${answered.length})`], ["all", "All"]], f.show, (v) => { f.show = v; draw(); }, "Show");
+  const neg = open.filter((i) => !positive(i)).length;
+  const tone = chips([["negative", `Negative (${neg})`], ["positive", `Positive (${open.length - neg})`], ["all", "Both"]], f.tone,
+    (v) => { f.tone = v; store.set("replyTone", v); draw(); }, "Tone");
   draw();
-  return h("div", intro, h("div.filters", filter), list);
+  return h("div", intro, h("div.filters", filter, tone), list);
 }
 
 // Bugs that need you now: reported again after a fix, or high/urgent and still open.

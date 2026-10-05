@@ -2010,6 +2010,14 @@
 	margin: 6px 0;
 	padding-left: 18px;
 }
+.fb .md-query {
+	display: block;
+	padding: 8px 10px;
+	border-radius: 6px;
+	background: var(--fb-card-2);
+	overflow-wrap: anywhere;
+	user-select: all;
+}
 
 /* Achievements (dashboard.js achievementsView): icon, name, share and a bar */
 .fb .ach {
@@ -2178,3 +2186,4 @@
 .fb .cmp-change.up {
 	color: var(--fb-good-text);
 }
+

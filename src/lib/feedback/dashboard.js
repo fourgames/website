@@ -462,7 +462,7 @@ const SERVICES = {
   // Media (feedback/media.py). The last entry: where the key a missing secret needs is made.
   twitch: ["Twitch", "Who's streaming your games right now, checked every 5 min", "no streams yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets", "https://dev.twitch.tv/console/apps"],
   youtube: ["YouTube", "New videos about your games, about hourly", "no videos yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets", "https://console.cloud.google.com/apis/library/youtube.googleapis.com"],
-  news: ["News", "Articles about your games on Google News, and articles and Reddit threads from your Google Alerts", "nothing found yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs", "https://www.google.com/alerts"],
+  news: ["News", "Articles about your games on Google News, and articles, Reddit threads, web pages and download copies from your Google Alerts", "nothing found yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs", "https://www.google.com/alerts"],
   github: ["GitHub", "Runs it all every 5 min, saves the data, rebuilds the site on store changes", "no changes yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
 };
 
@@ -950,7 +950,7 @@ function render() {
     bundles: bundleWith().length || null,
     competitors: competitors().length || null,
     soon: soonCount(),
-    media: liveNow().length ? `${liveNow().length} live` : mediaItems().filter((m) => m.at > now() - 7 * DAY).length || null,
+    media: liveNow().length ? `${liveNow().length} live` : talk().filter((m) => m.at > now() - 7 * DAY).length || null,
   };
   // The view on screen counts as seen now; any other view with something from the last 48 hours
   // that's newer than when you last opened it gets "New", like a new post.
@@ -1272,13 +1272,6 @@ const SOON = [
     needs: "A small add-on in each Godot game and a place to receive the events. At first launch it asks once: \"Help make the game better? Share your gameplay with Four Games so we can see how people play. [Sure!] [Only anonymous stats]\". Yes: events carry a random ID per install (not the Steam ID). No: events carry no ID, nothing is saved on the player's computer and the server keeps no IP addresses, so they can't be linked to anyone. Plus a privacy policy page saying what's collected and how to have it deleted; worth a check by someone who knows EU privacy law before launch.",
   },
   {
-    title: "Web search for every name",
-    why: "New pages anywhere on the web that name a game, in any of its languages: blogs, forums, store and download pages Google News doesn't cover.",
-    shows: ["New pages per game, sorted apart from news articles", "Copies of the game on download sites, with a link to Google's removal form"],
-    needs: "A Google Alert per game for all its names joined with OR (Deliver to: RSS feed), and the feed links in the GOOGLE_ALERTS_FEEDS secret. Free; the collector already reads them.",
-    link: ["https://www.google.com/alerts", "Google Alerts"],
-  },
-  {
     title: "Steam curators",
     why: "Curators who review a game, to thank them or reply.",
     shows: ["Each curator's recommendation, with their follower count"],
@@ -1304,7 +1297,7 @@ const NEWEST = {
   loved: () => issues("praise").map((i) => i.lastSeen),
   replies: () => toReply().map((i) => draftFor(i).at || i.created),
   updates: () => (state.game.releases || []).map((r) => r.time),
-  media: () => mediaItems().filter((m) => !m.own).map((m) => m.at),
+  media: () => talk().filter((m) => !m.own).map((m) => m.at),
   feed: () => items().filter((i) => !i.dev).map((i) => i.created),
 };
 function hasNew(view) {
@@ -1841,7 +1834,7 @@ function overviewView() {
   const replies = toReply();
   const latest = items().filter((i) => !i.dev).sort((a, b) => b.created - a.created).slice(0, 5);
   const live = liveNow();
-  const coverage = mediaItems().filter((m) => !isLive(m) && m.at > now() - 7 * DAY).sort((a, b) => b.at - a.at).slice(0, 3);
+  const coverage = talk().filter((m) => !isLive(m) && m.at > now() - 7 * DAY).sort((a, b) => b.at - a.at).slice(0, 3);
   return h("div",
     live.length ? section("🔴 Live now", live.length, ...live.map(mediaCard)) : null,
     urgent.length
@@ -1892,7 +1885,7 @@ function feedView() {
 
 
 // ---------------------------------------------------------------------------
-// Media: Twitch streams, YouTube videos, news articles and Reddit posts that name the game
+// Media: Twitch streams, YouTube videos, news articles, Reddit posts, web pages and download copies that name the game
 // (feedback/media.py, in the game's file under `media`).
 // ---------------------------------------------------------------------------
 
@@ -1901,9 +1894,14 @@ const MEDIA = {
   youtube: { name: "YouTube", color: "#ff0033" },
   news: { name: "News", color: "#3e63dd" },
   reddit: { name: "Reddit", color: "#ff4500" },
+  web: { name: "Web", color: "#12a594" },
+  copy: { name: "Download copies", color: "#71717a" },
 };
+// Copies of the game on download sites aren't anyone talking about it: they stay off the overview and charts.
+const REMOVAL_FORM = "https://reportcontent.google.com/forms/dmca_search";
 const MEDIA_SOURCES = Object.keys(MEDIA);
 const mediaItems = () => Object.values(state.game?.media?.items || {});
+const talk = () => mediaItems().filter((m) => m.source !== "copy");
 // Live: a run saw it live in the last half hour (the data can be a few minutes behind).
 const isLive = (m) => !!m.live && now() - (m.end || m.at) < 1800;
 const liveNow = () => mediaItems().filter(isLive).sort((a, b) => (b.viewers || 0) - (a.viewers || 0));
@@ -1937,7 +1935,7 @@ function mediaCard(m) {
   const thumb = m.thumb && (m.source !== "twitch" || live)
     ? link({ class: "md-thumb", tabindex: "-1", "aria-hidden": "true" }, h("img", { src: m.thumb, alt: "", loading: "lazy", onerror: (e) => e.currentTarget.parentElement.remove() }))
     : null;
-  const action = { twitch: live ? "Watch and chat" : "Channel", youtube: live ? "Watch and chat" : "Watch and comment", reddit: "Open the thread", news: "Read it" }[m.source];
+  const action = { twitch: live ? "Watch and chat" : "Channel", youtube: live ? "Watch and chat" : "Watch and comment", reddit: "Open the thread", news: "Read it", web: "Open the page", copy: "See the page" }[m.source];
   const facts = mediaFacts(m);
   return h(`div.card.md-card${live ? ".md-live" : ""}`, { style: `--md:${src.color}` },
     thumb,
@@ -1951,7 +1949,8 @@ function mediaCard(m) {
         m.lang ? ` · ${m.lang.slice(0, 2).toUpperCase()}` : null),
       facts.length ? h("div.md-facts", facts.join(" · ")) : null,
       m.text && m.source !== "youtube" ? h("p.md-text", m.text) : null,
-      link({ class: `btn${live ? " primary" : ""} md-go` }, action, " ↗")));
+      link({ class: `btn${live ? " primary" : ""} md-go` }, action, " ↗"),
+      m.source === "copy" ? h("a.btn.md-go", { href: REMOVAL_FORM, target: "_blank", rel: "noopener", title: "Google's form to remove a copyright-infringing page from its search results" }, "Ask Google to remove it ↗") : null));
 }
 
 function mediaView() {
@@ -1972,7 +1971,7 @@ function mediaView() {
   return h("div",
     live.length ? h("section.ov-section", h("h3", "🔴 Live now", h("span.ov-count", live.length)), ...live.map(mediaCard)) : null,
     about(
-      "Streams, videos, articles and Reddit threads that name the game. Twitch is checked every 5 minutes, news every 30 (Reddit threads come from your Google Alerts) and YouTube about hourly; Discord pings you for each new stream, video and article. They're marked along the bottom of the player and review charts, so you can see what caused a jump."),
+      "Streams, videos, articles, Reddit threads and other web pages that name the game. Twitch is checked every 5 minutes, news every 30 and YouTube about hourly; Reddit threads, web pages and download copies come from your Google Alerts. Discord pings you for each new stream, video and article. They're marked along the bottom of the player and review charts, so you can see what caused a jump; download copies aren't, and each has a link to Google's removal form."),
     twitch && twitch.category === null ? h("p.ov-calm", { style: "margin:0 0 12px" }, "Twitch has no category for this game yet, so its streams can't be found. Twitch adds games from IGDB: once the game is on igdb.com, it shows up within a day.") : null,
     names(),
     h("div.filters", filter),
@@ -1985,17 +1984,19 @@ const STEAM_LANG_NAME = { koreana: "Korean", schinese: "Simplified Chinese", tch
 const langName = (lang) => STEAM_LANG_NAME[lang] || lang[0].toUpperCase() + lang.slice(1);
 function names() {
   const local = Object.entries(state.game.media?.names || {}).flatMap(([lang, ns]) => ns.map((n) => [lang, n]));
-  if (!local.length) return null;
-  return h("details.md-names", h("summary", `Searches for ${plural(local.length + 1, "name")}: English and every localized name on Steam`),
+  return h("details.md-names", h("summary", local.length ? `Searches for ${plural(local.length + 1, "name")}: English and every localized name on Steam` : "Searches for the English name (Steam has no localized ones)"),
     h("ul", h("li", h("b", "English"), " ", state.game.meta?.name || ""), ...local.map(([lang, n]) => h("li", h("b", langName(lang)), " ", n))),
-    h("p.ov-calm", "Each language's names are searched in its own country's Google News. A name Steam had before (a changed translation) is kept."));
+    h("p.ov-calm", "Each language's names are searched in its own country's Google News. A name Steam had before (a changed translation) is kept."),
+    h("p.ov-calm", "For web pages in every language, make a ", h("a", { href: "https://www.google.com/alerts", target: "_blank", rel: "noopener" }, "Google Alert ↗"),
+      " for this (Show options → Deliver to: RSS feed) and add its feed link to the GOOGLE_ALERTS_FEEDS secret:"),
+    h("code.md-query", [state.game.meta?.name || "", ...local.map(([, n]) => n)].filter((n, i, all) => n && all.indexOf(n) === i).map((n) => `"${n}"`).join(" OR ")));
 }
 
 // Streams, videos, articles and posts along the bottom of a chart: a stream as a bar for as long
 // as it ran, anything else as a dot that's bigger the more people it reached. Returns the sources
 // shown, for the legend.
 function mediaMarks(svg, x, start, end) {
-  const list = mediaItems().filter((m) => (m.end || m.at) >= start && m.at <= end).sort((a, b) => reach(a) - reach(b));
+  const list = talk().filter((m) => (m.end || m.at) >= start && m.at <= end).sort((a, b) => reach(a) - reach(b));
   const y = H - M.bottom - 6;
   for (const m of list) {
     const color = MEDIA[m.source].color;
@@ -2011,7 +2012,7 @@ function mediaMarks(svg, x, start, end) {
 const mediaLegend = (sources) => sources.map((s) => h("span", h("i", { style: `background:${MEDIA[s].color}` }), MEDIA[s].name));
 // What was going on at a point of a chart: streams running then, anything else posted within `span`.
 function mediaAt(t, span) {
-  return mediaItems()
+  return talk()
     .filter((m) => m.source === "twitch" ? t >= m.at - span && t <= (isLive(m) ? now() : m.end || m.at) + span : Math.abs(m.at - t) <= span)
     .sort((a, b) => reach(b) - reach(a))
     .slice(0, 4)

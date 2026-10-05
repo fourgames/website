@@ -1,6 +1,7 @@
 """Who's talking about each game outside Steam: Twitch streams live right now, new YouTube videos, news
-articles (Google News, plus any Google Alerts feeds you add; links to Reddit from those are listed as
-Reddit posts, without alerts: Reddit's own API needs its approval). Saved in the game's
+articles (Google News, plus any Google Alerts feeds you add). From the alerts, links to Reddit are
+listed as Reddit posts (Reddit's own API needs its approval), other pages not on a news site as web
+pages, and copies of the game on download sites as copies, all without alerts. Saved in the game's
 file under `media`, so the dashboard can list them, mark them on the player and review charts and
 show who's live; new ones are sent to Discord (run.py send_media_alerts).
 
@@ -518,6 +519,27 @@ def google_alerts():
     return _alerts
 
 
+def _host(url):
+    return urllib.parse.urlsplit(url or "").netloc.lower().removeprefix("www.")
+
+
+# Download sites and the words they use, for copies of the game being given away (cracked, repacked
+# or "free"). Checked on the link and the title; the stores selling it are never one.
+COPY_SITES = re.compile(
+    r"\b(torrents?|crack(ed)?|repacks?|warez|skidrow|fitgirl|dodi|elamigos|igg ?games|steamunlocked|steamrip|"
+    r"oceanofgames|ocean of games|ova ?games|game3rb|gog ?games|apunkagames|nosteam|online ?fix|pcgamestorrents|ankergames|"
+    r"gamesfull|freegogpcgames|uploadhaven|mediafire|full version|free download|download free|"
+    r"скачать|торрент|descargar gratis|télécharger gratuit\w*|download gratis|下载|ダウンロード)\b")
+STORES = {"store.steampowered.com", "steamcommunity.com", "gog.com", "itch.io", "epicgames.com", "store.epicgames.com",
+          "humblebundle.com", "fanatical.com", "nintendo.com", "xbox.com", "playstation.com", "steamdb.info"}
+
+
+def is_copy(url, title):
+    if _host(url) in STORES:
+        return False
+    return bool(COPY_SITES.search(norm(urllib.parse.unquote(url or ""))) or COPY_SITES.search(norm(title)))
+
+
 def collect_news(media, game, found):
     app_id = game["appId"]
     names = all_names(media, game)
@@ -533,21 +555,28 @@ def collect_news(media, game, found):
         _ran(f"news-{lang}", app_id)
         time.sleep(0.3)
     try:
-        articles += [e for query, e in google_alerts() if norm(query).strip('"') == norm(game["name"]) or mentions(every, e["title"], e["text"])]
+        # An alert is the game's when its search names the game (all its names joined with OR), or
+        # the page does.
+        articles += [{**e, "alert": True} for query, e in google_alerts() if mentions(every, query) or mentions(every, e["title"], e["text"])]
     except (HttpError, ET.ParseError) as error:
         status.fail("news", f"Couldn't read a Google Alerts feed ({error}); check GOOGLE_ALERTS_FEEDS.")
     items = media["items"]
     seen = {i.get("title", "").lower() for i in items.values() if i["source"] == "news"}
+    # Sites Google News has articles from: an alert's page there is news, anywhere else a web page.
+    news_sites = {_host(i.get("authorUrl")) for i in items.values() if i["source"] == "news"}
+    news_sites |= {_host(a.get("authorUrl")) for a in articles if not a.get("alert")}
     for a in articles:
         # A Reddit thread (from an alert like site:reddit.com "Game name") is listed as Reddit, under its subreddit.
         sub = re.match(r"https?://(?:[a-z]+\.)?reddit\.com/(r/[^/]+)", a["url"] or "")
-        source = "reddit" if sub else "news"
-        key = _id("rd" if sub else "nw", a["key"])
+        copy = a.get("alert") and not sub and is_copy(a["url"], a["title"])
+        source = "reddit" if sub else "copy" if copy else "web" if a.get("alert") and _host(a["url"]) not in news_sites else "news"
+        key = _id({"reddit": "rd", "copy": "cp", "web": "wb"}.get(source, "nw"), a["key"])
         # The same story reached through Google News and an alert (different links) counts once. A
-        # Reddit thread is about a game when it says so or its subreddit is about games.
+        # Reddit thread is about a game when it says so or its subreddit is about games; a download
+        # page naming the game is always one.
         if key in items or not a["url"] or a["title"].lower() in seen:
             continue
-        if not (about_games(a["title"], a.get("text")) or (sub and re.search(r"gam|steam|indie", sub.group(1).lower()))):
+        if not (copy or about_games(a["title"], a.get("text")) or (sub and re.search(r"gam|steam|indie", sub.group(1).lower()))):
             continue
         seen.add(a["title"].lower())
         items[key] = {"id": key, "source": source, "url": a["url"], "title": _clip(re.sub(r"\s*:\s*r/\w+$", "", a["title"]), 300),
@@ -556,7 +585,7 @@ def collect_news(media, game, found):
                       "authorUrl": f"https://www.reddit.com/{sub.group(1)}/" if sub else a.get("authorUrl"),
                       "at": a["at"] or now(), "lang": a.get("lang") if a.get("lang") != "en" else None}
         found.append(key)
-        status.active("news", "new Reddit post" if sub else "new article")
+        status.active("news", {"reddit": "new Reddit post", "copy": "new download copy", "web": "new web page"}.get(source, "new article"))
     status.ok("news")
     return True
 
@@ -566,7 +595,7 @@ def collect_news(media, game, found):
 # ---------------------------------------------------------------------------
 
 SOURCES = {"twitch": "Twitch", "youtube": "YouTube", "news": "news"}
-QUIET = {"reddit"}  # listed, never alerted
+QUIET = {"reddit", "web", "copy"}  # listed, never alerted
 
 
 def collect(state, game, games):

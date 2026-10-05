@@ -10,6 +10,9 @@ percentages) and the studio's Discord server. None of it needs a key. Stdlib onl
 - Bundles: the Steam bundles the game is in (from its store page), daily, and the store details of
   the games you want to bundle it with (data/bundles.json, which only the dashboard writes): a game
   you just added on the next run, all of them daily.
+- Competitors: the games you compare this one with (data/competitors.json, which only the dashboard
+  writes): each one's player count hourly (kept as the day's peak), its review totals per day and
+  its update posts, so the dashboard can tell "everyone dropped" from "only we dropped".
 """
 
 import html
@@ -21,6 +24,7 @@ import steam
 
 HOUR = 3600
 ONLINE_DAYS = 90  # how long the online count is kept (it changes all the time)
+COMPETITOR_DAYS = 400  # how long a competitor's daily peaks and review totals are kept
 
 
 def _series_add(series, value):
@@ -165,3 +169,62 @@ def _partner(app_id):
         "price": "Free" if d.get("is_free") else price.get("initial_formatted") or price.get("final_formatted"),
         "reviews": {"desc": reviews.get("review_score_desc"), "total": reviews.get("total_reviews", 0), "positive": reviews.get("total_positive", 0)},
     }
+
+
+def record_competitors(state, game, wanted):
+    """Players, reviews and updates of the games in `wanted` (app ids you compare this game with).
+    Stored per competitor: `peaks` {day: most players seen that day (UTC)}, `reviews` {day:
+    {positive, negative}} like the game's own reviewTotals, and its latest `updates`."""
+    app_id = game["appId"]
+    found = state.setdefault("competitors", {})
+    for key in [k for k in found if k not in wanted]:
+        del found[key]
+    if not wanted:
+        state.pop("competitors")
+        return
+    # Hourly, and at once for a game you just added.
+    due = media._due("competitors", app_id, HOUR)
+    if not due:
+        wanted = [k for k in wanted if k not in found or not found[k]]
+        if not wanted:
+            return
+    day = time.strftime("%Y-%m-%d", time.gmtime())
+    cutoff = time.strftime("%Y-%m-%d", time.gmtime(time.time() - COMPETITOR_DAYS * 86400))
+    daily = due and media._due("competitors-daily", app_id, 24 * HOUR)
+    for key in wanted:
+        c = found.setdefault(key, {})
+        other = int(key)
+        try:
+            # The store details (name, capsule, release) and update posts change rarely: daily, and
+            # at once for a game you just added.
+            if daily or "name" not in c:
+                entry = (steam.request("https://store.steampowered.com/api/appdetails", params={"appids": other, "cc": "us", "l": "english"}) or {}).get(key) or {}
+                if not entry.get("success"):
+                    found[key] = {"missing": True}
+                    continue
+                d = entry["data"]
+                release = d.get("release_date") or {}
+                c.update(name=d.get("name"), capsule=d.get("header_image"),
+                         released=steam.parse_release_date(release.get("date")), comingSoon=bool(release.get("coming_soon")))
+                c.pop("missing", None)
+                c["updates"] = [{"time": e["time"], "name": e["name"], "version": e["version"], "url": e["url"]}
+                                for e in steam.update_events(other)[:10]]
+            players = steam.player_count(other)
+            if players is not None:
+                peaks = c.setdefault("peaks", {})
+                peaks[day] = max(players, peaks.get(day, 0))
+            summary = steam.request(f"https://store.steampowered.com/appreviews/{other}",
+                                    params={"json": 1, "language": "all", "purchase_type": "all", "num_per_page": 0}).get("query_summary") or {}
+            if summary.get("total_reviews") is not None:
+                c.setdefault("reviews", {})[day] = {"positive": summary.get("total_positive", 0), "negative": summary.get("total_negative", 0)}
+        except steam.HttpError as error:
+            print(f"[community] {game['name']} competitor {other}: {error}")
+            continue
+        for series in ("peaks", "reviews"):
+            if c.get(series):
+                c[series] = {d: v for d, v in sorted(c[series].items()) if d >= cutoff}
+        time.sleep(0.3)
+    if due:
+        media._ran("competitors", app_id)
+    if daily:
+        media._ran("competitors-daily", app_id)

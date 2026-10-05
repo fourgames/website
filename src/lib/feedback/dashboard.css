@@ -2143,3 +2143,38 @@
 		width: 100%;
 	}
 }
+
+/* Competitors (dashboard.js competitorsView): the verdict first, then the chart and one card per game */
+.fb .cmp-verdict {
+	margin: 0 0 12px;
+	padding: 10px 14px;
+	border-radius: 8px;
+	background: var(--fb-card);
+	box-shadow: var(--fb-shadow);
+	border-left: 4px solid var(--fb-muted);
+	font-size: 0.9375rem;
+}
+.fb .cmp-verdict.bad {
+	border-left-color: var(--fb-negative);
+}
+.fb .cmp-verdict.good {
+	border-left-color: var(--type-praise);
+}
+.fb .cmp-img {
+	width: 120px;
+}
+.fb .cmp-own {
+	outline: 2px solid var(--fb-accent);
+	outline-offset: -2px;
+}
+.fb .cmp-change {
+	font-size: 0.8125rem;
+	font-weight: 600;
+	color: var(--fb-ink-2);
+}
+.fb .cmp-change.down {
+	color: var(--fb-negative);
+}
+.fb .cmp-change.up {
+	color: var(--fb-good-text);
+}

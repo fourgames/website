@@ -101,14 +101,15 @@ const REPO_API = "https://api.github.com/repos/fourgames/website";
 const CLEARED_PATH = "feedback/data/cleared.json";
 const TOKEN_URL = "https://github.com/settings/personal-access-tokens/new?name=Feedback%20dashboard&target_name=fourgames&expires_in=366&contents=write";
 
-// The files only the dashboard writes: what you marked fixed, your Claude credit and the games you
-// want to bundle with.
+// The files only the dashboard writes: what you marked fixed, your Claude credit, the games you
+// want to bundle with and the games you compare with.
 async function loadCleared() {
-  const [cleared, credit, bundleWith] = await Promise.allSettled([getJson("cleared.json"), getJson("credit.json"), getJson("bundles.json")]);
+  const [cleared, credit, bundleWith, compareWith] = await Promise.allSettled([getJson("cleared.json"), getJson("credit.json"), getJson("bundles.json"), getJson("competitors.json")]);
   // None saved yet (or a test copy of the data without them): keep what's on screen.
   state.cleared = cleared.value || state.cleared || {};
   state.credit = credit.value || state.credit || null;
   state.bundleWith = bundleWith.value || state.bundleWith || {};
+  state.compareWith = compareWith.value || state.compareWith || {};
 }
 
 // Steam's sales for every game (feedback/sales.py), one file; kept as it was if it can't be read.
@@ -321,6 +322,7 @@ const ICONS = {
   achievements: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3",
   bundles: "M16.5 9.4 7.5 4.2M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.3 7 12 12l8.7-5M12 22V12",
   soon: "M6 11h4M8 9v4M15 12h.01M18 10h.01M17.32 5H6.68a4 4 0 0 0-3.98 3.59L2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.41-1.41A2 2 0 0 1 9.83 16h4.34a2 2 0 0 1 1.41.59L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3l-.7-7.41A4 4 0 0 0 17.32 5z",
+  competitors: "M3 3v18h18M7 15l4-4 3 3 6-6",
   sales: "M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
   media: "M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5M19.1 4.9C23 8.8 23 15.1 19.1 19M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
 };
@@ -925,7 +927,7 @@ const NAV = [
   [null, [["overview", "Overview"]]],
   ["Players", [["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["feed", "All posts"]]],
   ["Game", [["updates", "Updates"], ["achievements", "Achievements"], ["media", "Media"]]],
-  ["Business", [["sales", "Sales"], ["bundles", "Bundles"]]],
+  ["Business", [["sales", "Sales"], ["bundles", "Bundles"], ["competitors", "Competitors"]]],
   ["Later", [["soon", "Coming soon"]]],
 ];
 
@@ -946,6 +948,7 @@ function render() {
     overview: attention().length || null,
     achievements: state.game.achievements?.list?.length || null,
     bundles: bundleWith().length || null,
+    competitors: competitors().length || null,
     soon: soonCount(),
     media: liveNow().length ? `${liveNow().length} live` : mediaItems().filter((m) => m.at > now() - 7 * DAY).length || null,
   };
@@ -960,7 +963,7 @@ function render() {
   document.getElementById("fb-nav-side").replaceChildren(...NAV.flatMap(([group, tabs]) => [...(group ? [h("div.nav-group", group)] : []), ...tabs.map(button)]));
   document.getElementById("fb-nav-top").replaceChildren(...NAV.flatMap(([, tabs], i) => [...(i ? [h("span.nav-gap")] : []), ...tabs.map(button)]));
   setHash();
-  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, achievements: achievementsView, bundles: bundlesView, sales: salesView, soon: soonView, feed: feedView }[state.tab]();
+  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, achievements: achievementsView, bundles: bundlesView, competitors: competitorsView, sales: salesView, soon: soonView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
 
@@ -1054,21 +1057,26 @@ function askBundleWith(w) {
     h("label.dlg-label", "Note (optional)", note),
   ], w ? "Save" : "Add", () => {
     if (!input) return { appId: w.appId };
-    const text = input.value.trim();
-    const m = text.match(/\/app\/(\d+)(?:\/([^/?#]+))?/) || text.match(/^(\d+)$/);
-    if (!m) throw new Error("Paste the game's Steam store link, or its app id (the number in the link).");
-    const appId = Number(m[1]);
-    if (appId === state.game.appId) throw new Error("That's this game.");
-    if (state.bundleWith?.[state.game.appId]?.[appId]) throw new Error("That game is already on the list.");
-    // A name from the link until the collector looks the game up.
-    let name = null;
-    try { name = m[2] ? decodeURIComponent(m[2]).replace(/_/g, " ") : null; } catch {}
-    return { appId, name };
+    return appFromInput(input.value, state.bundleWith);
   }).then((got) => {
     if (!got) return;
     const fields = { note: note.value.trim() || null, ...(w ? {} : { name: got.name, status: "idea", at: now() }) };
     setBundleWith(got.appId, fields, w ? "Note saved" : "Added: looked up on the next run");
   });
+}
+
+// {appId, name} from a Steam store link or an app id typed in a dialog; throws what's wrong with it.
+// `saved` is the dashboard file the game goes in ({appId: {otherAppId: …}}).
+function appFromInput(text, saved) {
+  const m = text.trim().match(/\/app\/(\d+)(?:\/([^/?#]+))?/) || text.trim().match(/^(\d+)$/);
+  if (!m) throw new Error("Paste the game's Steam store link, or its app id (the number in the link).");
+  const appId = Number(m[1]);
+  if (appId === state.game.appId) throw new Error("That's this game.");
+  if (saved?.[state.game.appId]?.[appId]) throw new Error("That game is already on the list.");
+  // A name from the link until the collector looks the game up.
+  let name = null;
+  try { name = m[2] ? decodeURIComponent(m[2]).replace(/_/g, " ") : null; } catch {}
+  return { appId, name };
 }
 
 // Changes one game on the list (null removes it).
@@ -1081,6 +1089,175 @@ function setBundleWith(appId, fields, done) {
     if (!Object.keys(list).length) delete data[game];
     return data;
   }, `Feedback: bundle with ${appId} ${fields ? "updated" : "removed"} [skip ci]`, done);
+}
+
+// Competitors: similar games you compare this one with, saved in feedback/data/competitors.json
+// ({appId: {otherAppId: {at, name}}}). feedback/community.py reads each one hourly: the day's peak
+// players, its review totals per day and its update posts (state.game.competitors), so a drop shows
+// as "everyone dropped" or "only we dropped".
+const COMPETITOR_PATH = "feedback/data/competitors.json";
+const competitors = () => Object.entries(state.compareWith?.[state.game.appId] || {})
+  .map(([appId, w]) => ({ appId: Number(appId), ...w, info: state.game.competitors?.[appId] || null }))
+  .sort((a, b) => b.at - a.at);
+const WEEK = 7;
+
+// The game's own daily peak players ({day: n}, UTC days like the collector's) from its player count,
+// which is stored on change: a count holds until the next one.
+function ownPeaks() {
+  const series = state.game.players || [];
+  const peaks = {};
+  series.forEach(([t, n], i) => {
+    const until = series[i + 1]?.[0] ?? now();
+    for (let d = Math.floor(t / DAY); d <= Math.floor(until / DAY); d++) {
+      const key = isoDay(d * DAY);
+      peaks[key] = Math.max(n, peaks[key] ?? 0);
+    }
+  });
+  return peaks;
+}
+// Average daily peak over `days` full days ending `ago` days before today (today is still going).
+function peakAverage(peaks, days, ago = 1) {
+  const today = Math.floor(now() / DAY);
+  const values = Array.from({ length: days }, (_, i) => peaks[isoDay((today - ago - i) * DAY)]).filter((v) => v != null);
+  return values.length >= Math.ceil(days * 0.7) ? values.reduce((a, b) => a + b, 0) / values.length : null;
+}
+// Players this week against the week before, as a share (−0.2 is 20% fewer), or null without the data.
+function weekChange(peaks) {
+  const was = peakAverage(peaks, WEEK, WEEK + 1), is = peakAverage(peaks, WEEK);
+  return was == null || is == null || was < 1 ? null : is / was - 1;
+}
+// Review totals ({day: {positive, negative}}): the newest, and how many came in over the last week.
+function reviewFacts(totals) {
+  const days = Object.keys(totals || {}).sort();
+  if (!days.length) return null;
+  const last = totals[days[days.length - 1]];
+  const weekAgo = days.filter((d) => d <= isoDay(now() - WEEK * DAY)).pop();
+  const count = (r) => r.positive + r.negative;
+  return { total: count(last), positive: last.positive, week: weekAgo ? count(last) - count(totals[weekAgo]) : null };
+}
+const pct = (share) => `${share > 0 ? "+" : share < 0 ? "−" : "±"}${Math.abs(Math.round(share * 100))}%`;
+const median = (list) => { const s = list.slice().sort((a, b) => a - b); return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; };
+
+// The one line that says what the numbers mean: did only this game drop, or everyone?
+function competitorVerdict(own, others) {
+  if (!others.length) return null;
+  const m = median(others);
+  const vs = `similar games ${pct(m)} (median of ${others.length})`;
+  if (own == null) return ["calm", `Too few players of your own these two weeks to compare. Players this week against last: ${vs}.`];
+  if (own - m <= -0.15) return ["bad", `Only you dropped: players ${pct(own)} this week against last, while ${vs}. Look at what changed for this game: an update, a bug, a sale ending.`];
+  if (own - m >= 0.15) return ["good", `You're beating the market: players ${pct(own)} this week against last, while ${vs}.`];
+  if (m <= -0.1) return ["calm", `Everyone dropped: players ${pct(own)} this week against last, and ${vs}. Likely the season or a big release elsewhere, not your game.`];
+  return ["calm", `In step with similar games: players ${pct(own)} this week against last, ${vs}.`];
+}
+
+function competitorsView() {
+  const list = competitors();
+  const mine = ownPeaks();
+  const rows = list.map((w) => ({ ...w, name: w.info?.name || w.name || `App ${w.appId}`, peaks: w.info?.peaks || {} }));
+  const verdict = competitorVerdict(weekChange(mine), rows.map((r) => weekChange(r.peaks)).filter((v) => v != null));
+  const since = Math.min(...rows.flatMap((r) => Object.keys(r.peaks)).map(dayTime));
+  const storeLink = (appId, text) => h("a", { href: `https://store.steampowered.com/app/${appId}/`, target: "_blank", rel: "noopener" }, text);
+  const row = ({ appId, name, capsule, peaks, reviews, updates, info, own }) => {
+    const change = weekChange(peaks);
+    const r = reviewFacts(reviews);
+    const lastUpdate = (updates || []).slice().sort((a, b) => b.time - a.time)[0];
+    const yesterday = peaks[isoDay(now() - DAY)] ?? peaks[isoDay(now())];
+    const facts = [
+      yesterday != null ? `peak ${fmtNum(yesterday)} players yesterday` : null,
+      r?.total ? `${Math.round(100 * r.positive / r.total)}% of ${fmtNum(r.total)} reviews positive${r.week ? `, +${r.week} this week` : ""}` : null,
+    ].filter(Boolean);
+    return h(`div.card.bundle${own ? ".cmp-own" : ""}`,
+      h("img.bundle-img.cmp-img", { src: capsule || `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${appId}/header.jpg`, alt: "", loading: "lazy", onerror: (e) => { e.currentTarget.hidden = true; } }),
+      h("div.bundle-body",
+        h("div.bundle-head", own ? h("b", name, " (you)") : storeLink(appId, h("b", name)),
+          change != null ? h(`span.cmp-change.${change <= -0.15 ? "down" : change >= 0.15 ? "up" : "level"}`, { title: "Average daily peak players, the last 7 days against the 7 before" }, pct(change), " this week") : null),
+        info?.missing ? h("div.bundle-meta", "Steam has no public store page for this app id.")
+          : info || own ? h("div.bundle-meta", facts.join(" · ") || "Players and reviews show after the next hourly check.")
+          : h("div.bundle-meta", "Looked up on the next run (within 10 min)."),
+        lastUpdate ? h("div.bundle-meta", "Last update: ", h("a", { href: lastUpdate.url, target: "_blank", rel: "noopener" }, lastUpdate.version ? `v${lastUpdate.version}` : lastUpdate.name.slice(0, 50)), `, ${ago(lastUpdate.time)}`) : null,
+        own ? null : h("div.bundle-actions", h("button.linkish", { type: "button", onclick: () => setCompareWith(appId, null, `${name} removed`) }, "Remove"))));
+  };
+  const own = { appId: state.game.appId, name: state.game.meta?.name || "This game", capsule: state.game.meta?.capsule, peaks: mine, reviews: state.game.reviewTotals, updates: state.game.releases, own: true };
+  return h("div",
+    h("section.ov-section",
+      h("h3", "Compared with similar games", h("span.ov-count", list.length), h("button.btn", { type: "button", style: "margin-left:auto", onclick: () => askCompareWith() }, "+ Add a game")),
+      verdict ? h(`p.cmp-verdict.${verdict[0]}`, verdict[1])
+        : h("p.ov-calm", !list.length ? "Add 5 to 10 games like this one (same genre, size or price) to see whether a drop in players is yours alone or everyone's."
+          : `Needs two weeks of players to compare: collecting${Number.isFinite(since) ? ` since ${fmtShort(since)}` : " from the next run"}. Steam keeps no history, so it starts when a game is added.`),
+      list.length ? competitorChart(own, rows) : null,
+      about("Each game is read hourly from Steam: its player count (kept as the day's peak), its reviews and its update posts. \"This week\" is the average daily peak over the last 7 full days against the 7 before, so a game with 10 players and one with 10,000 compare fairly. Days are UTC."),
+      row(own),
+      ...rows.map((r) => row({ ...r, ...(r.info || {}), name: r.name, peaks: r.peaks }))));
+}
+
+// Daily peak players for this game and the median of the others, each as a share of its own average
+// over the chart, so games of any size line up; the others are faint lines behind.
+function competitorChart(own, rows) {
+  // The last 60 days, or from the first day any similar game was read.
+  const end = Math.floor(now() / DAY) * DAY;
+  const first = Math.min(...rows.flatMap((r) => Object.keys(r.peaks)).map((d) => Date.parse(d + "T00:00:00Z") / 1000));
+  const start = Math.max(end - 60 * DAY, Math.min(first, end - 2 * DAY));
+  const days = Array.from({ length: (end - start) / DAY }, (_, i) => isoDay(start + i * DAY));
+  const indexed = (peaks) => {
+    const values = days.map((d) => peaks[d] ?? null);
+    const known = values.filter((v) => v != null);
+    const avg = known.reduce((a, b) => a + b, 0) / (known.length || 1);
+    return avg >= 1 ? values.map((v) => (v == null ? null : v / avg)) : null;
+  };
+  const others = rows.map((r) => ({ name: r.name, values: indexed(r.peaks), peaks: r.peaks })).filter((o) => o.values && o.values.filter((v) => v != null).length >= 2);
+  const mine = indexed(own.peaks);
+  if (!others.length) return null;
+  const med = days.map((_, i) => { const v = others.map((o) => o.values[i]).filter((x) => x != null); return v.length ? median(v) : null; });
+  const max = Math.max(2, Math.ceil(Math.max(...others.flatMap((o) => o.values), ...(mine || []), ...med) * 2) / 2);
+  const x = (t) => M.left + ((t - start) / (end - DAY - start)) * (W - M.left - M.right);
+  const y = (v) => H - M.bottom - (v / max) * (H - M.top - M.bottom);
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": "Daily peak players against each game's own average" });
+  yAxis(svg, y, max, (v) => `${Math.round(v * 100)}%`);
+  svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: y(1), y2: y(1), class: "grid" }));
+  timeAxis(svg, x, start, end - DAY);
+  releaseMarkers(svg, x, markers(start, end));
+  const path = (values, attrs) => {
+    let d = "", pen = false;
+    values.forEach((v, i) => { if (v == null) { pen = false; return; } d += `${pen ? "L" : "M"}${x(start + i * DAY).toFixed(1)},${y(v).toFixed(1)}`; pen = true; });
+    if (d) svg.append(svgEl("path", { d, fill: "none", "stroke-linejoin": "round", ...attrs }));
+  };
+  for (const o of others) path(o.values, { stroke: "var(--fb-muted)", "stroke-width": 1, opacity: 0.35 });
+  path(med, { stroke: "var(--fb-ink-2)", "stroke-width": 2, "stroke-dasharray": "5 3" });
+  if (mine) path(mine, { stroke: "var(--fb-accent)", "stroke-width": 2.5 });
+  const cross = svgEl("line", { y1: M.top, y2: H - M.bottom, class: "cross", visibility: "hidden" });
+  svg.append(cross);
+  const legend = h("div.legend", h("span", h("i", { style: "background:var(--fb-accent)" }), "You"), h("span", h("i", { style: "background:var(--fb-ink-2)" }), "Median of similar games"), h("span", h("i", { style: "background:var(--fb-muted);opacity:.5" }), "Each similar game"));
+  const { card, tip } = chartCard("Players against their usual", "Each game's daily peak players as a share of its own average over the chart, the last 60 days at most (100% is a usual day). Lines apart are what's yours alone; lines together are the market.", legend, svg, null);
+  svg.addEventListener("pointermove", (e) => {
+    const box = svg.getBoundingClientRect();
+    const px = ((e.clientX - box.left) / box.width) * W;
+    const i = Math.max(0, Math.min(days.length - 1, Math.round(((px - M.left) / (W - M.left - M.right)) * (days.length - 1))));
+    const t = start + i * DAY;
+    cross.setAttribute("x1", x(t)); cross.setAttribute("x2", x(t)); cross.setAttribute("visibility", "visible");
+    const line = (label, v, n) => v == null ? null : h("div", h("b", `${Math.round(v * 100)}%`), ` ${label}`, n != null ? h("span.t", ` (${fmtNum(n)} peak)`) : null);
+    showTip(card, tip, svg, x(t), y(mine?.[i] ?? med[i] ?? 1), [h("div.t", fmtDate(t)), line("you", mine?.[i], own.peaks[days[i]]), line("median of similar games", med[i])].filter(Boolean));
+  });
+  svg.addEventListener("pointerleave", () => { tip.style.display = "none"; cross.setAttribute("visibility", "hidden"); });
+  return card;
+}
+
+// Adds a game to compare with, by its store link or app id.
+function askCompareWith() {
+  const input = h("input.dlg-input", { type: "text", required: true, placeholder: "https://store.steampowered.com/app/3203590/… or 3203590", spellcheck: "false" });
+  formDialog("Add a game to compare with", [h("label.dlg-label", "Store link or app id", input)], "Add", () => appFromInput(input.value, state.compareWith))
+    .then((got) => got && setCompareWith(got.appId, { name: got.name, at: now() }, "Added: read on the next run"));
+}
+
+// Changes one game on the list (null removes it).
+function setCompareWith(appId, fields, done) {
+  const game = String(state.game.appId);
+  saveData("compareWith", COMPETITOR_PATH, (data) => {
+    const list = (data[game] ||= {});
+    if (fields) list[appId] = { ...(list[appId] || {}), ...fields };
+    else delete list[appId];
+    if (!Object.keys(list).length) delete data[game];
+    return data;
+  }, `Feedback: compare with ${appId} ${fields ? "added" : "removed"} [skip ci]`, done);
 }
 
 // Ideas for later, each with what it would show and what it needs, so none gets forgotten. Nothing
@@ -1100,12 +1277,6 @@ const SOON = [
     shows: ["New pages per game, sorted apart from news articles", "Copies of the game on download sites, with a link to Google's removal form"],
     needs: "A Google Alert per game for all its names joined with OR (Deliver to: RSS feed), and the feed links in the GOOGLE_ALERTS_FEEDS secret. Free; the collector already reads them.",
     link: ["https://www.google.com/alerts", "Google Alerts"],
-  },
-  {
-    title: "Competitor watch",
-    why: "Tells \"everyone dropped this weekend\" apart from \"only we dropped\".",
-    shows: ["Players, reviews and updates for 5 to 10 similar games, next to yours"],
-    needs: "A list of the games to compare against. The collector already reads players and reviews this way, so it's quick to add.",
   },
   {
     title: "Steam curators",

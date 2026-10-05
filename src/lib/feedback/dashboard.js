@@ -432,7 +432,7 @@ async function init() {
   const games = state.index.games || [];
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = Number(hash.get("app") || store.get("app"));
-  state.tab = ["overview", "issues", "suggestions", "loved", "replies", "updates", "media", "achievements", "bundles", "sales", "soon", "feed"].includes(hash.get("tab")) ? hash.get("tab") : state.tab;
+  state.tab = NAV.some(([, tabs]) => tabs.some(([id]) => id === hash.get("tab"))) ? hash.get("tab") : state.tab;
   if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : orderedGames()[0].appId);
 }
 
@@ -906,6 +906,18 @@ function chartPanel(which) {
 // Views
 // ---------------------------------------------------------------------------
 
+// The views, in groups so the list reads at a glance: what players say, the game itself, and money.
+const NAV = [
+  [null, [["overview", "Overview"]]],
+  ["Players", [["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["feed", "All posts"]]],
+  ["Game", [["updates", "Updates"], ["achievements", "Achievements"], ["media", "Media"]]],
+  ["Business", [["sales", "Sales"], ["bundles", "Bundles"]]],
+  ["Later", [["soon", "Coming soon"]]],
+];
+
+// A view's explanation, folded away so the view itself comes first; one click opens it.
+const about = (...kids) => h("details.about", h("summary", "How this works"), h("p", ...kids));
+
 function render() {
   state.drawn = drawnKey(); // what's on screen, so a refresh only redraws for new data
   renderGames();
@@ -926,12 +938,13 @@ function render() {
   // The view on screen counts as seen now; any other view with something from the last 48 hours
   // that's newer than when you last opened it gets "New", like a new post.
   store.set(`seen:${state.game.appId}:${state.tab}`, now());
-  const tabs = [["overview", "Overview"], ["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["updates", "Updates"], ["media", "Media"], ["achievements", "Achievements"], ["bundles", "Bundles"], ["sales", "Sales"], ["feed", "All posts"], ["soon", "Coming soon"]];
-  const buttons = () => tabs.map(([id, label]) =>
+  const button = ([id, label]) =>
     h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
-      icon(id), h("span", label), id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : id === "soon" ? ".count-soon" : ""}`, counts[id]) : null));
-  document.getElementById("fb-nav-side").replaceChildren(...buttons());
-  document.getElementById("fb-nav-top").replaceChildren(...buttons());
+      icon(id), h("span", label), id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : id === "soon" ? ".count-soon" : ""}`, counts[id]) : null);
+  // The side card lists the views under their group's name; the phone tabs keep them in one row,
+  // with a gap between groups.
+  document.getElementById("fb-nav-side").replaceChildren(...NAV.flatMap(([group, tabs]) => [...(group ? [h("div.nav-group", group)] : []), ...tabs.map(button)]));
+  document.getElementById("fb-nav-top").replaceChildren(...NAV.flatMap(([, tabs], i) => [...(i ? [h("span.nav-gap")] : []), ...tabs.map(button)]));
   setHash();
   const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, achievements: achievementsView, bundles: bundlesView, sales: salesView, soon: soonView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
@@ -946,7 +959,7 @@ function achievementsView() {
   let drop = null;
   list.forEach((x, i) => { if (i && list[i - 1].percent - x.percent > (drop?.by || 0)) drop = { at: i, by: list[i - 1].percent - x.percent }; });
   return h("div",
-    h("p.updated", { style: "margin:0 0 12px" }, `The share of players who unlocked each achievement, from Steam, most common first. If they follow the game's progress, a big step down is where many players stop. Updated daily, last ${ago(a.at)}.`),
+    about( `The share of players who unlocked each achievement, from Steam, most common first. If they follow the game's progress, a big step down is where many players stop. Updated daily, last ${ago(a.at)}.`),
     ...list.map((x, i) => h("div.card.ach",
       x.icon ? h("img.ach-icon", { src: x.icon, alt: "", loading: "lazy" }) : null,
       h("div.ach-body",
@@ -1009,12 +1022,12 @@ function bundlesView() {
   return h("div",
     h("section.ov-section",
       h("h3", "Bundles on Steam", h("span.ov-count", list.length)),
-      h("p.updated", { style: "margin:0 0 12px" }, "The bundles this game is in, from its store page, checked daily", state.game.bundles?.at ? `, last ${ago(state.game.bundles.at)}` : "", ". ",
+      about( "The bundles this game is in, from its store page, checked daily", state.game.bundles?.at ? `, last ${ago(state.game.bundles.at)}` : "", ". ",
         h("a", { href: "https://partner.steamgames.com/doc/store/application/bundles", target: "_blank", rel: "noopener" }, "How bundles work ↗")),
       ...(list.length ? list.map(bundleCard) : [h("p.empty", "Not in any bundle yet.")])),
     h("section.ov-section",
       h("h3", "Games to bundle with", h("span.ov-count", wanted.length), h("button.btn", { type: "button", style: "margin-left:auto", onclick: () => askBundleWith() }, "+ Add a game")),
-      h("p.updated", { style: "margin:0 0 12px" }, "Games you'd like to bundle this one with. Contact the developer opens Steam's support page for that game, which lists how to reach them; mark where each one stands."),
+      about( "Games you'd like to bundle this one with. Contact the developer opens Steam's support page for that game, which lists how to reach them; mark where each one stands."),
       ...(wanted.length ? wanted.map(wantCard) : [h("p.empty", "None yet: add a game by its store link or app id.")])));
 }
 
@@ -1091,7 +1104,7 @@ const soonCount = () => SOON.length;
 
 function soonView() {
   return h("div",
-    h("p.updated", { style: "margin:0 0 12px" }, "Ideas for later: what each would show and what it needs. Nothing here is collected yet."),
+    about( "Ideas for later: what each would show and what it needs. Nothing here is collected yet."),
     ...SOON.map((idea) => h("div.card.soon",
       h("h3", idea.title, h("span.count.count-soon", "Soon")),
       h("p", idea.why),
@@ -1149,7 +1162,7 @@ function lovedView() {
   const list = issues("praise").sort((a, b) => b.mentions - a.mentions || b.lastSeen - a.lastSeen);
   const copyAll = h("button.btn.primary", { onclick: (e) => copy(list.map((i) => `- ${i.title} (${plural(i.mentions, "player")})`).join("\n"), e.currentTarget) }, "Copy the list");
   return h("div",
-    h("p.updated", { style: "margin:0 0 12px" }, "What players praise, grouped like ideas: things to keep, and wording for your store page and trailers."),
+    about( "What players praise, grouped like ideas: things to keep, and wording for your store page and trailers."),
     list.length ? h("div.filters", copyAll) : null,
     ...(list.length ? list.map((i) => issueCard(i)) : [h("p.empty", "No praise grouped yet.")]));
 }
@@ -1196,7 +1209,7 @@ function updatesView() {
       h("div.meta", h("a", { href: r.url, target: "_blank", rel: "noopener" }, "Patch notes ↗")));
   });
   return h("div",
-    h("p.updated", { style: "margin:0 0 12px" }, "Each update: how players took it (the reviews written after it), what it fixed (and whether those reports stopped), what it only partly addressed, and what came up since (crossed out once a later update fixed it)."),
+    about( "Each update: how players took it (the reviews written after it), what it fixed (and whether those reports stopped), what it only partly addressed, and what came up since (crossed out once a later update fixed it)."),
     ...(cards.length ? cards : [h("p.empty", "No updates yet.")]));
 }
 
@@ -1606,7 +1619,7 @@ function repliesView() {
     const empty = { open: "Nothing to reply to right now.", replied: "You haven't replied to any posts yet.", all: "Nothing here yet." }[f.show];
     list.replaceChildren(...(cards.length ? cards : [h("p.empty", empty)]));
   };
-  const intro = h("p.updated", { style: "margin:0 0 12px" },
+  const intro = about(
     "To reply: negative reviews and threads about something an update has since fixed. Steam suggests replying in cases like these, briefly: say what was fixed. Replied: posts you've already answered on Steam.");
   const filter = chips([["open", `To reply (${open.length})`], ["replied", `Replied (${answered.length})`], ["all", "All"]], f.show, (v) => { f.show = v; draw(); }, "Show");
   draw();
@@ -1760,7 +1773,7 @@ function mediaView() {
   draw();
   return h("div",
     live.length ? h("section.ov-section", h("h3", "🔴 Live now", h("span.ov-count", live.length)), ...live.map(mediaCard)) : null,
-    h("p.updated", { style: "margin:0 0 12px" },
+    about(
       "Streams, videos, articles and Reddit threads that name the game. Twitch is checked every 10 minutes, news every 30 (Reddit threads come from your Google Alerts) and YouTube about hourly; Discord pings you for each new stream, video and article. They're marked along the bottom of the player and review charts, so you can see what caused a jump."),
     twitch && twitch.category === null ? h("p.ov-calm", { style: "margin:0 0 12px" }, "Twitch has no category for this game yet, so its streams can't be found. Twitch adds games from IGDB: once the game is on igdb.com, it shows up within a day.") : null,
     names(),

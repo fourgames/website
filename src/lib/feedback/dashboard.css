@@ -211,8 +211,34 @@
 	font-size: 0.7rem;
 	color: var(--fb-muted);
 }
+/* A group's name over its views in the side card (dashboard.js NAV) */
+.fb .nav-group {
+	color: var(--fb-muted);
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 0.625rem 0.625rem 0.125rem;
+}
 .fb .nav-top {
 	display: none;
+}
+
+/* A view's explanation (dashboard.js about), folded to one line until opened */
+.fb .about {
+	margin: 0 0 12px;
+	font-size: 0.8125rem;
+	color: var(--fb-muted);
+}
+.fb .about summary {
+	cursor: pointer;
+	width: fit-content;
+}
+.fb .about summary:hover {
+	color: var(--fb-ink-2);
+}
+.fb .about p {
+	margin: 6px 0 0;
+	max-width: 65ch;
+	color: var(--fb-ink-2);
 }
 
 /* KPI cards */
@@ -668,6 +694,12 @@
 	.fb .nav-top .nav-btn[aria-current="true"] {
 		background: var(--fb-accent);
 		color: #fff;
+	}
+	.fb .nav-top .nav-gap {
+		flex: none;
+		width: 1px;
+		margin: 6px 4px;
+		background: var(--fb-line);
 	}
 	.fb .nav-top .nav-btn .count {
 		margin-left: 4px;

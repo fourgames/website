@@ -804,21 +804,34 @@ function renderStats() {
   const revenue = daily(14, (d) => byDay.get(isoDay(d))?.net || 0);
   // The two chart cards stay minimal, like SteamDB's: the number and what it is. Their details
   // (peaks, positive and negative counts) are in the panel that opens below.
-  document.getElementById("fb-stats").replaceChildren(...[
+  const cards = {
     // A fire when the players in game right now are the most ever recorded.
-    tile("Players", current == null ? "–" : `${current}${current && current >= Math.max(...series.map(([, n]) => n)) ? " 🔥" : ""}`,
+    players: tile("Players", current == null ? "–" : `${current}${current && current >= Math.max(...series.map(([, n]) => n)) ? " 🔥" : ""}`,
       current != null ? (current && current >= Math.max(...series.map(([, n]) => n)) ? "In-Game · all-time peak" : "In-Game") : "not released", peaks, undefined, "players"),
-    tile("Reviews", score ? `${score.rating.toFixed(2)}%` : "–", score ? plural(score.total, "review") : "no reviews yet", reviewsPerDay, "var(--fb-positive)", "reviews"),
-    tile("Followers", g.followers?.length ? g.followers[g.followers.length - 1][1] : "–", g.followers?.length ? growthLine(g.followers) : "on Steam",
+    reviews: tile("Reviews", score ? `${score.rating.toFixed(2)}%` : "–", score ? plural(score.total, "review") : "no reviews yet", reviewsPerDay, "var(--fb-positive)", "reviews"),
+    followers: tile("Followers", g.followers?.length ? g.followers[g.followers.length - 1][1] : "–", g.followers?.length ? growthLine(g.followers) : "on Steam",
       daily(14, (d) => playersAt(g.followers || [], d + DAY - 1) ?? 0), "var(--type-praise)", "followers"),
-    state.index.discord?.members?.length
+    discord: state.index.discord?.members?.length
       ? tile("Discord", state.index.discord.members.at(-1)[1], [`${state.index.discord.online?.at(-1)?.[1] ?? 0} online`],
         daily(14, (d) => playersAt(state.index.discord.members, d + DAY - 1) ?? 0), "#5865f2", "discord")
       : null,
-    salesDays().length ? tile("Revenue", usd(revenue.slice(-7).reduce((a, b) => a + b, 0)), "net, last 7 days", revenue, "var(--fb-positive)") : null,
-    tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent", openBugsPerDay, "var(--type-bug)"),
-    tile("New posts", fresh.length, "last 24 h", postsPerDay),
-  ].filter(Boolean));
+    revenue: salesDays().length ? tile("Revenue", usd(revenue.slice(-7).reduce((a, b) => a + b, 0)), "net, last 7 days", revenue, "var(--fb-positive)") : null,
+    bugs: tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent", openBugsPerDay, "var(--type-bug)"),
+    posts: tile("New posts", fresh.length, "last 24 h", postsPerDay),
+  };
+  // Up front only what you can act on: before release, the following you're building; after it,
+  // players, reviews, money and bugs. The rest waits behind "+ more" (remembered), and the card
+  // whose chart is open stays out either way.
+  const upcoming = g.meta?.status === "upcoming";
+  const main = upcoming ? ["followers", "discord", "bugs"] : ["players", "reviews", "revenue", "bugs"];
+  const more = store.get("kpis-more") === "1";
+  const extra = Object.keys(cards).filter((k) => !main.includes(k) && cards[k]);
+  const shown = Object.keys(cards).filter((k) => cards[k] && (more || main.includes(k) || k === state.expanded));
+  const toggle = extra.length ? h("button.kpi.kpi-toggle", { type: "button", "aria-expanded": String(more), onclick: () => {
+    store.set("kpis-more", more ? "0" : "1");
+    renderStats();
+  } }, more ? "Fewer" : `+ ${extra.filter((k) => !shown.includes(k)).length} more`) : null;
+  document.getElementById("fb-stats").replaceChildren(...shown.map((k) => cards[k]), toggle);
   document.getElementById("fb-expand").replaceChildren(...(state.expanded ? [chartPanel(state.expanded)] : []));
 }
 

@@ -246,6 +246,21 @@
 }
 
 /* KPI cards */
+/* "+ 3 more" / "Fewer" after the cards (dashboard.js renderStats) */
+.fb .kpi.kpi-toggle {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	border: 0;
+	font-family: var(--font-heading);
+	font-weight: 600;
+	color: var(--fb-muted);
+	cursor: pointer;
+}
+.fb .kpi.kpi-toggle:hover {
+	color: var(--fb-ink);
+	background: var(--fb-hover);
+}
 .fb .kpis {
 	display: grid;
 	grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));

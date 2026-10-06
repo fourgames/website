@@ -1943,7 +1943,7 @@
     "thumb": "https://i.ytimg.com/vi/pE3oQXBlq7k/mqdefault.jpg",
     "lang": "en",
     "duration": 4008,
-    "views": 179,
+    "views": 186,
     "likes": 0,
     "comments": 0,
     "live": false,
@@ -1985,7 +1985,7 @@
     "thumb": "https://i.ytimg.com/vi/JvkeKvMvAt0/mqdefault.jpg",
     "lang": "en",
     "duration": 4784,
-    "views": 2095,
+    "views": 2096,
     "likes": 26,
     "comments": 3,
     "live": false,
@@ -2048,37 +2048,37 @@
   ]
  ],
  "achievements": {
-  "at": 1791237300,
+  "at": 1791251418,
   "list": [
    {
     "name": "000%",
     "desc": "000%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
-    "percent": 98.5
+    "percent": 98.6
    },
    {
     "name": "025%",
     "desc": "025%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
-    "percent": 64.7
+    "percent": 63.8
    },
    {
     "name": "050%",
     "desc": "050%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
-    "percent": 53.5
+    "percent": 52.7
    },
    {
     "name": "075%",
     "desc": "075%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
-    "percent": 47.8
+    "percent": 47.2
    },
    {
     "name": "100%",
     "desc": "100%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
-    "percent": 38.0
+    "percent": 37.5
    }
   ]
  },
@@ -2178,7 +2178,7 @@
      "negative": 2164
     },
     "2026-10-06": {
-     "positive": 18030,
+     "positive": 18029,
      "negative": 2164
     }
    }
@@ -2252,7 +2252,7 @@
    ],
    "peaks": {
     "2026-10-05": 92,
-    "2026-10-06": 53
+    "2026-10-06": 56
    },
    "reviews": {
     "2026-10-05": {
@@ -2398,7 +2398,7 @@
    ],
    "peaks": {
     "2026-10-05": 96,
-    "2026-10-06": 40
+    "2026-10-06": 41
    },
    "reviews": {
     "2026-10-05": {
@@ -2488,7 +2488,7 @@
      "negative": 222
     },
     "2026-10-06": {
-     "positive": 1740,
+     "positive": 1741,
      "negative": 222
     }
    }
@@ -2570,7 +2570,7 @@
      "negative": 149
     },
     "2026-10-06": {
-     "positive": 5230,
+     "positive": 5231,
      "negative": 150
     }
    }
@@ -2644,7 +2644,7 @@
    ],
    "peaks": {
     "2026-10-05": 546,
-    "2026-10-06": 428
+    "2026-10-06": 447
    },
    "reviews": {
     "2026-10-05": {

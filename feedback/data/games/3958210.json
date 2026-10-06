@@ -6,7 +6,7 @@
   "reviews": 1790875183,
   "forums": {
    "0": 1791096785,
-   "event:18446744073709551615": 1790966789
+   "event:18446744073709551615": 1791327515
   }
  },
  "items": {
@@ -1010,6 +1010,23 @@
     "note": null
    },
    "alertedNew": true
+  },
+  "t594069369071340534": {
+   "id": "t594069369071340534",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594069369071340534/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1791327515,
+   "updated": 1791327515,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/3958210/announcements/detail/695400360681930759",
+   "title": "Digging A Hole In Ice With A Chainsaw on Steam Deck",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
   }
  },
  "issues": {
@@ -1915,6 +1932,11 @@
    "lastPost": 1791096785,
    "replies": 0,
    "forum": "General Discussions"
+  },
+  "594069369071340534": {
+   "lastPost": 1791327515,
+   "replies": 0,
+   "forum": "Events & Announcements"
   }
  },
  "devAccounts": [],

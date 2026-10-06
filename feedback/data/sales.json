@@ -1,5 +1,5 @@
 {
- "highwatermark": "2093584838799",
+ "highwatermark": "2093605153305",
  "days": {
   "2024-11-10": {
    "2807130": {
@@ -661,16 +661,16 @@
   "2026-10-05": {
    "3958210": {
     "gross": 7.77,
-    "returns": 1.6,
+    "returns": 3.2,
     "tax": 1.17,
-    "net": 5.0,
+    "net": 3.4,
     "units": 5,
-    "returnedUnits": 1,
+    "returnedUnits": 2,
     "discount": 40,
     "countries": {
      "CN": [
-      0.0,
-      0
+      -1.6,
+      -1
      ],
      "FI": [
       1.51,
@@ -710,11 +710,18 @@
   },
   "2026-10-06": {
    "3958210": {
+    "gross": 1.83,
     "returns": 0.92,
-    "tax": -0.13,
-    "net": -0.79,
+    "tax": 0.04,
+    "net": 0.87,
+    "units": 1,
     "returnedUnits": 1,
+    "discount": 40,
     "countries": {
+     "KR": [
+      1.67,
+      1
+     ],
      "KZ": [
       -0.79,
       -1

@@ -5,7 +5,7 @@
  "watermarks": {
   "reviews": 1790875183,
   "forums": {
-   "0": 1791096785,
+   "0": 1791329555,
    "event:18446744073709551615": 1791329172
   }
  },
@@ -1074,6 +1074,33 @@
    "dev": true,
    "versions": [],
    "pending": false
+  },
+  "c594069369071342686": {
+   "id": "c594069369071342686",
+   "kind": "reply",
+   "url": "https://steamcommunity.com/app/3958210/discussions/0/594069100231151619/#c594069369071342686",
+   "author": {
+    "id": "1029710208",
+    "name": "Danny",
+    "profile": "https://steamcommunity.com/profiles/76561198989975936",
+    "avatar": "https://avatars.fastly.steamstatic.com/7fd012481753eceb898d0652579c2831453e53d1_medium.jpg",
+    "games": null
+   },
+   "created": 1791329555,
+   "updated": 1791329555,
+   "text": "Thanks for asking! The achievements show how far down the pit you've made it: 0% for your first cut into the ice, then 25%, 50% and 75% of the way down, and 100% when you reach the end. The 2.0 update makes the pit 1000 m deep with a lot of new stuff, so give it another try!",
+   "topic": "t594069100231151619",
+   "forum": "General Discussions",
+   "dev": true,
+   "versions": [],
+   "pending": false,
+   "triage": {
+    "language": "English",
+    "english": ""
+   },
+   "translatedOwn": {
+    "text": "f253170c02d9"
+   }
   }
  },
  "issues": {
@@ -2034,8 +2061,8 @@
    "forum": "Events & Announcements"
   },
   "594069100231151619": {
-   "lastPost": 1791096785,
-   "replies": 0,
+   "lastPost": 1791329555,
+   "replies": 1,
    "forum": "General Discussions"
   },
   "594069369071340534": {
@@ -2371,10 +2398,10 @@
     }
    },
    "2026-10-06": {
-    "input": 4562,
-    "output": 780,
-    "calls": 8,
-    "cost": 0.008462,
+    "input": 4931,
+    "output": 794,
+    "calls": 9,
+    "cost": 0.008901,
     "tasks": {
      "patch": {
       "input": 2182,
@@ -2383,10 +2410,10 @@
       "cost": 0.004547
      },
      "translate": {
-      "input": 2380,
-      "output": 307,
-      "calls": 7,
-      "cost": 0.003915
+      "input": 2749,
+      "output": 321,
+      "calls": 8,
+      "cost": 0.004354
      }
     }
    }
@@ -2405,16 +2432,16 @@
     "cost": 0.004547
    },
    "translate": {
-    "input": 2380,
-    "output": 307,
-    "calls": 7,
-    "cost": 0.003915
+    "input": 2749,
+    "output": 321,
+    "calls": 8,
+    "cost": 0.004354
    }
   },
-  "input": 10910,
-  "output": 1634,
-  "calls": 13,
-  "cost": 0.01908
+  "input": 11279,
+  "output": 1648,
+  "calls": 14,
+  "cost": 0.019519
  },
  "competitors": {
   "3244220": {

@@ -2058,13 +2058,89 @@
     "チェーンソーで氷に穴を掘る"
    ],
    "koreana": [
-    "전기톱으로 얼음에 구멍 뚫기"
+    "전기톱으로 얼음에 구멍 뚫기",
+    "전기톱으로 얼음에 구멍 파기"
    ],
    "schinese": [
     "用电锯在冰上挖个洞"
    ],
    "tchinese": [
     "用電鋸在冰上挖個洞"
+   ],
+   "bulgarian": [
+    "Копая дупка в леда с моторен трион"
+   ],
+   "czech": [
+    "Kopání díry do ledu motorovou pilou"
+   ],
+   "danish": [
+    "Grave et hul i isen med motorsav"
+   ],
+   "dutch": [
+    "Een gat in het ijs graven met een kettingzaag"
+   ],
+   "finnish": [
+    "Kuopan kaivaminen jäähän moottorisahalla"
+   ],
+   "french": [
+    "Creuser un trou dans la glace à la tronçonneuse"
+   ],
+   "german": [
+    "Mit der Kettensäge ein Loch ins Eis graben"
+   ],
+   "greek": [
+    "Σκάβοντας τρύπα στον πάγο με αλυσοπρίονο"
+   ],
+   "hungarian": [
+    "Lyukat ások a jégbe láncfűrésszel"
+   ],
+   "indonesian": [
+    "Menggali lubang di es dengan gergaji mesin"
+   ],
+   "italian": [
+    "Scavare una buca nel ghiaccio con la motosega"
+   ],
+   "malay": [
+    "Menggali lubang dalam ais dengan gergaji rantai"
+   ],
+   "norwegian": [
+    "Grave et hull i isen med motorsag"
+   ],
+   "polish": [
+    "Kopanie dziury w lodzie piłą łańcuchową"
+   ],
+   "portuguese": [
+    "Cavar um buraco no gelo com uma motosserra"
+   ],
+   "brazilian": [
+    "Cavando um buraco no gelo com uma motosserra"
+   ],
+   "romanian": [
+    "Săpând o groapă în gheață cu drujba"
+   ],
+   "russian": [
+    "Копать яму во льду бензопилой"
+   ],
+   "spanish": [
+    "Cavar un agujero en el hielo con una motosierra"
+   ],
+   "latam": [
+    "Cavar un hoyo en el hielo con una motosierra"
+   ],
+   "swedish": [
+    "Gräva ett hål i isen med motorsåg"
+   ],
+   "thai": [
+    "ขุดหลุมในน้ำแข็งด้วยเลื่อยยนต์"
+   ],
+   "turkish": [
+    "Motorlu testereyle buzda çukur kazmak"
+   ],
+   "ukrainian": [
+    "Копати яму в льоду бензопилою"
+   ],
+   "vietnamese": [
+    "Đào hố trên băng bằng cưa máy"
    ]
   },
   "alert": "\"Digging A Hole In Ice With A Chainsaw\" OR \"チェーンソーで氷に穴を掘る\" OR \"전기톱으로 얼음에 구멍 뚫기\" OR \"用电锯在冰上挖个洞\" OR \"用電鋸在冰上挖個洞\""
@@ -2076,47 +2152,47 @@
   ]
  ],
  "achievements": {
-  "at": 1791293798,
+  "at": 1791307919,
   "list": [
    {
     "name": "000%",
     "desc": "000%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
-    "percent": 100.0
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
+    "percent": 98.6
    },
    {
     "name": "025%",
     "desc": "025%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
-    "percent": 63.0
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
+    "percent": 63.5
    },
    {
     "name": "050%",
     "desc": "050%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
-    "percent": 53.4
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
+    "percent": 54.0
    },
    {
     "name": "075%",
     "desc": "075%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
-    "percent": 46.5
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
+    "percent": 47.2
    },
    {
     "name": "100%",
     "desc": "100%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
-    "percent": 36.9
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
+    "percent": 37.8
    }
   ]
  },
  "bundles": {
-  "at": 1791237301,
+  "at": 1791307919,
   "list": [
    {
     "id": 86690,
     "name": "Four Games Collection",
-    "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/92aa3baa82d27f20f72b412568cf3640e52e4f52/header_ratio.jpg?t=1790685958",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/92aa3baa82d27f20f72b412568cf3640e52e4f52/header_ratio.jpg?t=1790685958",
     "apps": [
      {
       "appId": 2807130,
@@ -2198,7 +2274,7 @@
    ],
    "peaks": {
     "2026-10-05": 133,
-    "2026-10-06": 108
+    "2026-10-06": 123
    },
    "reviews": {
     "2026-10-05": {
@@ -2288,7 +2364,7 @@
      "negative": 249
     },
     "2026-10-06": {
-     "positive": 1518,
+     "positive": 1519,
      "negative": 250
     }
    }
@@ -2508,7 +2584,7 @@
    ],
    "peaks": {
     "2026-10-05": 1399,
-    "2026-10-06": 1142
+    "2026-10-06": 1178
    },
    "reviews": {
     "2026-10-05": {
@@ -2672,7 +2748,7 @@
    ],
    "peaks": {
     "2026-10-05": 546,
-    "2026-10-06": 493
+    "2026-10-06": 499
    },
    "reviews": {
     "2026-10-05": {
@@ -2754,7 +2830,7 @@
    ],
    "peaks": {
     "2026-10-05": 657,
-    "2026-10-06": 517
+    "2026-10-06": 602
    },
    "reviews": {
     "2026-10-05": {

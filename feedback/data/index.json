@@ -61,18 +61,21 @@
    "discount": 40,
    "store": "a9c98aab6e33",
    "lastPost": 1791096785,
-   "lastDevPost": 1791327515,
+   "lastDevPost": 1791329172,
    "claude": {
     "since": 1791207011,
-    "input": 6348,
-    "output": 854,
-    "calls": 5,
-    "cost": 0.010618,
+    "input": 10910,
+    "output": 1634,
+    "calls": 13,
+    "cost": 0.01908,
     "days": {
-     "2026-10-05": 0.0106
+     "2026-10-05": 0.0106,
+     "2026-10-06": 0.0085
     },
     "tasks": {
-     "reply": 0.0106
+     "reply": 0.0106,
+     "patch": 0.0045,
+     "translate": 0.0039
     },
     "past": {
      "input": 38721,
@@ -98,8 +101,8 @@
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791207011,
-   "activeWhat": "drafted a reply"
+   "active": 1791329527,
+   "activeWhat": "translated your post"
   },
   "discord": {
    "ok": true,
@@ -112,7 +115,7 @@
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791327635,
+   "active": 1791329527,
    "activeWhat": "new post"
   },
   "news": {
@@ -151,7 +154,7 @@
    "activeWhat": "new video"
   }
  },
- "changedAt": 1791328234,
+ "changedAt": 1791329527,
  "creditAlert": null,
  "discord": {
   "members": [
@@ -340,6 +343,10 @@
    [
     1791322060,
     14
+   ],
+   [
+    1791329527,
+    16
    ]
   ],
   "name": "Four Games",

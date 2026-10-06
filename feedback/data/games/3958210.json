@@ -6,7 +6,7 @@
   "reviews": 1790875183,
   "forums": {
    "0": 1791096785,
-   "event:18446744073709551615": 1791327515
+   "event:18446744073709551615": 1791329172
   }
  },
  "items": {
@@ -30,7 +30,7 @@
    "playtime": 0.7,
    "earlyAccess": false,
    "votesUp": 1,
-   "devResponse": null,
+   "devResponse": "Thanks for giving it a chance and for the detailed feedback! The 2.0 update addresses a lot of it, and I'd love to hear what you think if you try it again.",
    "versions": [],
    "flips": [],
    "pending": false,
@@ -161,7 +161,12 @@
     ],
     "note": null
    },
-   "devRespondedAt": null
+   "devRespondedAt": 1791329286,
+   "devResponseLanguage": "English",
+   "devResponseEnglish": null,
+   "translatedOwn": {
+    "devResponse": "341bc97f1297"
+   }
   },
   "r236626239": {
    "id": "r236626239",
@@ -183,7 +188,7 @@
    "playtime": 0.7,
    "earlyAccess": false,
    "votesUp": 1,
-   "devResponse": null,
+   "devResponse": "플레이해 주셔서 감사합니다! 2.0 업데이트에서 구덩이가 1000m로 두 배 깊어졌어요. 다시 해 보시고 의견 들려주세요!",
    "versions": [],
    "flips": [],
    "pending": false,
@@ -221,7 +226,12 @@
     "text": "40분이면 엔딩 쌉가능한 게임이라니 재미있다는 평가 감사합니다! 최근 Hotfix 1.4.1에서 깊은 곳의 얼음 파괴 문제를 고쳤으니 다시 한번 플레이해 보시고 끝까지 내려가 보세요.",
     "english": "Thanks for the kind words about being able to finish the ending in 40 minutes! We just released Hotfix 1.4.1 that fixed a bug where ice couldn't be broken deep in the pit, so jump back in and dig all the way to the bottom."
    },
-   "devRespondedAt": null
+   "devRespondedAt": 1791329297,
+   "devResponseLanguage": "Korean",
+   "devResponseEnglish": "Thank you for playing! In the 2.0 update, the pit has become twice as deep at 1000m. Please try it again and let us know your thoughts!",
+   "translatedOwn": {
+    "devResponse": "d2d1b794f89b"
+   }
   },
   "r236624465": {
    "id": "r236624465",
@@ -243,7 +253,7 @@
    "playtime": 1.7,
    "earlyAccess": false,
    "votesUp": 1,
-   "devResponse": null,
+   "devResponse": "평가 감사합니다! 2.0 업데이트로 많은 게 바뀌었어요. 다시 해 보시고 의견 들려주세요!",
    "versions": [],
    "flips": [],
    "pending": false,
@@ -281,7 +291,12 @@
     "text": "리뷰 감사합니다! 최근에 Hotfix 1.4.1을 내놨는데, 400m 아래에서 얼음이 깨지지 않던 문제를 수정했으니 다시 한번 내려가 봐도 좋을 것 같습니다.",
     "english": "Thanks for the review! We've just released Hotfix 1.4.1, which fixes that frustrating ice problem you hit deep in the pit, so you might want to give it another go."
    },
-   "devRespondedAt": null
+   "devRespondedAt": 1791329297,
+   "devResponseLanguage": "Korean",
+   "devResponseEnglish": "Thank you for the review! A lot has changed with the 2.0 update. Please try it again and let us know your thoughts!",
+   "translatedOwn": {
+    "devResponse": "e894a7ccf55a"
+   }
   },
   "r236614813": {
    "id": "r236614813",
@@ -303,7 +318,7 @@
    "playtime": 1.1,
    "earlyAccess": false,
    "votesUp": 1,
-   "devResponse": null,
+   "devResponse": "플레이해 주셔서 감사합니다! 2.0 업데이트에서 구덩이가 1000m로 깊어졌어요. 다시 해 보시고 의견 들려주세요!",
    "versions": [],
    "flips": [],
    "pending": false,
@@ -349,7 +364,12 @@
     "text": "엔딩까지 가는 그 중독성 있는 느낌을 좋아해주셔서 감사합니다! Hotfix 1.4.1에서 깊은 곳의 채굴 문제를 고쳤으니 다시 한번 파내려가 보세요.",
     "english": "Thanks so much for loving that addictive rush all the way to the ending! We fixed the deep mining issues in Hotfix 1.4.1, so jump back in and dig down again."
    },
-   "devRespondedAt": null
+   "devRespondedAt": 1791329297,
+   "devResponseLanguage": "Korean",
+   "devResponseEnglish": "Thank you for playing! In the 2.0 update, the pit has been deepened to 1000m. Please try it again and let us know your thoughts!",
+   "translatedOwn": {
+    "devResponse": "6610a0dff53b"
+   }
   },
   "r236561103": {
    "id": "r236561103",
@@ -371,7 +391,7 @@
    "playtime": 1.9,
    "earlyAccess": false,
    "votesUp": 2,
-   "devResponse": null,
+   "devResponse": "Danke für die ehrliche Bewertung! Im 2.0-Update klingt die Säge wie ein echter Benzinmotor. Schau gern noch mal rein!",
    "versions": [],
    "flips": [],
    "pending": false,
@@ -425,7 +445,12 @@
     "text": "Danke für das Feedback – und sorry, dass der Sound dir anfangs so in die Ohren gegangen ist! Das haben wir in Update 1.3 überarbeitet. Schau doch mal wieder rein: Mit Update 1.2 haben wir die Grube fünfmal so tief gemacht, sodass es jetzt viel länger dauert, bis du alle Upgrades hast.",
     "english": "Thanks for the feedback—and sorry the sound was so rough on your ears at first! We reworked that in Update 1.3. Jump back in and see: Update 1.2 made the pit five times as deep, so now it takes much longer to get all the upgrades."
    },
-   "devRespondedAt": null
+   "devRespondedAt": 1791329297,
+   "devResponseLanguage": "German",
+   "devResponseEnglish": "Thanks for the honest review! In the 2.0 update, the chainsaw sounds like a real gasoline engine. Feel free to check it out again!",
+   "translatedOwn": {
+    "devResponse": "2bd6e382abba"
+   }
   },
   "r236545405": {
    "id": "r236545405",
@@ -447,7 +472,7 @@
    "playtime": 0.6,
    "earlyAccess": false,
    "votesUp": 2,
-   "devResponse": "피드백 감사해요! 너무 금방 끝난다는 말씀에 공감해서, 1.02 업데이트에서 구덩이 깊이를 100 m에서 500 m로 늘렸어요. 이제 업그레이드를 전부 얻으면서 훨씬 오래 즐기실 수 있어요. 혼자 개발하다 보니 부족한 점이 많지만, 기회 되실 때 다시 한번 플레이해 주시면 정말 기쁠 것 같아요 ㅎㅎ",
+   "devResponse": "의견 감사합니다! 2.0 업데이트에서 구덩이가 1000m로 두 배 깊어졌어요. 다시 해 보시고 의견 들려주세요!",
    "versions": [],
    "flips": [],
    "pending": false,
@@ -486,11 +511,11 @@
     "note": null
    },
    "devResponseLanguage": "Korean",
-   "devResponseEnglish": "Thank you for the feedback! I sympathized with the comment about it ending too quickly, so in the 1.02 update I increased the pit depth from 100m to 500m. Now you can enjoy it much longer while obtaining all the upgrades. Since I'm developing it solo, there are many shortcomings, but I'd be really happy if you got a chance to play it again sometime haha",
+   "devResponseEnglish": "Thank you for your feedback! In the 2.0 update, the pit has been doubled in depth to 1000m. Please try it again and let us know what you think!",
    "translatedOwn": {
-    "devResponse": "4a9faf7feada"
+    "devResponse": "859e08ddec72"
    },
-   "devRespondedAt": 1790783687
+   "devRespondedAt": 1791329331
   },
   "r236542076": {
    "id": "r236542076",
@@ -512,7 +537,7 @@
    "playtime": 0.2,
    "earlyAccess": false,
    "votesUp": 2,
-   "devResponse": null,
+   "devResponse": "Danke für dein Feedback! Im 2.0-Update erklärt das Spiel besser, was zu tun ist. Probier es gern noch mal aus!",
    "versions": [],
    "flips": [],
    "pending": false,
@@ -565,7 +590,12 @@
     "text": "Vielen Dank für die Review! Freut uns, dass dir das entspannte Buddeln mit der Kettensäge gefällt – und gute Nachricht: Das Problem mit der fehlenden Erklärung am Anfang haben wir in Update 1.2 behoben, da gibt es jetzt einen Hinweis, wenn dein Inventar voll wird. Die Grube ist jetzt auch fünfmal tiefer, also viel mehr zum Erkunden und Upgraden – schau mal rein!",
     "english": "Thanks for the review! We're glad you're enjoying the relaxed digging with the chainsaw – and good news: we fixed that missing explanation at the start in Update 1.2, there's now a hint when your bag gets full. The pit is also five times deeper now, so plenty more to explore and upgrade – give it a try!"
    },
-   "devRespondedAt": null
+   "devRespondedAt": 1791329297,
+   "devResponseLanguage": "German",
+   "devResponseEnglish": "Thanks for your feedback! In the 2.0 update, the game explains better what to do. Feel free to give it another try!",
+   "translatedOwn": {
+    "devResponse": "c5f2bbc88872"
+   }
   },
   "t594068999055121855": {
    "id": "t594068999055121855",
@@ -1027,6 +1057,23 @@
    "dev": true,
    "versions": [],
    "pending": false
+  },
+  "t594069369071342244": {
+   "id": "t594069369071342244",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594069369071342244/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1791329172,
+   "updated": 1791329172,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/3958210/announcements/detail/695400360681930765",
+   "title": "Update 2.0",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
   }
  },
  "issues": {
@@ -1067,6 +1114,11 @@
      "in": "v1.2",
      "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382442",
      "reason": "New hint added: \"go up and sell at the pipe\" helps clarify selling, but doesn't provide the full tutorial players requested"
+    },
+    {
+     "in": "v2.0",
+     "url": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+     "reason": "New features like fuel system and heat mechanics add complexity, but no explicit tutorial or onboarding explanation is mentioned"
     }
    ]
   },
@@ -1110,7 +1162,7 @@
    "title": "Game is too short and needs more content",
    "area": "content, game length",
    "summary": "Game takes less than 1 hour to complete even when playing leisurely.",
-   "status": "open",
+   "status": "likely_fixed",
    "created": 1791044037,
    "items": [
     "r236545405",
@@ -1135,7 +1187,7 @@
    "negativeReviews": 2,
    "firstSession": 5,
    "details": [],
-   "priority": 9.97,
+   "priority": 1.99,
    "fixPrompt": null,
    "partly": [
     {
@@ -1148,7 +1200,12 @@
      "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382442",
      "reason": "Pit depth increased to 500m so \"you have time to get every upgrade,\" extending playtime but not necessarily adding new content to discover"
     }
-   ]
+   ],
+   "fixedIn": "v2.0",
+   "fixedAt": 1791329160,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+   "fixReason": "\"The pit is now 1000 m deep, twice as deep as before\" addresses the game being too short by doubling the content depth",
+   "stillSince": null
   },
   "I49": {
    "id": "I49",
@@ -1156,7 +1213,7 @@
    "title": "Sound effects are harsh and unpleasant",
    "area": "sound, dynamite, game length",
    "summary": "Sound effects were extremely unpleasant to listen to, like a dental filling procedure mixed with clanging bottles.",
-   "status": "still_happening",
+   "status": "likely_fixed",
    "created": 1791044044,
    "items": [
     "r236561103",
@@ -1180,13 +1237,13 @@
    "details": [
     "At exactly 400m depth, the chainsaw creates new ice or pulls old ice instead of removing it; workaround found by digging at pit edge."
    ],
-   "priority": 19.39,
+   "priority": 2.58,
    "fixPrompt": null,
-   "fixedIn": "v1.3",
-   "fixedAt": 1790838300,
-   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695399726270382543",
-   "fixReason": "Digging is easier on the ears: softer ice smashes and a less shrill chainsaw",
-   "stillSince": 1790848674
+   "fixedIn": "v2.0",
+   "fixedAt": 1791329160,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+   "fixReason": "\"The chainsaw sounds like a real gas engine with a pull-start instead of a high electric whine (reported by 3 players)\" directly replaces the harsh dentist drill sound",
+   "stillSince": null
   },
   "I50": {
    "id": "I50",
@@ -1194,7 +1251,7 @@
    "title": "Dynamite holes too small",
    "area": "sound, dynamite, game length",
    "summary": "Dynamite creates holes that are too small and provides poor value.",
-   "status": "open",
+   "status": "likely_fixed",
    "created": 1791044044,
    "items": [
     "r236561103"
@@ -1213,8 +1270,13 @@
    "negativeReviews": 0,
    "firstSession": 1,
    "details": [],
-   "priority": 2.0,
-   "fixPrompt": null
+   "priority": 0.4,
+   "fixPrompt": null,
+   "fixedIn": "v2.0",
+   "fixedAt": 1791329160,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+   "fixReason": "\"A new dynamite explosion with a fireball, a shockwave and flying ice, blowing a bigger hole (suggested by 1 player)\" makes dynamite holes larger",
+   "stillSince": null
   },
   "I51": {
    "id": "I51",
@@ -1248,10 +1310,10 @@
    ],
    "priority": 3.2,
    "fixPrompt": "Players of Digging A Hole In Ice With A Chainsaw are reporting a bug on Steam. Find the cause in this codebase and fix it.\n\nBug: Digging blocked at 410m depth\nArea of the game: deep digging, 410m depth\nReported by 2 players (German, Korean), between 2026-10-01 and 2026-10-01.\n\nWhat the reports say about reproducing it:\n- At 410m depth, no tools (dynamite, torches, chainsaw) damage the ice, blocking all progress. Restart resolves it.\n- At exactly 400m depth, the chainsaw creates new ice or pulls old ice instead of removing it; workaround found by digging at pit edge.\n\nPlayer reports (translated to English):\n- Steam discussion reply (2026-10-01, written in German): \"At 400m depth, the chainsaw creates new ice or pulls old ice instead of removing it. (from the post: I think it's really great how quickly you respond to criticism here. The destruction of the ice itself is now much more pleasant. But honestly, I don't notice a big difference with the chainsaw. At exactly 400m there's also a bug with the ice. Instead of removing it, you somehow create new ice with the chainsaw, or pull the old one along. really strange there. Fortunately I found a spot at the edge of the pit where I was just able to dig down the last 100m.)\"\n  https://steamcommunity.com/app/3958210/eventcomments/594068734660926138/#c594068734660970660\n- Steam discussion reply (2026-10-01, written in Korean): \"Ice stops taking damage at 410m depth.; No damage occurs with any tool (dynamite, torches, repeated chainsaw digging) at that depth.; Restarting the game resolved the issue. (from the post: From 410m onwards it won't break at all.... Even throwing 100 dynamite, even throwing 100 torches, digging all day long the ice stays the same. I don't know what the bug was, but turning it off and back on fixed it.)\"\n  https://steamcommunity.com/app/3958210/eventcomments/594068734660962823/#c594068734660964482\n\nWork out the most likely cause from the code, fix it, and tell me what you changed and how to test it. If the reports aren't enough to pin it down, say what to ask the players.",
-   "fixedIn": "v1.4.1",
-   "fixedAt": 1790966220,
-   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695399726270382318",
-   "fixReason": "\"Fixed ice from about 400 m down that sometimes couldn't be broken: the chainsaw and dynamite did nothing\" - directly addresses the digging blocked at 410m depth issue",
+   "fixedIn": "v2.0",
+   "fixedAt": 1791329160,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+   "fixReason": "\"Fixed the saw and dynamite sometimes no longer cutting ice around 400-450 m until you restarted the game\" fixes the exact depth blocking issue",
    "stillSince": null
   },
   "I52": {
@@ -1288,7 +1350,7 @@
    "title": "Missing surface return mechanic",
    "area": "game design, progression, mechanics",
    "summary": "No fuel or energy system gives no incentive to return to surface except to sell.",
-   "status": "open",
+   "status": "likely_fixed",
    "created": 1791044085,
    "items": [
     "r236634124"
@@ -1307,8 +1369,13 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 2.5,
-   "fixPrompt": null
+   "priority": 0.5,
+   "fixPrompt": null,
+   "fixedIn": "v2.0",
+   "fixedAt": 1791329160,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+   "fixReason": "\"Fuel: the chainsaw burns gas while it runs\" creates an incentive to return to surface for refueling",
+   "stillSince": null
   },
   "I55": {
    "id": "I55",
@@ -1316,7 +1383,7 @@
    "title": "Chainsaw glow mechanic unfulfilled",
    "area": "game design, progression, mechanics",
    "summary": "Chainsaw glows as if it should overheat but doesn't.",
-   "status": "open",
+   "status": "likely_fixed",
    "created": 1791044085,
    "items": [
     "r236634124"
@@ -1335,8 +1402,13 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 1.25,
-   "fixPrompt": null
+   "priority": 0.25,
+   "fixPrompt": null,
+   "fixedIn": "v2.0",
+   "fixedAt": 1791329160,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+   "fixReason": "\"A hot chainsaw cuts bigger holes, and the bonus grows as you upgrade it. It heats up whenever it runs\" fulfills the chainsaw glow mechanic with functional heat mechanics",
+   "stillSince": null
   },
   "I58": {
    "id": "I58",
@@ -1372,7 +1444,7 @@
    "title": "Lighting mechanic has no effect",
    "area": "game design, progression, mechanics",
    "summary": "Lights serve no purpose because depth doesn't increase darkness.",
-   "status": "open",
+   "status": "likely_fixed",
    "created": 1791044085,
    "items": [
     "r236634124"
@@ -1391,7 +1463,7 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 1.25,
+   "priority": 0.25,
    "fixPrompt": null,
    "partly": [
     {
@@ -1399,7 +1471,12 @@
      "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382299",
      "reason": "The depth counter staying readable longer provides visual feedback, but doesn't address the lighting mechanic having no effect on visibility"
     }
-   ]
+   ],
+   "fixedIn": "v2.0",
+   "fixedAt": 1791329160,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+   "fixReason": "\"The pit gets darker the deeper you dig, so your lanterns now light the way with a warm glow\" implements darkness progression that makes lighting meaningful",
+   "stillSince": null
   },
   "I60": {
    "id": "I60",
@@ -1463,7 +1540,7 @@
    "title": "Upgrades lack clear stat display",
    "area": "game design, progression, mechanics",
    "summary": "UI doesn't show upgrade details like stat changes.",
-   "status": "open",
+   "status": "likely_fixed",
    "created": 1791044085,
    "items": [
     "r236634124"
@@ -1482,8 +1559,13 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 2.5,
-   "fixPrompt": null
+   "priority": 0.5,
+   "fixPrompt": null,
+   "fixedIn": "v2.0",
+   "fixedAt": 1791329160,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+   "fixReason": "\"Looking at the tent or an upgrade machine tells you what it does and what the next level gives you, like cut size +15%, before you buy\" shows upgrade stat details clearly",
+   "stillSince": null
   },
   "I63": {
    "id": "I63",
@@ -1880,6 +1962,29 @@
    "matched": [],
    "checked": true,
    "partly": []
+  },
+  {
+   "gid": "695400360681930764",
+   "name": "Update 2.0",
+   "version": "2.0",
+   "launch": false,
+   "time": 1791329160,
+   "url": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+   "notes": "2.0 is the biggest update yet, so it starts everyone on a fresh run: your money, upgrades and dug hole are reset, and your settings and language are kept. The pit is now 1000 m deep, twice as deep as before, and a lot has changed on the way down.\n\nNew\n\n- \nThe pit is now 1000 m deep, with the ending waiting at the bottom (suggested by 5 players)\n\n- \nFuel: the chainsaw burns gas while it runs. Refill at the new gas machine next to the sell pipe. The tank grows with your bag, and an empty saw slows to a crawl instead of stopping, so you can always dig your way back to the money (suggested by 1 player)\n\n- \nThe pit gets darker the deeper you dig, so your lanterns now light the way with a warm glow (suggested by 1 player)\n\n- \nA hot chainsaw cuts bigger holes, and the bonus grows as you upgrade it. It heats up whenever it runs, so you can warm it up before you cut (suggested by 1 player)\n\n- \nNew loot deeper down: cinder blocks, tires, fire hydrants and gems, with the best pieces near the bottom\n\n- \nSelling is a show now: your bag streams into the sell pipe piece by piece and you're paid for each piece as it goes in. Step away and the rest stays in your bag\n\n- \nUpgrade machines show at a glance what you can afford: the item rises out of its case with a golden glow when you have the money\n\n- \nLooking at the tent or an upgrade machine tells you what it does and what the next level gives you, like cut size +15%, before you buy (suggested by 1 player)\n\n- \nSnowfall, ground mist and drifting frost in the ice\n\n- \nThai and Vietnamese, and prices in each language's own currency\n\nImprovements\n\n- \nThe chainsaw sounds like a real gas engine with a pull-start instead of a high electric whine (reported by 3 players)\n\n- \nThe whole game is mixed louder and more evenly, with new sounds for jumps and landings, machines, the sell pipe and the lantern\n\n- \nA new look for the chainsaw: the chain runs around the bar, and the heat glows in from its edges\n\n- \nA new dynamite explosion with a fireball, a shockwave and flying ice, blowing a bigger hole (suggested by 1 player)\n\n- \nProgress rebalanced for the deeper pit: upgrades are spread over the whole 1000 m, dynamite and lanterns are cheaper, and dynamite pays only for the ice it actually blows away\n\n- \nLoot breaks out of the ice in its own shape and flies into you when you pick it up\n\n- \nA redesigned main menu, pause menu and loading screen, and a cleaner HUD with matching controller and keyboard button icons\n\n- \nThe title logo is translated into every language\n\n- \nSmoother loading, up to 8% faster on Steam Deck, and a download less than half the size\n\nFixes\n\n- \nFixed the saw and dynamite sometimes no longer cutting ice around 400-450 m until you restarted the game\n\n- \nFixed loot floating in midair in tunnels dug in an earlier session\n\n- \nFixed a crash involving loot\n\n- \nFixed the first achievement unlocking at the start instead of on your first cut into the ice\n\n- \nSmaller fixes to the menus, the loading screen and the chainsaw's outline\n\nFound a bug or have an idea? Tell us in the Steam discussions.\n\n— Danny",
+   "matched": [
+    "I47",
+    "I49",
+    "I50",
+    "I51",
+    "I54",
+    "I55",
+    "I59",
+    "I62"
+   ],
+   "checked": true,
+   "partly": [
+    "I44"
+   ]
   }
  ],
  "threads": {
@@ -1935,6 +2040,11 @@
   },
   "594069369071340534": {
    "lastPost": 1791327515,
+   "replies": 0,
+   "forum": "Events & Announcements"
+  },
+  "594069369071342244": {
+   "lastPost": 1791329172,
    "replies": 0,
    "forum": "Events & Announcements"
   }
@@ -2047,7 +2157,7 @@
     "thumb": "https://i.ytimg.com/vi/JvkeKvMvAt0/mqdefault.jpg",
     "lang": "en",
     "duration": 4784,
-    "views": 2125,
+    "views": 2129,
     "likes": 26,
     "comments": 3,
     "live": false,
@@ -2259,6 +2369,26 @@
       "cost": 0.010618
      }
     }
+   },
+   "2026-10-06": {
+    "input": 4562,
+    "output": 780,
+    "calls": 8,
+    "cost": 0.008462,
+    "tasks": {
+     "patch": {
+      "input": 2182,
+      "output": 473,
+      "calls": 1,
+      "cost": 0.004547
+     },
+     "translate": {
+      "input": 2380,
+      "output": 307,
+      "calls": 7,
+      "cost": 0.003915
+     }
+    }
    }
   },
   "tasks": {
@@ -2267,12 +2397,24 @@
     "output": 854,
     "calls": 5,
     "cost": 0.010618
+   },
+   "patch": {
+    "input": 2182,
+    "output": 473,
+    "calls": 1,
+    "cost": 0.004547
+   },
+   "translate": {
+    "input": 2380,
+    "output": 307,
+    "calls": 7,
+    "cost": 0.003915
    }
   },
-  "input": 6348,
-  "output": 854,
-  "calls": 5,
-  "cost": 0.010618
+  "input": 10910,
+  "output": 1634,
+  "calls": 13,
+  "cost": 0.01908
  },
  "competitors": {
   "3244220": {
@@ -2316,7 +2458,7 @@
      "negative": 2164
     },
     "2026-10-06": {
-     "positive": 18035,
+     "positive": 18036,
      "negative": 2164
     }
    }
@@ -2708,7 +2850,7 @@
      "negative": 149
     },
     "2026-10-06": {
-     "positive": 5254,
+     "positive": 5255,
      "negative": 149
     }
    }

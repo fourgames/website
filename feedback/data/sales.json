@@ -1,5 +1,5 @@
 {
- "highwatermark": "2093753105069",
+ "highwatermark": "2093760548239",
  "days": {
   "2024-11-10": {
    "2807130": {
@@ -711,13 +711,17 @@
   "2026-10-06": {
    "3958210": {
     "gross": 5.71,
-    "returns": 1.83,
-    "tax": 0.17,
-    "net": 3.71,
+    "returns": 4.23,
+    "tax": -0.26,
+    "net": 1.74,
     "units": 3,
-    "returnedUnits": 2,
+    "returnedUnits": 3,
     "discount": 40,
     "countries": {
+     "IT": [
+      -1.97,
+      -1
+     ],
      "KR": [
       1.67,
       1

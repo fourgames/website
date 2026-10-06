@@ -1714,6 +1714,10 @@
   [
    1791269330,
    1
+  ],
+  [
+   1791272963,
+   0
   ]
  ],
  "reviewTotals": {
@@ -1947,7 +1951,7 @@
     "thumb": "https://i.ytimg.com/vi/pE3oQXBlq7k/mqdefault.jpg",
     "lang": "en",
     "duration": 4008,
-    "views": 192,
+    "views": 193,
     "likes": 0,
     "comments": 0,
     "live": false,
@@ -1989,7 +1993,7 @@
     "thumb": "https://i.ytimg.com/vi/JvkeKvMvAt0/mqdefault.jpg",
     "lang": "en",
     "duration": 4784,
-    "views": 2102,
+    "views": 2108,
     "likes": 26,
     "comments": 3,
     "live": false,
@@ -2574,7 +2578,7 @@
      "negative": 149
     },
     "2026-10-06": {
-     "positive": 5235,
+     "positive": 5236,
      "negative": 150
     }
    }

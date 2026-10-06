@@ -2056,7 +2056,7 @@
   ]
  ],
  "achievements": {
-  "at": 1791251418,
+  "at": 1791279655,
   "list": [
    {
     "name": "000%",
@@ -2068,25 +2068,25 @@
     "name": "025%",
     "desc": "025%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
-    "percent": 63.8
+    "percent": 63.0
    },
    {
     "name": "050%",
     "desc": "050%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
-    "percent": 52.7
+    "percent": 52.0
    },
    {
     "name": "075%",
     "desc": "075%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
-    "percent": 47.2
+    "percent": 46.5
    },
    {
     "name": "100%",
     "desc": "100%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
-    "percent": 37.5
+    "percent": 36.9
    }
   ]
  },
@@ -2186,7 +2186,7 @@
      "negative": 2164
     },
     "2026-10-06": {
-     "positive": 18031,
+     "positive": 18032,
      "negative": 2164
     }
    }
@@ -2406,7 +2406,7 @@
    ],
    "peaks": {
     "2026-10-05": 96,
-    "2026-10-06": 51
+    "2026-10-06": 60
    },
    "reviews": {
     "2026-10-05": {
@@ -2503,7 +2503,7 @@
   },
   "2764460": {
    "name": "Sandustry",
-   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2764460/985a3a20945ec9c8e3e898e16cdaffe99d00e884/header.jpg?t=1790846471",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2764460/985a3a20945ec9c8e3e898e16cdaffe99d00e884/header.jpg?t=1791278651",
    "released": 1786579200,
    "comingSoon": false,
    "updates": [

@@ -14,5 +14,14 @@
    "note": "Fixed: your secondary fire is the hammer its not planned to make it for rifle also",
    "release": "509567431915603800"
   }
+ },
+ "3958210": {
+  "I52": {
+   "as": "fixed",
+   "at": 1791379869,
+   "title": "Upgrades and mechanics lack meaningful purpose and progression",
+   "note": "Fixed: Upgrades and mechanics lack meaningful purpose and progression",
+   "release": "695400360681930764"
+  }
  }
 }

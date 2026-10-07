@@ -135,5 +135,6 @@ FEEDBACK_DATA_DIR=/tmp/fb/data FEEDBACK_DRY_RUN=1 .venv/bin/python feedback/run.
 ```
 
 - `FEEDBACK_DRY_RUN=1` skips Claude.
+- `FEEDBACK_RESORT=<app id>,…` (or `all`) sorts those games' posts again from scratch, after the sorting rules changed. On GitHub, start the workflow with the **resort** input instead. Issues get new IDs, so fixes marked on the dashboard for that game no longer apply; the run is a baseline, so no alerts are sent.
 - Without `STEAM_PUBLISHER_KEY`, reviews come from the public, keyless host.
 - Without `DISCORD_WEBHOOK_URL`, Discord payloads are printed instead of sent.

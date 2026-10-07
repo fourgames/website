@@ -30,7 +30,12 @@ while :; do
   started=$SECONDS
   # Other commits (yours, or code changes) land between checks.
   git pull -q --rebase origin main || git rebase --abort 2>/dev/null
-  python feedback/run.py && commit || echo "::warning::This run failed; the next one tries again."
+  if python feedback/run.py; then
+    unset FEEDBACK_RESORT  # a re-sort happens once; the following runs carry on from it
+    commit
+  else
+    echo "::warning::This run failed; the next one tries again."
+  fi
   # A new store page, release or sale: rebuild the site now rather than at the daily rebuild.
   if [ -f feedback/.cache/rebuild-site ]; then
     gh workflow run static.yml --ref main && rm feedback/.cache/rebuild-site

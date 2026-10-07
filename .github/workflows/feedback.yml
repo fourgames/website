@@ -11,6 +11,10 @@ on:
         description: Start now, replacing the current run
         type: boolean
         default: true
+      resort:
+        description: Sort these games' posts again from scratch (app ids, or "all"), after the sorting rules changed
+        type: string
+        default: ""
       test_discord:
         description: Only send a test of each Discord alert (no run)
         type: boolean
@@ -63,6 +67,7 @@ jobs:
           feedback/loop.sh
         env:
           FEEDBACK_HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          FEEDBACK_RESORT: ${{ inputs.resort }}
           STEAM_PUBLISHER_KEY: ${{ secrets.STEAM_PUBLISHER_KEY }}
           STEAM_FINANCIAL_KEY: ${{ secrets.STEAM_FINANCIAL_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

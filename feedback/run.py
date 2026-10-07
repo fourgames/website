@@ -15,6 +15,7 @@ import hashlib
 import json
 import math
 import os
+import re
 import sys
 import time
 from pathlib import Path
@@ -30,6 +31,8 @@ MAX_TRIAGE_PER_RUN = 400  # bounds the first backfill; the rest is picked up nex
 CLUSTER_LEVELS = [3, 5, 10, 25, 50, 100, 250, 500]
 URGENCY = ["low", "medium", "high", "urgent"]
 DAY = 86400
+# Games whose posts are all sorted again this run (app ids, or "all"); see resort().
+RESORT = set(filter(None, re.split(r"[\s,]+", os.environ.get("FEEDBACK_RESORT", ""))))
 
 
 def now():
@@ -527,6 +530,21 @@ def process_in_order(state, game, run, budget, events):
     merge_duplicates(state, game)
 
 
+def resort(state, game):
+    """Sorts every post again from scratch, after the sorting rules changed: the issues are dropped and
+    rebuilt post by post, with each update's patch notes matched again in between. New issues get new
+    IDs, so a fix you marked on an old one no longer applies. The run is a baseline, so nothing pings."""
+    for item in state["items"].values():
+        if not item.get("dev"):
+            item.update(pending=True, issues=[], issue=None)
+    for release in state["releases"]:
+        release.update(matched=[], partly=[], checked=False)
+    state["issues"] = {}
+    state["mergedAt"] = None
+    state["initialized"] = False
+    print(f"[resort] {game['name']}: every post will be sorted again")
+
+
 def merge_duplicates(state, game):
     """Posts are sorted one at a time, so two issues can end up being the same thing. After new
     issues appear, Claude looks over the whole list once and duplicates are merged into the oldest."""
@@ -1004,6 +1022,8 @@ def full_run():
     for game in index["games"]:
         path = game_path(game["appId"])
         state = load(path, None) or new_state(game)
+        if str(game["appId"]) in RESORT or "all" in RESORT:
+            resort(state, game)
         first_run = not state["initialized"]
         run = {"new": [], "edited": [], "flips": [], "urgent": [], "triaged": [], "touched": set()}
         used_before = json.loads(json.dumps(triage.USAGE))  # a copy, tasks included

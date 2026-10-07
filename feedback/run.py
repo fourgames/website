@@ -544,6 +544,10 @@ def merge_duplicates(state, game):
     status.active("claude", "checked issues")
     number = lambda issue_id: int(issue_id[1:])
     for group in groups:
+        # Issues started by the same post were sorted apart on purpose, with the whole post in view.
+        founders = [state["issues"][i]["items"][0] for i in group["ids"]]
+        if len(set(founders)) < len(founders):
+            continue
         keep_id, *others = sorted(group["ids"], key=number)
         keep = state["issues"][keep_id]
         keep["title"] = group["title"]

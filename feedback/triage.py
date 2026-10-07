@@ -126,7 +126,9 @@ Praise for two things is two points (e.g. "quick updates, and the controls feel 
 developer's responsiveness and one for the controls). Questions join nothing. Each point also gets its own urgency, on the scale above.
 - Some listed issues say they were likely fixed in an update, and how. A point that joins one sets still_after_fix \
 only when it clearly says the problem persists after that fix (e.g. "still no explanation even after the update"); \
-a player describing the old problem, or playing an older version, doesn't count.
+a player describing the old problem, or playing an older version, doesn't count. A complaint about what the fix \
+itself added, or the opposite of the issue (an issue asks for a limit or cost, the point says the new one is too \
+harsh), is a new issue, not the old one still happening.
 - Read the post the way a native speaker and Steam regular would. Steam reviews are full of memes and irony: a \
 recommended review that only says "run away" (Korean "도망쳐") jokes that the game is addictive or hard, not a \
 warning. Set tone accordingly and triage what the player actually means.
@@ -344,8 +346,10 @@ def find_duplicates(game_name, issues):
         "Group the issues that are the same underlying problem, request or praised thing: ones one change would "
         "settle (e.g. \"game too short\" and \"needs more content\"). Don't group issues that are only related or "
         "about different items. Praise groups only when it's the same specific thing (\"satisfying digging\" and \"digging "
-        "feels great\"), never into a broad theme like \"fun gameplay\". Only list groups of two or more; leave everything "
-        "else out."
+        "feels great\"), never into a broad theme like \"fun gameplay\". Bugs and ideas likewise never group into a theme "
+        "(\"lacks progression\", \"needs polish\", \"UI problems\"): issues about different items, tools or features stay "
+        "apart even when they share an area or sound alike, and the merged title must still name one specific thing. "
+        "Only list groups of two or more; leave everything else out."
     )
     response = _parse("merge",
         model=MODEL,

@@ -22,6 +22,13 @@
    "title": "Upgrades and mechanics lack meaningful purpose and progression",
    "note": "Fixed: Upgrades and mechanics lack meaningful purpose and progression",
    "release": "695400360681930764"
+  },
+  "I44": {
+   "as": "fixed",
+   "at": 1791379873,
+   "title": "Tutorial and onboarding are insufficient",
+   "note": "Fixed: Tutorial and onboarding are insufficient",
+   "release": "695400360681930764"
   }
  }
 }

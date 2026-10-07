@@ -64,21 +64,21 @@
    "lastDevPost": 1791331508,
    "claude": {
     "since": 1791207011,
-    "input": 20835,
-    "output": 2399,
-    "calls": 18,
-    "cost": 0.03283,
+    "input": 75216,
+    "output": 9381,
+    "calls": 44,
+    "cost": 0.122121,
     "days": {
      "2026-10-05": 0.0106,
      "2026-10-06": 0.0089,
-     "2026-10-07": 0.0133
+     "2026-10-07": 0.1026
     },
     "tasks": {
      "reply": 0.0106,
-     "patch": 0.0061,
+     "patch": 0.0229,
      "translate": 0.0044,
-     "sort": 0.0095,
-     "merge": 0.0023
+     "sort": 0.0752,
+     "merge": 0.0091
     },
     "past": {
      "input": 38721,
@@ -104,7 +104,7 @@
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791349580,
+   "active": 1791379989,
    "activeWhat": "checked issues"
   },
   "discord": {
@@ -139,7 +139,7 @@
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791377508,
+   "active": 1791379989,
    "activeWhat": "players changed"
   },
   "twitch": {
@@ -157,7 +157,7 @@
    "activeWhat": "new video"
   }
  },
- "changedAt": 1791378539,
+ "changedAt": 1791379989,
  "creditAlert": null,
  "discord": {
   "members": [
@@ -390,6 +390,10 @@
    [
     1791378539,
     20
+   ],
+   [
+    1791379989,
+    19
    ]
   ],
   "name": "Four Games",

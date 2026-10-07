@@ -518,7 +518,7 @@
     "profile": "https://steamcommunity.com/profiles/76561198395502823",
     "name": "thedead817",
     "avatar": "https://avatars.fastly.steamstatic.com/8bbf3dbea8e385c611ae4d8b2c79f43279b59035_medium.jpg",
-    "reviews": 455,
+    "reviews": 456,
     "games": 237
    },
    "lang": "german",
@@ -1875,6 +1875,10 @@
   [
    1791366410,
    0
+  ],
+  [
+   1791368219,
+   1
   ]
  ],
  "reviewTotals": {
@@ -2160,7 +2164,7 @@
     "thumb": "https://i.ytimg.com/vi/pE3oQXBlq7k/mqdefault.jpg",
     "lang": "en",
     "duration": 4008,
-    "views": 206,
+    "views": 210,
     "likes": 0,
     "comments": 1,
     "live": false,
@@ -2181,7 +2185,7 @@
     "thumb": "https://i.ytimg.com/vi/gqqB_pQWCCc/mqdefault.jpg",
     "lang": "en-US",
     "duration": 170,
-    "views": 7,
+    "views": 8,
     "likes": 0,
     "comments": 1,
     "live": false,
@@ -2223,7 +2227,7 @@
     "thumb": "https://i.ytimg.com/vi/olVZxqu-lPo/mqdefault.jpg",
     "lang": "en",
     "duration": 17,
-    "views": 292,
+    "views": 293,
     "likes": 7,
     "comments": 1,
     "live": false,
@@ -2332,7 +2336,7 @@
     "Đào hố trên băng bằng cưa máy"
    ]
   },
-  "alert": null
+  "alert": "\"Digging A Hole In Ice With A Chainsaw\" OR \"チェーンソーで氷に穴を掘る\" OR \"전기톱으로 얼음에 구멍 뚫기\" OR \"用电锯在冰上挖个洞\" OR \"用電鋸在冰上挖個洞\""
  },
  "followers": [
   [
@@ -2963,8 +2967,8 @@
      "negative": 149
     },
     "2026-10-07": {
-     "positive": 5266,
-     "negative": 149
+     "positive": 5265,
+     "negative": 150
     }
    }
   },
@@ -3038,7 +3042,7 @@
    "peaks": {
     "2026-10-05": 546,
     "2026-10-06": 514,
-    "2026-10-07": 398
+    "2026-10-07": 414
    },
    "reviews": {
     "2026-10-05": {

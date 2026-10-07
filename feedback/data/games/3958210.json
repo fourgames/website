@@ -5,8 +5,8 @@
  "watermarks": {
   "reviews": 1790875183,
   "forums": {
-   "0": 1791329555,
-   "event:18446744073709551615": 1791331508
+   "0": 1791349280,
+   "event:18446744073709551615": 1791349398
   }
  },
  "items": {
@@ -40,15 +40,7 @@
    "issues": [
     "I52",
     "I49",
-    "I54",
-    "I55",
-    "I58",
-    "I59",
-    "I60",
-    "I61",
-    "I47",
-    "I62",
-    "I63"
+    "I47"
    ],
    "issue": "I52",
    "triage": {
@@ -86,14 +78,14 @@
       "text": "No fuel or energy system gives no incentive to return to surface except to sell.",
       "urgency": "medium",
       "quote": "There is no energy/fuel gauge, so there's no reason to go back to the surface if you don't need to sell.",
-      "issue": "I54"
+      "issue": "I52"
      },
      {
       "kind": "complaint",
       "text": "Chainsaw glows as if it should overheat but doesn't.",
       "urgency": "low",
       "quote": "The chainsaw visibly starts to glow, so it seems like there should be some sort of heat aspect, but it doesn't overheat.",
-      "issue": "I55"
+      "issue": "I52"
      },
      {
       "kind": "complaint",
@@ -114,28 +106,28 @@
       "text": "Can continue drilling when pack is full, eliminating need to return after full upgrades.",
       "urgency": "medium",
       "quote": "When the pack is full, you can just keep drilling.  So once you fully upgrade the chainsaw and backpack, there's no reason to go back to the surface.",
-      "issue": "I58"
+      "issue": "I52"
      },
      {
       "kind": "complaint",
       "text": "Lights serve no purpose because depth doesn't increase darkness.",
       "urgency": "low",
       "quote": "There are lights you can buy and place to light up the hole you dig, but going deeper doesn't seem to make the game any darker, so there's no need to place lights.",
-      "issue": "I59"
+      "issue": "I52"
      },
      {
       "kind": "complaint",
       "text": "Dynamite is not useful and has no upgrade path.",
       "urgency": "low",
       "quote": "Dynamite exists, but it's not really needed and doesn't seem to have upgrades.",
-      "issue": "I60"
+      "issue": "I52"
      },
      {
       "kind": "complaint",
       "text": "Tent's function is unclear with no feedback about what it does.",
       "urgency": "low",
       "quote": "There's a tent at the surface that seems like does something, but there's no notification of it doing anything.  I'd guess it saves the game, but I don't know for sure.",
-      "issue": "I61"
+      "issue": "I52"
      },
      {
       "kind": "complaint",
@@ -149,14 +141,14 @@
       "text": "UI doesn't show upgrade details like stat changes.",
       "urgency": "medium",
       "quote": "There's no real UI.  You don't know what exactly an upgrade does.  Other games would say \"digging radius 1 > 2\" or \"jetpack speed 2 > 3\" or something.",
-      "issue": "I62"
+      "issue": "I52"
      },
      {
       "kind": "suggestion",
       "text": "Player would repurchase if the game receives more content and depth.",
       "urgency": "low",
       "quote": "I do plan on keeping an eye on it, I'd like to buy it again if it gets fleshed out.",
-      "issue": "I63"
+      "issue": "I47"
      }
     ],
     "note": null
@@ -1118,6 +1110,119 @@
    "dev": true,
    "versions": [],
    "pending": false
+  },
+  "c594069369071358074": {
+   "id": "c594069369071358074",
+   "kind": "reply",
+   "url": "https://steamcommunity.com/app/3958210/discussions/0/594069100231151619/#c594069369071358074",
+   "author": {
+    "id": "435237095",
+    "name": "thedead817",
+    "profile": "https://steamcommunity.com/profiles/76561198395502823",
+    "avatar": "https://avatars.akamai.steamstatic.com/8bbf3dbea8e385c611ae4d8b2c79f43279b59035_medium.jpg",
+    "games": null
+   },
+   "created": 1791349280,
+   "updated": 1791349280,
+   "text": "Ok thanks for the Info",
+   "topic": "t594069100231151619",
+   "forum": "General Discussions",
+   "dev": false,
+   "versions": [],
+   "pending": false,
+   "issues": [
+    "I64"
+   ],
+   "issue": "I64",
+   "triage": {
+    "language": "English",
+    "summary": "Player acknowledges receiving information.",
+    "category": "praise",
+    "urgency": "low",
+    "area": "general",
+    "details": null,
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "praise",
+      "text": "Player appreciates receiving information.",
+      "urgency": "low",
+      "quote": "Ok thanks for the Info",
+      "issue": "I64"
+     }
+    ],
+    "note": null
+   },
+   "alertedNew": true
+  },
+  "c594069369071358175": {
+   "id": "c594069369071358175",
+   "kind": "reply",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594069369071342244/#c594069369071358175",
+   "author": {
+    "id": "435237095",
+    "name": "thedead817",
+    "profile": "https://steamcommunity.com/profiles/76561198395502823",
+    "avatar": "https://avatars.akamai.steamstatic.com/8bbf3dbea8e385c611ae4d8b2c79f43279b59035_medium.jpg",
+    "games": null
+   },
+   "created": 1791349398,
+   "updated": 1791349398,
+   "text": "Tolles Update. Danke. Das einzige was amAnfang bissl blöd war , das die Kettensäge so schnell leer war. Da konnte man nach 30 sekunden schon wieder aufladen gehen...Das wird dann aber besser. Respekt an jeden der sich über die 1000 Meter freut. Mir hatten schon die 500 gereicht bzw war erst bei 100 Meter ^^",
+   "topic": "t594069369071342244",
+   "forum": "Events & Announcements",
+   "dev": false,
+   "versions": [],
+   "pending": false,
+   "issues": [
+    "I65",
+    "I52",
+    "I64"
+   ],
+   "issue": "I65",
+   "triage": {
+    "language": "German",
+    "english": "Great update. Thanks. The only thing that was a bit annoying at the beginning was that the chainsaw ran out of fuel so quickly. After 30 seconds you had to go refuel... But that gets better. Respect to everyone who is happy about the 1000 meters. I was already satisfied with the 500 or was only at 100 meters ^^",
+    "summary": "The player appreciates the update but found early fuel management tedious, though it improves, and notes the deeper pit doesn't appeal to them personally.",
+    "category": "praise",
+    "urgency": "low",
+    "area": "fuel, game depth",
+    "details": null,
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "praise",
+      "text": "The update is great.",
+      "urgency": "low",
+      "quote": "Tolles Update. Danke.",
+      "issue": "I65"
+     },
+     {
+      "kind": "complaint",
+      "text": "The chainsaw runs out of fuel too quickly early on, requiring refueling after only 30 seconds.",
+      "urgency": "low",
+      "quote": "das die Kettensäge so schnell leer war. Da konnte man nach 30 sekunden schon wieder aufladen gehen",
+      "still": true,
+      "issue": "I52"
+     },
+     {
+      "kind": "praise",
+      "text": "Fuel management improves as the game progresses.",
+      "urgency": "low",
+      "quote": "Das wird dann aber besser.",
+      "issue": "I65"
+     },
+     {
+      "kind": "praise",
+      "text": "The developer deserves respect for the significant content expansion.",
+      "urgency": "low",
+      "quote": "Developer communication and responsiveness",
+      "issue": "I64"
+     }
+    ],
+    "note": null
+   },
+   "alertedNew": true
   }
  },
  "issues": {
@@ -1203,7 +1308,7 @@
   "I47": {
    "id": "I47",
    "kind": "suggestion",
-   "title": "Game is too short and needs more content",
+   "title": "Game needs more content and longer playtime",
    "area": "content, game length",
    "summary": "Game takes less than 1 hour to complete even when playing leisurely.",
    "status": "likely_fixed",
@@ -1363,152 +1468,36 @@
   "I52": {
    "id": "I52",
    "kind": "suggestion",
-   "title": "Upgrades lack meaningful progression and purpose",
+   "title": "Upgrades and mechanics lack meaningful purpose and progression",
    "area": "game design, progression, mechanics",
    "summary": "Jetpack has no fuel cost, making upgrades pointless after a few.",
-   "status": "open",
+   "status": "still_happening",
    "created": 1791044085,
    "items": [
-    "r236634124"
+    "r236634124",
+    "c594069369071358175"
    ],
    "alerted": {
     "urgent": false,
     "cluster": 0
    },
-   "mentions": 1,
+   "mentions": 2,
    "languages": [
-    "English"
+    "English",
+    "German"
    ],
    "firstSeen": 1790875183,
-   "lastSeen": 1790875183,
+   "lastSeen": 1791349398,
    "urgency": "medium",
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 2.5,
-   "fixPrompt": null
-  },
-  "I54": {
-   "id": "I54",
-   "kind": "suggestion",
-   "title": "Missing surface return mechanic",
-   "area": "game design, progression, mechanics",
-   "summary": "No fuel or energy system gives no incentive to return to surface except to sell.",
-   "status": "likely_fixed",
-   "created": 1791044085,
-   "items": [
-    "r236634124"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1790875183,
-   "lastSeen": 1790875183,
-   "urgency": "medium",
-   "negativeReviews": 1,
-   "firstSession": 1,
-   "details": [],
-   "priority": 0.5,
+   "priority": 7.5,
    "fixPrompt": null,
    "fixedIn": "v2.0",
    "fixedAt": 1791329160,
    "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
    "fixReason": "\"Fuel: the chainsaw burns gas while it runs\" creates an incentive to return to surface for refueling",
-   "stillSince": null
-  },
-  "I55": {
-   "id": "I55",
-   "kind": "suggestion",
-   "title": "Chainsaw glow mechanic unfulfilled",
-   "area": "game design, progression, mechanics",
-   "summary": "Chainsaw glows as if it should overheat but doesn't.",
-   "status": "likely_fixed",
-   "created": 1791044085,
-   "items": [
-    "r236634124"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1790875183,
-   "lastSeen": 1790875183,
-   "urgency": "low",
-   "negativeReviews": 1,
-   "firstSession": 1,
-   "details": [],
-   "priority": 0.25,
-   "fixPrompt": null,
-   "fixedIn": "v2.0",
-   "fixedAt": 1791329160,
-   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
-   "fixReason": "\"A hot chainsaw cuts bigger holes, and the bonus grows as you upgrade it. It heats up whenever it runs\" fulfills the chainsaw glow mechanic with functional heat mechanics",
-   "stillSince": null
-  },
-  "I58": {
-   "id": "I58",
-   "kind": "suggestion",
-   "title": "No consequence for full inventory",
-   "area": "game design, progression, mechanics",
-   "summary": "Can continue drilling when pack is full, eliminating need to return after full upgrades.",
-   "status": "open",
-   "created": 1791044085,
-   "items": [
-    "r236634124"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1790875183,
-   "lastSeen": 1790875183,
-   "urgency": "medium",
-   "negativeReviews": 1,
-   "firstSession": 1,
-   "details": [],
-   "priority": 2.5,
-   "fixPrompt": null
-  },
-  "I59": {
-   "id": "I59",
-   "kind": "suggestion",
-   "title": "Lighting mechanic has no effect",
-   "area": "game design, progression, mechanics",
-   "summary": "Lights serve no purpose because depth doesn't increase darkness.",
-   "status": "likely_fixed",
-   "created": 1791044085,
-   "items": [
-    "r236634124"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1790875183,
-   "lastSeen": 1790875183,
-   "urgency": "low",
-   "negativeReviews": 1,
-   "firstSession": 1,
-   "details": [],
-   "priority": 0.25,
-   "fixPrompt": null,
    "partly": [
     {
      "in": "v1.4",
@@ -1516,22 +1505,19 @@
      "reason": "The depth counter staying readable longer provides visual feedback, but doesn't address the lighting mechanic having no effect on visibility"
     }
    ],
-   "fixedIn": "v2.0",
-   "fixedAt": 1791329160,
-   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
-   "fixReason": "\"The pit gets darker the deeper you dig, so your lanterns now light the way with a warm glow\" implements darkness progression that makes lighting meaningful",
-   "stillSince": null
+   "stillSince": 1791349398
   },
-  "I60": {
-   "id": "I60",
-   "kind": "suggestion",
-   "title": "Dynamite lacks purpose and progression",
-   "area": "game design, progression, mechanics",
-   "summary": "Dynamite is not useful and has no upgrade path.",
+  "I64": {
+   "id": "I64",
+   "kind": "praise",
+   "title": "Developer communication and responsiveness",
+   "area": "general",
+   "summary": "Player appreciates receiving information.",
    "status": "open",
-   "created": 1791044085,
+   "created": 1791349571,
    "items": [
-    "r236634124"
+    "c594069369071358074",
+    "c594069369071358175"
    ],
    "alerted": {
     "urgent": false,
@@ -1539,27 +1525,28 @@
    },
    "mentions": 1,
    "languages": [
-    "English"
+    "English",
+    "German"
    ],
-   "firstSeen": 1790875183,
-   "lastSeen": 1790875183,
+   "firstSeen": 1791349280,
+   "lastSeen": 1791349398,
    "urgency": "low",
-   "negativeReviews": 1,
-   "firstSession": 1,
+   "negativeReviews": 0,
+   "firstSession": 0,
    "details": [],
-   "priority": 1.25,
+   "priority": 1.0,
    "fixPrompt": null
   },
-  "I61": {
-   "id": "I61",
-   "kind": "suggestion",
-   "title": "Tent lacks explanation or feedback",
-   "area": "game design, progression, mechanics",
-   "summary": "Tent's function is unclear with no feedback about what it does.",
+  "I65": {
+   "id": "I65",
+   "kind": "praise",
+   "title": "Fuel system and Version 2.0 update improvements",
+   "area": "fuel, game depth",
+   "summary": "The update is great.",
    "status": "open",
-   "created": 1791044085,
+   "created": 1791349576,
    "items": [
-    "r236634124"
+    "c594069369071358175"
    ],
    "alerted": {
     "urgent": false,
@@ -1567,80 +1554,19 @@
    },
    "mentions": 1,
    "languages": [
-    "English"
+    "German"
    ],
-   "firstSeen": 1790875183,
-   "lastSeen": 1790875183,
+   "firstSeen": 1791349398,
+   "lastSeen": 1791349398,
    "urgency": "low",
-   "negativeReviews": 1,
-   "firstSession": 1,
+   "negativeReviews": 0,
+   "firstSession": 0,
    "details": [],
-   "priority": 1.25,
-   "fixPrompt": null
-  },
-  "I62": {
-   "id": "I62",
-   "kind": "suggestion",
-   "title": "Upgrades lack clear stat display",
-   "area": "game design, progression, mechanics",
-   "summary": "UI doesn't show upgrade details like stat changes.",
-   "status": "likely_fixed",
-   "created": 1791044085,
-   "items": [
-    "r236634124"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1790875183,
-   "lastSeen": 1790875183,
-   "urgency": "medium",
-   "negativeReviews": 1,
-   "firstSession": 1,
-   "details": [],
-   "priority": 0.5,
-   "fixPrompt": null,
-   "fixedIn": "v2.0",
-   "fixedAt": 1791329160,
-   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
-   "fixReason": "\"Looking at the tent or an upgrade machine tells you what it does and what the next level gives you, like cut size +15%, before you buy\" shows upgrade stat details clearly",
-   "stillSince": null
-  },
-  "I63": {
-   "id": "I63",
-   "kind": "suggestion",
-   "title": "Player would repurchase if the game receives more content and depth",
-   "area": "game design, progression, mechanics",
-   "summary": "Player would repurchase if the game receives more content and depth.",
-   "status": "open",
-   "created": 1791044085,
-   "items": [
-    "r236634124"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "English"
-   ],
-   "firstSeen": 1790875183,
-   "lastSeen": 1790875183,
-   "urgency": "low",
-   "negativeReviews": 1,
-   "firstSession": 1,
-   "details": [],
-   "priority": 1.25,
+   "priority": 1.0,
    "fixPrompt": null
   }
  },
- "nextIssue": 64,
+ "nextIssue": 67,
  "players": [
   [
    1791016909,
@@ -1917,6 +1843,10 @@
   [
    1791348660,
    2
+  ],
+  [
+   1791349561,
+   1
   ]
  ],
  "reviewTotals": {
@@ -2009,7 +1939,7 @@
    "checked": true,
    "partly": [
     "I44",
-    "I59"
+    "I52"
    ]
   },
   {
@@ -2049,10 +1979,7 @@
     "I49",
     "I50",
     "I51",
-    "I54",
-    "I55",
-    "I59",
-    "I62"
+    "I52"
    ],
    "checked": true,
    "partly": [
@@ -2119,8 +2046,8 @@
    "forum": "Events & Announcements"
   },
   "594069100231151619": {
-   "lastPost": 1791329555,
-   "replies": 1,
+   "lastPost": 1791349280,
+   "replies": 2,
    "forum": "General Discussions"
   },
   "594069369071340534": {
@@ -2129,8 +2056,8 @@
    "forum": "Events & Announcements"
   },
   "594069369071342244": {
-   "lastPost": 1791329172,
-   "replies": 0,
+   "lastPost": 1791349398,
+   "replies": 1,
    "forum": "Events & Announcements"
   },
   "594069369071344540": {
@@ -2146,7 +2073,7 @@
    40
   ]
  ],
- "mergedAt": 64,
+ "mergedAt": 67,
  "newPostAlertsFrom": 1791061932,
  "manualFixes": {},
  "past": {
@@ -2481,16 +2408,28 @@
     }
    },
    "2026-10-07": {
-    "input": 1467,
-    "output": 8,
-    "calls": 1,
-    "cost": 0.001507,
+    "input": 9556,
+    "output": 751,
+    "calls": 4,
+    "cost": 0.013311,
     "tasks": {
      "patch": {
       "input": 1467,
       "output": 8,
       "calls": 1,
       "cost": 0.001507
+     },
+     "sort": {
+      "input": 6484,
+      "output": 609,
+      "calls": 2,
+      "cost": 0.009529
+     },
+     "merge": {
+      "input": 1605,
+      "output": 134,
+      "calls": 1,
+      "cost": 0.002275
      }
     }
    }
@@ -2513,12 +2452,24 @@
     "output": 321,
     "calls": 8,
     "cost": 0.004354
+   },
+   "sort": {
+    "input": 6484,
+    "output": 609,
+    "calls": 2,
+    "cost": 0.009529
+   },
+   "merge": {
+    "input": 1605,
+    "output": 134,
+    "calls": 1,
+    "cost": 0.002275
    }
   },
-  "input": 12746,
-  "output": 1656,
-  "calls": 15,
-  "cost": 0.021026
+  "input": 20835,
+  "output": 2399,
+  "calls": 18,
+  "cost": 0.03283
  },
  "competitors": {
   "3244220": {

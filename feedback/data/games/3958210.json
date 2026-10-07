@@ -2184,7 +2184,7 @@
     "thumb": "https://i.ytimg.com/vi/pE3oQXBlq7k/mqdefault.jpg",
     "lang": "en",
     "duration": 4008,
-    "views": 210,
+    "views": 209,
     "likes": 0,
     "comments": 1,
     "live": false,
@@ -2226,7 +2226,7 @@
     "thumb": "https://i.ytimg.com/vi/JvkeKvMvAt0/mqdefault.jpg",
     "lang": "en",
     "duration": 4784,
-    "views": 2151,
+    "views": 2154,
     "likes": 26,
     "comments": 5,
     "live": false,
@@ -2292,8 +2292,8 @@
     "duration": 30,
     "own": true,
     "category": "27",
-    "views": 4,
-    "likes": 2,
+    "views": 11,
+    "likes": 3,
     "comments": 1,
     "live": false,
     "upcoming": false,
@@ -2409,13 +2409,13 @@
   ]
  ],
  "achievements": {
-  "at": 1791350289,
+  "at": 1791378534,
   "list": [
    {
     "name": "000%",
     "desc": "000%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
-    "percent": 98.6
+    "percent": 100.0
    },
    {
     "name": "025%",
@@ -2614,7 +2614,7 @@
      "negative": 2164
     },
     "2026-10-07": {
-     "positive": 18039,
+     "positive": 18040,
      "negative": 2164
     }
    }
@@ -2758,7 +2758,7 @@
    "peaks": {
     "2026-10-05": 70,
     "2026-10-06": 58,
-    "2026-10-07": 50
+    "2026-10-07": 59
    },
    "reviews": {
     "2026-10-05": {
@@ -2845,7 +2845,7 @@
    "peaks": {
     "2026-10-05": 96,
     "2026-10-06": 94,
-    "2026-10-07": 68
+    "2026-10-07": 84
    },
    "reviews": {
     "2026-10-05": {
@@ -2932,7 +2932,7 @@
    "peaks": {
     "2026-10-05": 1399,
     "2026-10-06": 1332,
-    "2026-10-07": 654
+    "2026-10-07": 719
    },
    "reviews": {
     "2026-10-05": {
@@ -3019,7 +3019,7 @@
    "peaks": {
     "2026-10-05": 1822,
     "2026-10-06": 1722,
-    "2026-10-07": 1403
+    "2026-10-07": 1553
    },
    "reviews": {
     "2026-10-05": {

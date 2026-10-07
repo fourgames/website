@@ -246,7 +246,7 @@
     "profile": "https://steamcommunity.com/profiles/76561199743081459",
     "name": "김까까",
     "avatar": "https://avatars.fastly.steamstatic.com/13fcac4e5d5618bccb3696d5691d1af5adbac1ba_medium.jpg",
-    "reviews": 158,
+    "reviews": 159,
     "games": null
    },
    "lang": "koreana",
@@ -2406,6 +2406,10 @@
   [
    1791382227,
    0
+  ],
+  [
+   1791387669,
+   1
   ]
  ],
  "reviewTotals": {
@@ -2741,7 +2745,7 @@
     "thumb": "https://i.ytimg.com/vi/JvkeKvMvAt0/mqdefault.jpg",
     "lang": "en",
     "duration": 4784,
-    "views": 2154,
+    "views": 2155,
     "likes": 26,
     "comments": 5,
     "live": false,
@@ -3204,7 +3208,7 @@
    "peaks": {
     "2026-10-05": 92,
     "2026-10-06": 83,
-    "2026-10-07": 57
+    "2026-10-07": 58
    },
    "reviews": {
     "2026-10-05": {
@@ -3447,7 +3451,7 @@
    "peaks": {
     "2026-10-05": 1399,
     "2026-10-06": 1332,
-    "2026-10-07": 895
+    "2026-10-07": 1003
    },
    "reviews": {
     "2026-10-05": {
@@ -3546,7 +3550,7 @@
      "negative": 149
     },
     "2026-10-07": {
-     "positive": 5266,
+     "positive": 5269,
      "negative": 150
     }
    }
@@ -3708,7 +3712,7 @@
    "peaks": {
     "2026-10-05": 657,
     "2026-10-06": 651,
-    "2026-10-07": 441
+    "2026-10-07": 493
    },
    "reviews": {
     "2026-10-05": {

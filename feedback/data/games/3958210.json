@@ -6,7 +6,7 @@
   "reviews": 1790875183,
   "forums": {
    "0": 1791349280,
-   "event:18446744073709551615": 1791386183
+   "event:18446744073709551615": 1791392084
   }
  },
  "items": {
@@ -1290,6 +1290,33 @@
     "note": "The player mentions Meltopia (likely another game by the developer) as a comparison point for satisfying mechanics."
    },
    "alertedNew": true
+  },
+  "c594069369071402379": {
+   "id": "c594069369071402379",
+   "kind": "reply",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594069369071342244/#c594069369071402379",
+   "author": {
+    "id": "1029710208",
+    "name": "Danny",
+    "profile": "https://steamcommunity.com/profiles/76561198989975936",
+    "avatar": "https://avatars.akamai.steamstatic.com/7fd012481753eceb898d0652579c2831453e53d1_medium.jpg",
+    "games": null
+   },
+   "created": 1791392084,
+   "updated": 1791392084,
+   "text": "Danke dir! Du hattest recht, am Anfang war der Sprit viel zu schnell leer. Die ersten Tanks halten jetzt bis zu doppelt so lange, du musst also nicht mehr so oft nachtanken.",
+   "topic": "t594069369071342244",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false,
+   "triage": {
+    "language": "German",
+    "english": "Thanks! You were right, at the beginning the fuel ran out way too quickly. The first tanks now last up to twice as long, so you don't have to refuel as often anymore."
+   },
+   "translatedOwn": {
+    "text": "9685e55708a5"
+   }
   }
  },
  "issues": {
@@ -2631,8 +2658,8 @@
    "forum": "Events & Announcements"
   },
   "594069369071342244": {
-   "lastPost": 1791386183,
-   "replies": 2,
+   "lastPost": 1791392084,
+   "replies": 3,
    "forum": "Events & Announcements"
   },
   "594069369071344540": {
@@ -3027,10 +3054,10 @@
     }
    },
    "2026-10-07": {
-    "input": 126589,
-    "output": 15384,
-    "calls": 58,
-    "cost": 0.203509,
+    "input": 126932,
+    "output": 15438,
+    "calls": 59,
+    "cost": 0.204122,
     "tasks": {
      "patch": {
       "input": 24984,
@@ -3049,6 +3076,12 @@
       "output": 993,
       "calls": 10,
       "cost": 0.019016
+     },
+     "translate": {
+      "input": 343,
+      "output": 54,
+      "calls": 1,
+      "cost": 0.000613
      }
     }
    }
@@ -3067,10 +3100,10 @@
     "cost": 0.040491
    },
    "translate": {
-    "input": 2749,
-    "output": 321,
-    "calls": 8,
-    "cost": 0.004354
+    "input": 3092,
+    "output": 375,
+    "calls": 9,
+    "cost": 0.004967
    },
    "sort": {
     "input": 87554,
@@ -3085,10 +3118,10 @@
     "cost": 0.019016
    }
   },
-  "input": 137868,
-  "output": 17032,
-  "calls": 72,
-  "cost": 0.223028
+  "input": 138211,
+  "output": 17086,
+  "calls": 73,
+  "cost": 0.223641
  },
  "competitors": {
   "3244220": {

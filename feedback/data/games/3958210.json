@@ -6,7 +6,7 @@
   "reviews": 1790875183,
   "forums": {
    "0": 1791349280,
-   "event:18446744073709551615": 1791392084
+   "event:18446744073709551615": 1791392577
   }
  },
  "items": {
@@ -1316,6 +1316,33 @@
    },
    "translatedOwn": {
     "text": "9685e55708a5"
+   }
+  },
+  "c594069369071402969": {
+   "id": "c594069369071402969",
+   "kind": "reply",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594069369071342244/#c594069369071402969",
+   "author": {
+    "id": "1029710208",
+    "name": "Danny",
+    "profile": "https://steamcommunity.com/profiles/76561198989975936",
+    "avatar": "https://avatars.akamai.steamstatic.com/7fd012481753eceb898d0652579c2831453e53d1_medium.jpg",
+    "games": null
+   },
+   "created": 1791392577,
+   "updated": 1791392577,
+   "text": "Danke, dass du mir immer wieder sagst, wie der Sound ist, das hilft mir echt! Das ständige Scheppern vom Eis ist jetzt weg. Stattdessen hörst du ein durchgehendes, ruhigeres Schleifen und nur ab und zu ein leises Knacken.",
+   "topic": "t594069369071342244",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false,
+   "triage": {
+    "language": "German",
+    "english": "Thanks for constantly telling me what the sound is like, it really helps me! The constant clattering of the ice is now gone. Instead, you hear a continuous, quieter grinding sound and only occasionally a soft crack."
+   },
+   "translatedOwn": {
+    "text": "e496d1e961a5"
    }
   }
  },
@@ -2658,8 +2685,8 @@
    "forum": "Events & Announcements"
   },
   "594069369071342244": {
-   "lastPost": 1791392084,
-   "replies": 3,
+   "lastPost": 1791392577,
+   "replies": 4,
    "forum": "Events & Announcements"
   },
   "594069369071344540": {
@@ -3054,10 +3081,10 @@
     }
    },
    "2026-10-07": {
-    "input": 126932,
-    "output": 15438,
-    "calls": 59,
-    "cost": 0.204122,
+    "input": 127297,
+    "output": 15498,
+    "calls": 60,
+    "cost": 0.204787,
     "tasks": {
      "patch": {
       "input": 24984,
@@ -3078,10 +3105,10 @@
       "cost": 0.019016
      },
      "translate": {
-      "input": 343,
-      "output": 54,
-      "calls": 1,
-      "cost": 0.000613
+      "input": 708,
+      "output": 114,
+      "calls": 2,
+      "cost": 0.001278
      }
     }
    }
@@ -3100,10 +3127,10 @@
     "cost": 0.040491
    },
    "translate": {
-    "input": 3092,
-    "output": 375,
-    "calls": 9,
-    "cost": 0.004967
+    "input": 3457,
+    "output": 435,
+    "calls": 10,
+    "cost": 0.005632
    },
    "sort": {
     "input": 87554,
@@ -3118,10 +3145,10 @@
     "cost": 0.019016
    }
   },
-  "input": 138211,
-  "output": 17086,
-  "calls": 73,
-  "cost": 0.223641
+  "input": 138576,
+  "output": 17146,
+  "calls": 74,
+  "cost": 0.224306
  },
  "competitors": {
   "3244220": {

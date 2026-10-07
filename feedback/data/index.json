@@ -61,22 +61,22 @@
    "discount": 40,
    "store": "a9c98aab6e33",
    "lastPost": 1791386183,
-   "lastDevPost": 1791392084,
+   "lastDevPost": 1791392577,
    "claude": {
     "since": 1791207011,
-    "input": 138211,
-    "output": 17086,
-    "calls": 73,
-    "cost": 0.223641,
+    "input": 138576,
+    "output": 17146,
+    "calls": 74,
+    "cost": 0.224306,
     "days": {
      "2026-10-05": 0.0106,
      "2026-10-06": 0.0089,
-     "2026-10-07": 0.2041
+     "2026-10-07": 0.2048
     },
     "tasks": {
      "reply": 0.0106,
      "patch": 0.0405,
-     "translate": 0.005,
+     "translate": 0.0056,
      "sort": 0.1485,
      "merge": 0.019
     },
@@ -104,7 +104,7 @@
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791392129,
+   "active": 1791392728,
    "activeWhat": "translated your post"
   },
   "discord": {
@@ -118,7 +118,7 @@
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791392129,
+   "active": 1791392728,
    "activeWhat": "new post"
   },
   "news": {
@@ -157,7 +157,7 @@
    "activeWhat": "new video"
   }
  },
- "changedAt": 1791392129,
+ "changedAt": 1791392728,
  "creditAlert": null,
  "discord": {
   "members": [

@@ -2197,7 +2197,7 @@
     "thumb": "https://i.ytimg.com/vi/pE3oQXBlq7k/mqdefault.jpg",
     "lang": "en",
     "duration": 4008,
-    "views": 204,
+    "views": 206,
     "likes": 0,
     "comments": 1,
     "live": false,
@@ -2218,9 +2218,9 @@
     "thumb": "https://i.ytimg.com/vi/gqqB_pQWCCc/mqdefault.jpg",
     "lang": "en-US",
     "duration": 170,
-    "views": 5,
+    "views": 7,
     "likes": 0,
-    "comments": 0,
+    "comments": 1,
     "live": false,
     "upcoming": false,
     "subscribers": 2,
@@ -2976,7 +2976,7 @@
      "negative": 149
     },
     "2026-10-07": {
-     "positive": 5262,
+     "positive": 5263,
      "negative": 149
     }
    }

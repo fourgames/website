@@ -6,7 +6,7 @@
   "reviews": 1790875183,
   "forums": {
    "0": 1791329555,
-   "event:18446744073709551615": 1791329172
+   "event:18446744073709551615": 1791331508
   }
  },
  "items": {
@@ -1101,6 +1101,23 @@
    "translatedOwn": {
     "text": "f253170c02d9"
    }
+  },
+  "t594069369071344540": {
+   "id": "t594069369071344540",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594069369071344540/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1791331508,
+   "updated": 1791331508,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/3958210/announcements/detail/695400360681930773",
+   "title": "Hotfix 2.0.1",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
   }
  },
  "issues": {
@@ -2017,6 +2034,18 @@
    "partly": [
     "I44"
    ]
+  },
+  {
+   "gid": "695400360681930772",
+   "name": "Hotfix 2.0.1",
+   "version": "2.0.1",
+   "launch": false,
+   "time": 1791331500,
+   "url": "https://store.steampowered.com/news/app/3958210/view/695400360681930772",
+   "notes": "Sorry about the stutters in 2.0: the game froze for a moment the first time you picked up loot, sold at the sell pipe or landed. This hotfix fixes it.\n\nFixes\n\n- \nFixed a lag spike the first time you picked up loot, sold at the sell pipe or landed after a jump or a fall\n\n- \nFixed the game freezing longer while loading on Mac and Linux\n\nThanks for playing! If anything else gets in your way, tell us in the Steam discussions.\n\n— Danny",
+   "matched": [],
+   "checked": true,
+   "partly": []
   }
  ],
  "threads": {
@@ -2077,6 +2106,11 @@
   },
   "594069369071342244": {
    "lastPost": 1791329172,
+   "replies": 0,
+   "forum": "Events & Announcements"
+  },
+  "594069369071344540": {
+   "lastPost": 1791331508,
    "replies": 0,
    "forum": "Events & Announcements"
   }
@@ -2421,6 +2455,20 @@
       "cost": 0.004354
      }
     }
+   },
+   "2026-10-07": {
+    "input": 1467,
+    "output": 8,
+    "calls": 1,
+    "cost": 0.001507,
+    "tasks": {
+     "patch": {
+      "input": 1467,
+      "output": 8,
+      "calls": 1,
+      "cost": 0.001507
+     }
+    }
    }
   },
   "tasks": {
@@ -2431,10 +2479,10 @@
     "cost": 0.010618
    },
    "patch": {
-    "input": 2182,
-    "output": 473,
-    "calls": 1,
-    "cost": 0.004547
+    "input": 3649,
+    "output": 481,
+    "calls": 2,
+    "cost": 0.006054
    },
    "translate": {
     "input": 2749,
@@ -2443,10 +2491,10 @@
     "cost": 0.004354
    }
   },
-  "input": 11279,
-  "output": 1648,
-  "calls": 14,
-  "cost": 0.019519
+  "input": 12746,
+  "output": 1656,
+  "calls": 15,
+  "cost": 0.021026
  },
  "competitors": {
   "3244220": {

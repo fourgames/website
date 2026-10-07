@@ -60,25 +60,25 @@
    "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3958210/31c125b9f63a0f8c5329e902bfd08f6c7a6c85d8/header.jpg?t=1791328139",
    "discount": 40,
    "store": "a9c98aab6e33",
-   "lastPost": 1791349398,
+   "lastPost": 1791386183,
    "lastDevPost": 1791331508,
    "claude": {
     "since": 1791207011,
-    "input": 132382,
-    "output": 16344,
-    "calls": 70,
-    "cost": 0.214102,
+    "input": 137868,
+    "output": 17032,
+    "calls": 72,
+    "cost": 0.223028,
     "days": {
      "2026-10-05": 0.0106,
      "2026-10-06": 0.0089,
-     "2026-10-07": 0.1946
+     "2026-10-07": 0.2035
     },
     "tasks": {
      "reply": 0.0106,
      "patch": 0.0405,
      "translate": 0.0044,
-     "sort": 0.1424,
-     "merge": 0.0163
+     "sort": 0.1485,
+     "merge": 0.019
     },
     "past": {
      "input": 38721,
@@ -104,7 +104,7 @@
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791380339,
+   "active": 1791386739,
    "activeWhat": "checked issues"
   },
   "discord": {
@@ -118,7 +118,7 @@
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1791349580,
+   "active": 1791386739,
    "activeWhat": "new post"
   },
   "news": {
@@ -157,7 +157,7 @@
    "activeWhat": "new video"
   }
  },
- "changedAt": 1791384047,
+ "changedAt": 1791386739,
  "creditAlert": null,
  "discord": {
   "members": [

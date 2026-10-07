@@ -6,7 +6,7 @@
   "reviews": 1790875183,
   "forums": {
    "0": 1791349280,
-   "event:18446744073709551615": 1791349398
+   "event:18446744073709551615": 1791386183
   }
  },
  "items": {
@@ -265,9 +265,9 @@
    "steamPurchase": true,
    "receivedForFree": false,
    "issues": [
-    "I97"
+    "I88"
    ],
-   "issue": "I97",
+   "issue": "I88",
    "triage": {
     "language": "Korean",
     "english": "I'll say just one thing in all conscience: \"Run... away...\"",
@@ -283,7 +283,7 @@
       "text": "The game is so engaging you should run away to avoid getting addicted.",
       "urgency": "low",
       "quote": "양심껏 한 마디만 하겠습니다 \"도.망.쳐\"",
-      "issue": "I97"
+      "issue": "I88"
      }
     ],
     "note": "Korean meme: '도망쳐' (run away) in a recommended review means the game is so compelling it's hard to stop playing, not a warning."
@@ -1220,6 +1220,76 @@
     "note": "The ^^ emoticon at the end is a friendly laugh, not sarcasm."
    },
    "alertedNew": true
+  },
+  "c594069369071394989": {
+   "id": "c594069369071394989",
+   "kind": "reply",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594069369071342244/#c594069369071394989",
+   "author": {
+    "id": "358681924",
+    "name": "Horror Heaven",
+    "profile": "https://steamcommunity.com/profiles/76561198318947652",
+    "avatar": "https://avatars.akamai.steamstatic.com/8442685651231b08503c282a75c5f324df2ae085_medium.jpg",
+    "games": null
+   },
+   "created": 1791386183,
+   "updated": 1791386183,
+   "text": "Auf jeden Fall ein gutes Update. Das Spiel ist jetzt noch besser. Auch der Sound ist erträglicher. Wobei ich die Effekte nach wie vor auf 10% habe, weil mir das Konstante Scheppern von dem Eis echt zu viel ist. Der Flammenwerfer aus Meltopia war echt entspannend ;).",
+   "topic": "t594069369071342244",
+   "forum": "Events & Announcements",
+   "dev": false,
+   "versions": [],
+   "pending": false,
+   "issues": [
+    "I108",
+    "I110",
+    "I91",
+    "I112"
+   ],
+   "issue": "I108",
+   "triage": {
+    "language": "German",
+    "english": "Definitely a good update. The game is even better now. The sound is more tolerable too. Though I still have effects at 10% because the constant clattering of the ice is really too much for me. The flamethrower from Meltopia was really relaxing ;).",
+    "summary": "The update is good and sound is better, but the ice clattering noise is still too loud even at low volume.",
+    "category": "suggestion",
+    "urgency": "low",
+    "area": "sound design, ice sound",
+    "details": null,
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "praise",
+      "text": "The update is good and the game is even better now.",
+      "urgency": "low",
+      "quote": "Auf jeden Fall ein gutes Update. Das Spiel ist jetzt noch besser.",
+      "issue": "I108"
+     },
+     {
+      "kind": "praise",
+      "text": "The sound is more tolerable now.",
+      "urgency": "low",
+      "quote": "Auch der Sound ist erträglicher.",
+      "issue": "I110"
+     },
+     {
+      "kind": "complaint",
+      "text": "The constant clattering of the ice noise is still too loud even at minimum sound effect volume.",
+      "urgency": "low",
+      "quote": "Wobei ich die Effekte nach wie vor auf 10% habe, weil mir das Konstante Scheppern von dem Eis echt zu viel ist.",
+      "still": true,
+      "issue": "I91"
+     },
+     {
+      "kind": "praise",
+      "text": "The flamethrower from Meltopia was relaxing.",
+      "urgency": "low",
+      "quote": "Der Flammenwerfer aus Meltopia war echt entspannend",
+      "issue": "I112"
+     }
+    ],
+    "note": "The player mentions Meltopia (likely another game by the developer) as a comparison point for satisfying mechanics."
+   },
+   "alertedNew": true
   }
  },
  "issues": {
@@ -1266,31 +1336,32 @@
   "I88": {
    "id": "I88",
    "kind": "praise",
-   "title": "Engaging chainsaw digging gameplay",
+   "title": "Engaging and addictive digging gameplay",
    "area": "tutorial, new player experience",
    "summary": "The chainsaw digging mechanic makes for a nice, relaxed game.",
    "status": "open",
    "created": 1791380237,
    "items": [
     "r236542076",
-    "r236614813"
+    "r236614813",
+    "r236624465"
    ],
    "alerted": {
     "urgent": false,
     "cluster": 0
    },
-   "mentions": 2,
+   "mentions": 3,
    "languages": [
     "German",
     "Korean"
    ],
    "firstSeen": 1790771780,
-   "lastSeen": 1790856494,
+   "lastSeen": 1790866538,
    "urgency": "low",
    "negativeReviews": 0,
-   "firstSession": 2,
+   "firstSession": 3,
    "details": [],
-   "priority": 2.0,
+   "priority": 2.58,
    "fixPrompt": null
   },
   "I89": {
@@ -1374,15 +1445,16 @@
   "I91": {
    "id": "I91",
    "kind": "suggestion",
-   "title": "Sound design is harsh and unpleasant",
+   "title": "Sound design too harsh and loud",
    "area": "sound design, dynamite balance, content",
    "summary": "The sound design is unpleasant and harsh, like a dentist filling with bottle-clinking.",
-   "status": "likely_fixed",
+   "status": "still_happening",
    "created": 1791380250,
    "items": [
     "r236561103",
     "c594068734660970660",
-    "r236634124"
+    "r236634124",
+    "c594069369071394989"
    ],
    "alerted": {
     "urgent": false,
@@ -1394,20 +1466,20 @@
     "German"
    ],
    "firstSeen": 1790789172,
-   "lastSeen": 1790875183,
+   "lastSeen": 1791386183,
    "urgency": "medium",
    "negativeReviews": 1,
    "firstSession": 2,
    "details": [
     "At exactly 400m depth, using the chainsaw creates new ice or pulls the old ice instead of removing it. Player found a workaround by digging at the pit's edge. Occurs at the 400m mark specifically."
    ],
-   "priority": 1.29,
+   "priority": 9.69,
    "fixPrompt": null,
    "fixedIn": "v2.0",
    "fixedAt": 1791329160,
    "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
    "fixReason": "\"The chainsaw sounds like a real gas engine with a pull-start instead of a high electric whine\" directly replaces the complained-about dental drill sound with a real gas engine sound",
-   "stillSince": null
+   "stillSince": 1791386183
   },
   "I92": {
    "id": "I92",
@@ -1553,34 +1625,6 @@
    "firstSession": 1,
    "details": [],
    "priority": 2.0,
-   "fixPrompt": null
-  },
-  "I97": {
-   "id": "I97",
-   "kind": "praise",
-   "title": "Addictive gameplay",
-   "area": "overall",
-   "summary": "The game is so engaging you should run away to avoid getting addicted.",
-   "status": "open",
-   "created": 1791380288,
-   "items": [
-    "r236624465"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "Korean"
-   ],
-   "firstSeen": 1790866538,
-   "lastSeen": 1790866538,
-   "urgency": "low",
-   "negativeReviews": 0,
-   "firstSession": 1,
-   "details": [],
-   "priority": 1.0,
    "fixPrompt": null
   },
   "I98": {
@@ -1904,23 +1948,24 @@
    "status": "open",
    "created": 1791380337,
    "items": [
-    "c594069369071358175"
+    "c594069369071358175",
+    "c594069369071394989"
    ],
    "alerted": {
     "urgent": false,
     "cluster": 0
    },
-   "mentions": 1,
+   "mentions": 2,
    "languages": [
     "German"
    ],
    "firstSeen": 1791349398,
-   "lastSeen": 1791349398,
+   "lastSeen": 1791386183,
    "urgency": "low",
    "negativeReviews": 0,
    "firstSession": 0,
    "details": [],
-   "priority": 1.0,
+   "priority": 2.0,
    "fixPrompt": null
   },
   "I109": {
@@ -1950,9 +1995,65 @@
    "details": [],
    "priority": 1.0,
    "fixPrompt": null
+  },
+  "I110": {
+   "id": "I110",
+   "kind": "praise",
+   "title": "The sound is more tolerable now",
+   "area": "sound design, ice sound",
+   "summary": "The sound is more tolerable now.",
+   "status": "open",
+   "created": 1791386735,
+   "items": [
+    "c594069369071394989"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 1,
+   "languages": [
+    "German"
+   ],
+   "firstSeen": 1791386183,
+   "lastSeen": 1791386183,
+   "urgency": "low",
+   "negativeReviews": 0,
+   "firstSession": 0,
+   "details": [],
+   "priority": 1.0,
+   "fixPrompt": null
+  },
+  "I112": {
+   "id": "I112",
+   "kind": "praise",
+   "title": "Flamethrower satisfying to use",
+   "area": "sound design, ice sound",
+   "summary": "The flamethrower from Meltopia was relaxing.",
+   "status": "open",
+   "created": 1791386735,
+   "items": [
+    "c594069369071394989"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 1,
+   "languages": [
+    "German"
+   ],
+   "firstSeen": 1791386183,
+   "lastSeen": 1791386183,
+   "urgency": "low",
+   "negativeReviews": 0,
+   "firstSession": 0,
+   "details": [],
+   "priority": 1.0,
+   "fixPrompt": null
   }
  },
- "nextIssue": 110,
+ "nextIssue": 113,
  "players": [
   [
    1791016909,
@@ -2522,8 +2623,8 @@
    "forum": "Events & Announcements"
   },
   "594069369071342244": {
-   "lastPost": 1791349398,
-   "replies": 1,
+   "lastPost": 1791386183,
+   "replies": 2,
    "forum": "Events & Announcements"
   },
   "594069369071344540": {
@@ -2539,7 +2640,7 @@
    40
   ]
  ],
- "mergedAt": 110,
+ "mergedAt": 113,
  "newPostAlertsFrom": 1791061932,
  "manualFixes": {},
  "past": {
@@ -2918,10 +3019,10 @@
     }
    },
    "2026-10-07": {
-    "input": 121103,
-    "output": 14696,
-    "calls": 56,
-    "cost": 0.194583,
+    "input": 126589,
+    "output": 15384,
+    "calls": 58,
+    "cost": 0.203509,
     "tasks": {
      "patch": {
       "input": 24984,
@@ -2930,16 +3031,16 @@
       "cost": 0.035944
      },
      "sort": {
-      "input": 83974,
-      "output": 11678,
-      "calls": 28,
-      "cost": 0.142364
+      "input": 87554,
+      "output": 12199,
+      "calls": 29,
+      "cost": 0.148549
      },
      "merge": {
-      "input": 12145,
-      "output": 826,
-      "calls": 9,
-      "cost": 0.016275
+      "input": 14051,
+      "output": 993,
+      "calls": 10,
+      "cost": 0.019016
      }
     }
    }
@@ -2964,22 +3065,22 @@
     "cost": 0.004354
    },
    "sort": {
-    "input": 83974,
-    "output": 11678,
-    "calls": 28,
-    "cost": 0.142364
+    "input": 87554,
+    "output": 12199,
+    "calls": 29,
+    "cost": 0.148549
    },
    "merge": {
-    "input": 12145,
-    "output": 826,
-    "calls": 9,
-    "cost": 0.016275
+    "input": 14051,
+    "output": 993,
+    "calls": 10,
+    "cost": 0.019016
    }
   },
-  "input": 132382,
-  "output": 16344,
-  "calls": 70,
-  "cost": 0.214102
+  "input": 137868,
+  "output": 17032,
+  "calls": 72,
+  "cost": 0.223028
  },
  "competitors": {
   "3244220": {

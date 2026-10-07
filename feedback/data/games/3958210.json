@@ -533,7 +533,7 @@
    "versions": [],
    "flips": [],
    "pending": false,
-   "playtimeForever": 1.1,
+   "playtimeForever": 1.6,
    "steamPurchase": true,
    "receivedForFree": false,
    "issues": [
@@ -2190,7 +2190,7 @@
     "thumb": "https://i.ytimg.com/vi/JvkeKvMvAt0/mqdefault.jpg",
     "lang": "en",
     "duration": 4784,
-    "views": 2138,
+    "views": 2144,
     "likes": 26,
     "comments": 5,
     "live": false,
@@ -3026,7 +3026,7 @@
    "peaks": {
     "2026-10-05": 546,
     "2026-10-06": 514,
-    "2026-10-07": 392
+    "2026-10-07": 398
    },
    "reviews": {
     "2026-10-05": {

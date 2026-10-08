@@ -43,6 +43,13 @@
    "title": "Sound design too harsh and loud",
    "note": "Fixed: Sound design too harsh and loud",
    "release": "695400360681930772"
+  },
+  "I92": {
+   "as": "fixed",
+   "at": 1791453623,
+   "title": "Dynamite upgrades feel underpowered",
+   "note": "Fixed: Dynamite upgrades feel underpowered",
+   "release": "695400360681930764"
   }
  }
 }

@@ -57,6 +57,13 @@
    "title": "Missing fuel/energy system for gameplay loop",
    "note": "Fixed: Missing fuel/energy system for gameplay loop",
    "release": "695400360681930764"
+  },
+  "I99": {
+   "as": "fixed",
+   "at": 1791453649,
+   "title": "Chainsaw upgrades lack meaningful progression",
+   "note": "not planned",
+   "release": "695400360681930772"
   }
  }
 }

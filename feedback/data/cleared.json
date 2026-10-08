@@ -71,6 +71,13 @@
    "title": "Backpack upgrades lack variety",
    "note": "not planned",
    "release": "695400360681930772"
+  },
+  "I103": {
+   "as": "fixed",
+   "at": 1791453667,
+   "title": "No incentive to return to surface after upgrades",
+   "note": "Fixed: No incentive to return to surface after upgrades",
+   "release": "695400360681930764"
   }
  }
 }

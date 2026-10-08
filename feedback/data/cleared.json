@@ -92,6 +92,13 @@
    "title": "Player interested in returning if game receives substantial content updates",
    "note": "Fixed: Player interested in returning if game receives substantial content updates",
    "release": "695400360681930764"
+  },
+  "I87": {
+   "as": "fixed",
+   "at": 1791453690,
+   "title": "Missing tutorial or initial explanation",
+   "note": "Fixed: Missing tutorial or initial explanation",
+   "release": "695400360681930764"
   }
  }
 }

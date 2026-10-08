@@ -1353,7 +1353,7 @@
    "title": "Missing tutorial or initial explanation",
    "area": "tutorial, new player experience",
    "summary": "The game lacks an initial tutorial explaining that you need to sell ice to progress.",
-   "status": "open",
+   "status": "likely_fixed",
    "created": 1791380237,
    "items": [
     "r236542076"
@@ -1372,7 +1372,7 @@
    "negativeReviews": 0,
    "firstSession": 1,
    "details": [],
-   "priority": 1.2,
+   "priority": 0.24,
    "fixPrompt": null,
    "partly": [
     {
@@ -1385,7 +1385,13 @@
      "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382299",
      "reason": "Improved depth counter readability provides feedback about progression, but doesn't add a tutorial or explain the ice-selling mechanic as requested"
     }
-   ]
+   ],
+   "fixedIn": "v2.0",
+   "fixedAt": 1791329160,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+   "fixReason": "Fixed: Missing tutorial or initial explanation",
+   "manualFix": "I87@1791453690",
+   "stillSince": null
   },
   "I88": {
    "id": "I88",
@@ -1492,7 +1498,8 @@
     {
      "in": "v2.0",
      "url": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
-     "reason": "\"New loot deeper down: cinder blocks, tires, fire hydrants and gems, with the best pieces near the bottom\" adds new content to discover while digging, but doesn't fully address the 3-4 hours needed or upgrade distribution issues"
+     "reason": "\"nows 1000m and gas requiring you to go up\" adds gameplay depth through longer content and resource management, but doesn't directly address the lack of collectibles, side paths, or meaningful progression from pickup items that players requested.",
+     "manual": "I90@1791453607"
     }
    ]
   },
@@ -1533,7 +1540,15 @@
    "fixedAt": 1791329160,
    "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
    "fixReason": "\"The chainsaw sounds like a real gas engine with a pull-start instead of a high electric whine\" directly replaces the complained-about dental drill sound with a real gas engine sound",
-   "stillSince": 1791386183
+   "stillSince": 1791386183,
+   "partly": [
+    {
+     "in": "v2.0.1",
+     "url": "https://store.steampowered.com/news/app/3958210/view/695400360681930772",
+     "reason": "The patch notes state \"Fixed: Sound design too harsh and loud\" but players report that chainsaw sounds remain unchanged and ice clattering is still too loud even at minimum volume, suggesting the fix did not fully address the reported harshness issues.",
+     "manual": "I91@1791453616"
+    }
+   ]
   },
   "I92": {
    "id": "I92",
@@ -1541,7 +1556,7 @@
    "title": "Dynamite upgrades feel underpowered",
    "area": "sound design, dynamite balance, content",
    "summary": "Dynamite is not worth the cost, creating only small holes.",
-   "status": "open",
+   "status": "likely_fixed",
    "created": 1791380250,
    "items": [
     "r236561103",
@@ -1562,7 +1577,7 @@
    "negativeReviews": 1,
    "firstSession": 2,
    "details": [],
-   "priority": 5.0,
+   "priority": 1.0,
    "fixPrompt": null,
    "partly": [
     {
@@ -1575,7 +1590,13 @@
      "url": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
      "reason": "\"A new dynamite explosion with a fireball, a shockwave and flying ice, blowing a bigger hole\" makes dynamite more impactful visually, but doesn't address the cost balance concern"
     }
-   ]
+   ],
+   "fixedIn": "v2.0",
+   "fixedAt": 1791329160,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+   "fixReason": "Patch note states \"Fixed: Dynamite upgrades feel underpowered\" which directly addresses the player report that \"Dynamite upgrades feel underpowered\"",
+   "manualFix": "I92@1791453623",
+   "stillSince": null
   },
   "I93": {
    "id": "I93",
@@ -1679,7 +1700,15 @@
    "firstSession": 1,
    "details": [],
    "priority": 2.0,
-   "fixPrompt": null
+   "fixPrompt": null,
+   "partly": [
+    {
+     "in": "v2.0.1",
+     "url": "https://store.steampowered.com/news/app/3958210/view/695400360681930772",
+     "reason": "Your note doesn't seem to do what players asked: \"not planned\"",
+     "manual": "I96@1791453673"
+    }
+   ]
   },
   "I98": {
    "id": "I98",
@@ -1740,7 +1769,15 @@
    "firstSession": 1,
    "details": [],
    "priority": 2.5,
-   "fixPrompt": null
+   "fixPrompt": null,
+   "partly": [
+    {
+     "in": "v2.0.1",
+     "url": "https://store.steampowered.com/news/app/3958210/view/695400360681930772",
+     "reason": "Your note doesn't seem to do what players asked: \"not planned\"",
+     "manual": "I99@1791453649"
+    }
+   ]
   },
   "I100": {
    "id": "I100",
@@ -1748,7 +1785,7 @@
    "title": "Missing fuel/energy system for gameplay loop",
    "area": "game design, progression, content",
    "summary": "No fuel mechanic removes incentive to return to surface regularly.",
-   "status": "still_happening",
+   "status": "likely_fixed",
    "created": 1791380305,
    "items": [
     "r236634124",
@@ -1769,13 +1806,14 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 3.75,
+   "priority": 0.5,
    "fixPrompt": null,
    "fixedIn": "v2.0",
-   "fixedAt": 1791329160,
+   "fixedAt": 1791453631,
    "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
-   "fixReason": "\"Fuel: the chainsaw burns gas while it runs. Refill at the new gas machine\" introduces the fuel/energy system requested to create incentive for regular surface returns",
-   "stillSince": 1791349398
+   "fixReason": "Patch notes state 'Fixed: Missing fuel/energy system for gameplay loop' which directly addresses the players' report of 'Missing fuel/energy system for gameplay loop'",
+   "stillSince": null,
+   "manualFix": "I100@1791453631"
   },
   "I101": {
    "id": "I101",
@@ -1836,7 +1874,15 @@
    "firstSession": 1,
    "details": [],
    "priority": 2.5,
-   "fixPrompt": null
+   "fixPrompt": null,
+   "partly": [
+    {
+     "in": "v2.0.1",
+     "url": "https://store.steampowered.com/news/app/3958210/view/695400360681930772",
+     "reason": "Your note doesn't seem to do what players asked: \"not planned\"",
+     "manual": "I102@1791453659"
+    }
+   ]
   },
   "I103": {
    "id": "I103",
@@ -1844,7 +1890,7 @@
    "title": "No incentive to return to surface after upgrades",
    "area": "game design, progression, content",
    "summary": "Can continue drilling with full pack, eliminating surface visits after upgrades complete.",
-   "status": "open",
+   "status": "likely_fixed",
    "created": 1791380305,
    "items": [
     "r236634124"
@@ -1863,8 +1909,14 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 2.5,
-   "fixPrompt": null
+   "priority": 0.5,
+   "fixPrompt": null,
+   "fixedIn": "v2.0",
+   "fixedAt": 1791329160,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+   "fixReason": "\"Fixed: No incentive to return to surface after upgrades\" directly addresses the reported issue about lacking incentive to return to surface after upgrades complete.",
+   "manualFix": "I103@1791453667",
+   "stillSince": null
   },
   "I104": {
    "id": "I104",
@@ -1971,7 +2023,7 @@
    "title": "Player interested in returning if game receives substantial content updates",
    "area": "game design, progression, content",
    "summary": "Player interested in returning if game receives substantial content updates.",
-   "status": "open",
+   "status": "likely_fixed",
    "created": 1791380305,
    "items": [
     "r236634124"
@@ -1990,8 +2042,14 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 1.25,
-   "fixPrompt": null
+   "priority": 0.25,
+   "fixPrompt": null,
+   "fixedIn": "v2.0",
+   "fixedAt": 1791329160,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
+   "fixReason": "Patch notes state \"Player interested in returning if game receives substantial content updates\" which directly addresses the player's request for substantial content updates",
+   "manualFix": "I107@1791453685",
+   "stillSince": null
   },
   "I108": {
    "id": "I108",
@@ -2733,7 +2791,68 @@
  ],
  "mergedAt": 113,
  "newPostAlertsFrom": 1791061932,
- "manualFixes": {},
+ "manualFixes": {
+  "I90@1791453607": {
+   "issue": "I90",
+   "fit": "partial",
+   "reason": "\"nows 1000m and gas requiring you to go up\" adds gameplay depth through longer content and resource management, but doesn't directly address the lack of collectibles, side paths, or meaningful progression from pickup items that players requested.",
+   "pending": false
+  },
+  "I91@1791453616": {
+   "issue": "I91",
+   "fit": "partial",
+   "reason": "The patch notes state \"Fixed: Sound design too harsh and loud\" but players report that chainsaw sounds remain unchanged and ice clattering is still too loud even at minimum volume, suggesting the fix did not fully address the reported harshness issues.",
+   "pending": false
+  },
+  "I92@1791453623": {
+   "issue": "I92",
+   "fit": "direct",
+   "reason": "Patch note states \"Fixed: Dynamite upgrades feel underpowered\" which directly addresses the player report that \"Dynamite upgrades feel underpowered\"",
+   "pending": false
+  },
+  "I100@1791453631": {
+   "issue": "I100",
+   "fit": "direct",
+   "reason": "Patch notes state 'Fixed: Missing fuel/energy system for gameplay loop' which directly addresses the players' report of 'Missing fuel/energy system for gameplay loop'",
+   "pending": false
+  },
+  "I99@1791453649": {
+   "issue": "I99",
+   "fit": "none",
+   "reason": "Your note doesn't seem to do what players asked: \"not planned\"",
+   "pending": false
+  },
+  "I102@1791453659": {
+   "issue": "I102",
+   "fit": "none",
+   "reason": "Your note doesn't seem to do what players asked: \"not planned\"",
+   "pending": false
+  },
+  "I103@1791453667": {
+   "issue": "I103",
+   "fit": "direct",
+   "reason": "\"Fixed: No incentive to return to surface after upgrades\" directly addresses the reported issue about lacking incentive to return to surface after upgrades complete.",
+   "pending": false
+  },
+  "I96@1791453673": {
+   "issue": "I96",
+   "fit": "none",
+   "reason": "Your note doesn't seem to do what players asked: \"not planned\"",
+   "pending": false
+  },
+  "I107@1791453685": {
+   "issue": "I107",
+   "fit": "direct",
+   "reason": "Patch notes state \"Player interested in returning if game receives substantial content updates\" which directly addresses the player's request for substantial content updates",
+   "pending": false
+  },
+  "I87@1791453690": {
+   "issue": "I87",
+   "fit": "direct",
+   "reason": "Fixed: Missing tutorial or initial explanation",
+   "pending": false
+  }
+ },
  "past": {
   "until": 1791119618,
   "input": 38721,
@@ -3140,6 +3259,20 @@
       "cost": 0.001278
      }
     }
+   },
+   "2026-10-08": {
+    "input": 6229,
+    "output": 440,
+    "calls": 10,
+    "cost": 0.008429,
+    "tasks": {
+     "patch": {
+      "input": 6229,
+      "output": 440,
+      "calls": 10,
+      "cost": 0.008429
+     }
+    }
    }
   },
   "tasks": {
@@ -3150,10 +3283,10 @@
     "cost": 0.010618
    },
    "patch": {
-    "input": 27166,
-    "output": 2665,
-    "calls": 20,
-    "cost": 0.040491
+    "input": 33395,
+    "output": 3105,
+    "calls": 30,
+    "cost": 0.04892
    },
    "translate": {
     "input": 3457,
@@ -3174,10 +3307,10 @@
     "cost": 0.019016
    }
   },
-  "input": 138576,
-  "output": 17146,
-  "calls": 74,
-  "cost": 0.224306
+  "input": 144805,
+  "output": 17586,
+  "calls": 84,
+  "cost": 0.232735
  },
  "competitors": {
   "3244220": {

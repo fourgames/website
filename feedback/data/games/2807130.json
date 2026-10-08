@@ -948,77 +948,77 @@
   ]
  ],
  "achievements": {
-  "at": 1791464946,
+  "at": 1791479080,
   "list": [
    {
     "name": "Greed For Gold",
     "desc": "Claim your first gold coin from the goblins.",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/2807130/8f7f9aa8ce1585becdc87be5007485008ca91e9c.jpg",
-    "percent": 75.7
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2807130/8f7f9aa8ce1585becdc87be5007485008ca91e9c.jpg",
+    "percent": 76.4
    },
    {
     "name": "Certified Goblin Slayer",
     "desc": "Slay your first goblins.",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/2807130/2ef5763278179a125427f111a1a77f8beefa063d.jpg",
-    "percent": 66.6
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2807130/2ef5763278179a125427f111a1a77f8beefa063d.jpg",
+    "percent": 67.6
    },
    {
     "name": "Straw Hat",
     "desc": "I'll leave this hat with you.",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/2807130/52abd0147180295d9aad85f1ff00e3dd743dda9b.jpg",
-    "percent": 21.2
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2807130/52abd0147180295d9aad85f1ff00e3dd743dda9b.jpg",
+    "percent": 20.5
    },
    {
     "name": "Let There Be Light",
     "desc": "And there was light.",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/2807130/dc7802bf5c9da2382a4a0ed2fec4b60d4962ede9.jpg",
-    "percent": 18.1
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2807130/dc7802bf5c9da2382a4a0ed2fec4b60d4962ede9.jpg",
+    "percent": 20.5
    },
    {
     "name": "Bare Bones",
     "desc": "Win without building anything.",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/2807130/61007e39ce5d0a3f46e4fb4272bcdda2719ab985.jpg",
-    "percent": 3.0
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2807130/61007e39ce5d0a3f46e4fb4272bcdda2719ab985.jpg",
+    "percent": 2.9
    },
    {
     "name": "Plush",
     "desc": "Soft to the touch.",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/2807130/3af94e02dbfeb5b92ceb4434f7400384791cb497.jpg",
-    "percent": 3.0
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2807130/3af94e02dbfeb5b92ceb4434f7400384791cb497.jpg",
+    "percent": 2.9
    },
    {
     "name": "Wrong Tool For The Job",
     "desc": "Use your hammer on an enemy.",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/2807130/81f3704a082bb85588181a14d45a7d4b75b0a9c1.jpg",
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2807130/81f3704a082bb85588181a14d45a7d4b75b0a9c1.jpg",
     "percent": 0.1
    },
    {
     "name": "Untouchable",
     "desc": "Win without taking any damage to yourself or your buildings.",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/2807130/cb69f126006386c8f7d149a98d61aeff4a038916.jpg",
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2807130/cb69f126006386c8f7d149a98d61aeff4a038916.jpg",
     "percent": 0.1
    },
    {
     "name": "Impregnable",
     "desc": "Win without taking any damage to your buildings or furnace.",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/2807130/6ae7eab99cfcb6bfdb03ea24a42a1cc64fe5820b.jpg",
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2807130/6ae7eab99cfcb6bfdb03ea24a42a1cc64fe5820b.jpg",
     "percent": 0.1
    },
    {
     "name": "Pacifist",
     "desc": "Win without using your rifle.",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/2807130/c4888d3ea8fe87144e7f28858df490222940a044.jpg",
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2807130/c4888d3ea8fe87144e7f28858df490222940a044.jpg",
     "percent": 0.1
    }
   ]
  },
  "bundles": {
-  "at": 1791464947,
+  "at": 1791479081,
   "list": [
    {
     "id": 86690,
     "name": "Four Games Collection",
-    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/92aa3baa82d27f20f72b412568cf3640e52e4f52/header_ratio.jpg?t=1790685958",
+    "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/92aa3baa82d27f20f72b412568cf3640e52e4f52/header_ratio.jpg?t=1790685958",
     "apps": [
      {
       "appId": 2807130,
@@ -1053,7 +1053,7 @@
     "2026-10-05": 20,
     "2026-10-06": 20,
     "2026-10-07": 26,
-    "2026-10-08": 16
+    "2026-10-08": 20
    },
    "reviews": {
     "2026-10-05": {
@@ -1161,7 +1161,7 @@
      "negative": 2111
     },
     "2026-10-08": {
-     "positive": 12834,
+     "positive": 12836,
      "negative": 2112
     }
    }

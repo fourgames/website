@@ -2472,6 +2472,10 @@
   [
    1791428840,
    1
+  ],
+  [
+   1791430082,
+   0
   ]
  ],
  "reviewTotals": {
@@ -2812,7 +2816,7 @@
     "thumb": "https://i.ytimg.com/vi/JvkeKvMvAt0/mqdefault.jpg",
     "lang": "en",
     "duration": 4784,
-    "views": 2176,
+    "views": 2178,
     "likes": 26,
     "comments": 5,
     "live": false,
@@ -3303,7 +3307,7 @@
      "negative": 252
     },
     "2026-10-08": {
-     "positive": 1521,
+     "positive": 1522,
      "negative": 252
     }
    }
@@ -3377,7 +3381,7 @@
      "negative": 676
     },
     "2026-10-08": {
-     "positive": 2612,
+     "positive": 2613,
      "negative": 676
     }
    }
@@ -3653,7 +3657,7 @@
      "negative": 150
     },
     "2026-10-08": {
-     "positive": 5283,
+     "positive": 5285,
      "negative": 151
     }
    }
@@ -3729,7 +3733,7 @@
     "2026-10-05": 546,
     "2026-10-06": 514,
     "2026-10-07": 530,
-    "2026-10-08": 382
+    "2026-10-08": 418
    },
    "reviews": {
     "2026-10-05": {

@@ -78,6 +78,13 @@
    "title": "No incentive to return to surface after upgrades",
    "note": "Fixed: No incentive to return to surface after upgrades",
    "release": "695400360681930764"
+  },
+  "I96": {
+   "as": "fixed",
+   "at": 1791453673,
+   "title": "Ending is unsatisfying",
+   "note": "not planned",
+   "release": "695400360681930772"
   }
  }
 }

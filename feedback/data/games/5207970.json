@@ -217,7 +217,7 @@
     "2026-10-05": 1933,
     "2026-10-06": 1837,
     "2026-10-07": 1855,
-    "2026-10-08": 1521
+    "2026-10-08": 1671
    },
    "reviews": {
     "2026-10-05": {
@@ -309,7 +309,7 @@
     "2026-10-05": 183,
     "2026-10-06": 157,
     "2026-10-07": 165,
-    "2026-10-08": 133
+    "2026-10-08": 141
    },
    "reviews": {
     "2026-10-05": {
@@ -567,7 +567,7 @@
     "2026-10-05": 441,
     "2026-10-06": 426,
     "2026-10-07": 438,
-    "2026-10-08": 395
+    "2026-10-08": 441
    },
    "reviews": {
     "2026-10-05": {
@@ -682,10 +682,16 @@
   },
   "2943180": {
    "name": "Virtual Cottage 2",
-   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2943180/7676dc665eb0f64b90b0d045b3163ba8abdc8ffc/header.jpg?t=1783588382",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2943180/7676dc665eb0f64b90b0d045b3163ba8abdc8ffc/header.jpg?t=1791462906",
    "released": 1774569600,
    "comingSoon": false,
    "updates": [
+    {
+     "time": 1791462240,
+     "name": "Autumn Update 2026!",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2943180/view/675134162359812297"
+    },
     {
      "time": 1787405820,
      "name": "Special Update: Against The Storm Collab!",
@@ -745,7 +751,7 @@
     "2026-10-05": 394,
     "2026-10-06": 347,
     "2026-10-07": 360,
-    "2026-10-08": 318
+    "2026-10-08": 340
    },
    "reviews": {
     "2026-10-05": {

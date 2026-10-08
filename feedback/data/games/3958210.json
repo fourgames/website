@@ -384,7 +384,7 @@
     "profile": "https://steamcommunity.com/profiles/76561198318947652",
     "name": "Horror Heaven",
     "avatar": "https://avatars.fastly.steamstatic.com/8442685651231b08503c282a75c5f324df2ae085_medium.jpg",
-    "reviews": 1043,
+    "reviews": 1044,
     "games": 988
    },
    "lang": "german",
@@ -2980,7 +2980,7 @@
     "thumb": "https://i.ytimg.com/vi/olVZxqu-lPo/mqdefault.jpg",
     "lang": "en",
     "duration": 17,
-    "views": 294,
+    "views": 293,
     "likes": 7,
     "comments": 1,
     "live": false,
@@ -3025,7 +3025,7 @@
     "duration": 30,
     "own": true,
     "category": "27",
-    "views": 163,
+    "views": 170,
     "likes": 4,
     "comments": 1,
     "live": false,
@@ -3522,7 +3522,7 @@
     "2026-10-05": 70,
     "2026-10-06": 58,
     "2026-10-07": 66,
-    "2026-10-08": 37
+    "2026-10-08": 38
    },
    "reviews": {
     "2026-10-05": {
@@ -3722,7 +3722,7 @@
      "negative": 223
     },
     "2026-10-08": {
-     "positive": 1757,
+     "positive": 1758,
      "negative": 224
     }
    }
@@ -3798,7 +3798,7 @@
     "2026-10-05": 1822,
     "2026-10-06": 1722,
     "2026-10-07": 1698,
-    "2026-10-08": 1272
+    "2026-10-08": 1406
    },
    "reviews": {
     "2026-10-05": {
@@ -3814,7 +3814,7 @@
      "negative": 150
     },
     "2026-10-08": {
-     "positive": 5289,
+     "positive": 5291,
      "negative": 152
     }
    }
@@ -3890,7 +3890,7 @@
     "2026-10-05": 546,
     "2026-10-06": 514,
     "2026-10-07": 530,
-    "2026-10-08": 556
+    "2026-10-08": 575
    },
    "reviews": {
     "2026-10-05": {

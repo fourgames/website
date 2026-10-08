@@ -2782,7 +2782,7 @@
     "thumb": "https://i.ytimg.com/vi/pE3oQXBlq7k/mqdefault.jpg",
     "lang": "en",
     "duration": 4008,
-    "views": 217,
+    "views": 216,
     "likes": 0,
     "comments": 1,
     "live": false,
@@ -2824,7 +2824,7 @@
     "thumb": "https://i.ytimg.com/vi/JvkeKvMvAt0/mqdefault.jpg",
     "lang": "en",
     "duration": 4784,
-    "views": 2173,
+    "views": 2178,
     "likes": 26,
     "comments": 5,
     "live": false,
@@ -2890,8 +2890,8 @@
     "duration": 30,
     "own": true,
     "category": "27",
-    "views": 143,
-    "likes": 3,
+    "views": 154,
+    "likes": 4,
     "comments": 1,
     "live": false,
     "upcoming": false,
@@ -3007,47 +3007,47 @@
   ]
  ],
  "achievements": {
-  "at": 1791422648,
+  "at": 1791436766,
   "list": [
    {
     "name": "000%",
     "desc": "000%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
-    "percent": 98.7
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
+    "percent": 100.0
    },
    {
     "name": "025%",
     "desc": "025%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
-    "percent": 60.7
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
+    "percent": 60.0
    },
    {
     "name": "050%",
     "desc": "050%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
-    "percent": 50.6
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
+    "percent": 50.0
    },
    {
     "name": "075%",
     "desc": "075%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
-    "percent": 45.5
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
+    "percent": 45.0
    },
    {
     "name": "100%",
     "desc": "100%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
-    "percent": 35.4
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
+    "percent": 35.0
    }
   ]
  },
  "bundles": {
-  "at": 1791394366,
+  "at": 1791436766,
   "list": [
    {
     "id": 86690,
     "name": "Four Games Collection",
-    "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/92aa3baa82d27f20f72b412568cf3640e52e4f52/header_ratio.jpg?t=1790685958",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/92aa3baa82d27f20f72b412568cf3640e52e4f52/header_ratio.jpg?t=1790685958",
     "apps": [
      {
       "appId": 2807130,
@@ -3223,7 +3223,7 @@
      "negative": 2164
     },
     "2026-10-08": {
-     "positive": 18046,
+     "positive": 18047,
      "negative": 2164
     }
    }
@@ -3573,7 +3573,7 @@
      "negative": 223
     },
     "2026-10-08": {
-     "positive": 1753,
+     "positive": 1755,
      "negative": 224
     }
    }

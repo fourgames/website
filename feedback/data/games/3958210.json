@@ -1487,7 +1487,7 @@
    "negativeReviews": 2,
    "firstSession": 3,
    "details": [],
-   "priority": 15.51,
+   "priority": 9.31,
    "fixPrompt": null,
    "partly": [
     {
@@ -1577,7 +1577,7 @@
    "negativeReviews": 1,
    "firstSession": 2,
    "details": [],
-   "priority": 1.0,
+   "priority": 0.6,
    "fixPrompt": null,
    "partly": [
     {
@@ -1735,7 +1735,7 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 0.5,
+   "priority": 0.3,
    "fixPrompt": null,
    "fixedIn": "v2.0",
    "fixedAt": 1791329160,
@@ -1768,7 +1768,7 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 2.5,
+   "priority": 1.5,
    "fixPrompt": null,
    "partly": [
     {
@@ -1840,7 +1840,7 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 0.25,
+   "priority": 0.15,
    "fixPrompt": null,
    "fixedIn": "v2.0",
    "fixedAt": 1791329160,
@@ -1873,7 +1873,7 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 2.5,
+   "priority": 1.5,
    "fixPrompt": null,
    "partly": [
     {
@@ -1909,7 +1909,7 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 0.5,
+   "priority": 0.3,
    "fixPrompt": null,
    "fixedIn": "v2.0",
    "fixedAt": 1791329160,
@@ -1943,7 +1943,7 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 0.25,
+   "priority": 0.15,
    "fixPrompt": null,
    "fixedIn": "v2.0",
    "fixedAt": 1791329160,
@@ -1976,7 +1976,7 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 0.25,
+   "priority": 0.15,
    "fixPrompt": null,
    "fixedIn": "v2.0",
    "fixedAt": 1791329160,
@@ -2009,7 +2009,7 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 0.5,
+   "priority": 0.3,
    "fixPrompt": null,
    "fixedIn": "v2.0",
    "fixedAt": 1791329160,
@@ -2042,7 +2042,7 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 0.25,
+   "priority": 0.15,
    "fixPrompt": null,
    "fixedIn": "v2.0",
    "fixedAt": 1791329160,

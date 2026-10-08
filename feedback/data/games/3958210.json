@@ -1450,7 +1450,7 @@
    "negativeReviews": 1,
    "firstSession": 2,
    "details": [],
-   "priority": 1.0,
+   "priority": 0.6,
    "fixPrompt": null,
    "fixedIn": "v2.0",
    "fixedAt": 1791329160,

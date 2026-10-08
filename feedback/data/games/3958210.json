@@ -399,7 +399,7 @@
    "versions": [],
    "flips": [],
    "pending": false,
-   "playtimeForever": 3.0,
+   "playtimeForever": 3.3,
    "steamPurchase": true,
    "receivedForFree": false,
    "issues": [
@@ -3673,8 +3673,8 @@
      "negative": 150
     },
     "2026-10-08": {
-     "positive": 5286,
-     "negative": 151
+     "positive": 5287,
+     "negative": 152
     }
    }
   },
@@ -3749,7 +3749,7 @@
     "2026-10-05": 546,
     "2026-10-06": 514,
     "2026-10-07": 530,
-    "2026-10-08": 421
+    "2026-10-08": 457
    },
    "reviews": {
     "2026-10-05": {

@@ -36,6 +36,13 @@
    "title": "Insufficient content and gameplay depth",
    "note": "Fixed: Insufficient content and gameplay depth it nows 1000m and gas requiring you to go up",
    "release": "695400360681930764"
+  },
+  "I91": {
+   "as": "fixed",
+   "at": 1791453616,
+   "title": "Sound design too harsh and loud",
+   "note": "Fixed: Sound design too harsh and loud",
+   "release": "695400360681930772"
   }
  }
 }

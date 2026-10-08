@@ -939,7 +939,7 @@
     "重鑄前線"
    ]
   },
-  "alert": "\"Reforge Front\" OR \"リフォージ・フロント\" OR \"리포지 프론트\" OR \"重铸前线\" OR \"重鑄前線\""
+  "alert": null
  },
  "followers": [
   [

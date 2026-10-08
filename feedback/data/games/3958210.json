@@ -1605,7 +1605,7 @@
    "details": [
     "At exactly 400m depth, using the chainsaw creates new ice or pulls the old ice instead of removing it. Player found a workaround by digging at the pit's edge. Occurs at the 400m mark specifically."
    ],
-   "priority": 2.0,
+   "priority": 1.2,
    "fixPrompt": null
   },
   "I94": {
@@ -1638,7 +1638,7 @@
     "Occurs at 410m depth or beyond. Tools affected: dynamite (100+ thrown), torches (100+ thrown), chainsaw (continuous digging). Workaround: restart the game.",
     "At exactly 400m depth, using the chainsaw creates new ice or pulls the old ice instead of removing it. Player found a workaround by digging at the pit's edge. Occurs at the 400m mark specifically."
    ],
-   "priority": 1.6,
+   "priority": 0.96,
    "fixPrompt": "Players of Digging A Hole In Ice With A Chainsaw are reporting a bug on Steam. Find the cause in this codebase and fix it.\n\nBug: Ice unbreakable at deep levels\nArea of the game: progression, depth\nReported by 2 players (German, Korean), between 2026-10-01 and 2026-10-01.\n\nWhat the reports say about reproducing it:\n- Occurs at 410m depth or beyond. Tools affected: dynamite (100+ thrown), torches (100+ thrown), chainsaw (continuous digging). Workaround: restart the game.\n- At exactly 400m depth, using the chainsaw creates new ice or pulls the old ice instead of removing it. Player found a workaround by digging at the pit's edge. Occurs at the 400m mark specifically.\n\nPlayer reports (translated to English):\n- Steam discussion reply (2026-10-01, written in German): \"At 400m depth, chainsaw creates new ice or pulls old ice instead of removing it. (from the post: I think it's really great how quickly feedback is being responded to here. The ice destruction itself is now much more pleasant. But honestly, I don't notice a big difference with the chainsaw. At exactly 400m there's unfortunately also a bug with the ice. Instead of removing it, you somehow create new ice with the chainsaw, or pull the old ice with it. Really weird there. Fortunately I found a spot at the edge of the pit where I was just barely able to dig down the last 100m.)\"\n  https://steamcommunity.com/app/3958210/eventcomments/594068734660926138/#c594068734660970660\n- Steam discussion reply (2026-10-01, written in Korean): \"From 410m depth onwards, no tools can damage the ice even with 100+ dynamite, 100+ torches, or continuous digging. (from the post: From 410m onwards nothing gets chipped away... Even throwing 100 dynamite, even throwing 100 torches, digging all day long the ice stays the same. I'm not sure what the bug was, but it worked when I turned it off and back on.)\"\n  https://steamcommunity.com/app/3958210/eventcomments/594068734660962823/#c594068734660964482\n\nWork out the most likely cause from the code, fix it, and tell me what you changed and how to test it. If the reports aren't enough to pin it down, say what to ask the players.",
    "partly": [
     {

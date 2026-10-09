@@ -3234,47 +3234,47 @@
   ]
  ],
  "achievements": {
-  "at": 1791521539,
+  "at": 1791563933,
   "list": [
    {
     "name": "000%",
     "desc": "000%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
     "percent": 100.0
    },
    {
     "name": "025%",
     "desc": "025%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
-    "percent": 57.6
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
+    "percent": 58.8
    },
    {
     "name": "050%",
     "desc": "050%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
-    "percent": 48.2
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
+    "percent": 49.4
    },
    {
     "name": "075%",
     "desc": "075%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
-    "percent": 43.5
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
+    "percent": 44.7
    },
    {
     "name": "100%",
     "desc": "100%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
-    "percent": 34.1
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
+    "percent": 36.4
    }
   ]
  },
  "bundles": {
-  "at": 1791479162,
+  "at": 1791563933,
   "list": [
    {
     "id": 86690,
     "name": "Four Games Collection",
-    "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/92aa3baa82d27f20f72b412568cf3640e52e4f52/header_ratio.jpg?t=1790685958",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/92aa3baa82d27f20f72b412568cf3640e52e4f52/header_ratio.jpg?t=1790685958",
     "apps": [
      {
       "appId": 2807130,
@@ -3449,7 +3449,7 @@
     "2026-10-06": 141,
     "2026-10-07": 132,
     "2026-10-08": 161,
-    "2026-10-09": 147
+    "2026-10-09": 150
    },
    "reviews": {
     "2026-10-05": {
@@ -3546,7 +3546,7 @@
     "2026-10-06": 83,
     "2026-10-07": 83,
     "2026-10-08": 75,
-    "2026-10-09": 60
+    "2026-10-09": 69
    },
    "reviews": {
     "2026-10-05": {
@@ -3819,7 +3819,7 @@
     "2026-10-06": 1332,
     "2026-10-07": 1313,
     "2026-10-08": 1201,
-    "2026-10-09": 898
+    "2026-10-09": 985
    },
    "reviews": {
     "2026-10-05": {
@@ -3846,7 +3846,7 @@
   },
   "2764460": {
    "name": "Sandustry",
-   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2764460/985a3a20945ec9c8e3e898e16cdaffe99d00e884/header.jpg?t=1791278651",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2764460/985a3a20945ec9c8e3e898e16cdaffe99d00e884/header.jpg?t=1791551267",
    "released": 1786579200,
    "comingSoon": false,
    "updates": [
@@ -3916,7 +3916,7 @@
     "2026-10-06": 1722,
     "2026-10-07": 1698,
     "2026-10-08": 1785,
-    "2026-10-09": 1898
+    "2026-10-09": 1936
    },
    "reviews": {
     "2026-10-05": {
@@ -4110,7 +4110,7 @@
     "2026-10-06": 651,
     "2026-10-07": 649,
     "2026-10-08": 638,
-    "2026-10-09": 525
+    "2026-10-09": 577
    },
    "reviews": {
     "2026-10-05": {

@@ -3073,7 +3073,7 @@
     "thumb": "https://i.ytimg.com/vi/JvkeKvMvAt0/mqdefault.jpg",
     "lang": "en",
     "duration": 4784,
-    "views": 2200,
+    "views": 2201,
     "likes": 27,
     "comments": 5,
     "live": false,
@@ -3094,7 +3094,7 @@
     "thumb": "https://i.ytimg.com/vi/olVZxqu-lPo/mqdefault.jpg",
     "lang": "en",
     "duration": 17,
-    "views": 297,
+    "views": 299,
     "likes": 8,
     "comments": 1,
     "live": false,
@@ -3139,7 +3139,7 @@
     "duration": 30,
     "own": true,
     "category": "27",
-    "views": 228,
+    "views": 233,
     "likes": 4,
     "comments": 1,
     "live": false,
@@ -3155,6 +3155,39 @@
     "author": "m.youtube.com",
     "authorUrl": null,
     "at": 1791448124,
+    "lang": null
+   },
+   "wb20bd7d36db9f": {
+    "id": "wb20bd7d36db9f",
+    "source": "web",
+    "url": "https://news.17173.com/tag/%E7%94%A8%E7%94%B5%E9%94%AF%E5%9C%A8%E5%86%B0%E4%B8%8A%E6%8C%96%E4%B8%AA%E6%B4%9E",
+    "title": "用电锯在冰上挖个洞 - 新闻- 17173",
+    "text": "《用电锯在冰上挖个洞》在Steam Deck 上畅玩《用电锯在冰上挖个洞》. Steam Deck畅玩《用电锯在冰上挖个洞》！完整手柄支持，云存档无缝衔接，虽然兼容性未 ...",
+    "author": "news.17173.com",
+    "authorUrl": null,
+    "at": 1791609896,
+    "lang": null
+   },
+   "wb4ac05d110164": {
+    "id": "wb4ac05d110164",
+    "source": "web",
+    "url": "https://www.cheesegame.org/59502.html",
+    "title": "[PC]用电锯在冰上挖个洞/Digging A Hole In Ice With A Chainsaw - 芝士游戏",
+    "text": "[PC]用电锯在冰上挖个洞/Digging A Hole In Ice With A Chainsaw · 游戏介绍 · 游戏截图 · 请登录后发表评论.",
+    "author": "cheesegame.org",
+    "authorUrl": null,
+    "at": 1791608229,
+    "lang": null
+   },
+   "wb8982b728372f": {
+    "id": "wb8982b728372f",
+    "source": "web",
+    "url": "https://www.kkyx.net/qbyx/13307.html",
+    "title": "用电锯在冰上挖个洞/Digging A Hole In Ice With A Chainsaw - KKYX-游戏仓库",
+    "text": "用电锯在冰上挖个洞/Digging A Hole In Ice With A Chainsaw. 网友投递 2026-10-09 动作冒险. 本站资源来源于用户投稿分享，仅供个人学习非商用！ 资源报错.",
+    "author": "kkyx.net",
+    "authorUrl": null,
+    "at": 1791519497,
     "lang": null
    }
   },
@@ -3258,7 +3291,7 @@
     "Đào hố trên băng bằng cưa máy"
    ]
   },
-  "alert": null
+  "alert": "\"Digging A Hole In Ice With A Chainsaw\" OR \"用电锯在冰上挖个洞\" OR \"用電鋸在冰上挖個洞\" OR \"チェーンソーで氷に穴を掘る\" OR \"전기톱으로 얼음에 구멍 파기\" OR \"ขุดหลุมในน้ำแข็งด้วยเลื่อยยนต์\" OR \"Копая дупка в леда с моторен трион\" OR \"Kopání díry do ledu motorovou pilou\" OR \"Grave et hul i isen med motorsav\" OR \"Mit der Kettensäge ein Loch ins Eis graben\" OR \"Cavar un agujero en el hielo con una motosierra\" OR \"Cavar un hoyo en el hielo con una motosierra\" OR \"Σκάβοντας τρύπα στον πάγο με αλυσοπρίονο\" OR \"Creuser un trou dans la glace à la tronçonneuse\" OR \"Scavare una buca nel ghiaccio con la motosega\" OR \"Menggali lubang di es dengan gergaji mesin\" OR \"Lyukat ások a jégbe láncfűrésszel\" OR \"Een gat in het ijs graven met een kettingzaag\" OR \"Grave et hull i isen med motorsag\" OR \"Kopanie dziury w lodzie piłą łańcuchową\" OR \"Cavar um buraco no gelo com uma motosserra\" OR \"Cavando um buraco no gelo com uma motosserra\" OR \"Săpând o groapă în gheață cu drujba\" OR \"Копать яму во льду бензопилой\" OR \"Kuopan kaivaminen jäähän moottorisahalla\" OR \"Gräva ett hål i isen med motorsåg\" OR \"Motorlu testereyle buzda çukur kazmak\" OR \"Đào hố trên băng bằng cưa máy\" OR \"Копати яму в льоду бензопилою\" OR \"Menggali lubang dalam ais dengan gergaji rantai\""
  },
  "followers": [
   [
@@ -3271,47 +3304,47 @@
   ]
  ],
  "achievements": {
-  "at": 1791620410,
+  "at": 1791634544,
   "list": [
    {
     "name": "000%",
     "desc": "000%",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
     "percent": 100.0
    },
    {
     "name": "025%",
     "desc": "025%",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
     "percent": 58.8
    },
    {
     "name": "050%",
     "desc": "050%",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
     "percent": 49.4
    },
    {
     "name": "075%",
     "desc": "075%",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
     "percent": 44.7
    },
    {
     "name": "100%",
     "desc": "100%",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
     "percent": 36.4
    }
   ]
  },
  "bundles": {
-  "at": 1791620410,
+  "at": 1791634544,
   "list": [
    {
     "id": 86690,
     "name": "Four Games Collection",
-    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/92aa3baa82d27f20f72b412568cf3640e52e4f52/header_ratio.jpg?t=1790685958",
+    "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/92aa3baa82d27f20f72b412568cf3640e52e4f52/header_ratio.jpg?t=1790685958",
     "apps": [
      {
       "appId": 2807130,
@@ -3511,7 +3544,7 @@
      "negative": 2167
     },
     "2026-10-10": {
-     "positive": 18059,
+     "positive": 18060,
      "negative": 2167
     }
    }
@@ -3673,7 +3706,7 @@
     "2026-10-07": 66,
     "2026-10-08": 76,
     "2026-10-09": 71,
-    "2026-10-10": 60
+    "2026-10-10": 62
    },
    "reviews": {
     "2026-10-05": {
@@ -3799,8 +3832,8 @@
      "negative": 287
     },
     "2026-10-10": {
-     "positive": 1623,
-     "negative": 287
+     "positive": 1624,
+     "negative": 288
     }
    }
   },
@@ -3877,7 +3910,7 @@
     "2026-10-07": 1313,
     "2026-10-08": 1201,
     "2026-10-09": 1264,
-    "2026-10-10": 775
+    "2026-10-10": 864
    },
    "reviews": {
     "2026-10-05": {
@@ -3979,7 +4012,7 @@
     "2026-10-07": 1698,
     "2026-10-08": 1785,
     "2026-10-09": 1936,
-    "2026-10-10": 1805
+    "2026-10-10": 1980
    },
    "reviews": {
     "2026-10-05": {
@@ -4003,7 +4036,7 @@
      "negative": 153
     },
     "2026-10-10": {
-     "positive": 5343,
+     "positive": 5345,
      "negative": 153
     }
    }
@@ -4081,7 +4114,7 @@
     "2026-10-07": 530,
     "2026-10-08": 612,
     "2026-10-09": 660,
-    "2026-10-10": 750
+    "2026-10-10": 799
    },
    "reviews": {
     "2026-10-05": {
@@ -4183,7 +4216,7 @@
     "2026-10-07": 649,
     "2026-10-08": 638,
     "2026-10-09": 687,
-    "2026-10-10": 486
+    "2026-10-10": 545
    },
    "reviews": {
     "2026-10-05": {

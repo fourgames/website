@@ -2670,6 +2670,10 @@
   [
    1791639840,
    0
+  ],
+  [
+   1791670245,
+   1
   ]
  ],
  "reviewTotals": {
@@ -3039,7 +3043,7 @@
     "thumb": "https://i.ytimg.com/vi/pE3oQXBlq7k/mqdefault.jpg",
     "lang": "en",
     "duration": 4008,
-    "views": 257,
+    "views": 259,
     "likes": 0,
     "comments": 1,
     "live": false,
@@ -3654,7 +3658,7 @@
      "negative": 253
     },
     "2026-10-10": {
-     "positive": 1525,
+     "positive": 1524,
      "negative": 254
     }
    }
@@ -3942,7 +3946,7 @@
      "negative": 225
     },
     "2026-10-10": {
-     "positive": 1776,
+     "positive": 1777,
      "negative": 225
     }
    }
@@ -4044,7 +4048,7 @@
      "negative": 153
     },
     "2026-10-10": {
-     "positive": 5367,
+     "positive": 5368,
      "negative": 155
     }
    }

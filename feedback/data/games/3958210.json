@@ -3081,7 +3081,7 @@
     "thumb": "https://i.ytimg.com/vi/JvkeKvMvAt0/mqdefault.jpg",
     "lang": "en",
     "duration": 4784,
-    "views": 2202,
+    "views": 2205,
     "likes": 27,
     "comments": 5,
     "live": false,
@@ -3147,7 +3147,7 @@
     "duration": 30,
     "own": true,
     "category": "27",
-    "views": 235,
+    "views": 240,
     "likes": 4,
     "comments": 1,
     "live": false,
@@ -3552,8 +3552,8 @@
      "negative": 2167
     },
     "2026-10-10": {
-     "positive": 18062,
-     "negative": 2166
+     "positive": 18063,
+     "negative": 2167
     }
    }
   },
@@ -3630,7 +3630,7 @@
     "2026-10-07": 83,
     "2026-10-08": 75,
     "2026-10-09": 75,
-    "2026-10-10": 70
+    "2026-10-10": 78
    },
    "reviews": {
     "2026-10-05": {
@@ -3655,7 +3655,7 @@
     },
     "2026-10-10": {
      "positive": 1525,
-     "negative": 253
+     "negative": 254
     }
    }
   },
@@ -3918,7 +3918,7 @@
     "2026-10-07": 1313,
     "2026-10-08": 1201,
     "2026-10-09": 1264,
-    "2026-10-10": 1210
+    "2026-10-10": 1298
    },
    "reviews": {
     "2026-10-05": {
@@ -3942,7 +3942,7 @@
      "negative": 225
     },
     "2026-10-10": {
-     "positive": 1774,
+     "positive": 1775,
      "negative": 225
     }
    }
@@ -4044,7 +4044,7 @@
      "negative": 153
     },
     "2026-10-10": {
-     "positive": 5359,
+     "positive": 5362,
      "negative": 155
     }
    }

@@ -3354,47 +3354,47 @@
   ]
  ],
  "achievements": {
-  "at": 1791789934,
+  "at": 1791804066,
   "list": [
    {
     "name": "000%",
     "desc": "000%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
     "percent": 100.0
    },
    {
     "name": "025%",
     "desc": "025%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
     "percent": 56.8
    },
    {
     "name": "050%",
     "desc": "050%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
     "percent": 47.7
    },
    {
     "name": "075%",
     "desc": "075%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
     "percent": 43.1
    },
    {
     "name": "100%",
     "desc": "100%",
-    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
+    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
     "percent": 35.2
    }
   ]
  },
  "bundles": {
-  "at": 1791789935,
+  "at": 1791804066,
   "list": [
    {
     "id": 86690,
     "name": "Four Games Collection",
-    "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/92aa3baa82d27f20f72b412568cf3640e52e4f52/header_ratio.jpg?t=1790685958",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/92aa3baa82d27f20f72b412568cf3640e52e4f52/header_ratio.jpg?t=1790685958",
     "apps": [
      {
       "appId": 2807130,
@@ -3890,7 +3890,7 @@
     "2026-10-09": 70,
     "2026-10-10": 75,
     "2026-10-11": 82,
-    "2026-10-12": 42
+    "2026-10-12": 43
    },
    "reviews": {
     "2026-10-05": {
@@ -4153,7 +4153,7 @@
   },
   "4078200": {
    "name": "Dwarf Eats Mountain",
-   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078200/92169b31b645d10982a3bf281f94a4183f2cb12b/header.jpg?t=1789941732",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4078200/92169b31b645d10982a3bf281f94a4183f2cb12b/header.jpg?t=1791800244",
    "released": 1779062400,
    "comingSoon": false,
    "updates": [
@@ -4226,7 +4226,7 @@
     "2026-10-09": 660,
     "2026-10-10": 814,
     "2026-10-11": 812,
-    "2026-10-12": 627
+    "2026-10-12": 633
    },
    "reviews": {
     "2026-10-05": {
@@ -4371,7 +4371,7 @@
     },
     "2026-10-12": {
      "positive": 3617,
-     "negative": 625
+     "negative": 626
     }
    }
   }

@@ -3105,7 +3105,7 @@
     "thumb": "https://i.ytimg.com/vi/pE3oQXBlq7k/mqdefault.jpg",
     "lang": "en",
     "duration": 4008,
-    "views": 265,
+    "views": 266,
     "likes": 0,
     "comments": 1,
     "live": false,
@@ -3168,7 +3168,7 @@
     "thumb": "https://i.ytimg.com/vi/olVZxqu-lPo/mqdefault.jpg",
     "lang": "en",
     "duration": 17,
-    "views": 302,
+    "views": 301,
     "likes": 8,
     "comments": 1,
     "live": false,
@@ -3400,7 +3400,7 @@
   ]
  ],
  "achievements": {
-  "at": 1791804066,
+  "at": 1791832392,
   "list": [
    {
     "name": "000%",
@@ -3412,7 +3412,7 @@
     "name": "025%",
     "desc": "025%",
     "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
-    "percent": 56.8
+    "percent": 56.6
    },
    {
     "name": "050%",
@@ -3424,13 +3424,13 @@
     "name": "075%",
     "desc": "075%",
     "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
-    "percent": 43.1
+    "percent": 42.2
    },
    {
     "name": "100%",
     "desc": "100%",
     "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
-    "percent": 35.2
+    "percent": 35.5
    }
   ]
  },
@@ -3618,7 +3618,7 @@
     "2026-10-09": 185,
     "2026-10-10": 234,
     "2026-10-11": 236,
-    "2026-10-12": 218
+    "2026-10-12": 231
    },
    "reviews": {
     "2026-10-05": {
@@ -3650,7 +3650,7 @@
      "negative": 2171
     },
     "2026-10-12": {
-     "positive": 18083,
+     "positive": 18082,
      "negative": 2173
     }
    }
@@ -3730,7 +3730,7 @@
     "2026-10-09": 75,
     "2026-10-10": 78,
     "2026-10-11": 76,
-    "2026-10-12": 55
+    "2026-10-12": 63
    },
    "reviews": {
     "2026-10-05": {
@@ -4048,7 +4048,7 @@
     "2026-10-09": 1264,
     "2026-10-10": 1299,
     "2026-10-11": 1407,
-    "2026-10-12": 1038
+    "2026-10-12": 1060
    },
    "reviews": {
     "2026-10-05": {
@@ -4080,7 +4080,7 @@
      "negative": 226
     },
     "2026-10-12": {
-     "positive": 1788,
+     "positive": 1789,
      "negative": 228
     }
    }
@@ -4160,7 +4160,7 @@
     "2026-10-09": 1936,
     "2026-10-10": 2332,
     "2026-10-11": 2482,
-    "2026-10-12": 1949
+    "2026-10-12": 1968
    },
    "reviews": {
     "2026-10-05": {
@@ -4192,7 +4192,7 @@
      "negative": 157
     },
     "2026-10-12": {
-     "positive": 5427,
+     "positive": 5428,
      "negative": 159
     }
    }
@@ -4384,7 +4384,7 @@
     "2026-10-09": 687,
     "2026-10-10": 798,
     "2026-10-11": 868,
-    "2026-10-12": 681
+    "2026-10-12": 708
    },
    "reviews": {
     "2026-10-05": {
@@ -4417,7 +4417,7 @@
     },
     "2026-10-12": {
      "positive": 3618,
-     "negative": 627
+     "negative": 628
     }
    }
   }

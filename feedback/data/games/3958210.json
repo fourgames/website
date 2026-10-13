@@ -3417,7 +3417,7 @@
   ]
  ],
  "achievements": {
-  "at": 1791846507,
+  "at": 1791860612,
   "list": [
    {
     "name": "000%",
@@ -3429,25 +3429,25 @@
     "name": "025%",
     "desc": "025%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
-    "percent": 57.7
+    "percent": 57.1
    },
    {
     "name": "050%",
     "desc": "050%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
-    "percent": 48.8
+    "percent": 48.3
    },
    {
     "name": "075%",
     "desc": "075%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
-    "percent": 44.4
+    "percent": 43.9
    },
    {
     "name": "100%",
     "desc": "100%",
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
-    "percent": 36.6
+    "percent": 36.2
    }
   ]
  },
@@ -3969,7 +3969,7 @@
     "2026-10-10": 75,
     "2026-10-11": 82,
     "2026-10-12": 61,
-    "2026-10-13": 35
+    "2026-10-13": 37
    },
    "reviews": {
     "2026-10-05": {

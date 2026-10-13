@@ -6,7 +6,7 @@
   "reviews": 1790875183,
   "forums": {
    "0": 1791349280,
-   "event:18446744073709551615": 1791392577
+   "event:18446744073709551615": 1791906455
   }
  },
  "items": {
@@ -1344,6 +1344,58 @@
    "translatedOwn": {
     "text": "e496d1e961a5"
    }
+  },
+  "c594069880291028512": {
+   "id": "c594069880291028512",
+   "kind": "reply",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/594069369071342244/#c594069880291028512",
+   "author": {
+    "id": "1509261874",
+    "name": "mklesmos",
+    "profile": "https://steamcommunity.com/profiles/76561199469527602",
+    "avatar": "https://avatars.fastly.steamstatic.com/e6973454bced5dcd58186c729797fe4ca4dbaf57_medium.jpg",
+    "games": null
+   },
+   "created": 1791906455,
+   "updated": 1791906455,
+   "text": "thank you for the game.......i hope to add more achievment <3",
+   "topic": "t594069369071342244",
+   "forum": "Events & Announcements",
+   "dev": false,
+   "versions": [],
+   "pending": false,
+   "issues": [
+    "I113",
+    "I114"
+   ],
+   "issue": "I113",
+   "triage": {
+    "language": "English",
+    "summary": "Player thanks the developer and hopes for more achievements.",
+    "category": "suggestion",
+    "urgency": "low",
+    "area": "achievements, content",
+    "details": null,
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "praise",
+      "text": "Player appreciates the game.",
+      "urgency": "low",
+      "quote": "thank you for the game",
+      "issue": "I113"
+     },
+     {
+      "kind": "suggestion",
+      "text": "Player wants more achievements.",
+      "urgency": "low",
+      "quote": "i hope to add more achievment",
+      "issue": "I114"
+     }
+    ],
+    "note": null
+   },
+   "alertedNew": true
   }
  },
  "issues": {
@@ -2163,9 +2215,65 @@
    "details": [],
    "priority": 1.0,
    "fixPrompt": null
+  },
+  "I113": {
+   "id": "I113",
+   "kind": "praise",
+   "title": "Developer appreciation",
+   "area": "achievements, content",
+   "summary": "Player appreciates the game.",
+   "status": "open",
+   "created": 1791906516,
+   "items": [
+    "c594069880291028512"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 1,
+   "languages": [
+    "English"
+   ],
+   "firstSeen": 1791906455,
+   "lastSeen": 1791906455,
+   "urgency": "low",
+   "negativeReviews": 0,
+   "firstSession": 0,
+   "details": [],
+   "priority": 1.0,
+   "fixPrompt": null
+  },
+  "I114": {
+   "id": "I114",
+   "kind": "suggestion",
+   "title": "More achievements needed",
+   "area": "achievements, content",
+   "summary": "Player wants more achievements.",
+   "status": "open",
+   "created": 1791906516,
+   "items": [
+    "c594069880291028512"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 1,
+   "languages": [
+    "English"
+   ],
+   "firstSeen": 1791906455,
+   "lastSeen": 1791906455,
+   "urgency": "low",
+   "negativeReviews": 0,
+   "firstSession": 0,
+   "details": [],
+   "priority": 1.0,
+   "fixPrompt": null
   }
  },
- "nextIssue": 113,
+ "nextIssue": 115,
  "players": [
   [
    1791016909,
@@ -2993,8 +3101,8 @@
    "forum": "Events & Announcements"
   },
   "594069369071342244": {
-   "lastPost": 1791392577,
-   "replies": 4,
+   "lastPost": 1791906455,
+   "replies": 5,
    "forum": "Events & Announcements"
   },
   "594069369071344540": {
@@ -3010,7 +3118,7 @@
    40
   ]
  ],
- "mergedAt": 113,
+ "mergedAt": 115,
  "newPostAlertsFrom": 1791061932,
  "manualFixes": {
   "I90@1791453607": {
@@ -3568,6 +3676,26 @@
       "cost": 0.008429
      }
     }
+   },
+   "2026-10-13": {
+    "input": 5586,
+    "output": 326,
+    "calls": 2,
+    "cost": 0.007216,
+    "tasks": {
+     "sort": {
+      "input": 3675,
+      "output": 192,
+      "calls": 1,
+      "cost": 0.004635
+     },
+     "merge": {
+      "input": 1911,
+      "output": 134,
+      "calls": 1,
+      "cost": 0.002581
+     }
+    }
    }
   },
   "tasks": {
@@ -3590,22 +3718,22 @@
     "cost": 0.005632
    },
    "sort": {
-    "input": 87554,
-    "output": 12199,
-    "calls": 29,
-    "cost": 0.148549
+    "input": 91229,
+    "output": 12391,
+    "calls": 30,
+    "cost": 0.153184
    },
    "merge": {
-    "input": 14051,
-    "output": 993,
-    "calls": 10,
-    "cost": 0.019016
+    "input": 15962,
+    "output": 1127,
+    "calls": 11,
+    "cost": 0.021597
    }
   },
-  "input": 144805,
-  "output": 17586,
-  "calls": 84,
-  "cost": 0.232735
+  "input": 150391,
+  "output": 17912,
+  "calls": 86,
+  "cost": 0.239951
  },
  "competitors": {
   "3244220": {

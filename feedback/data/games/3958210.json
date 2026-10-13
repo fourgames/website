@@ -3122,7 +3122,7 @@
     "thumb": "https://i.ytimg.com/vi/pE3oQXBlq7k/mqdefault.jpg",
     "lang": "en",
     "duration": 4008,
-    "views": 268,
+    "views": 269,
     "likes": 0,
     "comments": 1,
     "live": false,
@@ -3164,7 +3164,7 @@
     "thumb": "https://i.ytimg.com/vi/JvkeKvMvAt0/mqdefault.jpg",
     "lang": "en",
     "duration": 4784,
-    "views": 2228,
+    "views": 2227,
     "likes": 28,
     "comments": 5,
     "live": false,
@@ -3230,7 +3230,7 @@
     "duration": 30,
     "own": true,
     "category": "27",
-    "views": 275,
+    "views": 276,
     "likes": 5,
     "comments": 1,
     "live": false,
@@ -3973,7 +3973,7 @@
     "2026-10-10": 75,
     "2026-10-11": 82,
     "2026-10-12": 61,
-    "2026-10-13": 37
+    "2026-10-13": 41
    },
    "reviews": {
     "2026-10-05": {
@@ -4324,7 +4324,7 @@
     "2026-10-10": 814,
     "2026-10-11": 812,
     "2026-10-12": 652,
-    "2026-10-13": 461
+    "2026-10-13": 471
    },
    "reviews": {
     "2026-10-05": {
@@ -4371,6 +4371,12 @@
    "released": 1667174400,
    "comingSoon": false,
    "updates": [
+    {
+     "time": 1791886500,
+     "name": "Main Update V0.36",
+     "version": null,
+     "url": "https://store.steampowered.com/news/app/2009350/view/681889561799820133"
+    },
     {
      "time": 1790954940,
      "name": "Beta Update V0.36.5550",
@@ -4424,12 +4430,6 @@
      "name": "Beta Update!",
      "version": null,
      "url": "https://store.steampowered.com/news/app/2009350/view/680758587997290604"
-    },
-    {
-     "time": 1783674840,
-     "name": "Beta Hotfix Update!",
-     "version": null,
-     "url": "https://store.steampowered.com/news/app/2009350/view/696518197582495781"
     }
    ],
    "peaks": {

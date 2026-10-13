@@ -1,5 +1,5 @@
 {
- "highwatermark": "2095301344476",
+ "highwatermark": "2095362175003",
  "days": {
   "2024-11-10": {
    "2807130": {
@@ -798,7 +798,7 @@
     "gross": 14.12,
     "returns": 2.6,
     "tax": 0.85,
-    "net": 10.66,
+    "net": 10.67,
     "units": 7,
     "returnedUnits": 2,
     "discount": 40,

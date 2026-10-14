@@ -3,7 +3,7 @@
  "appId": 3958210,
  "initialized": true,
  "watermarks": {
-  "reviews": 1790875183,
+  "reviews": 1792017613,
   "forums": {
    "0": 1791349280,
    "event:18446744073709551615": 1791906455
@@ -1244,7 +1244,7 @@
     "I108",
     "I110",
     "I91",
-    "I112"
+    "I88"
    ],
    "issue": "I108",
    "triage": {
@@ -1284,7 +1284,7 @@
       "text": "The flamethrower from Meltopia was relaxing.",
       "urgency": "low",
       "quote": "Der Flammenwerfer aus Meltopia war echt entspannend",
-      "issue": "I112"
+      "issue": "I88"
      }
     ],
     "note": "The player mentions Meltopia (likely another game by the developer) as a comparison point for satisfying mechanics."
@@ -1396,6 +1396,66 @@
     "note": null
    },
    "alertedNew": true
+  },
+  "r237734697": {
+   "id": "r237734697",
+   "kind": "review",
+   "url": "https://steamcommunity.com/profiles/76561199000244578/recommended/3958210/",
+   "author": {
+    "id": "76561199000244578",
+    "reviews": 1,
+    "profile": "https://steamcommunity.com/profiles/76561199000244578",
+    "name": "Engelbrekt Chukwuekezikam",
+    "avatar": "https://avatars.fastly.steamstatic.com/d8c5a166daaf81ee422bfca69cefc2f6d78ffcab_medium.jpg",
+    "games": null
+   },
+   "lang": "swedish",
+   "created": 1792017613,
+   "updated": 1792017613,
+   "text": "Best game Ive ever played",
+   "votedUp": true,
+   "playtime": 4.8,
+   "playtimeForever": 4.8,
+   "steamPurchase": true,
+   "receivedForFree": false,
+   "earlyAccess": false,
+   "votesUp": 0,
+   "devResponse": null,
+   "devRespondedAt": null,
+   "versions": [],
+   "flips": [],
+   "pending": false,
+   "issues": [
+    "I115"
+   ],
+   "issue": "I115",
+   "triage": {
+    "language": "English",
+    "summary": "The player loves the game and considers it the best they've ever played.",
+    "category": "praise",
+    "urgency": "low",
+    "area": "overall",
+    "details": null,
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "praise",
+      "text": "The game is the best they've ever played.",
+      "urgency": "low",
+      "quote": "Best game Ive ever played",
+      "issue": "I115"
+     }
+    ],
+    "note": null
+   },
+   "thanksReply": {
+    "update": null,
+    "fixes": [],
+    "at": 1792017613,
+    "text": "That genuinely means the world to us—thank you so much! We've got more exciting stuff coming down the pipeline, so please jump back in soon and see what we've been cooking up.",
+    "english": "That genuinely means the world to us—thank you so much! We've got more exciting stuff coming down the pipeline, so please jump back in soon and see what we've been cooking up."
+   },
+   "alertedNew": true
   }
  },
  "issues": {
@@ -1448,7 +1508,7 @@
   "I88": {
    "id": "I88",
    "kind": "praise",
-   "title": "Engaging and addictive digging gameplay",
+   "title": "Relaxing and satisfying core gameplay mechanics",
    "area": "tutorial, new player experience",
    "summary": "The chainsaw digging mechanic makes for a nice, relaxed game.",
    "status": "open",
@@ -1456,24 +1516,25 @@
    "items": [
     "r236542076",
     "r236614813",
-    "r236624465"
+    "r236624465",
+    "c594069369071394989"
    ],
    "alerted": {
     "urgent": false,
     "cluster": 0
    },
-   "mentions": 3,
+   "mentions": 4,
    "languages": [
     "German",
     "Korean"
    ],
    "firstSeen": 1790771780,
-   "lastSeen": 1790866538,
+   "lastSeen": 1791386183,
    "urgency": "low",
    "negativeReviews": 0,
    "firstSession": 3,
    "details": [],
-   "priority": 1.55,
+   "priority": 1.8,
    "fixPrompt": null
   },
   "I89": {
@@ -2188,34 +2249,6 @@
    "priority": 0.6,
    "fixPrompt": null
   },
-  "I112": {
-   "id": "I112",
-   "kind": "praise",
-   "title": "Flamethrower satisfying to use",
-   "area": "sound design, ice sound",
-   "summary": "The flamethrower from Meltopia was relaxing.",
-   "status": "open",
-   "created": 1791386735,
-   "items": [
-    "c594069369071394989"
-   ],
-   "alerted": {
-    "urgent": false,
-    "cluster": 0
-   },
-   "mentions": 1,
-   "languages": [
-    "German"
-   ],
-   "firstSeen": 1791386183,
-   "lastSeen": 1791386183,
-   "urgency": "low",
-   "negativeReviews": 0,
-   "firstSession": 0,
-   "details": [],
-   "priority": 0.6,
-   "fixPrompt": null
-  },
   "I113": {
    "id": "I113",
    "kind": "praise",
@@ -2271,9 +2304,37 @@
    "details": [],
    "priority": 1.0,
    "fixPrompt": null
+  },
+  "I115": {
+   "id": "I115",
+   "kind": "praise",
+   "title": "Exceptional overall experience",
+   "area": "overall",
+   "summary": "The game is the best they've ever played.",
+   "status": "open",
+   "created": 1792018024,
+   "items": [
+    "r237734697"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 1,
+   "languages": [
+    "English"
+   ],
+   "firstSeen": 1792017613,
+   "lastSeen": 1792017613,
+   "urgency": "low",
+   "negativeReviews": 0,
+   "firstSession": 0,
+   "details": [],
+   "priority": 1.0,
+   "fixPrompt": null
   }
  },
- "nextIssue": 115,
+ "nextIssue": 116,
  "players": [
   [
    1791016909,
@@ -2925,9 +2986,9 @@
    "desc": "7 user reviews"
   },
   "2026-10-14": {
-   "positive": 5,
+   "positive": 6,
    "negative": 2,
-   "desc": "7 user reviews"
+   "desc": "8 user reviews"
   }
  },
  "releases": [
@@ -3139,7 +3200,7 @@
    0
   ]
  ],
- "mergedAt": 115,
+ "mergedAt": 116,
  "newPostAlertsFrom": 1791061932,
  "manualFixes": {
   "I90@1791453607": {
@@ -3728,14 +3789,40 @@
       "cost": 0.002581
      }
     }
+   },
+   "2026-10-14": {
+    "input": 6191,
+    "output": 410,
+    "calls": 3,
+    "cost": 0.008241,
+    "tasks": {
+     "sort": {
+      "input": 3705,
+      "output": 141,
+      "calls": 1,
+      "cost": 0.00441
+     },
+     "merge": {
+      "input": 1944,
+      "output": 177,
+      "calls": 1,
+      "cost": 0.002829
+     },
+     "reply": {
+      "input": 542,
+      "output": 92,
+      "calls": 1,
+      "cost": 0.001002
+     }
+    }
    }
   },
   "tasks": {
    "reply": {
-    "input": 6348,
-    "output": 854,
-    "calls": 5,
-    "cost": 0.010618
+    "input": 6890,
+    "output": 946,
+    "calls": 6,
+    "cost": 0.01162
    },
    "patch": {
     "input": 33395,
@@ -3750,22 +3837,22 @@
     "cost": 0.005632
    },
    "sort": {
-    "input": 91229,
-    "output": 12391,
-    "calls": 30,
-    "cost": 0.153184
+    "input": 94934,
+    "output": 12532,
+    "calls": 31,
+    "cost": 0.157594
    },
    "merge": {
-    "input": 15962,
-    "output": 1127,
-    "calls": 11,
-    "cost": 0.021597
+    "input": 17906,
+    "output": 1304,
+    "calls": 12,
+    "cost": 0.024426
    }
   },
-  "input": 150391,
-  "output": 17912,
-  "calls": 86,
-  "cost": 0.239951
+  "input": 156582,
+  "output": 18322,
+  "calls": 89,
+  "cost": 0.248192
  },
  "competitors": {
   "3244220": {

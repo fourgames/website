@@ -5,7 +5,7 @@
  "watermarks": {
   "forums": {
    "0": 0,
-   "event:18446744073709551615": 1791992738
+   "event:18446744073709551615": 1791992908
   }
  },
  "items": {
@@ -25,6 +25,23 @@
    "dev": true,
    "versions": [],
    "pending": false
+  },
+  "t564796605131194911": {
+   "id": "t564796605131194911",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/5207970/eventcomments/564796605131194911/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1791992908,
+   "updated": 1791992908,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/5207970/announcements/detail/669505296465396142",
+   "title": "Pomo Valley on Steam Deck",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
   }
  },
  "issues": {},
@@ -35,6 +52,11 @@
  "threads": {
   "564796605131194712": {
    "lastPost": 1791992738,
+   "replies": 0,
+   "forum": "Events & Announcements"
+  },
+  "564796605131194911": {
+   "lastPost": 1791992908,
    "replies": 0,
    "forum": "Events & Announcements"
   }

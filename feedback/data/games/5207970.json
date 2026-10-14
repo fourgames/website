@@ -5,16 +5,40 @@
  "watermarks": {
   "forums": {
    "0": 0,
-   "event:18446744073709551615": 0
+   "event:18446744073709551615": 1791992738
   }
  },
- "items": {},
+ "items": {
+  "t564796605131194712": {
+   "id": "t564796605131194712",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/5207970/eventcomments/564796605131194712/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1791992738,
+   "updated": 1791992738,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/5207970/announcements/detail/669505296465396140",
+   "title": "Pomo Valley launches October 30!",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
+  }
+ },
  "issues": {},
  "nextIssue": 1,
  "players": [],
  "reviewTotals": {},
  "releases": [],
- "threads": {},
+ "threads": {
+  "564796605131194712": {
+   "lastPost": 1791992738,
+   "replies": 0,
+   "forum": "Events & Announcements"
+  }
+ },
  "devAccounts": [],
  "mergedAt": 1,
  "newPostAlertsFrom": 1791061931,

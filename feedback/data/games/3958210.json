@@ -1858,7 +1858,7 @@
    "negativeReviews": 1,
    "firstSession": 1,
    "details": [],
-   "priority": 0.5,
+   "priority": 0.3,
    "fixPrompt": null,
    "fixedIn": "v2.0",
    "fixedAt": 1791453631,
@@ -2157,7 +2157,7 @@
    "negativeReviews": 0,
    "firstSession": 0,
    "details": [],
-   "priority": 1.0,
+   "priority": 0.6,
    "fixPrompt": null
   },
   "I110": {

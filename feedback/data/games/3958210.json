@@ -1586,7 +1586,7 @@
    "details": [
     "At exactly 400m depth, using the chainsaw creates new ice or pulls the old ice instead of removing it. Player found a workaround by digging at the pit's edge. Occurs at the 400m mark specifically."
    ],
-   "priority": 9.69,
+   "priority": 5.82,
    "fixPrompt": null,
    "fixedIn": "v2.0",
    "fixedAt": 1791329160,
@@ -2129,7 +2129,7 @@
    "negativeReviews": 0,
    "firstSession": 0,
    "details": [],
-   "priority": 2.0,
+   "priority": 1.2,
    "fixPrompt": null
   },
   "I109": {
@@ -2185,7 +2185,7 @@
    "negativeReviews": 0,
    "firstSession": 0,
    "details": [],
-   "priority": 1.0,
+   "priority": 0.6,
    "fixPrompt": null
   },
   "I112": {
@@ -2213,7 +2213,7 @@
    "negativeReviews": 0,
    "firstSession": 0,
    "details": [],
-   "priority": 1.0,
+   "priority": 0.6,
    "fixPrompt": null
   },
   "I113": {

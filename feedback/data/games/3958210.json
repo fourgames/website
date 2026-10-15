@@ -2935,6 +2935,10 @@
   [
    1792021311,
    1
+  ],
+  [
+   1792022511,
+   0
   ]
  ],
  "reviewTotals": {
@@ -2994,6 +2998,11 @@
    "desc": "7 user reviews"
   },
   "2026-10-14": {
+   "positive": 6,
+   "negative": 2,
+   "desc": "8 user reviews"
+  },
+  "2026-10-15": {
    "positive": 6,
    "negative": 2,
    "desc": "8 user reviews"

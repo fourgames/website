@@ -6,7 +6,7 @@
   "reviews": 1792068023,
   "forums": {
    "0": 1791349280,
-   "event:18446744073709551615": 1791906455
+   "event:18446744073709551615": 1792071323
   }
  },
  "items": {
@@ -1449,11 +1449,11 @@
     "note": null
    },
    "thanksReply": {
-    "update": null,
+    "update": "Update 2.1",
     "fixes": [],
-    "at": 1792017613,
-    "text": "That genuinely means the world to us—thank you so much! We've got more exciting stuff coming down the pipeline, so please jump back in soon and see what we've been cooking up.",
-    "english": "That genuinely means the world to us—thank you so much! We've got more exciting stuff coming down the pipeline, so please jump back in soon and see what we've been cooking up."
+    "at": 1792071300,
+    "text": "Thanks so much, that means the world to us! We just put out Update 2.1, and one of the big changes is that reaching the ending no longer wipes your run—so you can jump back down and keep digging whenever you want.",
+    "english": "Thanks so much, that means the world to us! We just put out Update 2.1, and one of the big changes is that reaching the ending no longer wipes your run—so you can jump back down and keep digging whenever you want."
    },
    "alertedNew": true
   },
@@ -1518,13 +1518,33 @@
     "note": null
    },
    "thanksReply": {
-    "update": null,
-    "fixes": [],
-    "at": 1792068023,
-    "text": "플레이해주셔서 감사합니다! 엔딩에서의 튕김 문제는 정말 안타깝네요. 저희가 이 부분을 살펴보고 있으니 앞으로 더 나아질 거예요. 다시 한 번 도전해주시길 바랍니다!",
-    "english": "Thanks for playing! We're really sorry to hear about the crash at the ending. We're looking into that issue and things should improve soon. Hope you'll give it another shot!"
+    "update": "Update 2.1",
+    "fixes": [
+     "I116@v2.1",
+     "I117@v2.1"
+    ],
+    "at": 1792071300,
+    "text": "업데이트 2.1에서 엔딩 후 진행 상황이 유지되도록 수정했으니, 이제 다시 뛰어내려서 제대로 된 엔딩을 볼 수 있어요! 플레이해주셔서 감사합니다.",
+    "english": "We fixed it in Update 2.1 so your progress stays after the ending—now you can jump back in and finally see the ending properly! Thanks for playing."
    },
    "alertedNew": true
+  },
+  "t572677904481265539": {
+   "id": "t572677904481265539",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/3958210/eventcomments/572677904481265539/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1792071323,
+   "updated": 1792071323,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/3958210/announcements/detail/667253496651711531",
+   "title": "Update 2.1",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
   }
  },
  "issues": {
@@ -1565,6 +1585,11 @@
      "in": "v1.4",
      "url": "https://store.steampowered.com/news/app/3958210/view/695399726270382299",
      "reason": "Improved depth counter readability provides feedback about progression, but doesn't add a tutorial or explain the ice-selling mechanic as requested"
+    },
+    {
+     "in": "v2.1",
+     "url": "https://store.steampowered.com/news/app/3958210/view/667253496651711530",
+     "reason": "Updated sound design may reduce the harsh, unpleasant audio experience, but doesn't add the missing tutorial or explanation players requested"
     }
    ],
    "fixedIn": "v2.0",
@@ -1729,6 +1754,11 @@
      "url": "https://store.steampowered.com/news/app/3958210/view/695400360681930772",
      "reason": "The patch notes state \"Fixed: Sound design too harsh and loud\" but players report that chainsaw sounds remain unchanged and ice clattering is still too loud even at minimum volume, suggesting the fix did not fully address the reported harshness issues.",
      "manual": "I91@1791453616"
+    },
+    {
+     "in": "v2.1",
+     "url": "https://store.steampowered.com/news/app/3958210/view/667253496651711530",
+     "reason": "\"Cutting ice is now a steady grinding sound while the saw bites, instead of constant cracks\" and sound leveling may improve harshness, but players report chainsaw still sounds like dental drill and clattering still too loud"
     }
    ]
   },
@@ -1995,7 +2025,14 @@
    "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
    "fixReason": "Patch notes state 'Fixed: Missing fuel/energy system for gameplay loop' which directly addresses the players' report of 'Missing fuel/energy system for gameplay loop'",
    "stillSince": null,
-   "manualFix": "I100@1791453631"
+   "manualFix": "I100@1791453631",
+   "partly": [
+    {
+     "in": "v2.1",
+     "url": "https://store.steampowered.com/news/app/3958210/view/667253496651711530",
+     "reason": "\"Early fuel tanks last longer\" provides more fuel availability, but doesn't address the core issue that there's no real fuel/energy system creating incentive to return to surface"
+    }
+   ]
   },
   "I101": {
    "id": "I101",
@@ -2164,7 +2201,14 @@
    "fixedAt": 1791329160,
    "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/695400360681930764",
    "fixReason": "\"Looking at the tent or an upgrade machine tells you what it does and what the next level gives you\" provides UI feedback explaining tent functionality",
-   "stillSince": null
+   "stillSince": null,
+   "partly": [
+    {
+     "in": "v2.1",
+     "url": "https://store.steampowered.com/news/app/3958210/view/667253496651711530",
+     "reason": "\"Fixed a crash when looking at the tent\" resolves the crash, but the underlying issue of unclear tent functionality and missing UI feedback remains unaddressed"
+    }
+   ]
   },
   "I106": {
    "id": "I106",
@@ -2408,7 +2452,7 @@
    "title": "Crash at ending",
    "area": "ending, crashes",
    "summary": "Game crashes at the ending.",
-   "status": "open",
+   "status": "likely_fixed",
    "created": 1792068794,
    "items": [
     "r237770580"
@@ -2429,8 +2473,13 @@
    "details": [
     "Game crashed at the ending sequence after 2 hours of play. Upon restart, all progress was lost and the player had to start from the beginning. Unable to view the ending as a result."
    ],
-   "priority": 4.0,
-   "fixPrompt": "Players of Digging A Hole In Ice With A Chainsaw are reporting a bug on Steam. Find the cause in this codebase and fix it.\n\nBug: Crash at ending\nArea of the game: ending, crashes\nReported by 1 player (Korean), between 2026-10-15 and 2026-10-15.\n\nWhat the reports say about reproducing it:\n- Game crashed at the ending sequence after 2 hours of play. Upon restart, all progress was lost and the player had to start from the beginning. Unable to view the ending as a result.\n\nPlayer reports (translated to English):\n- Steam review (2026-10-15, 2.5 h played, written in Korean): \"Game crashes at the ending. (from the post: It took 2 hours. Game crashed at the ending. After restarting, I had to start from the beginning. So I couldn't see the ending properly.)\"\n  https://steamcommunity.com/profiles/76561199122575545/recommended/3958210/\n\nWork out the most likely cause from the code, fix it, and tell me what you changed and how to test it. If the reports aren't enough to pin it down, say what to ask the players."
+   "priority": 0.8,
+   "fixPrompt": "Players of Digging A Hole In Ice With A Chainsaw are reporting a bug on Steam. Find the cause in this codebase and fix it.\n\nBug: Crash at ending\nArea of the game: ending, crashes\nReported by 1 player (Korean), between 2026-10-15 and 2026-10-15.\n\nWhat the reports say about reproducing it:\n- Game crashed at the ending sequence after 2 hours of play. Upon restart, all progress was lost and the player had to start from the beginning. Unable to view the ending as a result.\n\nPlayer reports (translated to English):\n- Steam review (2026-10-15, 2.5 h played, written in Korean): \"Game crashes at the ending. (from the post: It took 2 hours. Game crashed at the ending. After restarting, I had to start from the beginning. So I couldn't see the ending properly.)\"\n  https://steamcommunity.com/profiles/76561199122575545/recommended/3958210/\n\nWork out the most likely cause from the code, fix it, and tell me what you changed and how to test it. If the reports aren't enough to pin it down, say what to ask the players.",
+   "fixedIn": "v2.1",
+   "fixedAt": 1792071300,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/667253496651711530",
+   "fixReason": "\"Fixed the game crashing at loading on Mac\" and \"Fixed a crash when looking at the tent\" directly address crash issues at ending",
+   "stillSince": null
   },
   "I117": {
    "id": "I117",
@@ -2438,7 +2487,7 @@
    "title": "Progress lost after crash",
    "area": "ending, crashes",
    "summary": "Progress is lost and the game resets to the start after crashing.",
-   "status": "open",
+   "status": "likely_fixed",
    "created": 1792068794,
    "items": [
     "r237770580"
@@ -2459,8 +2508,13 @@
    "details": [
     "Game crashed at the ending sequence after 2 hours of play. Upon restart, all progress was lost and the player had to start from the beginning. Unable to view the ending as a result."
    ],
-   "priority": 8.0,
-   "fixPrompt": "Players of Digging A Hole In Ice With A Chainsaw are reporting a bug on Steam. Find the cause in this codebase and fix it.\n\nBug: Progress lost after crash\nArea of the game: ending, crashes\nReported by 1 player (Korean), between 2026-10-15 and 2026-10-15.\n\nWhat the reports say about reproducing it:\n- Game crashed at the ending sequence after 2 hours of play. Upon restart, all progress was lost and the player had to start from the beginning. Unable to view the ending as a result.\n\nPlayer reports (translated to English):\n- Steam review (2026-10-15, 2.5 h played, written in Korean): \"Progress is lost and the game resets to the start after crashing. (from the post: It took 2 hours. Game crashed at the ending. After restarting, I had to start from the beginning. So I couldn't see the ending properly.)\"\n  https://steamcommunity.com/profiles/76561199122575545/recommended/3958210/\n\nWork out the most likely cause from the code, fix it, and tell me what you changed and how to test it. If the reports aren't enough to pin it down, say what to ask the players."
+   "priority": 1.6,
+   "fixPrompt": "Players of Digging A Hole In Ice With A Chainsaw are reporting a bug on Steam. Find the cause in this codebase and fix it.\n\nBug: Progress lost after crash\nArea of the game: ending, crashes\nReported by 1 player (Korean), between 2026-10-15 and 2026-10-15.\n\nWhat the reports say about reproducing it:\n- Game crashed at the ending sequence after 2 hours of play. Upon restart, all progress was lost and the player had to start from the beginning. Unable to view the ending as a result.\n\nPlayer reports (translated to English):\n- Steam review (2026-10-15, 2.5 h played, written in Korean): \"Progress is lost and the game resets to the start after crashing. (from the post: It took 2 hours. Game crashed at the ending. After restarting, I had to start from the beginning. So I couldn't see the ending properly.)\"\n  https://steamcommunity.com/profiles/76561199122575545/recommended/3958210/\n\nWork out the most likely cause from the code, fix it, and tell me what you changed and how to test it. If the reports aren't enough to pin it down, say what to ask the players.",
+   "fixedIn": "v2.1",
+   "fixedAt": 1792071300,
+   "fixedUrl": "https://store.steampowered.com/news/app/3958210/view/667253496651711530",
+   "fixReason": "\"Your run is kept after the ending: your money, upgrades and the hole you dug are still there next time\" directly prevents progress loss by keeping the run after ending instead of wiping it",
+   "stillSince": null
   }
  },
  "nextIssue": 118,
@@ -3278,6 +3332,26 @@
    "matched": [],
    "checked": true,
    "partly": []
+  },
+  {
+   "gid": "667253496651711530",
+   "name": "Update 2.1",
+   "version": "2.1",
+   "launch": false,
+   "time": 1792071300,
+   "url": "https://store.steampowered.com/news/app/3958210/view/667253496651711530",
+   "notes": "A small update with everything since 2.0. The biggest change: reaching the ending no longer wipes your run.\n\nImprovements\n\n- \nYour run is kept after the ending: your money, upgrades and the hole you dug are still there next time, so you can jump down to see the ending again or keep digging\n\n- \nCutting ice is now a steady grinding sound while the saw bites, instead of constant cracks\n\n- \nIce going into the sell pipe crunches instead of smashing like glass\n\n- \nEarly fuel tanks last longer\n\n- \nSounds are evened out: footsteps and the jet boots are no longer louder than the chainsaw, and the machines and the sell pipe are quieter\n\nFixes\n\n- \nFixed the game crashing at loading on Mac\n\n- \nFixed a crash when looking at the tent\n\n- \nFixed the first stutter when you pick up loot, sell or land\n\n- \nFixed the chainsaw's bar looking washed out white in fog\n\nFound a bug or have an idea? Tell us in the Steam discussions.\n\n— Danny",
+   "matched": [
+    "I116",
+    "I117"
+   ],
+   "checked": true,
+   "partly": [
+    "I87",
+    "I91",
+    "I100",
+    "I105"
+   ]
   }
  ],
  "threads": {
@@ -3343,6 +3417,11 @@
   },
   "594069369071344540": {
    "lastPost": 1791331508,
+   "replies": 0,
+   "forum": "Events & Announcements"
+  },
+  "572677904481265539": {
+   "lastPost": 1792071323,
    "replies": 0,
    "forum": "Events & Announcements"
   }
@@ -3975,10 +4054,10 @@
     }
    },
    "2026-10-15": {
-    "input": 6316,
-    "output": 608,
-    "calls": 3,
-    "cost": 0.009356,
+    "input": 9873,
+    "output": 1193,
+    "calls": 6,
+    "cost": 0.015838,
     "tasks": {
      "sort": {
       "input": 3743,
@@ -3993,26 +4072,32 @@
       "cost": 0.002779
      },
      "reply": {
-      "input": 589,
-      "output": 148,
+      "input": 2367,
+      "output": 402,
+      "calls": 3,
+      "cost": 0.004377
+     },
+     "patch": {
+      "input": 1779,
+      "output": 331,
       "calls": 1,
-      "cost": 0.001329
+      "cost": 0.003434
      }
     }
    }
   },
   "tasks": {
    "reply": {
-    "input": 7479,
-    "output": 1094,
-    "calls": 7,
-    "cost": 0.012949
+    "input": 9257,
+    "output": 1348,
+    "calls": 9,
+    "cost": 0.015997
    },
    "patch": {
-    "input": 33395,
-    "output": 3105,
-    "calls": 30,
-    "cost": 0.04892
+    "input": 35174,
+    "output": 3436,
+    "calls": 31,
+    "cost": 0.052354
    },
    "translate": {
     "input": 3457,
@@ -4033,10 +4118,10 @@
     "cost": 0.027205
    }
   },
-  "input": 162898,
-  "output": 18930,
-  "calls": 92,
-  "cost": 0.257548
+  "input": 166455,
+  "output": 19515,
+  "calls": 95,
+  "cost": 0.26403
  },
  "competitors": {
   "3244220": {

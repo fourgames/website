@@ -3139,6 +3139,10 @@
   [
    1792068788,
    1
+  ],
+  [
+   1792072482,
+   0
   ]
  ],
  "reviewTotals": {
@@ -3562,7 +3566,7 @@
     "thumb": "https://i.ytimg.com/vi/pE3oQXBlq7k/mqdefault.jpg",
     "lang": "en",
     "duration": 4008,
-    "views": 286,
+    "views": 285,
     "likes": 0,
     "comments": 1,
     "live": false,
@@ -3872,47 +3876,47 @@
   ]
  ],
  "achievements": {
-  "at": 1792058396,
+  "at": 1792072512,
   "list": [
    {
     "name": "000%",
     "desc": "000%",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/02d6eefa7f8fdcd3e3ac6ac1fdcd76e67563cf52.jpg",
     "percent": 100.0
    },
    {
     "name": "025%",
     "desc": "025%",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
-    "percent": 57.4
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4fe1f5fddf421186687d9a2d0044b9c690f531a1.jpg",
+    "percent": 57.8
    },
    {
     "name": "050%",
     "desc": "050%",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
-    "percent": 48.9
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/2dfc57ddc54c2ab76b78a1a493e1db0bb294c298.jpg",
+    "percent": 49.4
    },
    {
     "name": "075%",
     "desc": "075%",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
-    "percent": 43.6
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/4389728d9b5794e006e351dce824016b00207818.jpg",
+    "percent": 44.2
    },
    {
     "name": "100%",
     "desc": "100%",
-    "icon": "https://shared.akamai.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
-    "percent": 36.1
+    "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/3958210/f33e9999dcc50569c0c547289b598a535088f440.jpg",
+    "percent": 35.7
    }
   ]
  },
  "bundles": {
-  "at": 1792058397,
+  "at": 1792072512,
   "list": [
    {
     "id": 86690,
     "name": "Four Games Collection",
-    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/02557fe8dafe26f77e25b5f7b4614b752a0b6562/header_ratio.jpg?t=1792006142",
+    "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/02557fe8dafe26f77e25b5f7b4614b752a0b6562/header_ratio.jpg?t=1792006142",
     "apps": [
      {
       "appId": 2807130,
@@ -4221,8 +4225,8 @@
      "negative": 2181
     },
     "2026-10-15": {
-     "positive": 18093,
-     "negative": 2182
+     "positive": 18094,
+     "negative": 2184
     }
    }
   },
@@ -4304,7 +4308,7 @@
     "2026-10-12": 63,
     "2026-10-13": 52,
     "2026-10-14": 50,
-    "2026-10-15": 47
+    "2026-10-15": 52
    },
    "reviews": {
     "2026-10-05": {
@@ -4591,7 +4595,7 @@
   },
   "4210580": {
    "name": "Ore Factory Squad ⛏️",
-   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4210580/b305646840dc9db685bc40596da7bdaea388c694/header.jpg?t=1792049875",
+   "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/4210580/b305646840dc9db685bc40596da7bdaea388c694/header.jpg?t=1792070188",
    "released": 1784160000,
    "comingSoon": false,
    "updates": [
@@ -4667,7 +4671,7 @@
     "2026-10-12": 1060,
     "2026-10-13": 937,
     "2026-10-14": 798,
-    "2026-10-15": 373
+    "2026-10-15": 432
    },
    "reviews": {
     "2026-10-05": {
@@ -4794,7 +4798,7 @@
     "2026-10-12": 1968,
     "2026-10-13": 1752,
     "2026-10-14": 1612,
-    "2026-10-15": 1260
+    "2026-10-15": 1282
    },
    "reviews": {
     "2026-10-05": {
@@ -4838,7 +4842,7 @@
      "negative": 162
     },
     "2026-10-15": {
-     "positive": 5496,
+     "positive": 5497,
      "negative": 161
     }
    }
@@ -4921,7 +4925,7 @@
     "2026-10-12": 652,
     "2026-10-13": 540,
     "2026-10-14": 490,
-    "2026-10-15": 442
+    "2026-10-15": 455
    },
    "reviews": {
     "2026-10-05": {

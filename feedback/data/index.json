@@ -64,10 +64,10 @@
    "lastDevPost": 1792071323,
    "claude": {
     "since": 1791207011,
-    "input": 166455,
-    "output": 19515,
-    "calls": 95,
-    "cost": 0.26403,
+    "input": 166895,
+    "output": 19593,
+    "calls": 96,
+    "cost": 0.26486,
     "days": {
      "2026-10-05": 0.0106,
      "2026-10-06": 0.0089,
@@ -75,12 +75,12 @@
      "2026-10-08": 0.0084,
      "2026-10-13": 0.0072,
      "2026-10-14": 0.0082,
-     "2026-10-15": 0.0158
+     "2026-10-15": 0.0167
     },
     "tasks": {
      "reply": 0.016,
      "patch": 0.0524,
-     "translate": 0.0056,
+     "translate": 0.0065,
      "sort": 0.1628,
      "merge": 0.0272
     },
@@ -108,8 +108,8 @@
    "ok": true,
    "message": null,
    "since": 1791020758,
-   "active": 1792071501,
-   "activeWhat": "drafted a reply"
+   "active": 1792072095,
+   "activeWhat": "translated your post"
   },
   "discord": {
    "ok": true,
@@ -161,7 +161,7 @@
    "activeWhat": "new video"
   }
  },
- "changedAt": 1792071501,
+ "changedAt": 1792072095,
  "creditAlert": null,
  "discord": {
   "members": [

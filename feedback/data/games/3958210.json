@@ -1479,9 +1479,9 @@
    "steamPurchase": true,
    "receivedForFree": false,
    "earlyAccess": false,
-   "votesUp": 0,
-   "devResponse": null,
-   "devRespondedAt": null,
+   "votesUp": 1,
+   "devResponse": "엔딩까지 플레이해 주셔서 감사합니다! 그 시점에 게임이 종료되고 진행 상황이 초기화되는 건 원래 의도한 엔딩이었는데요, 2.1 업데이트부터는 엔딩 후에도 진행 상황이 그대로 유지됩니다. 다만 이미 사라진 진행 상황은 복구해 드릴 수가 없어서 정말 죄송합니다!",
+   "devRespondedAt": 1792072021,
    "versions": [],
    "flips": [],
    "pending": false,
@@ -1527,7 +1527,12 @@
     "text": "업데이트 2.1에서 엔딩 후 진행 상황이 유지되도록 수정했으니, 이제 다시 뛰어내려서 제대로 된 엔딩을 볼 수 있어요! 플레이해주셔서 감사합니다.",
     "english": "We fixed it in Update 2.1 so your progress stays after the ending—now you can jump back in and finally see the ending properly! Thanks for playing."
    },
-   "alertedNew": true
+   "alertedNew": true,
+   "devResponseLanguage": "Korean",
+   "devResponseEnglish": "Thank you for playing through to the ending! At that point, the game ending and progress resetting was the originally intended ending, but from the 2.1 update onwards, your progress will be maintained even after the ending. However, I'm very sorry that we cannot recover progress that has already been lost!",
+   "translatedOwn": {
+    "devResponse": "22e4ecef6d62"
+   }
   },
   "t572677904481265539": {
    "id": "t572677904481265539",
@@ -4054,10 +4059,10 @@
     }
    },
    "2026-10-15": {
-    "input": 9873,
-    "output": 1193,
-    "calls": 6,
-    "cost": 0.015838,
+    "input": 10313,
+    "output": 1271,
+    "calls": 7,
+    "cost": 0.016668,
     "tasks": {
      "sort": {
       "input": 3743,
@@ -4082,6 +4087,12 @@
       "output": 331,
       "calls": 1,
       "cost": 0.003434
+     },
+     "translate": {
+      "input": 440,
+      "output": 78,
+      "calls": 1,
+      "cost": 0.00083
      }
     }
    }
@@ -4100,10 +4111,10 @@
     "cost": 0.052354
    },
    "translate": {
-    "input": 3457,
-    "output": 435,
-    "calls": 10,
-    "cost": 0.005632
+    "input": 3897,
+    "output": 513,
+    "calls": 11,
+    "cost": 0.006462
    },
    "sort": {
     "input": 98677,
@@ -4118,10 +4129,10 @@
     "cost": 0.027205
    }
   },
-  "input": 166455,
-  "output": 19515,
-  "calls": 95,
-  "cost": 0.26403
+  "input": 166895,
+  "output": 19593,
+  "calls": 96,
+  "cost": 0.26486
  },
  "competitors": {
   "3244220": {

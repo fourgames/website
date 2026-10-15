@@ -3,7 +3,7 @@
  "appId": 3958210,
  "initialized": true,
  "watermarks": {
-  "reviews": 1792017613,
+  "reviews": 1792068023,
   "forums": {
    "0": 1791349280,
    "event:18446744073709551615": 1791906455
@@ -1456,6 +1456,75 @@
     "english": "That genuinely means the world to us—thank you so much! We've got more exciting stuff coming down the pipeline, so please jump back in soon and see what we've been cooking up."
    },
    "alertedNew": true
+  },
+  "r237770580": {
+   "id": "r237770580",
+   "kind": "review",
+   "url": "https://steamcommunity.com/profiles/76561199122575545/recommended/3958210/",
+   "author": {
+    "id": "76561199122575545",
+    "reviews": 7,
+    "profile": "https://steamcommunity.com/profiles/76561199122575545",
+    "name": "멍구르CHZZK",
+    "avatar": "https://avatars.akamai.steamstatic.com/5500736e59c6ea2c01db25cae0121c3615018c53_medium.jpg",
+    "games": 60
+   },
+   "lang": "koreana",
+   "created": 1792068023,
+   "updated": 1792068023,
+   "text": "2시간 걸렸음. 엔딩에서 튕김. 다시 시작하니 처음부터임. 고로 엔딩을 제대로 못봄",
+   "votedUp": true,
+   "playtime": 2.5,
+   "playtimeForever": 2.5,
+   "steamPurchase": true,
+   "receivedForFree": false,
+   "earlyAccess": false,
+   "votesUp": 0,
+   "devResponse": null,
+   "devRespondedAt": null,
+   "versions": [],
+   "flips": [],
+   "pending": false,
+   "issues": [
+    "I116",
+    "I117"
+   ],
+   "issue": "I116",
+   "triage": {
+    "language": "Korean",
+    "english": "It took 2 hours. Game crashed at the ending. After restarting, I had to start from the beginning. So I couldn't see the ending properly.",
+    "summary": "The game crashed at the ending and reset progress to the start, preventing the player from viewing the ending.",
+    "category": "bug",
+    "urgency": "high",
+    "area": "ending, crashes",
+    "details": "Game crashed at the ending sequence after 2 hours of play. Upon restart, all progress was lost and the player had to start from the beginning. Unable to view the ending as a result.",
+    "tone": "sincere",
+    "points": [
+     {
+      "kind": "bug",
+      "text": "Game crashes at the ending.",
+      "urgency": "high",
+      "quote": "엔딩에서 튕김",
+      "issue": "I116"
+     },
+     {
+      "kind": "bug",
+      "text": "Progress is lost and the game resets to the start after crashing.",
+      "urgency": "urgent",
+      "quote": "다시 시작하니 처음부터임",
+      "issue": "I117"
+     }
+    ],
+    "note": null
+   },
+   "thanksReply": {
+    "update": null,
+    "fixes": [],
+    "at": 1792068023,
+    "text": "플레이해주셔서 감사합니다! 엔딩에서의 튕김 문제는 정말 안타깝네요. 저희가 이 부분을 살펴보고 있으니 앞으로 더 나아질 거예요. 다시 한 번 도전해주시길 바랍니다!",
+    "english": "Thanks for playing! We're really sorry to hear about the crash at the ending. We're looking into that issue and things should improve soon. Hope you'll give it another shot!"
+   },
+   "alertedNew": true
   }
  },
  "issues": {
@@ -2332,9 +2401,69 @@
    "details": [],
    "priority": 1.0,
    "fixPrompt": null
+  },
+  "I116": {
+   "id": "I116",
+   "kind": "bug",
+   "title": "Crash at ending",
+   "area": "ending, crashes",
+   "summary": "Game crashes at the ending.",
+   "status": "open",
+   "created": 1792068794,
+   "items": [
+    "r237770580"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 1,
+   "languages": [
+    "Korean"
+   ],
+   "firstSeen": 1792068023,
+   "lastSeen": 1792068023,
+   "urgency": "high",
+   "negativeReviews": 0,
+   "firstSession": 0,
+   "details": [
+    "Game crashed at the ending sequence after 2 hours of play. Upon restart, all progress was lost and the player had to start from the beginning. Unable to view the ending as a result."
+   ],
+   "priority": 4.0,
+   "fixPrompt": "Players of Digging A Hole In Ice With A Chainsaw are reporting a bug on Steam. Find the cause in this codebase and fix it.\n\nBug: Crash at ending\nArea of the game: ending, crashes\nReported by 1 player (Korean), between 2026-10-15 and 2026-10-15.\n\nWhat the reports say about reproducing it:\n- Game crashed at the ending sequence after 2 hours of play. Upon restart, all progress was lost and the player had to start from the beginning. Unable to view the ending as a result.\n\nPlayer reports (translated to English):\n- Steam review (2026-10-15, 2.5 h played, written in Korean): \"Game crashes at the ending. (from the post: It took 2 hours. Game crashed at the ending. After restarting, I had to start from the beginning. So I couldn't see the ending properly.)\"\n  https://steamcommunity.com/profiles/76561199122575545/recommended/3958210/\n\nWork out the most likely cause from the code, fix it, and tell me what you changed and how to test it. If the reports aren't enough to pin it down, say what to ask the players."
+  },
+  "I117": {
+   "id": "I117",
+   "kind": "bug",
+   "title": "Progress lost after crash",
+   "area": "ending, crashes",
+   "summary": "Progress is lost and the game resets to the start after crashing.",
+   "status": "open",
+   "created": 1792068794,
+   "items": [
+    "r237770580"
+   ],
+   "alerted": {
+    "urgent": false,
+    "cluster": 0
+   },
+   "mentions": 1,
+   "languages": [
+    "Korean"
+   ],
+   "firstSeen": 1792068023,
+   "lastSeen": 1792068023,
+   "urgency": "urgent",
+   "negativeReviews": 0,
+   "firstSession": 0,
+   "details": [
+    "Game crashed at the ending sequence after 2 hours of play. Upon restart, all progress was lost and the player had to start from the beginning. Unable to view the ending as a result."
+   ],
+   "priority": 8.0,
+   "fixPrompt": "Players of Digging A Hole In Ice With A Chainsaw are reporting a bug on Steam. Find the cause in this codebase and fix it.\n\nBug: Progress lost after crash\nArea of the game: ending, crashes\nReported by 1 player (Korean), between 2026-10-15 and 2026-10-15.\n\nWhat the reports say about reproducing it:\n- Game crashed at the ending sequence after 2 hours of play. Upon restart, all progress was lost and the player had to start from the beginning. Unable to view the ending as a result.\n\nPlayer reports (translated to English):\n- Steam review (2026-10-15, 2.5 h played, written in Korean): \"Progress is lost and the game resets to the start after crashing. (from the post: It took 2 hours. Game crashed at the ending. After restarting, I had to start from the beginning. So I couldn't see the ending properly.)\"\n  https://steamcommunity.com/profiles/76561199122575545/recommended/3958210/\n\nWork out the most likely cause from the code, fix it, and tell me what you changed and how to test it. If the reports aren't enough to pin it down, say what to ask the players."
   }
  },
- "nextIssue": 116,
+ "nextIssue": 118,
  "players": [
   [
    1791016909,
@@ -2947,6 +3076,10 @@
   [
    1792066089,
    2
+  ],
+  [
+   1792068788,
+   1
   ]
  ],
  "reviewTotals": {
@@ -3011,9 +3144,9 @@
    "desc": "8 user reviews"
   },
   "2026-10-15": {
-   "positive": 6,
+   "positive": 7,
    "negative": 2,
-   "desc": "8 user reviews"
+   "desc": "9 user reviews"
   }
  },
  "releases": [
@@ -3225,7 +3358,7 @@
    0
   ]
  ],
- "mergedAt": 116,
+ "mergedAt": 118,
  "newPostAlertsFrom": 1791061932,
  "manualFixes": {
   "I90@1791453607": {
@@ -3840,14 +3973,40 @@
       "cost": 0.001002
      }
     }
+   },
+   "2026-10-15": {
+    "input": 6316,
+    "output": 608,
+    "calls": 3,
+    "cost": 0.009356,
+    "tasks": {
+     "sort": {
+      "input": 3743,
+      "output": 301,
+      "calls": 1,
+      "cost": 0.005248
+     },
+     "merge": {
+      "input": 1984,
+      "output": 159,
+      "calls": 1,
+      "cost": 0.002779
+     },
+     "reply": {
+      "input": 589,
+      "output": 148,
+      "calls": 1,
+      "cost": 0.001329
+     }
+    }
    }
   },
   "tasks": {
    "reply": {
-    "input": 6890,
-    "output": 946,
-    "calls": 6,
-    "cost": 0.01162
+    "input": 7479,
+    "output": 1094,
+    "calls": 7,
+    "cost": 0.012949
    },
    "patch": {
     "input": 33395,
@@ -3862,22 +4021,22 @@
     "cost": 0.005632
    },
    "sort": {
-    "input": 94934,
-    "output": 12532,
-    "calls": 31,
-    "cost": 0.157594
+    "input": 98677,
+    "output": 12833,
+    "calls": 32,
+    "cost": 0.162842
    },
    "merge": {
-    "input": 17906,
-    "output": 1304,
-    "calls": 12,
-    "cost": 0.024426
+    "input": 19890,
+    "output": 1463,
+    "calls": 13,
+    "cost": 0.027205
    }
   },
-  "input": 156582,
-  "output": 18322,
-  "calls": 89,
-  "cost": 0.248192
+  "input": 162898,
+  "output": 18930,
+  "calls": 92,
+  "cost": 0.257548
  },
  "competitors": {
   "3244220": {

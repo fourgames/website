@@ -1057,12 +1057,12 @@
   ]
  },
  "bundles": {
-  "at": 1792072439,
+  "at": 1792128949,
   "list": [
    {
     "id": 86690,
     "name": "Four Games Collection",
-    "image": "https://shared.fastly.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/02557fe8dafe26f77e25b5f7b4614b752a0b6562/header_ratio.jpg?t=1792006142",
+    "image": "https://shared.akamai.steamstatic.com/store_item_assets/steam/bundles/86690/qgoly42pg8cbknm8/02557fe8dafe26f77e25b5f7b4614b752a0b6562/header_ratio.jpg?t=1792006142",
     "apps": [
      {
       "appId": 2807130,
@@ -1621,7 +1621,7 @@
     "2026-10-13": 727,
     "2026-10-14": 580,
     "2026-10-15": 506,
-    "2026-10-16": 306
+    "2026-10-16": 307
    },
    "reviews": {
     "2026-10-05": {

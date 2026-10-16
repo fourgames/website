@@ -3753,7 +3753,7 @@
     "duration": 2129,
     "own": null,
     "category": "20",
-    "views": 26,
+    "views": 23,
     "likes": 1,
     "comments": 0,
     "live": false,
@@ -4764,7 +4764,7 @@
      "negative": 229
     },
     "2026-10-16": {
-     "positive": 1810,
+     "positive": 1811,
      "negative": 229
     }
    }
@@ -5160,8 +5160,8 @@
      "negative": 629
     },
     "2026-10-16": {
-     "positive": 3628,
-     "negative": 629
+     "positive": 3627,
+     "negative": 630
     }
    }
   }

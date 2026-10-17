@@ -4828,7 +4828,7 @@
     "2026-10-14": 195,
     "2026-10-15": 176,
     "2026-10-16": 180,
-    "2026-10-17": 193
+    "2026-10-17": 195
    },
    "reviews": {
     "2026-10-05": {
@@ -4887,6 +4887,52 @@
    "reviewScore": {
     "desc": "Very Positive",
     "score": 8
+   },
+   "store": {
+    "recommendations": 18955,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 1,
+    "achievements": 10,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Full controller support",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Adventure",
+     "Indie"
+    ],
+    "platforms": [
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "German",
+     "French",
+     "Italian",
+     "Spanish - Spain",
+     "Portuguese - Brazil",
+     "Simplified Chinese",
+     "Japanese",
+     "Korean",
+     "Polish",
+     "Russian"
+    ],
+    "controller": "full",
+    "age": null,
+    "price": 499,
+    "free": false,
+    "developers": [
+     "DoubleBee"
+    ],
+    "publishers": [
+     "rokaplay select",
+     "Drillhounds"
+    ],
+    "website": null
    }
   },
   "3601800": {
@@ -5028,6 +5074,73 @@
    "reviewScore": {
     "desc": "Very Positive",
     "score": 8
+   },
+   "store": {
+    "recommendations": 1740,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 2,
+    "achievements": 46,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Full controller support",
+     "Custom Volume Controls",
+     "#category_playable_at_your_own_pace",
+     "Playable without Timed Input",
+     "DualShock Controller Support",
+     "DualShock Controller Support",
+     "DualSense Controller Support",
+     "DualSense Controller Support",
+     "Save Anytime",
+     "Stereo Sound",
+     "Stats",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Adventure",
+     "Casual",
+     "Indie",
+     "Simulation"
+    ],
+    "platforms": [
+     "mac",
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "Russian",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Polish",
+     "Portuguese - Portugal",
+     "Turkish",
+     "Dutch",
+     "Romanian",
+     "Ukrainian",
+     "Simplified Chinese",
+     "Korean",
+     "Thai",
+     "Japanese",
+     "Arabic",
+     "Hungarian",
+     "Indonesian",
+     "Vietnamese",
+     "Portuguese - Brazil"
+    ],
+    "controller": "full",
+    "age": null,
+    "price": 699,
+    "free": false,
+    "developers": [
+     "Garden of Dreams"
+    ],
+    "publishers": [
+     "Garden of Dreams"
+    ],
+    "website": null
    }
   },
   "3585800": {
@@ -5151,6 +5264,57 @@
    "reviewScore": {
     "desc": "Mostly Positive",
     "score": 6
+   },
+   "store": {
+    "recommendations": 2951,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 0,
+    "achievements": 75,
+    "categories": [
+     "Single-player",
+     "Multi-player",
+     "PvP",
+     "Online PvP",
+     "Co-op",
+     "Online Co-op",
+     "Steam Achievements",
+     "Camera Comfort",
+     "Playable without Timed Input",
+     "Save Anytime",
+     "Stereo Sound",
+     "Partial Controller Support",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Adventure",
+     "Casual",
+     "Indie",
+     "Simulation"
+    ],
+    "platforms": [
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "Simplified Chinese",
+     "Traditional Chinese",
+     "Japanese",
+     "German",
+     "Korean"
+    ],
+    "controller": null,
+    "age": null,
+    "price": 699,
+    "free": false,
+    "developers": [
+     "Wild Dog"
+    ],
+    "publishers": [
+     "Wild Dog"
+    ],
+    "website": "https://wilddog.jp/keepdigging"
    }
   },
   "3976500": {
@@ -5292,6 +5456,63 @@
    "reviewScore": {
     "desc": "Very Positive",
     "score": 8
+   },
+   "store": {
+    "recommendations": 1842,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 0,
+    "achievements": 32,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Full controller support",
+     "DualShock Controller Support",
+     "DualShock Controller Support",
+     "DualSense Controller Support",
+     "DualSense Controller Support",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Action",
+     "Adventure",
+     "Indie",
+     "Simulation"
+    ],
+    "platforms": [
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Simplified Chinese",
+     "Korean",
+     "Polish",
+     "Portuguese - Brazil",
+     "Portuguese - Portugal",
+     "Russian",
+     "Turkish",
+     "Japanese",
+     "Traditional Chinese",
+     "Ukrainian",
+     "Serbian"
+    ],
+    "controller": "full",
+    "age": null,
+    "price": 1299,
+    "free": false,
+    "developers": [
+     "Puppyroar Games"
+    ],
+    "publishers": [
+     "Forklift Interactive",
+     "Gamersky Games"
+    ],
+    "website": "https://discord.gg/UHj5XEHDZb"
    }
   },
   "4210580": {
@@ -5374,7 +5595,7 @@
     "2026-10-14": 798,
     "2026-10-15": 680,
     "2026-10-16": 705,
-    "2026-10-17": 692
+    "2026-10-17": 743
    },
    "reviews": {
     "2026-10-05": {
@@ -5433,6 +5654,69 @@
    "reviewScore": {
     "desc": "Very Positive",
     "score": 8
+   },
+   "store": {
+    "recommendations": 1856,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 1,
+    "achievements": 35,
+    "categories": [
+     "Single-player",
+     "Multi-player",
+     "Co-op",
+     "Online Co-op",
+     "Steam Achievements",
+     "Full controller support",
+     "Camera Comfort",
+     "Custom Volume Controls",
+     "#category_playable_at_your_own_pace",
+     "Playable without Timed Input",
+     "DualShock Controller Support",
+     "DualShock Controller Support",
+     "DualSense Controller Support",
+     "DualSense Controller Support",
+     "Save Anytime",
+     "Stereo Sound",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Indie",
+     "Simulation"
+    ],
+    "platforms": [
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Japanese",
+     "Korean",
+     "Polish",
+     "Portuguese - Portugal",
+     "Russian",
+     "Simplified Chinese",
+     "Traditional Chinese",
+     "Turkish",
+     "Portuguese - Brazil",
+     "Danish",
+     "Dutch",
+     "Ukrainian"
+    ],
+    "controller": "full",
+    "age": null,
+    "price": 1299,
+    "free": false,
+    "developers": [
+     "threeW"
+    ],
+    "publishers": [
+     "PlayWay S.A."
+    ],
+    "website": null
    }
   },
   "2764460": {
@@ -5574,6 +5858,67 @@
    "reviewScore": {
     "desc": "Overwhelmingly Positive",
     "score": 9
+   },
+   "store": {
+    "recommendations": 5419,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 0,
+    "achievements": 16,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Steam Trading Cards",
+     "Steam Workshop",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Simulation",
+     "Strategy",
+     "Early Access"
+    ],
+    "platforms": [
+     "linux",
+     "mac",
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Czech",
+     "Hungarian",
+     "Japanese",
+     "Korean",
+     "Polish",
+     "Portuguese - Brazil",
+     "Russian",
+     "Simplified Chinese",
+     "Traditional Chinese",
+     "Turkish",
+     "Ukrainian",
+     "Danish",
+     "Dutch",
+     "Finnish",
+     "Norwegian",
+     "Portuguese - Portugal",
+     "Spanish - Latin America",
+     "Swedish"
+    ],
+    "controller": null,
+    "age": null,
+    "price": 1499,
+    "free": false,
+    "developers": [
+     "Lantto Games"
+    ],
+    "publishers": [
+     "Hooded Horse"
+    ],
+    "website": "https://sandustry.com"
    }
   },
   "4078200": {
@@ -5715,6 +6060,59 @@
    "reviewScore": {
     "desc": "Very Positive",
     "score": 8
+   },
+   "store": {
+    "recommendations": 1189,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 1,
+    "achievements": 21,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Camera Comfort",
+     "Color Alternatives",
+     "Custom Volume Controls",
+     "Adjustable Difficulty",
+     "Mouse Only Option",
+     "Playable without Timed Input",
+     "Save Anytime",
+     "Steam Cloud",
+     "Stats",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Casual",
+     "Indie",
+     "Simulation",
+     "Strategy"
+    ],
+    "platforms": [
+     "linux",
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "German",
+     "Spanish - Spain",
+     "Portuguese - Brazil",
+     "Russian",
+     "Simplified Chinese",
+     "Japanese",
+     "Korean"
+    ],
+    "controller": null,
+    "age": null,
+    "price": 999,
+    "free": false,
+    "developers": [
+     "Green Wizard"
+    ],
+    "publishers": [
+     "Green Wizard"
+    ],
+    "website": null
    }
   },
   "2009350": {
@@ -5797,7 +6195,7 @@
     "2026-10-14": 741,
     "2026-10-15": 708,
     "2026-10-16": 762,
-    "2026-10-17": 829
+    "2026-10-17": 846
    },
    "reviews": {
     "2026-10-05": {
@@ -5856,6 +6254,51 @@
    "reviewScore": {
     "desc": "Very Positive",
     "score": 8
+   },
+   "store": {
+    "recommendations": 4038,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 2,
+    "achievements": null,
+    "categories": [
+     "Single-player",
+     "Multi-player",
+     "Co-op",
+     "Online Co-op",
+     "LAN Co-op",
+     "DualShock Controller Support",
+     "DualShock Controller Support",
+     "Partial Controller Support",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Adventure",
+     "Casual",
+     "Simulation",
+     "Strategy"
+    ],
+    "platforms": [
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain"
+    ],
+    "controller": null,
+    "age": null,
+    "price": 2499,
+    "free": false,
+    "developers": [
+     "North Modding Company AB"
+    ],
+    "publishers": [
+     "North Modding Company AB"
+    ],
+    "website": null
    }
   }
  },
@@ -5867,12 +6310,20 @@
   [
    1792249589,
    2
+  ],
+  [
+   1792256502,
+   3
   ]
  ],
  "followersInGame": [
   [
    1792249589,
    0
+  ],
+  [
+   1792256502,
+   1
   ]
  ]
 }

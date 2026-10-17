@@ -290,6 +290,58 @@
    "reviewScore": {
     "desc": "Overwhelmingly Positive",
     "score": 9
+   },
+   "store": {
+    "recommendations": 13952,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 1,
+    "achievements": 71,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Steam Trading Cards",
+     "Adjustable Text Size",
+     "Custom Volume Controls",
+     "Playable without Timed Input",
+     "Save Anytime",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Casual",
+     "Indie",
+     "Simulation",
+     "Strategy"
+    ],
+    "platforms": [
+     "mac",
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Japanese",
+     "Korean",
+     "Portuguese - Brazil",
+     "Simplified Chinese",
+     "Traditional Chinese",
+     "Estonian"
+    ],
+    "controller": null,
+    "age": null,
+    "price": 699,
+    "free": false,
+    "developers": [
+     "Mister Morris Games"
+    ],
+    "publishers": [
+     "Mister Morris Games"
+    ],
+    "website": null
    }
   },
   "2113850": {
@@ -431,6 +483,53 @@
    "reviewScore": {
     "desc": "Overwhelmingly Positive",
     "score": 9
+   },
+   "store": {
+    "recommendations": 15376,
+    "metacritic": 80,
+    "metacriticUrl": "https://www.metacritic.com/game/pc/spirit-city-lofi-sessions?ftag=MCD-06-10aaa1f",
+    "dlc": 6,
+    "achievements": 34,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Steam Trading Cards",
+     "Steam Cloud",
+     "Stats",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Casual",
+     "Indie",
+     "Simulation"
+    ],
+    "platforms": [
+     "mac",
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Simplified Chinese",
+     "Japanese",
+     "Korean",
+     "Portuguese - Brazil",
+     "Russian"
+    ],
+    "controller": null,
+    "age": null,
+    "price": 1199,
+    "free": false,
+    "developers": [
+     "Mooncube Games"
+    ],
+    "publishers": [
+     "Mooncube Games"
+    ],
+    "website": "https://lofigaming.com/games/spirit-city"
    }
   },
   "4030830": {
@@ -572,6 +671,59 @@
    "reviewScore": {
     "desc": "Very Positive",
     "score": 8
+   },
+   "store": {
+    "recommendations": 184,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 2,
+    "achievements": 18,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Custom Volume Controls",
+     "Mouse Only Option",
+     "Playable without Timed Input",
+     "Save Anytime",
+     "Surround Sound",
+     "Touch Only Option",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Casual",
+     "Indie",
+     "Simulation"
+    ],
+    "platforms": [
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Japanese",
+     "Korean",
+     "Polish",
+     "Simplified Chinese",
+     "Portuguese - Portugal",
+     "Russian",
+     "Ukrainian",
+     "Portuguese - Brazil"
+    ],
+    "controller": null,
+    "age": null,
+    "price": 899,
+    "free": false,
+    "developers": [
+     "Little Lantern"
+    ],
+    "publishers": [
+     "Little Lantern"
+    ],
+    "website": null
    }
   },
   "2060480": {
@@ -695,6 +847,42 @@
    "reviewScore": {
     "desc": "Overwhelmingly Positive",
     "score": 9
+   },
+   "store": {
+    "recommendations": 508,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 0,
+    "achievements": 51,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Steam Cloud",
+     "Stats",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Casual",
+     "Simulation"
+    ],
+    "platforms": [
+     "mac",
+     "windows"
+    ],
+    "languages": [
+     "English"
+    ],
+    "controller": null,
+    "age": null,
+    "price": 499,
+    "free": false,
+    "developers": [
+     "wormpod"
+    ],
+    "publishers": [
+     "wormpod"
+    ],
+    "website": null
    }
   },
   "3136330": {
@@ -836,6 +1024,56 @@
    "reviewScore": {
     "desc": "Very Positive",
     "score": 8
+   },
+   "store": {
+    "recommendations": 980,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 0,
+    "achievements": 75,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Casual",
+     "Indie",
+     "Early Access"
+    ],
+    "platforms": [
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Japanese",
+     "Korean",
+     "Polish",
+     "Portuguese - Portugal",
+     "Russian",
+     "Simplified Chinese",
+     "Spanish - Latin America",
+     "Turkish",
+     "Ukrainian",
+     "Portuguese - Brazil",
+     "Hungarian"
+    ],
+    "controller": null,
+    "age": null,
+    "price": 699,
+    "free": false,
+    "developers": [
+     "VuVuu"
+    ],
+    "publishers": [
+     "VuVuu"
+    ],
+    "website": null
    }
   },
   "3314340": {
@@ -977,6 +1215,65 @@
    "reviewScore": {
     "desc": "Overwhelmingly Positive",
     "score": 9
+   },
+   "store": {
+    "recommendations": 1588,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 3,
+    "achievements": 26,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Full controller support",
+     "Captions available",
+     "Camera Comfort",
+     "Custom Volume Controls",
+     "#category_playable_at_your_own_pace",
+     "Playable without Timed Input",
+     "DualShock Controller Support",
+     "DualShock Controller Support",
+     "Save Anytime",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Casual",
+     "Simulation",
+     "Early Access"
+    ],
+    "platforms": [
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "Spanish - Spain",
+     "French",
+     "Italian",
+     "Spanish - Latin America",
+     "Portuguese - Brazil",
+     "Portuguese - Portugal",
+     "German",
+     "Simplified Chinese",
+     "Traditional Chinese",
+     "Korean",
+     "Japanese",
+     "Polish",
+     "Russian",
+     "Turkish",
+     "Ukrainian"
+    ],
+    "controller": "full",
+    "age": null,
+    "price": 699,
+    "free": false,
+    "developers": [
+     "HeyNau"
+    ],
+    "publishers": [
+     "HeyNau"
+    ],
+    "website": null
    }
   },
   "4216670": {
@@ -1118,6 +1415,49 @@
    "reviewScore": {
     "desc": "Very Positive",
     "score": 8
+   },
+   "store": {
+    "recommendations": 428,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 0,
+    "achievements": 13,
+    "categories": [
+     "Single-player",
+     "Multi-player",
+     "Co-op",
+     "Online Co-op",
+     "Steam Achievements",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Casual",
+     "Indie",
+     "Simulation"
+    ],
+    "platforms": [
+     "mac",
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "Japanese",
+     "Simplified Chinese"
+    ],
+    "controller": null,
+    "age": null,
+    "price": 499,
+    "free": false,
+    "developers": [
+     "MilkwayStudio"
+    ],
+    "publishers": [
+     "MilkwayStudio",
+     " Irox Games",
+     " XD"
+    ],
+    "website": "https://api.xiaoheihe.cn/s/1001G7"
    }
   },
   "2943180": {
@@ -1259,6 +1599,63 @@
    "reviewScore": {
     "desc": "Overwhelmingly Positive",
     "score": 9
+   },
+   "store": {
+    "recommendations": 700,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 0,
+    "achievements": 27,
+    "categories": [
+     "Single-player",
+     "Multi-player",
+     "Co-op",
+     "Online Co-op",
+     "Steam Achievements",
+     "Steam Trading Cards",
+     "Custom Volume Controls",
+     "Playable without Timed Input",
+     "Save Anytime",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Casual",
+     "Simulation"
+    ],
+    "platforms": [
+     "linux",
+     "mac",
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "German",
+     "Spanish - Spain",
+     "Japanese",
+     "Korean",
+     "Portuguese - Portugal",
+     "Simplified Chinese",
+     "Turkish",
+     "Dutch",
+     "French",
+     "Norwegian",
+     "Italian",
+     "Portuguese - Brazil",
+     "Spanish - Latin America",
+     "Polish"
+    ],
+    "controller": null,
+    "age": null,
+    "price": 799,
+    "free": false,
+    "developers": [
+     "DU&I"
+    ],
+    "publishers": [
+     "DU&I"
+    ],
+    "website": null
    }
   }
  },
@@ -1296,12 +1693,20 @@
   [
    1792253360,
    3
+  ],
+  [
+   1792256460,
+   4
   ]
  ],
  "followersInGame": [
   [
    1792249563,
    1
+  ],
+  [
+   1792256460,
+   2
   ]
  ]
 }

@@ -1270,6 +1270,55 @@
    "reviewScore": {
     "desc": "Very Positive",
     "score": 8
+   },
+   "store": {
+    "recommendations": 7460,
+    "metacritic": 77,
+    "metacriticUrl": "https://www.metacritic.com/game/pc/sanctum-2?ftag=MCD-06-10aaa1f",
+    "dlc": 6,
+    "achievements": 50,
+    "categories": [
+     "Single-player",
+     "Multi-player",
+     "Co-op",
+     "Online Co-op",
+     "Steam Achievements",
+     "Full controller support",
+     "Steam Trading Cards",
+     "Steam Cloud",
+     "Steam Leaderboards",
+     "Remote Play on TV",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Action",
+     "Indie",
+     "Strategy"
+    ],
+    "platforms": [
+     "linux",
+     "mac",
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "German",
+     "French",
+     "Italian",
+     "Spanish - Spain",
+     "Russian"
+    ],
+    "controller": "full",
+    "age": null,
+    "price": 1499,
+    "free": false,
+    "developers": [
+     "Coffee Stain Studios"
+    ],
+    "publishers": [
+     "Coffee Stain Publishing"
+    ],
+    "website": null
    }
   },
   "1522820": {
@@ -1411,6 +1460,67 @@
    "reviewScore": {
     "desc": "Very Positive",
     "score": 8
+   },
+   "store": {
+    "recommendations": 10967,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 3,
+    "achievements": 38,
+    "categories": [
+     "Single-player",
+     "Multi-player",
+     "Co-op",
+     "Online Co-op",
+     "Steam Achievements",
+     "Full controller support",
+     "Steam Trading Cards",
+     "Steam Cloud",
+     "Steam Leaderboards",
+     "Remote Play on TV",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Action",
+     "Adventure",
+     "Indie",
+     "Strategy"
+    ],
+    "platforms": [
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Arabic",
+     "Czech",
+     "Danish",
+     "Finnish",
+     "Japanese",
+     "Korean",
+     "Norwegian",
+     "Polish",
+     "Portuguese - Portugal",
+     "Portuguese - Brazil",
+     "Russian",
+     "Simplified Chinese",
+     "Swedish",
+     "Turkish"
+    ],
+    "controller": "full",
+    "age": null,
+    "price": 2999,
+    "free": false,
+    "developers": [
+     "Robot Entertainment"
+    ],
+    "publishers": [
+     "Robot Entertainment"
+    ],
+    "website": "https://robotentertainment.com/omd3"
    }
   },
   "2902540": {
@@ -1540,6 +1650,50 @@
    "reviewScore": {
     "desc": "Overwhelmingly Positive",
     "score": 9
+   },
+   "store": {
+    "recommendations": 828,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 0,
+    "achievements": 12,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Steam Trading Cards",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Action"
+    ],
+    "platforms": [
+     "windows"
+    ],
+    "languages": [
+     "Simplified Chinese",
+     "English",
+     "French",
+     "German",
+     "Spanish - Spain",
+     "Japanese",
+     "Traditional Chinese",
+     "Portuguese - Brazil",
+     "Portuguese - Portugal",
+     "Spanish - Latin America",
+     "Korean"
+    ],
+    "controller": null,
+    "age": null,
+    "price": 299,
+    "free": false,
+    "developers": [
+     "Seal"
+    ],
+    "publishers": [
+     "Seal"
+    ],
+    "website": null
    }
   },
   "1269690": {
@@ -1681,6 +1835,62 @@
    "reviewScore": {
     "desc": "Very Positive",
     "score": 8
+   },
+   "store": {
+    "recommendations": 1164,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 1,
+    "achievements": 82,
+    "categories": [
+     "Single-player",
+     "Multi-player",
+     "PvP",
+     "LAN PvP",
+     "Shared/Split Screen PvP",
+     "Co-op",
+     "LAN Co-op",
+     "Shared/Split Screen Co-op",
+     "Shared/Split Screen",
+     "Steam Achievements",
+     "Steam Trading Cards",
+     "Steam Workshop",
+     "DualShock Controller Support",
+     "DualShock Controller Support",
+     "Partial Controller Support",
+     "Stats",
+     "Steam Leaderboards",
+     "Includes level editor",
+     "Remote Play Together",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Action",
+     "Adventure",
+     "Casual",
+     "Indie",
+     "RPG",
+     "Simulation",
+     "Strategy",
+     "Early Access"
+    ],
+    "platforms": [
+     "windows"
+    ],
+    "languages": [
+     "English"
+    ],
+    "controller": null,
+    "age": null,
+    "price": 699,
+    "free": false,
+    "developers": [
+     "N7T-GAMES"
+    ],
+    "publishers": [
+     "N7T-GAMES"
+    ],
+    "website": null
    }
   },
   "2239150": {
@@ -1816,12 +2026,64 @@
     },
     "2026-10-17": {
      "positive": 22968,
-     "negative": 939
+     "negative": 940
     }
    },
    "reviewScore": {
     "desc": "Overwhelmingly Positive",
     "score": 9
+   },
+   "store": {
+    "recommendations": 23169,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 1,
+    "achievements": 57,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Full controller support",
+     "Steam Cloud",
+     "Steam Leaderboards",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Action",
+     "Indie",
+     "Strategy"
+    ],
+    "platforms": [
+     "mac",
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "German",
+     "Spanish - Spain",
+     "Japanese",
+     "Polish",
+     "Portuguese - Brazil",
+     "Russian",
+     "Simplified Chinese",
+     "Turkish",
+     "Italian",
+     "Czech",
+     "Korean",
+     "Ukrainian"
+    ],
+    "controller": "full",
+    "age": null,
+    "price": 1299,
+    "free": false,
+    "developers": [
+     "GrizzlyGames",
+     "Mythwright"
+    ],
+    "publishers": [
+     "Mythwright"
+    ],
+    "website": null
    }
   },
   "2459550": {
@@ -1963,6 +2225,60 @@
    "reviewScore": {
     "desc": "Overwhelmingly Positive",
     "score": 9
+   },
+   "store": {
+    "recommendations": 4383,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 0,
+    "achievements": 100,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Full controller support",
+     "Steam Trading Cards",
+     "DualShock Controller Support",
+     "DualShock Controller Support",
+     "DualSense Controller Support",
+     "DualSense Controller Support",
+     "Steam Cloud",
+     "Steam Leaderboards",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Indie",
+     "Strategy",
+     "Free To Play"
+    ],
+    "platforms": [
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "Simplified Chinese",
+     "Japanese",
+     "Traditional Chinese",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Korean",
+     "Polish",
+     "Portuguese - Brazil",
+     "Russian",
+     "Spanish - Latin America"
+    ],
+    "controller": "full",
+    "age": null,
+    "price": 1999,
+    "free": false,
+    "developers": [
+     "Refic Games"
+    ],
+    "publishers": [
+     "Refic Games"
+    ],
+    "website": "https://www.reficgames.com/"
    }
   },
   "3976500": {
@@ -2104,6 +2420,63 @@
    "reviewScore": {
     "desc": "Very Positive",
     "score": 8
+   },
+   "store": {
+    "recommendations": 1842,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 0,
+    "achievements": 32,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Full controller support",
+     "DualShock Controller Support",
+     "DualShock Controller Support",
+     "DualSense Controller Support",
+     "DualSense Controller Support",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Action",
+     "Adventure",
+     "Indie",
+     "Simulation"
+    ],
+    "platforms": [
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Simplified Chinese",
+     "Korean",
+     "Polish",
+     "Portuguese - Brazil",
+     "Portuguese - Portugal",
+     "Russian",
+     "Turkish",
+     "Japanese",
+     "Traditional Chinese",
+     "Ukrainian",
+     "Serbian"
+    ],
+    "controller": "full",
+    "age": null,
+    "price": 1299,
+    "free": false,
+    "developers": [
+     "Puppyroar Games"
+    ],
+    "publishers": [
+     "Forklift Interactive",
+     "Gamersky Games"
+    ],
+    "website": "https://discord.gg/UHj5XEHDZb"
    }
   }
  },
@@ -2115,6 +2488,10 @@
   [
    1792249539,
    26
+  ],
+  [
+   1792256416,
+   30
   ]
  ],
  "followersInGame": [

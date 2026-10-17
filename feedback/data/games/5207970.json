@@ -5,7 +5,7 @@
  "watermarks": {
   "forums": {
    "0": 0,
-   "event:18446744073709551615": 1791992908
+   "event:18446744073709551615": 1792244855
   }
  },
  "items": {
@@ -42,6 +42,23 @@
    "dev": true,
    "versions": [],
    "pending": false
+  },
+  "t564796840407569750": {
+   "id": "t564796840407569750",
+   "kind": "topic",
+   "url": "https://steamcommunity.com/app/5207970/eventcomments/564796840407569750/",
+   "author": {
+    "id": null,
+    "name": null
+   },
+   "created": 1792244855,
+   "updated": 1792244855,
+   "text": "View full event information here:\nhttps://steamcommunity.com/ogg/5207970/announcements/detail/669505296465396846",
+   "title": "The Pomo Valley demo is out now!",
+   "forum": "Events & Announcements",
+   "dev": true,
+   "versions": [],
+   "pending": false
   }
  },
  "issues": {},
@@ -57,6 +74,11 @@
   },
   "564796605131194911": {
    "lastPost": 1791992908,
+   "replies": 0,
+   "forum": "Events & Announcements"
+  },
+  "564796840407569750": {
+   "lastPost": 1792244855,
    "replies": 0,
    "forum": "Events & Announcements"
   }

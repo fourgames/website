@@ -17,6 +17,9 @@ import status
 import steam
 
 KEY = os.environ.get("STEAM_FINANCIAL_KEY", "").strip()
+# Bumped when a day's totals gain something: every day is then read again once (Steam only lists the
+# days that changed since the high-water mark, so old days would never get it otherwise).
+VERSION = 2  # 2: the per-day breakdown (platforms, types, packages, sales, currencies)
 BASE = "https://partner.steam-api.com/IPartnerFinancialsService"
 
 
@@ -36,7 +39,7 @@ def _usd(v):
 
 def fetch_day(date):
     """{appId: totals} for one Pacific-time date, plus {appId: name}."""
-    rows, names, discounts = [], {}, {}
+    rows, names, discounts, labels = [], {}, {}, {"packages": {}, "bundles": {}, "sales": {}, "items": {}}
     mark = "0"
     while True:
         res = steam.request(f"{BASE}/GetDetailedSales/v001/", params={"key": KEY, "date": date, "highwatermark_id": mark})
@@ -46,6 +49,14 @@ def fetch_day(date):
             names[_int(a.get("appid"))] = a.get("app_name")
         for d in res.get("combined_discount_info") or []:
             discounts[_int(d.get("combined_discount_id"))] = _int(d.get("total_discount_percentage"))
+            if d.get("combined_discount_name"):
+                labels["sales"][str(_int(d.get("combined_discount_id")))] = d["combined_discount_name"]
+        for key, block, id_key, name_key in (("packages", "package_info", "packageid", "package_name"),
+                                             ("bundles", "bundle_info", "bundleid", "bundle_name"),
+                                             ("items", "game_item_info", "game_item_id", "game_item_description")):
+            for d in res.get(block) or []:
+                if d.get(name_key):
+                    labels[key][str(_int(d.get(id_key)))] = d[name_key]
         new_mark = str(res.get("max_id") or mark)
         if new_mark == mark or not res.get("results"):
             break
@@ -57,7 +68,10 @@ def fetch_day(date):
         if r.get("package_sale_type") == "Retail":
             app = _int(r.get("primary_appid")) or _int(r.get("appid"))
             if app:
-                apps.setdefault(app, _empty())["activations"] += _int(r.get("gross_units_activated"))
+                t = apps.setdefault(app, _empty())
+                t["activations"] += _int(r.get("gross_units_activated"))
+                # Where the keys were activated.
+                _add(t["breakdown"], "activationCountries", r.get("country_code") or "??", 0, _int(r.get("gross_units_activated")))
             continue
         # Packages are credited to their primary app (the base game for a DLC, per Valve's revenue-share
         # mapping); in-game purchases carry their app directly.
@@ -79,25 +93,56 @@ def fetch_day(date):
         discount = discounts.get(_int(r.get("combined_discount_id")), 0)
         if discount and _int(r.get("gross_units_sold")):
             t["discount"] = max(t["discount"], discount)
-    return {app: _round(t) for app, t in apps.items()}, names
+        # The same net revenue and units split other ways, for the dashboard's More data: Windows/Mac/
+        # Linux, game/DLC/bundle/in-game item, which package, which sale, full price or discounted,
+        # the buyer's currency.
+        units = _int(r.get("net_units_sold"))
+        b = t["breakdown"]
+        _add(b, "platforms", r.get("platform") or "Unknown", net, units)
+        _add(b, "types", r.get("line_item_type") or "Unknown", net, units)
+        if _int(r.get("packageid")):
+            _add(b, "packages", str(_int(r.get("packageid"))), net, units)
+        if _int(r.get("bundleid")):
+            _add(b, "bundles", str(_int(r.get("bundleid"))), net, units)
+        if _int(r.get("game_item_id")):
+            _add(b, "items", str(_int(r.get("game_item_id"))), net, units)
+        _add(b, "sales", str(_int(r.get("combined_discount_id"))) if discount else "full price", net, units)
+        if r.get("currency"):
+            _add(b, "currencies", r["currency"], net, units)
+        _add(b, "countryReturns", cc, -_usd(r.get("gross_returns_usd")), -_int(r.get("gross_units_returned")))
+    return {app: _round(t) for app, t in apps.items()}, names, labels
+
+
+def _add(breakdown, kind, key, net, units):
+    c = breakdown.setdefault(kind, {}).setdefault(key, [Decimal(0), 0])
+    c[0] += net
+    c[1] += units
 
 
 def _empty():
     return {"gross": Decimal(0), "returns": Decimal(0), "tax": Decimal(0), "net": Decimal(0), "units": 0,
-            "returnedUnits": 0, "activations": 0, "discount": 0, "countries": {}}
+            "returnedUnits": 0, "activations": 0, "discount": 0, "countries": {}, "breakdown": {}}
+
+
+def _pairs(d):
+    return {k: [round(float(n), 2), u] for k, (n, u) in sorted(d.items()) if n or u}
 
 
 def _round(t):
-    out = {k: (round(float(v), 2) if isinstance(v, Decimal) else v) for k, v in t.items() if k != "countries"}
-    out["countries"] = {cc: [round(float(n), 2), u] for cc, (n, u) in sorted(t["countries"].items())}
+    out = {k: (round(float(v), 2) if isinstance(v, Decimal) else v) for k, v in t.items() if k not in ("countries", "breakdown")}
+    out["countries"] = _pairs(t["countries"])
+    out["breakdown"] = {kind: v for kind, d in sorted(t["breakdown"].items()) if (v := _pairs(d))}
     return {k: v for k, v in out.items() if v not in (0, 0.0, {})}
 
 
 def sync(sales):
-    """Updates `sales` in place ({highwatermark, days: {date: {appId: totals}}, apps: {appId: name}})."""
+    """Updates `sales` in place ({highwatermark, days: {date: {appId: totals}}, apps: {appId: name},
+    names: {packages|bundles|sales|items: {id: name}}})."""
     if not KEY:
         status.fail("sales", "No STEAM_FINANCIAL_KEY secret: make a Financial API Group in Steamworks and add its key.")
         return False
+    if sales.get("version", 1) < VERSION:
+        sales["highwatermark"] = "0"
     try:
         res = steam.request(f"{BASE}/GetChangedDatesForPartner/v001/", params={"key": KEY, "highwatermark": sales.get("highwatermark", "0")})
     except steam.HttpError as error:
@@ -116,7 +161,7 @@ def sync(sales):
         return True
     for date in dates:
         try:
-            day, names = fetch_day(date)
+            day, names, labels = fetch_day(date)
         except steam.HttpError as error:
             print(f"[sales] {date}: {error}; trying again next run")
             status.fail("sales", f"Steam's sales API failed ({error}).")
@@ -127,10 +172,14 @@ def sync(sales):
         else:
             sales["days"].pop(key, None)
         sales["apps"].update({str(app): name for app, name in names.items() if app and name})
+        # Names for the ids in each day's breakdown (packages, bundles, sales, in-game items).
+        for kind, found in labels.items():
+            sales.setdefault("names", {}).setdefault(kind, {}).update(found)
         time.sleep(0.3)
     # Only move the mark once every changed day is rebuilt (an error above returns early), or a
     # failure would skip days for good.
     sales["highwatermark"] = str(res.get("result_highwatermark") or sales.get("highwatermark", "0"))
+    sales["version"] = VERSION
     sales["days"] = dict(sorted(sales["days"].items()))
     status.ok("sales")
     return True

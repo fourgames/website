@@ -316,6 +316,8 @@ def collect_twitch(media, game, found):
         item["viewers"] = s.get("viewer_count", 0)
         item["peak"] = max(item.get("peak", 0), item["viewers"])
         item["thumb"] = (s.get("thumbnail_url") or "").replace("{width}", "440").replace("{height}", "248") or None
+        item["tags"] = (s.get("tags") or [])[:10]
+        item["mature"] = bool(s.get("is_mature"))
         item["live"] = True
         item["end"] = t
     live = {f"tw{s['id']}" for s in streams}
@@ -323,7 +325,46 @@ def collect_twitch(media, game, found):
         if item["source"] == "twitch" and item.get("live") and item["id"] not in live and t - item["end"] >= STREAM_GONE:
             item["live"] = False
             item.pop("viewers", None)
+    if _due("twitch-clips", app_id, 3600):
+        try:
+            twitch_clips_and_videos(tw, category["id"])
+            _ran("twitch-clips", app_id)
+        except HttpError as error:
+            print(f"[twitch] {game['name']} clips: {error}")
     return True
+
+
+CLIP_DAYS = 30  # clips and VODs of the game are kept this long after they're made
+
+
+def twitch_clips_and_videos(tw, category_id):
+    """Clips and VODs of the game's category: they stay after a stream ends, with their views, so a
+    stream nobody saw live still shows what came of it. Hourly, kept CLIP_DAYS, the most viewed 50."""
+    cutoff = now() - CLIP_DAYS * 86400
+    since = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(cutoff))
+    clips = tw.setdefault("clips", {})
+    for c in twitch("clips", {"game_id": category_id, "started_at": since, "first": 50}).get("data") or []:
+        clips[c["id"]] = {
+            "url": c.get("url"), "title": _clip(c.get("title"), 200), "author": c.get("broadcaster_name"),
+            "by": c.get("creator_name"), "views": c.get("view_count", 0), "at": iso_time(c.get("created_at")),
+            "duration": round(c.get("duration") or 0), "thumb": c.get("thumbnail_url"), "lang": c.get("language"),
+        }
+    videos = tw.setdefault("videos", {})
+    for v in twitch("videos", {"game_id": category_id, "sort": "time", "first": 50}).get("data") or []:
+        videos[v["id"]] = {
+            "url": v.get("url"), "title": _clip(v.get("title"), 200), "author": v.get("user_name"),
+            "views": v.get("view_count", 0), "at": iso_time(v.get("created_at")), "duration": _twitch_duration(v.get("duration")),
+            "type": v.get("type"), "lang": v.get("language"),
+            "thumb": (v.get("thumbnail_url") or "").replace("%{width}", "440").replace("%{height}", "248") or None,
+        }
+    for key in ("clips", "videos"):
+        kept = sorted(((k, v) for k, v in tw[key].items() if (v.get("at") or 0) >= cutoff), key=lambda kv: -kv[1]["views"])
+        tw[key] = dict(kept[:50])
+
+
+def _twitch_duration(text):
+    m = re.fullmatch(r"(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?", text or "")
+    return sum(int(v or 0) * s for v, s in zip(m.groups(), (3600, 60, 1))) if m else None
 
 
 # ---------------------------------------------------------------------------
@@ -349,6 +390,15 @@ def _video_stats(item, v):
     item["live"] = live == "live"
     item["upcoming"] = live == "upcoming"
     details = v.get("liveStreamingDetails") or {}
+    sn, cd = v.get("snippet") or {}, v.get("contentDetails") or {}
+    item["tags"] = (sn.get("tags") or [])[:15]
+    item["topics"] = [t.rsplit("/", 1)[-1].replace("_", " ") for t in (v.get("topicDetails") or {}).get("topicCategories") or []]
+    item["hd"] = cd.get("definition") == "hd"
+    item["captions"] = cd.get("caption") == "true"
+    item["kids"] = bool((v.get("status") or {}).get("madeForKids"))
+    for key, field in (("scheduled", "scheduledStartTime"), ("started", "actualStartTime"), ("ended", "actualEndTime")):
+        if details.get(field):
+            item[key] = iso_time(details[field])
     if details.get("concurrentViewers"):
         item["viewers"] = int(details["concurrentViewers"])
         item["peak"] = max(item.get("peak", 0), item["viewers"])
@@ -393,7 +443,7 @@ def collect_youtube(media, game, found, games):
     videos = {}
     ids = new_ids + [v for v in recent if v not in new_ids]
     for start in range(0, len(ids), 50):
-        for v in youtube("videos", {"part": "snippet,statistics,contentDetails,liveStreamingDetails", "id": ",".join(ids[start:start + 50])}).get("items") or []:
+        for v in youtube("videos", {"part": "snippet,statistics,contentDetails,liveStreamingDetails,topicDetails,status", "id": ",".join(ids[start:start + 50])}).get("items") or []:
             videos[v["id"]] = v
     new = []
     for vid in new_ids:
@@ -427,14 +477,41 @@ def collect_youtube(media, game, found, games):
             continue
         item["category"] = (v.get("snippet") or {}).get("categoryId")
         _video_stats(item, v)
-    # Each new channel's size, in one call.
-    channels = list(dict.fromkeys(items[k]["channelId"] for k in new if items[k].get("channelId")))
-    if channels:
-        subs = {c["id"]: c.get("statistics") or {} for c in youtube("channels", {"part": "statistics", "id": ",".join(channels[:50])}).get("items") or []}
-        for k in new:
-            s = subs.get(items[k].get("channelId")) or {}
-            if not s.get("hiddenSubscriberCount") and "subscriberCount" in s:
-                items[k]["subscribers"] = int(s["subscriberCount"])
+    # Each channel's size and where it's from, for new videos and the ones still refreshed, 50 a call
+    # (1 unit each).
+    fresh = new + [f"yt{v}" for v in recent if f"yt{v}" in items]
+    channels = list(dict.fromkeys(items[k]["channelId"] for k in fresh if items[k].get("channelId")))
+    info = {}
+    for start in range(0, len(channels), 50):
+        for c in youtube("channels", {"part": "statistics,snippet", "id": ",".join(channels[start:start + 50])}).get("items") or []:
+            info[c["id"]] = c
+    for k in fresh:
+        c = info.get(items[k].get("channelId"))
+        if not c:
+            continue
+        st, sn = c.get("statistics") or {}, c.get("snippet") or {}
+        if not st.get("hiddenSubscriberCount") and "subscriberCount" in st:
+            items[k]["subscribers"] = int(st["subscriberCount"])
+        items[k]["channel"] = {
+            "country": sn.get("country"), "handle": sn.get("customUrl"),
+            "videos": int(st.get("videoCount", 0)), "views": int(st.get("viewCount", 0)),
+            "since": iso_time(sn.get("publishedAt")), "avatar": ((sn.get("thumbnails") or {}).get("default") or {}).get("url"),
+        }
+    # What people say under the videos: the top comments, read again when the count changes (1 unit).
+    for k in fresh:
+        item = items[k]
+        if not item.get("comments") or item.get("topCommentsAt") == item["comments"]:
+            continue
+        try:
+            threads = youtube("commentThreads", {"part": "snippet", "videoId": k[2:], "order": "relevance", "maxResults": 5, "textFormat": "plainText"}).get("items") or []
+        except HttpError:
+            continue  # comments turned off
+        item["topComments"] = [
+            {"author": c.get("authorDisplayName"), "text": _clip(c.get("textDisplay"), 300), "likes": c.get("likeCount", 0),
+             "at": iso_time(c.get("publishedAt")), "replies": (t.get("snippet") or {}).get("totalReplyCount", 0)}
+            for t in threads if (c := ((t.get("snippet") or {}).get("topLevelComment") or {}).get("snippet"))
+        ]
+        item["topCommentsAt"] = item["comments"]
     if new:
         status.active("youtube", "new video")
     found.extend(new)

@@ -115,6 +115,24 @@ async function loadCleared() {
 // Steam's sales for every game (feedback/sales.py), one file; kept as it was if it can't be read.
 async function loadSales() {
   try { state.sales = await getJson("sales.json"); } catch {}
+  try { state.wishlists = await getJson("wishlists.json"); } catch {}
+}
+
+// The game's wishlist days (feedback/wishlists.py), oldest first: [[date, {adds, deletes, purchases,
+// gifts, …}]], and the running balance (wishlists still on players' lists) at the end of each day.
+function wishlistDays() {
+  return Object.entries(state.wishlists?.apps?.[state.game.appId]?.days || {}).sort(([a], [b]) => a.localeCompare(b));
+}
+const wishNet = (d) => (d.adds || 0) - (d.deletes || 0) - (d.purchases || 0) - (d.gifts || 0);
+function wishlistBalance() {
+  let total = 0;
+  return wishlistDays().map(([d, v]) => [dayTime(d) + DAY / 2, (total += wishNet(v))]);
+}
+// While older days are still being filled in, the balance only counts from the oldest one read.
+function wishlistPartial() {
+  const w = state.wishlists?.apps?.[state.game.appId];
+  const first = wishlistDays()[0]?.[0];
+  return w?.minDate && first && first > w.minDate ? first : null;
 }
 
 const clearedEntry = (issue) => state.cleared?.[state.game.appId]?.[issue.id] || null;
@@ -323,6 +341,7 @@ const ICONS = {
   competitors: "M3 3v18h18M7 15l4-4 3 3 6-6",
   sales: "M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6",
   curators: "M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01z",
+  more: "M3 5c0-1.7 4-3 9-3s9 1.3 9 3-4 3-9 3-9-1.3-9-3zM3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5M3 12c0 1.7 4 3 9 3s9-1.3 9-3",
   media: "M4.9 19.1C1 15.2 1 8.8 4.9 4.9M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5M19.1 4.9C23 8.8 23 15.1 19.1 19M14 12a2 2 0 1 1-4 0 2 2 0 0 1 4 0",
 };
 function icon(name) {
@@ -458,6 +477,7 @@ const SERVICES = {
   steam: ["Steam", "Reviews, players in game, store pages and update posts", "no new data yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
   forums: ["Discussions", "Threads, replies and comments on your announcements", "no new posts yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
   sales: ["Sales", "Revenue, units, refunds and countries per day, hourly (feedback/sales.py)", "no sales data yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets", "https://partner.steamgames.com/pub/groups/"],
+  wishlists: ["Wishlists", "Wishlist adds, deletes and purchases per day, by country, language and platform, hourly (feedback/wishlists.py)", "no wishlist data yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets", "https://partner.steamgames.com/pub/groups/"],
   claude: ["Claude", "Translates posts, sorts them into bugs and ideas, matches patch notes", "nothing sorted yet", "https://platform.claude.com/settings/billing", "Add credit"],
   discord: ["Discord", "Pings you for new negative reviews and bug reports, urgent issues, flipped reviews and shared complaints", "no alerts sent yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
   // Media (feedback/media.py). The last entry: where the key a missing secret needs is made.
@@ -617,7 +637,7 @@ function renderStatus() {
   const kindOf = (key) => { const s = status[key]; return !s || s.ok === undefined ? "idle" : s.ok ? "ok" : "bad"; };
   const brandMark = (key) => {
     const mark = svgEl("svg", { viewBox: "0 0 24 24", class: "svc-mark", "aria-hidden": "true", fill: "currentColor" });
-    mark.append(svgEl("path", { d: BRAND[key === "forums" || key === "sales" ? "steam" : key], "fill-rule": key === "news" ? "evenodd" : "nonzero" }));
+    mark.append(svgEl("path", { d: BRAND[key === "forums" || key === "sales" || key === "wishlists" ? "steam" : key], "fill-rule": key === "news" ? "evenodd" : "nonzero" }));
     return mark;
   };
   const STATE = { ok: "Working", bad: "Needs attention", idle: "Unknown" };
@@ -827,6 +847,7 @@ function renderStats() {
       ? tile("Discord", state.index.discord.members.at(-1)[1], [`${state.index.discord.online?.at(-1)?.[1] ?? 0} online`],
         daily(14, (d) => playersAt(state.index.discord.members, d + DAY - 1) ?? 0), "#5865f2", "discord")
       : null,
+    wishlists: wishlistDays().length ? wishlistTile(tile) : null,
     revenue: salesDays().length ? tile("Gross all time", usd(grossAll), `${usd(revenue.slice(-7).reduce((a, b) => a + b, 0))} in the last 7 days`, revenue, "var(--fb-positive)") : null,
     bugs: tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent", openBugsPerDay, "var(--type-bug)"),
     posts: tile("New posts", fresh.length, "last 24 h", postsPerDay),
@@ -835,7 +856,7 @@ function renderStats() {
   // players, reviews, money and bugs. The rest waits behind "+ more" (remembered), and the card
   // whose chart is open stays out either way.
   const upcoming = g.meta?.status === "upcoming";
-  const main = upcoming ? ["demo", "followers", "discord", "bugs"] : ["players", "reviews", "revenue", "bugs"];
+  const main = upcoming ? ["demo", "wishlists", "followers", "bugs"] : ["players", "reviews", "wishlists", "revenue", "bugs"];
   const more = store.get("kpis-more") === "1";
   const extra = Object.keys(cards).filter((k) => !main.includes(k) && cards[k]);
   const shown = Object.keys(cards).filter((k) => cards[k] && (more || main.includes(k) || k === state.expanded));
@@ -897,6 +918,13 @@ function statHeader(which) {
     return [stat(current, unit), stat(since(7), "last 7 days"), stat(since(30), "last 30 days")];
   };
   if (which === "followers") return h("div.stat-header", ...growth(g.followers || [], "followers on Steam"));
+  if (which === "wishlists") {
+    const days = wishlistDays(), sum = (k, n) => days.slice(-n).reduce((a, [, v]) => a + (v[k] || 0), 0);
+    const adds = sum("adds", Infinity), bought = sum("purchases", Infinity) + sum("gifts", Infinity);
+    return h("div.stat-header", ...growth(wishlistBalance(), "wishlists"),
+      stat(`+${sum("adds", 7)} / −${sum("deletes", 7)}`, "added / removed, last 7 days"),
+      stat(bought, `bought or gifted from a wishlist${adds ? ` (${Math.round((bought / adds) * 100)}% of adds)` : ""}`));
+  }
   if (which === "discord") {
     const online = state.index.discord?.online || [];
     return h("div.stat-header", ...growth(state.index.discord?.members || [], "Discord members"), stat(online.length ? online[online.length - 1][1] : 0, "online now"));
@@ -923,12 +951,12 @@ function chartPanel(which) {
     // Never before the game's release (nothing to show there): "All" starts at the oldest data or
     // the release, whichever is later; the fixed ranges are cut at the release too.
     // Followers and Discord count from before the release too (that's when wishlists build up).
-    const own = { followers: state.game.followers, discord: state.index.discord?.members, demo: state.game.demoPlayers || [] }[which];
+    const own = { followers: state.game.followers, discord: state.index.discord?.members, demo: state.game.demoPlayers || [], wishlists: wishlistBalance() }[which];
     const released = own ? 0 : state.game.meta?.released || 0;
     const oldest = Math.min(end - DAY, ...(own || []).map((p) => p[0]), ...(own ? [] : [...(state.game.players || []).map((p) => p[0]), ...items().map((i) => i.created)]));
     const start = Math.min(end - DAY, Math.max(released, f.range ? end - f.range * DAY : oldest));
     const releases = markers(start, end);
-    body.replaceChildren({ players: playersChart, demo: demoChart, reviews: reviewsChart, followers: followersChart, discord: discordChart }[which](start, end, releases));
+    body.replaceChildren({ players: playersChart, demo: demoChart, reviews: reviewsChart, followers: followersChart, discord: discordChart, wishlists: wishlistsChart }[which](start, end, releases));
   };
   const range = chips([[2, "48h"], [7, "1w"], [30, "1m"], [90, "3m"], [180, "6m"], [365, "1y"], [0, "max"]], f.range, (v) => { f.range = v; draw(); }, "Zoom");
   wrap.append(h("div.filters", h("span.zoom-label", "Zoom"), range), body);
@@ -945,7 +973,7 @@ const NAV = [
   ["Players", [["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["feed", "All posts"]]],
   ["Game", [["updates", "Updates"], ["achievements", "Achievements"], ["media", "Media"], ["curators", "Curators"]]],
   ["Business", [["sales", "Sales"], ["bundles", "Bundles"], ["competitors", "Competitors"]]],
-  ["Later", [["soon", "Coming soon"]]],
+  ["Later", [["more", "More data"], ["soon", "Coming soon"]]],
 ];
 
 // A view's explanation, folded away so the view itself comes first; one click opens it.
@@ -988,7 +1016,7 @@ function render() {
   document.getElementById("fb-nav-side").replaceChildren(...NAV.flatMap(([group, tabs]) => [...(group ? [h("div.nav-group", group)] : []), ...tabs.map(button)]));
   document.getElementById("fb-nav-top").replaceChildren(...NAV.flatMap(([, tabs], i) => [...(i ? [h("span.nav-gap")] : []), ...tabs.map(button)]));
   setHash();
-  const view = { issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, updates: updatesView, media: mediaView, achievements: achievementsView, curators: curatorsView, bundles: bundlesView, competitors: competitorsView, sales: salesView, soon: soonView, feed: feedView }[state.tab]();
+  const view = { issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, updates: updatesView, media: mediaView, achievements: achievementsView, curators: curatorsView, bundles: bundlesView, competitors: competitorsView, sales: salesView, soon: soonView, more: moreView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
 
@@ -1420,6 +1448,202 @@ function soonView() {
       h("p.ov-calm", h("b", "Needs: "), idea.needs, idea.link ? [" ", h("a", { href: idea.link[0], target: "_blank", rel: "noopener" }, idea.link[1], " ↗")] : null))));
 }
 
+// Everything else the collector keeps, by topic, each folded away: numbers that aren't worth a view
+// of their own yet but might be one day. Each section says where its data comes from.
+function moreView() {
+  const sections = [moreWishlists(), moreReviews(), moreStore(), moreCommunity(), moreUpdates(), moreSales(), moreMedia(), moreCompetitors(), moreClaude()].filter(Boolean);
+  return h("div",
+    about("Everything else the collector saves that has no view of its own: open a topic to see it. All of it comes from the same runs as the rest of the dashboard."),
+    sections.length ? sections : h("p.empty", "Nothing extra collected for this game yet."));
+}
+const moreSection = (title, hint, ...kids) => h("details.card.more", h("summary", h("b", title), hint ? h("span.meta", " · " + hint) : null), ...kids);
+const kvTable = (rows) => h("table.data", ...rows.filter(([, v]) => v != null && v !== "" && !(Array.isArray(v) && !v.length))
+  .map(([k, v]) => h("tr", h("th", k), h("td", Array.isArray(v) ? v.join(", ") : v))));
+const share = (n, d) => d ? `${Math.round((n / d) * 100)}%` : "–";
+// A breakdown as rows with a share bar: [[label, value, extra]] biggest first.
+// The 15 biggest; the share still counts all of them.
+function shareTable(head, rows, fmt = (v) => v) {
+  const total = rows.reduce((a, [, v]) => a + Math.max(0, v), 0);
+  return h("table.data.share", h("tr", ...head.map((x) => h("th", x))),
+    ...rows.sort((a, b) => b[1] - a[1]).slice(0, 15).map(([label, v, extra]) => h("tr", h("td", label), h("td", fmt(v)),
+      h("td", h("span.share-bar", { style: `width:${total ? Math.max(2, Math.round((Math.max(0, v) / total) * 80)) : 0}px` }), " ", share(Math.max(0, v), total)),
+      extra != null ? h("td", extra) : null)));
+}
+
+function moreWishlists() {
+  const days = wishlistDays();
+  if (!days.length) return null;
+  const sum = { adds: 0, deletes: 0, purchases: 0, gifts: 0, windows: 0, mac: 0, linux: 0 }, countries = {}, languages = {};
+  for (const [, v] of days) {
+    for (const k of Object.keys(sum)) sum[k] += v[k] || 0;
+    for (const [into, from] of [[countries, v.countries], [languages, v.languages]])
+      for (const [k, a] of Object.entries(from || {})) { const r = (into[k] ||= [0, 0, 0, 0]); a.forEach((n, i) => { r[i] += n; }); }
+  }
+  let regions = null;
+  try { regions = new Intl.DisplayNames(["en"], { type: "region" }); } catch {}
+  const rows = (o, name) => Object.entries(o).map(([k, [a, d, p, g]]) => [name(k), a - d - p - g, `+${a} −${d} · ${p + g} bought`]);
+  const partial = wishlistPartial();
+  return moreSection("Wishlists", `Steam's daily wishlist report, ${partial ? `from ${fmtDate(dayTime(partial))} (older days still filling in)` : "all days"}`,
+    kvTable([
+      ["Added", sum.adds.toLocaleString("en-US")], ["Removed", sum.deletes.toLocaleString("en-US")],
+      ["Bought from a wishlist", sum.purchases.toLocaleString("en-US")], ["Gifted", sum.gifts.toLocaleString("en-US")],
+      ["Kept", sum.adds ? share(sum.adds - sum.deletes, sum.adds) + " of adds weren't removed" : null],
+    ]),
+    h("h4", "Where players added it from"), shareTable(["Platform", "Adds", "Share"], [["Windows", sum.windows], ["Mac", sum.mac], ["Linux", sum.linux]].filter(([, n]) => n)),
+    Object.keys(countries).length ? [h("h4", "By country (still wishlisted)"), shareTable(["Country", "Wishlists", "Share", "Activity"], rows(countries, (k) => regions?.of(k) || k))] : null,
+    Object.keys(languages).length ? [h("h4", "By store language (still wishlisted)"), shareTable(["Language", "Wishlists", "Share", "Activity"], rows(languages, (k) => k))] : null);
+}
+
+function moreReviews() {
+  const reviews = items().filter((i) => i.kind === "review" && !i.dev);
+  if (!reviews.length) return null;
+  const pos = reviews.filter((r) => r.votedUp), neg = reviews.filter((r) => !r.votedUp);
+  const month = reviews.filter((r) => r.created > now() - 30 * DAY);
+  const hours = (list) => list.length ? `${Math.round(median(list.map((r) => r.playtime || 0)) * 10) / 10} h` : "–";
+  const totals = Object.entries(state.game.reviewTotals || {}).sort().at(-1)?.[1];
+  const helpful = reviews.filter((r) => r.votesUp || r.votesFunny || r.comments).sort((a, b) => (b.helpfulness || 0) - (a.helpfulness || 0) || b.votesUp - a.votesUp).slice(0, 5);
+  return moreSection("Reviews", "from Steam's review data, refreshed hourly",
+    kvTable([
+      ["Steam's rating", totals?.desc ? `${totals.desc}${totals.score ? ` (${totals.score}/9)` : ""}` : null],
+      ["Last 30 days", month.length ? `${share(month.filter((r) => r.votedUp).length, month.length)} positive of ${plural(month.length, "review")}` : "no reviews"],
+      ["Median hours at review", `${hours(pos)} positive · ${hours(neg)} negative`],
+      ["Negative under 2 h", `${neg.filter((r) => (r.playtime || 0) < 2).length} of ${neg.length} (inside Steam's refund window)`],
+      ["Still playing", `${reviews.filter((r) => r.playtimeRecent).length} of ${reviews.length} played in the last two weeks (${pos.filter((r) => r.playtimeRecent).length} positive, ${neg.filter((r) => r.playtimeRecent).length} negative)`],
+      ["Played more since", `${reviews.filter((r) => (r.playtimeForever || 0) > (r.playtime || 0) + 0.5).length} kept playing after reviewing`],
+      ["Steam Deck", `${reviews.filter((r) => r.deck).length} mostly on Deck`],
+      ["Bought on Steam", `${reviews.filter((r) => r.steamPurchase).length} · key ${reviews.filter((r) => r.steamPurchase === false && !r.receivedForFree).length} · free ${reviews.filter((r) => r.receivedForFree).length}`],
+      ["Early Access", reviews.some((r) => r.earlyAccess) ? `${reviews.filter((r) => r.earlyAccess).length} written in Early Access` : null],
+      ["Refunded", reviews.some((r) => "refunded" in r) ? `${reviews.filter((r) => r.refunded).length} refunded after reviewing` : null],
+      ["Replies under reviews", plural(reviews.reduce((a, r) => a + (r.comments || 0), 0), "comment")],
+    ]),
+    helpful.length ? [h("h4", "Most helpful"), ...helpful.map((r) => h("div.more-line",
+      h("a", { href: r.url, target: "_blank", rel: "noopener" }, r.votedUp ? "👍 " : "👎 ", (r.triage?.summary || r.text || "").slice(0, 120)),
+      h("span.meta", ` · ${r.votesUp || 0} helpful · ${r.votesFunny || 0} funny · ${plural(r.comments || 0, "comment")}`)))] : null);
+}
+
+function moreStore() {
+  const d = state.game.meta?.details;
+  if (!d) return null;
+  return moreSection("Store page", "from Steam's store data, every run",
+    kvTable([
+      ["Recommendations", d.recommendations?.toLocaleString("en-US")],
+      ["Metacritic", d.metacritic ? h("a", { href: d.metacriticUrl, target: "_blank", rel: "noopener" }, d.metacritic, " ↗") : null],
+      ["Price", d.free ? "Free" : d.price != null ? usd(d.price / 100, 2) : null],
+      ["DLC", d.dlc || null],
+      ["Achievements", d.achievements],
+      ["Genres", d.genres],
+      ["Features", (d.categories || []).filter((c) => !c.startsWith("#"))],
+      ["Platforms", d.platforms],
+      ["Controller", d.controller],
+      ["Languages", d.languages?.length ? `${d.languages.length}: ${d.languages.join(", ")}` : null],
+      ["Age rating", d.age],
+      ["Developer", d.developers], ["Publisher", d.publishers],
+      ["Website", d.website ? h("a", { href: d.website, target: "_blank", rel: "noopener" }, d.website) : null],
+    ]));
+}
+
+function moreCommunity() {
+  const online = state.game.followersOnline || [], inGame = state.game.followersInGame || [];
+  const invite = state.index.discord?.invite;
+  if (!online.length && !inGame.length && !invite) return null;
+  const peak = (series, days) => Math.max(0, ...series.filter(([t]) => t > now() - days * DAY).map(([, v]) => v));
+  return moreSection("Community", "followers on Steam, hourly",
+    kvTable([
+      ["Followers online now", online.at(-1)?.[1]],
+      ["Most online, 7 days", online.length ? peak(online, 7) : null],
+      ["Followers in the game now", inGame.at(-1)?.[1]],
+      ["Most in the game, 7 days", inGame.length ? peak(inGame, 7) : null],
+      ["Discord invite", invite ? h("a", { href: invite.startsWith("http") ? invite : `https://discord.gg/${invite}`, target: "_blank", rel: "noopener" }, invite) : null],
+    ]),
+    online.length > 1 ? h("div.meta", "Online followers, last 7 days: ", spark(online.filter(([t]) => t > now() - 7 * DAY).map(([, v]) => v))) : null);
+}
+
+function moreUpdates() {
+  const list = updates();
+  if (!list.length) return null;
+  return moreSection("Updates", "from the update posts on Steam",
+    h("table.data", h("tr", h("th", "Update"), h("th", "Date"), h("th", "Build"), h("th", "👍"), h("th", "👎"), h("th", "Comments"), h("th", "Tags")),
+      ...list.map((r) => h("tr", h("td", h("a", { href: r.url, target: "_blank", rel: "noopener" }, releaseLabel(r))), h("td", fmtDate(r.time)),
+        h("td", r.buildId ? `${r.buildId}${r.branch ? ` (${r.branch})` : ""}` : ""), h("td", r.votesUp ?? ""), h("td", r.votesDown ?? ""), h("td", r.comments ?? ""),
+        h("td", (r.tags || []).filter((t) => t !== "mod_reviewed").join(", "))))),
+    ...list.filter((r) => r.notes).map((r) => h("details.issue-more", h("summary", `Patch notes: ${releaseLabel(r)}`), h("div.text.notes", r.notes))));
+}
+
+function moreSales() {
+  const days = salesDays();
+  if (!days.length) return null;
+  const names = state.sales?.names || {};
+  const sum = {}, totals = { tax: 0, returns: 0, gross: 0 };
+  for (const [, t] of days) {
+    totals.tax += t.tax || 0; totals.returns += t.returns || 0; totals.gross += t.gross || 0;
+    for (const [kind, rows] of Object.entries(t.breakdown || {})) for (const [k, [net, units]] of Object.entries(rows)) {
+      const r = ((sum[kind] ||= {})[k] ||= [0, 0]);
+      r[0] += net; r[1] += units;
+    }
+  }
+  let regions = null;
+  try { regions = new Intl.DisplayNames(["en"], { type: "region" }); } catch {}
+  const label = (kind, k) => kind === "sales" ? (k === "full price" ? "Full price" : names.sales?.[k] || `Sale ${k}`)
+    : kind === "packages" ? names.packages?.[k] || `Package ${k}` : kind === "bundles" ? names.bundles?.[k] || `Bundle ${k}`
+    : kind === "items" ? names.items?.[k] || `Item ${k}` : /Countries|countryReturns/.test(kind) ? (regions?.of(k) || k) : k;
+  const TITLES = { platforms: "Platform", types: "Type", packages: "Package", bundles: "Bundle", sales: "Price", currencies: "Currency", items: "In-game item", countryReturns: "Refunds by country", activationCountries: "Key activations by country" };
+  const tables = Object.entries(TITLES).filter(([kind]) => sum[kind]).map(([kind, title]) => {
+    const rows = Object.entries(sum[kind]).map(([k, [net, units]]) => kind === "activationCountries" ? [label(kind, k), units] : [label(kind, k), net, `${units} units`]);
+    return [h("h4", title), kind === "activationCountries" ? shareTable([title, "Keys", "Share"], rows) : shareTable([title, "Net", "Share", "Units"], rows, (v) => usd(v, 2))];
+  });
+  return moreSection("Sales", "every day Steam has, from the sales API",
+    kvTable([["Gross", usd(totals.gross, 2)], ["Refunded", usd(totals.returns, 2)], ["Tax", usd(totals.tax, 2)]]),
+    tables.length ? tables.flat() : h("p.meta", "The platform, price, package and currency split shows after the next sales sync."));
+}
+
+function moreMedia() {
+  const tw = state.game.media?.twitch || {};
+  const yt = Object.values(state.game.media?.items || {}).filter((i) => i.source === "youtube");
+  const clips = Object.values(tw.clips || {}), vods = Object.values(tw.videos || {});
+  const comments = yt.filter((v) => v.topComments?.length);
+  const countries = {}, tags = {};
+  for (const v of yt) {
+    if (v.channel?.country) countries[v.channel.country] = (countries[v.channel.country] || 0) + 1;
+    for (const t of [...(v.tags || []), ...(v.topics || [])]) tags[t.toLowerCase()] = (tags[t.toLowerCase()] || 0) + 1;
+  }
+  if (!clips.length && !vods.length && !comments.length && !Object.keys(countries).length && !tw.category) return null;
+  let regions = null;
+  try { regions = new Intl.DisplayNames(["en"], { type: "region" }); } catch {}
+  const mediaLine = (m) => h("div.more-line", h("a", { href: m.url, target: "_blank", rel: "noopener" }, m.title || "Untitled"),
+    h("span.meta", ` · ${m.author || ""} · ${(m.views || 0).toLocaleString("en-US")} views · ${m.at ? ago(m.at) : ""}`));
+  return moreSection("Media", "Twitch clips and VODs, YouTube comments and channels",
+    tw.category ? h("p.meta", `Twitch category: ${tw.category.name}`) : null,
+    clips.length ? [h("h4", `Twitch clips (${clips.length}, last 30 days)`), ...clips.sort((a, b) => b.views - a.views).slice(0, 10).map(mediaLine)] : null,
+    vods.length ? [h("h4", `Twitch VODs (${vods.length})`), ...vods.sort((a, b) => b.views - a.views).slice(0, 10).map(mediaLine)] : null,
+    comments.length ? [h("h4", "Top YouTube comments"), ...comments.map((v) => h("details.issue-more", h("summary", v.title),
+      ...v.topComments.map((c) => h("div.more-line", h("b", c.author || "Someone"), ": ", c.text, h("span.meta", ` · ${c.likes} likes${c.replies ? ` · ${plural(c.replies, "reply")}` : ""}`)))))] : null,
+    Object.keys(countries).length ? [h("h4", "Where the YouTube channels are"), shareTable(["Country", "Videos", "Share"], Object.entries(countries).map(([k, n]) => [regions?.of(k) || k, n]))] : null,
+    Object.keys(tags).length ? [h("h4", "Most used video tags"), h("p.meta", Object.entries(tags).sort((a, b) => b[1] - a[1]).slice(0, 25).map(([t, n]) => `${t} (${n})`).join(", "))] : null);
+}
+
+function moreCompetitors() {
+  const list = Object.entries(state.game.competitors || {}).filter(([, c]) => c.store);
+  if (!list.length) return null;
+  // Five columns to fit a phone; Metacritic, DLC and platforms are on hover.
+  return moreSection("Competitors' store pages", "daily, for the games on Competitors",
+    h("table.data", h("tr", h("th", "Game"), h("th", "Rating"), h("th", "Recs"), h("th", "Price"), h("th", "Langs")),
+      ...list.map(([id, c]) => h("tr", { title: [c.store.metacritic ? `Metacritic ${c.store.metacritic}` : null, c.store.dlc ? plural(c.store.dlc, "DLC") : null, (c.store.platforms || []).join(", ")].filter(Boolean).join(" · ") },
+        h("td", h("a", { href: `https://store.steampowered.com/app/${id}/`, target: "_blank", rel: "noopener" }, c.name || id)),
+        h("td", c.reviewScore?.desc || ""), h("td", c.store.recommendations?.toLocaleString("en-US") ?? ""),
+        h("td", c.store.free ? "Free" : c.store.price != null ? usd(c.store.price / 100, 2) : ""), h("td", c.store.languages?.length || "")))));
+}
+
+function moreClaude() {
+  const days = Object.entries(state.game.usage?.days || {}).sort().slice(-30).reverse();
+  if (!days.length) return null;
+  const tasks = Object.keys(TASKS);
+  // Short column names to fit a phone; the full task name is on hover.
+  const SHORT = { sort: "Sort", translate: "Transl.", patch: "Patch", merge: "Merge", reply: "Reply" };
+  return moreSection("Claude cost per day", "this game, last 30 days, by task",
+    h("table.data", h("tr", h("th", "Day"), h("th", "Total"), ...tasks.map((t) => h("th", { title: TASKS[t] }, SHORT[t] || t))),
+      ...days.map(([d, v]) => h("tr", h("td", fmtShort(dayTime(d))), h("td", fmtCost(v.cost || 0)), ...tasks.map((t) => h("td", v.tasks?.[t] ? fmtCost(v.tasks[t].cost) : ""))))));
+}
+
 // When the newest thing in each view arrived.
 const NEWEST = {
   issues: () => issues("bug").filter(isActive).map((i) => i.lastSeen),
@@ -1671,8 +1895,20 @@ function issueCard(issue) {
         issue.area,
       ].filter(Boolean).join(" · ")),
       summary ? h("ul.pc-points", h("li", summaryLabel, summary)) : null,
+      (issue.details || []).length ? h("details.issue-more", h("summary", `Details players gave (${issue.details.length})`),
+        h("ul", ...issue.details.map((d) => h("li", d)))) : null,
+      fixVerdict(issue),
+      issue.stillSince ? h("div.meta", `Still happening since ${fmtDate(issue.stillSince)}`) : null,
       h("div.actions", issue.kind === "praise" ? null : copyBtn, toggle, patchBtn, issue.kind === "praise" ? null : checkButton(issue))),
     postList);
+}
+
+// What Claude made of the fix you marked: the real fix, or only part of it, and why.
+function fixVerdict(issue) {
+  const c = clearedEntry(issue);
+  const v = c && state.game.manualFixes?.[fixKey(issue, c)];
+  if (!v || v.pending || !v.reason) return null;
+  return h("div.meta", h("b", v.fit === "direct" ? "Claude: your fix covers it. " : "Claude: your fix only partly covers it. "), v.reason);
 }
 
 // The check: ticks a bug or idea off as fixed, or (ticked) undoes that.
@@ -1767,6 +2003,15 @@ function postParts(item, focus = null) {
       flipped ? h("span.badge", { class: flipped.to === "negative" ? "s-still" : "s-fixed" }, `flipped ${flipped.to} ${fmtShort(flipped.at)}`) : null,
       item.deleted ? h("span.badge.s-still", "deleted on Steam") : null,
       item.dev ? h("span.badge", "Your post") : null,
+      // What else Steam says about a review: how other players took it, and who wrote it.
+      item.votesUp ? h("span.badge", { title: `Steam's helpfulness score ${Math.round((item.helpfulness || 0) * 100)}%` }, `${item.votesUp} found it helpful`) : null,
+      item.votesFunny ? h("span.badge", `${item.votesFunny} found it funny`) : null,
+      item.comments ? h("span.badge", plural(item.comments, "comment")) : null,
+      item.deck ? h("span.badge", { title: item.deckPlaytime ? `${item.deckPlaytime} h on Deck at review` : "" }, "Steam Deck") : null,
+      item.receivedForFree ? h("span.badge", "Got it free") : item.kind === "review" && item.steamPurchase === false ? h("span.badge", "Key") : null,
+      item.earlyAccess ? h("span.badge", "Early Access") : null,
+      item.refunded ? h("span.badge.s-still", "Refunded") : null,
+      item.playtimeRecent ? h("span.badge.s-fixed", { title: `${item.playtimeRecent} h in the last two weeks` }, "Still playing") : null,
     ].filter(Boolean),
     tags: [t.category ? h("span.badge", t.category) : null, t.urgency ? urgencyBadge(t.urgency) : null].filter(Boolean),
     body: [
@@ -2536,6 +2781,22 @@ const followersChart = (start, end, releases) => stepChart(start, end, releases,
   title: "Followers on Steam", aria: "Steam followers over time", sub: "Who follows the game on Steam, checked hourly. It moves with wishlists.", empty: "No follower data in this range.",
   lines: [{ series: state.game.followers || [], color: "var(--type-praise)", unit: "followers" }],
 });
+// Wishlists still on players' lists, from Steam's wishlist report (feedback/wishlists.py), and the
+// adds each day.
+const wishlistsChart = (start, end, releases) => stepChart(start, end, releases, {
+  title: "Wishlists", aria: "Wishlists over time",
+  sub: `Wishlists still on players' lists (adds minus removals, purchases and gifts), from Steam's daily wishlist report${wishlistPartial() ? `. Counting from ${fmtDate(dayTime(wishlistPartial()))} while older days are filled in` : ""}.`,
+  empty: "No wishlist data in this range.",
+  lines: [{ series: wishlistBalance(), color: "var(--fb-accent)", unit: "wishlists" },
+    { series: wishlistDays().map(([d, v]) => [dayTime(d) + DAY / 2, v.adds || 0]), color: "var(--type-praise)", unit: "added that day", dashed: true }],
+});
+function wishlistTile(tile) {
+  const balance = wishlistBalance();
+  const byDay = new Map(wishlistDays());
+  const adds = daily(14, (d) => byDay.get(isoDay(d))?.adds || 0);
+  return tile("Wishlists", balance.at(-1)[1].toLocaleString("en-US"), growthLine(balance), adds, "var(--fb-accent)", "wishlists");
+}
+
 // The studio's Discord server (feedback/community.py, in index.json), the same on every game.
 const discordChart = (start, end, releases) => stepChart(start, end, releases, {
   title: `Discord: ${state.index.discord?.name || "your server"}`, aria: "Discord members over time", sub: "Members and members online, checked hourly. The same server for every game.", empty: "No Discord data in this range.",

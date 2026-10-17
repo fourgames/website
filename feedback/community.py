@@ -54,6 +54,14 @@ def record_followers(state, game):
     m = re.search(r"<groupDetails>.*?<memberCount>(\d+)</memberCount>", xml, re.S)
     if m:
         _series_add(state.setdefault("followers", []), int(m.group(1)))
+    # How many of them are online and playing it right now, kept like Discord's online count.
+    cutoff = int(time.time()) - ONLINE_DAYS * 86400
+    for tag, key in (("membersOnline", "followersOnline"), ("membersInGame", "followersInGame")):
+        n = re.search(rf"<groupDetails>.*?<{tag}>(\d+)</{tag}>", xml, re.S)
+        if n:
+            series = state.setdefault(key, [])
+            _series_add(series, int(n.group(1)))
+            state[key] = [p for p in series if p[0] >= cutoff]
     media._ran("followers", app_id)
 
 
@@ -216,7 +224,8 @@ def record_competitors(state, game, wanted):
                 d = entry["data"]
                 release = d.get("release_date") or {}
                 c.update(name=d.get("name"), capsule=d.get("header_image"),
-                         released=steam.parse_release_date(release.get("date")), comingSoon=bool(release.get("coming_soon")))
+                         released=steam.parse_release_date(release.get("date")), comingSoon=bool(release.get("coming_soon")),
+                         store=steam.store_extras(d))
                 c.pop("missing", None)
                 c["updates"] = [{"time": e["time"], "name": e["name"], "version": e["version"], "url": e["url"]}
                                 for e in steam.update_events(other)[:10]]
@@ -228,6 +237,7 @@ def record_competitors(state, game, wanted):
                                     params={"json": 1, "language": "all", "purchase_type": "all", "num_per_page": 0}).get("query_summary") or {}
             if summary.get("total_reviews") is not None:
                 c.setdefault("reviews", {})[day] = {"positive": summary.get("total_positive", 0), "negative": summary.get("total_negative", 0)}
+                c["reviewScore"] = {"desc": summary.get("review_score_desc"), "score": summary.get("review_score")}
         except steam.HttpError as error:
             print(f"[community] {game['name']} competitor {other}: {error}")
             continue

@@ -100,6 +100,7 @@ def ingest_reviews(state, game, run):
                 "positive": summary.get("total_positive", 0),
                 "negative": summary.get("total_negative", 0),
                 "desc": summary.get("review_score_desc"),
+                "score": summary.get("review_score"),  # Steam's 0-9 rating behind the wording
             }
         reached_old = False
         for r in reviews:
@@ -114,6 +115,26 @@ def ingest_reviews(state, game, run):
     state["watermarks"]["reviews"] = max(newest, state["watermarks"].get("reviews", 0))
     if full:
         media._ran("reviews-full", app_id)
+
+
+def review_extras(r):
+    """The rest of what Steam says about a review and its author: whether they still play, Steam Deck,
+    how helpful and funny other players found it, replies under it, and a refund. Refreshed on every
+    read, since these change after the review is written."""
+    author = r.get("author") or {}
+    hours = lambda minutes: round((minutes or 0) / 60, 1)
+    extras = {
+        "playtimeRecent": hours(author.get("playtime_last_two_weeks")),  # last two weeks
+        "lastPlayed": author.get("last_played") or None,
+        "deck": bool(r.get("primarily_steam_deck")),
+        "deckPlaytime": hours(author.get("deck_playtime_at_review")),
+        "votesFunny": r.get("votes_funny", 0),
+        "helpfulness": round(float(r.get("weighted_vote_score") or 0), 3),  # Steam's 0-1 helpful rank
+        "comments": r.get("comment_count", 0),
+    }
+    if "refunded" in r:
+        extras["refunded"] = bool(r["refunded"])
+    return extras
 
 
 def upsert_review(state, game, r, run):
@@ -143,6 +164,7 @@ def upsert_review(state, game, r, run):
             "votesUp": r.get("votes_up", 0),
             "devResponse": r.get("developer_response") or None,
             "devRespondedAt": r.get("timestamp_dev_responded") or None,
+            **review_extras(r),
             "versions": [],
             "flips": [],
             "pending": True,
@@ -151,6 +173,7 @@ def upsert_review(state, game, r, run):
         status.active("steam", "new review")
         return
     item["votesUp"] = r.get("votes_up", 0)
+    item.update(review_extras(r))
     item["author"]["reviews"] = author.get("num_reviews")
     item["playtimeForever"] = round((author.get("playtime_forever") or 0) / 60, 1)
     item["steamPurchase"] = bool(r.get("steam_purchase"))
@@ -501,12 +524,14 @@ def fix_prompt(game, issue, posts):
 
 def record_releases(state, events):
     """Every update is recorded at once (the dashboard shows it); matching waits its turn."""
-    known = {r["gid"] for r in state["releases"]}
+    known = {r["gid"]: r for r in state["releases"]}
     for event in events:
-        if event["gid"] not in known:
+        if event["gid"] in known:
+            known[event["gid"]].update(event["stats"])
+        else:
             state["releases"].append(
                 {k: event[k] for k in ("gid", "name", "version", "launch", "time", "url")}
-                | {"notes": event["body"][:20000], "matched": [], "checked": False}
+                | event["stats"] | {"notes": event["body"][:20000], "matched": [], "checked": False}
             )
     state["releases"].sort(key=lambda r: r["time"])
 
@@ -1097,6 +1122,16 @@ def full_run():
             media._ran("sales", 0)
             if save(DATA / "sales.json", sales):
                 changed.append("sales")
+
+    # Wishlists (wishlists.py), hourly with sales: same key, and Steam fills in each day once it's over.
+    import wishlists as wishlists_api
+
+    if wishlists_api.KEY and media._due("wishlists", 0, 3600):
+        wishlists = load(DATA / "wishlists.json", {"apps": {}})
+        if wishlists_api.sync(wishlists, [g["appId"] for g in index["games"]]):
+            media._ran("wishlists", 0)
+        if save(DATA / "wishlists.json", wishlists):
+            changed.append("wishlists")
 
     try:
         community.record_discord(index, steam.site_config().get("discord"))

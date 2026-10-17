@@ -107,6 +107,32 @@ def store_fingerprint(d):
     return hashlib.sha1(json.dumps(shown).encode()).hexdigest()[:12]
 
 
+def store_extras(d):
+    """The store details not used elsewhere, for the dashboard's More data: what's on the store page
+    besides the text and images (recommendations, Metacritic, DLC, features, languages, price)."""
+    price = d.get("price_overview") or {}
+    meta = d.get("metacritic") or {}
+    languages = re.sub(r"<[^>]+>|\*", "", d.get("supported_languages") or "")
+    return {
+        "recommendations": (d.get("recommendations") or {}).get("total"),
+        "metacritic": meta.get("score"),
+        "metacriticUrl": meta.get("url"),
+        "dlc": len(d.get("dlc") or []),
+        "achievements": (d.get("achievements") or {}).get("total"),
+        "categories": [c.get("description") for c in d.get("categories") or []],
+        "genres": [g.get("description") for g in d.get("genres") or []],
+        "platforms": sorted(k for k, v in (d.get("platforms") or {}).items() if v),
+        "languages": [l.strip() for l in languages.split("languages with full audio")[0].split(",") if l.strip()],
+        "controller": d.get("controller_support"),
+        "age": int(d.get("required_age") or 0) or None,
+        "price": price.get("initial"),  # US cents, before any discount
+        "free": bool(d.get("is_free")),
+        "developers": d.get("developers") or [],
+        "publishers": d.get("publishers") or [],
+        "website": d.get("website") or None,
+    }
+
+
 def fetch_games(previous):
     """[{appId, name, status, type, capsule}] for every game on our publisher page plus games.js.
     Falls back to the previous list if Steam can't be reached, so a hiccup never drops a game."""
@@ -144,6 +170,7 @@ def fetch_games(previous):
                 # The store's current discount; each run records it, so sale periods build up over time.
                 "discount": (d.get("price_overview") or {}).get("discount_percent", 0),
                 "store": store_fingerprint(d),
+                "details": store_extras(d),
                 "demo": public_demo(d, known.get(app_id, {}).get("demo")),
             }
         )
@@ -224,6 +251,15 @@ def update_events(app_id):
                 "time": int(e.get("rtime32_start_time") or body.get("posttime") or 0),
                 "url": f"https://store.steampowered.com/news/app/{app_id}/view/{e.get('gid')}",
                 "body": bbcode_to_text(body.get("body") or ""),
+                # The build it shipped and how players took the post; votes and comments keep changing.
+                "stats": {
+                    "buildId": e.get("build_id") or None,
+                    "branch": e.get("build_branch") or None,
+                    "votesUp": e.get("votes_up", 0),
+                    "votesDown": e.get("votes_down", 0),
+                    "comments": e.get("comment_count", 0),
+                    "tags": [t for t in body.get("tags") or [] if not t.startswith("ModAct_")],
+                },
             }
         )
     return sorted(events, key=lambda e: e["time"], reverse=True)

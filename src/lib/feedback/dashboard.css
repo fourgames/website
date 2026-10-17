@@ -2337,3 +2337,55 @@
 .fb .impact-stat.rr-stat {
 	align-items: flex-start;
 }
+/* More data: every extra the collector keeps, folded by topic. */
+.fb details.more > summary {
+	cursor: pointer;
+	list-style-position: inside;
+}
+.fb details.more[open] > summary {
+	margin-bottom: 6px;
+}
+.fb details.more h4 {
+	margin: 14px 0 4px;
+	font-size: 0.8125rem;
+}
+.fb details.more table.data th {
+	font-weight: 600;
+	color: var(--fb-ink-2);
+	vertical-align: top;
+}
+.fb table.data.share td:nth-child(2) {
+	text-align: right;
+}
+.fb .share-bar {
+	display: inline-block;
+	height: 8px;
+	border-radius: 4px;
+	background: var(--fb-accent);
+	vertical-align: middle;
+}
+.fb .more-line {
+	font-size: 0.8125rem;
+	margin: 4px 0;
+	overflow-wrap: anywhere;
+}
+.fb details.issue-more {
+	margin-top: 6px;
+	font-size: 0.8125rem;
+}
+.fb details.issue-more > summary {
+	cursor: pointer;
+	color: var(--fb-ink-2);
+}
+.fb details.issue-more ul {
+	margin: 4px 0 0 1.2em;
+	padding: 0;
+}
+.fb details.more table.data td {
+	overflow-wrap: anywhere;
+}
+.fb .notes {
+	white-space: pre-wrap;
+	font-size: 0.75rem;
+	margin-top: 4px;
+}

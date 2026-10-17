@@ -121,7 +121,15 @@
    "translatedOwn": {
     "devResponse": "573199efa14e"
    },
-   "devRespondedAt": 1777577988
+   "devRespondedAt": 1777577988,
+   "playtimeRecent": 0.0,
+   "lastPlayed": 1751639149,
+   "deck": false,
+   "deckPlaytime": 0.0,
+   "votesFunny": 0,
+   "helpfulness": 0.542,
+   "comments": 0,
+   "refunded": false
   },
   "t7130962134691875275": {
    "id": "t7130962134691875275",
@@ -676,7 +684,8 @@
   "2026-10-17": {
    "positive": 1,
    "negative": 0,
-   "desc": "1 user reviews"
+   "desc": "1 user reviews",
+   "score": 0
   }
  },
  "releases": [
@@ -689,7 +698,15 @@
    "notes": "The new demo is here, and it’s packed with big changes and a ton of new content! We've added new goblin types, more levels, a hub area, upgraded graphics, and much more!\n\nROADMAP\n- More sound effects\n- Game balancing\n- Optimization improvements\n- Feedback and suggestions from the community\n- (Maybe) a new building",
    "matched": [],
    "checked": true,
-   "partly": []
+   "partly": [],
+   "buildId": null,
+   "branch": null,
+   "votesUp": 1,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "mod_reviewed"
+   ]
   },
   {
    "gid": "4524520259786639017",
@@ -700,7 +717,15 @@
    "notes": "The hammer can now be used to damage enemies and more.\n\nPatch Notes:\n- Optimization improvements\n- Furnace turn off animation\n- Hammer Damage\n- Game balancing: tutorial, world 1 levels\n- Enemy AI Improvements\n- Cannon Rotation Improvements\n\nRoadmap:\n- Replace placeholder sound effects\n- More sound effects\n- Game balancing\n- More Enemy AI Improvements\n- Feedback and suggestions from the community\n- (Maybe) a new building",
    "matched": [],
    "checked": true,
-   "partly": []
+   "partly": [],
+   "buildId": null,
+   "branch": null,
+   "votesUp": 0,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "mod_reviewed"
+   ]
   },
   {
    "gid": "4517765223387783650",
@@ -711,7 +736,15 @@
    "notes": "Patch Notes:\n- Loading screen improvements\n- Bullets interact with grass\n- Enable v-sync by default\n- Make default sens higher\n- New bomb building\n- Make barricades price / 2\n- Bigger bomb goblin hit box\n- Reduce wait time from 30sec > 15sec\n- Variable jump heights\n- Many new SFX\n- BIG Color adjustments \n- Grass/ground changes \n- Saturation changes\n- Smarter goblin navigation\n- Cannon rotation bug fix\n- Add back unstuck\n- Game name change from \"Forge Front\" to \"Forg\" to make it easier to search for and more memorable.\n- Balance worlds \n- Balance goblin economy\n- Balance Furnace\n- Update steam page\n- Cannon rope model fix\n- tutorial changes\n- More credits\n- Tree improvements\n- Wind and water improvements\n- Fix bug reset buildings placed for each level\n\nRoadmap:\n- More SFX, music improvements \n- Balance\n- Feedback and suggestions from the community",
    "matched": [],
    "checked": true,
-   "partly": []
+   "partly": [],
+   "buildId": null,
+   "branch": null,
+   "votesUp": 1,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "mod_reviewed"
+   ]
   },
   {
    "gid": "509567431915603800",
@@ -722,7 +755,15 @@
    "notes": "Patch Notes:\n\n-  Improved tutorial & tutorial prompts for better clarity.\n\n-  Building limit now shows max text instead of cost.\n\n-  Increased music volume by +5 dB.\n\n-  Added more tips \"IT'S OVER, GOBLINS. I HAVE THE HIGH GROUND!\" - CANNON\n\n-  Moved loading screen tips to the options tab due to faster load times.\n\n-  Replaced icons and symbols with emojis to fix alignment issues. 🪙❤️💥💣🌑☀️\n\n-  Made upgrade information easier to understand, add extra information as tips.\n\n-  Collect gold from chests.\n\n-  Eat mushrooms to heal.\n\n-  Corrected next item and previous item scroll order issues.\n\n-  Fixed scroll UI bugs.\n\n-  Resolved speed line overlay bugs and made improvements.\n\n-  Fixed damage overlay bugs and made improvements.\n\n-  Adjusted barricade model ropes.\n\n-  Added more shake effects for interactions.\n\n-  Achievements now available on more levels.\n\n-  Removed fruit basket.\n\n-  All levels baked.\n\n-  New OG Level Crystal, Very Hard+ Start with 100 gold (instead of 400) & No healing mushrooms and limited high ground for strategic placements. Big respect to you if you can beat Crystal on Night Mode.\n\n-  Fix place building flash.\n\n-  Add bomb place particles.\n\n-  Fix sky resources.\n\n-  Updated screenshots.\n\n-  Update GIFs.\n\n-  Updated trailer.\n\nRoadmap:\n\n-  Engine upgrade for better performance.\n\n-  Community feedback and suggestions.",
    "matched": [],
    "checked": true,
-   "partly": []
+   "partly": [],
+   "buildId": null,
+   "branch": null,
+   "votesUp": 2,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "mod_reviewed"
+   ]
   },
   {
    "gid": "690882175138005309",
@@ -737,6 +778,14 @@
    "checked": true,
    "partly": [
     "I26"
+   ],
+   "buildId": null,
+   "branch": null,
+   "votesUp": 3,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "mod_reviewed"
    ]
   },
   {
@@ -748,7 +797,15 @@
    "notes": "- \nNow in 28 languages, including Japanese, Korean and Chinese. The game follows your Steam language, or pick one in Options\n\n- \nNow playable on Linux\n\n- \nNew lighting in every world: an overcast forest, freezing snow, warm lava, a torchlit hub and a glowing furnace\n\n- \nNew title logo, with its own version in Japanese, Korean and Chinese\n\n- \nThe whole Options menu now works with a controller: LB/RB switch tabs and B goes back, great on Steam Deck\n\n- \nController: hold LT to aim, which is when aim assist kicks in. Sprint is now on L3, crouch on R3 and bomb on View\n\n- \nFive achievements that could not be unlocked before now unlock\n\n- \nSmoother play: no freeze on the first hit, and much steadier frame rates on Mac\n\n- \nCoin, heart and bomb icons now look the same on every system\n\n- \nNew 16:10 resolutions, including Steam Deck's 1280x800\n\n- \nFixed: the 2560x1440 option set 2560x1080, rebinding a key removed its controller button, and the pause menu was empty after pressing Esc in Options\n\n- \nFixed: the lava world's last wave played the wrong music, and the snow music restarted off the beat",
    "matched": [],
    "checked": true,
-   "partly": []
+   "partly": [],
+   "buildId": null,
+   "branch": null,
+   "votesUp": 0,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "mod_reviewed"
+   ]
   },
   {
    "gid": "684140727200908131",
@@ -782,7 +839,16 @@
    "notes": "A smaller update with two things controller and Steam Deck players will notice right away.\n\nImprovements\n\n- \nAim assist reworked: on controller, shots near a goblin now go to it, at the height you aimed (headshots still count) and leading its movement. Your camera is never moved\n\n- \nMuch smaller game: the download is about a third smaller (about 198 MB instead of 305 MB) and it takes nearly half the storage (about 306 MB instead of 539 MB), great on a Steam Deck\n\nFound a bug or have an idea? Tell us in the Steam discussions.\n\n— Danny",
    "matched": [],
    "checked": true,
-   "partly": []
+   "partly": [],
+   "buildId": 25703451,
+   "branch": null,
+   "votesUp": 0,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "patchnotes",
+    "mod_reviewed"
+   ]
   }
  ],
  "threads": {
@@ -969,7 +1035,9 @@
    "category": {
     "id": "972917675",
     "name": "Forge Front"
-   }
+   },
+   "clips": {},
+   "videos": {}
   },
   "watermarks": {
    "youtube": 1501099448

@@ -9,6 +9,75 @@
    "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/2807130/f709685fb160ba9042b9b5ef18d36fad0b58f5c1/header.jpg?t=1791073252",
    "discount": 0,
    "store": "52b684d751f3",
+   "details": {
+    "recommendations": null,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 0,
+    "achievements": 10,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Full controller support",
+     "Custom Volume Controls",
+     "Adjustable Difficulty",
+     "Stereo Sound",
+     "Surround Sound",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Action",
+     "Indie",
+     "Strategy"
+    ],
+    "platforms": [
+     "linux",
+     "mac",
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Bulgarian",
+     "Czech",
+     "Danish",
+     "Dutch",
+     "Finnish",
+     "Greek",
+     "Hungarian",
+     "Indonesian",
+     "Japanese",
+     "Korean",
+     "Malay",
+     "Norwegian",
+     "Polish",
+     "Portuguese - Brazil",
+     "Portuguese - Portugal",
+     "Romanian",
+     "Russian",
+     "Simplified Chinese",
+     "Spanish - Latin America",
+     "Swedish",
+     "Traditional Chinese",
+     "Turkish",
+     "Ukrainian"
+    ],
+    "controller": "full",
+    "age": null,
+    "price": 499,
+    "free": false,
+    "developers": [
+     "Four Games"
+    ],
+    "publishers": [
+     "Four Games"
+    ],
+    "website": null
+   },
    "demo": null,
    "lastPost": 1751640136,
    "lastDevPost": 1791073295,
@@ -49,6 +118,82 @@
    "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/5207970/0cb9242e668b929659c8705c9c4b3c1da19c108b/header.jpg?t=1792244435",
    "discount": 0,
    "store": "46e0b6ff6d7d",
+   "details": {
+    "recommendations": null,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 1,
+    "achievements": null,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Full controller support",
+     "Custom Volume Controls",
+     "Keyboard Only Option",
+     "Mouse Only Option",
+     "#category_playable_at_your_own_pace",
+     "Playable without Timed Input",
+     "Save Anytime",
+     "Stereo Sound",
+     "Touch Only Option",
+     "Steam Cloud",
+     "Stats",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Casual",
+     "Indie",
+     "Simulation"
+    ],
+    "platforms": [
+     "linux",
+     "mac",
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Bulgarian",
+     "Czech",
+     "Danish",
+     "Dutch",
+     "Finnish",
+     "Greek",
+     "Hungarian",
+     "Indonesian",
+     "Japanese",
+     "Korean",
+     "Malay",
+     "Norwegian",
+     "Polish",
+     "Portuguese - Brazil",
+     "Portuguese - Portugal",
+     "Romanian",
+     "Russian",
+     "Simplified Chinese",
+     "Spanish - Latin America",
+     "Swedish",
+     "Traditional Chinese",
+     "Turkish",
+     "Ukrainian",
+     "Thai",
+     "Vietnamese"
+    ],
+    "controller": "full",
+    "age": null,
+    "price": null,
+    "free": false,
+    "developers": [
+     "Four Games"
+    ],
+    "publishers": [
+     "Four Games"
+    ],
+    "website": null
+   },
    "demo": {
     "appId": 5367080,
     "name": "Pomo Valley Demo"
@@ -65,6 +210,74 @@
    "capsule": "https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/3958210/31c125b9f63a0f8c5329e902bfd08f6c7a6c85d8/header.jpg?t=1791328139",
    "discount": 0,
    "store": "2bf15eec6b93",
+   "details": {
+    "recommendations": null,
+    "metacritic": null,
+    "metacriticUrl": null,
+    "dlc": 0,
+    "achievements": 5,
+    "categories": [
+     "Single-player",
+     "Steam Achievements",
+     "Full controller support",
+     "#category_playable_at_your_own_pace",
+     "Steam Cloud",
+     "Family Sharing"
+    ],
+    "genres": [
+     "Adventure",
+     "Casual",
+     "Simulation"
+    ],
+    "platforms": [
+     "linux",
+     "mac",
+     "windows"
+    ],
+    "languages": [
+     "English",
+     "French",
+     "Italian",
+     "German",
+     "Spanish - Spain",
+     "Bulgarian",
+     "Czech",
+     "Danish",
+     "Dutch",
+     "Finnish",
+     "Greek",
+     "Hungarian",
+     "Indonesian",
+     "Japanese",
+     "Korean",
+     "Malay",
+     "Norwegian",
+     "Polish",
+     "Portuguese - Brazil",
+     "Portuguese - Portugal",
+     "Romanian",
+     "Russian",
+     "Simplified Chinese",
+     "Spanish - Latin America",
+     "Swedish",
+     "Traditional Chinese",
+     "Turkish",
+     "Ukrainian",
+     "Thai",
+     "Vietnamese"
+    ],
+    "controller": "full",
+    "age": null,
+    "price": 499,
+    "free": false,
+    "developers": [
+     "Four Games"
+    ],
+    "publishers": [
+     "Four Games"
+    ],
+    "website": null
+   },
    "demo": null,
    "lastPost": 1792068023,
    "lastDevPost": 1792071323,
@@ -159,6 +372,13 @@
    "active": null,
    "activeWhat": null
   },
+  "wishlists": {
+   "ok": true,
+   "message": null,
+   "since": 1792246826,
+   "active": null,
+   "activeWhat": null
+  },
   "youtube": {
    "ok": true,
    "message": null,
@@ -167,7 +387,7 @@
    "activeWhat": "new video"
   }
  },
- "changedAt": 1792245950,
+ "changedAt": 1792246826,
  "creditAlert": null,
  "discord": {
   "members": [

@@ -1532,7 +1532,15 @@
    "devResponseEnglish": "Thank you for playing through to the ending! At that point, the game ending and progress resetting was the originally intended ending, but from the 2.1 update onwards, your progress will be maintained even after the ending. However, I'm very sorry that we cannot recover progress that has already been lost!",
    "translatedOwn": {
     "devResponse": "22e4ecef6d62"
-   }
+   },
+   "playtimeRecent": 2.5,
+   "lastPlayed": 1792067856,
+   "deck": false,
+   "deckPlaytime": 0.0,
+   "votesFunny": 0,
+   "helpfulness": 0.514,
+   "comments": 0,
+   "refunded": false
   },
   "t572677904481265539": {
    "id": "t572677904481265539",
@@ -3243,7 +3251,8 @@
   "2026-10-17": {
    "positive": 7,
    "negative": 2,
-   "desc": "9 user reviews"
+   "desc": "9 user reviews",
+   "score": 0
   }
  },
  "releases": [
@@ -3258,6 +3267,15 @@
    "checked": true,
    "partly": [
     "I92"
+   ],
+   "buildId": null,
+   "branch": null,
+   "votesUp": 2,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "patchnotes",
+    "mod_reviewed"
    ]
   },
   {
@@ -3274,6 +3292,15 @@
    "partly": [
     "I87",
     "I90"
+   ],
+   "buildId": null,
+   "branch": null,
+   "votesUp": 3,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "patchnotes",
+    "mod_reviewed"
    ]
   },
   {
@@ -3287,7 +3314,16 @@
     "I91"
    ],
    "checked": true,
-   "partly": []
+   "partly": [],
+   "buildId": null,
+   "branch": null,
+   "votesUp": 2,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "patchnotes",
+    "mod_reviewed"
+   ]
   },
   {
    "gid": "695399726270382652",
@@ -3300,6 +3336,15 @@
    "checked": true,
    "partly": [
     "I94"
+   ],
+   "buildId": null,
+   "branch": null,
+   "votesUp": 2,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "patchnotes",
+    "mod_reviewed"
    ]
   },
   {
@@ -3313,6 +3358,15 @@
    "checked": true,
    "partly": [
     "I87"
+   ],
+   "buildId": null,
+   "branch": null,
+   "votesUp": 1,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "mod_reviewed",
+    "patchnotes"
    ]
   },
   {
@@ -3326,7 +3380,16 @@
     "I94"
    ],
    "checked": true,
-   "partly": []
+   "partly": [],
+   "buildId": null,
+   "branch": null,
+   "votesUp": 2,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "mod_reviewed",
+    "patchnotes"
+   ]
   },
   {
    "gid": "695399726270384006",
@@ -3337,7 +3400,15 @@
    "notes": "It's out! Trapped in a pit with a chainsaw, you dig down through the ice, sell what you haul up, and buy upgrades and dynamite to go deeper, faster.\n\nAbout the game\n\n- \nDig: carve your way down through the ice\n\n- \nSell what you haul up, then buy upgrades and dynamite\n\n- \nA short game you can finish in one sitting\n\n- \nFull controller support, Steam Achievements and Steam Cloud\n\n- \nOh yeah, there's something waiting for you at the bottom\n\nIt's 40% off until October 14. If you enjoy it, a review helps a lot!\n\n— Danny",
    "matched": [],
    "checked": true,
-   "partly": []
+   "partly": [],
+   "buildId": null,
+   "branch": null,
+   "votesUp": 1,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "mod_reviewed"
+   ]
   },
   {
    "gid": "695400360681930764",
@@ -3362,6 +3433,14 @@
    "partly": [
     "I90",
     "I92"
+   ],
+   "buildId": 25764550,
+   "branch": null,
+   "votesUp": 5,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "mod_reviewed"
    ]
   },
   {
@@ -3394,6 +3473,15 @@
     "I91",
     "I100",
     "I105"
+   ],
+   "buildId": 25961013,
+   "branch": null,
+   "votesUp": 1,
+   "votesDown": 0,
+   "comments": 0,
+   "tags": [
+    "patchnotes",
+    "mod_reviewed"
    ]
   }
  ],

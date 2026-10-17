@@ -2170,6 +2170,18 @@
 	border-radius: 99px;
 	background: var(--fb-accent);
 }
+.fb .ach-change {
+	margin-top: 4px;
+	font-size: 0.8125rem;
+	color: var(--fb-ink-2);
+	font-variant-numeric: tabular-nums;
+}
+.fb .ach-up {
+	color: var(--fb-good-text);
+}
+.fb .ach-down {
+	color: var(--fb-negative);
+}
 
 /* Ideas for later (dashboard.js soonView) */
 .fb .count-soon {
@@ -2256,18 +2268,6 @@
 .fb .cur {
 	display: flex;
 	gap: 14px;
-.fb .ach-change {
-	margin-top: 4px;
-	font-size: 0.8125rem;
-	color: var(--fb-ink-2);
-	font-variant-numeric: tabular-nums;
-}
-.fb .ach-up {
-	color: var(--fb-good-text);
-}
-.fb .ach-down {
-	color: var(--fb-negative);
-}
 	align-items: flex-start;
 }
 .fb .cur-avatar {

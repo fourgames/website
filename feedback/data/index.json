@@ -126,9 +126,9 @@
    "activeWhat": "new post"
   },
   "news": {
-   "ok": false,
-   "message": "Couldn't search news (HTTP 503 from news.google.com).",
-   "since": 1792213847,
+   "ok": true,
+   "message": null,
+   "since": 1792228010,
    "active": 1792094638,
    "activeWhat": "new web page"
   },
@@ -161,7 +161,7 @@
    "activeWhat": "new video"
   }
  },
- "changedAt": 1792225488,
+ "changedAt": 1792228010,
  "creditAlert": null,
  "discord": {
   "members": [
@@ -1138,6 +1138,10 @@
    [
     1792225488,
     13
+   ],
+   [
+    1792228010,
+    17
    ]
   ],
   "name": "Four Games",

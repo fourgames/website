@@ -754,7 +754,7 @@ function renderHeader() {
   const img = document.getElementById("fb-capsule");
   img.hidden = !meta.capsule;
   if (meta.capsule) img.src = meta.capsule;
-  document.getElementById("fb-title").replaceChildren(...[meta.name || "", meta.status === "upcoming" ? h("span.pill", "Coming soon") : null].filter(Boolean));
+  document.getElementById("fb-title").replaceChildren(...[meta.name || "", meta.status === "upcoming" ? h("span.pill", "Coming soon") : null, meta.demo ? h("span.pill", "Demo live") : null].filter(Boolean));
   const g = state.game;
   // The newest numbered update; a launch post or an unnumbered one only when there's nothing else.
   const release = (g.releases || []).filter((r) => r.version).at(-1) || (g.releases || []).at(-1);
@@ -773,6 +773,7 @@ function renderHeader() {
     ["Sales", `https://partner.steampowered.com/app/details/${id}/`],
     // Store traffic: impressions, visits and click-through per source (discovery queue, search…).
     ["Traffic", `https://partner.steamgames.com/apps/navtrafficstats/${id}`],
+    ...(meta.demo ? [["Demo store page", `https://store.steampowered.com/app/${meta.demo.appId}/`], ["Demo Steamworks", `https://partner.steamgames.com/apps/landing/${meta.demo.appId}`]] : []),
   ];
   document.getElementById("fb-links").replaceChildren(
     h("details.steam-menu",
@@ -814,6 +815,8 @@ function renderStats() {
     // A fire when the players in game right now are the most ever recorded.
     players: tile("Players", current == null ? "–" : `${current}${current && current >= Math.max(...series.map(([, n]) => n)) ? " 🔥" : ""}`,
       current != null ? (current && current >= Math.max(...series.map(([, n]) => n)) ? "In-Game · all-time peak" : "In-Game") : "not released", peaks, undefined, "players"),
+    // The demo's own players (feedback/run.py records them with the game's), once it's out.
+    demo: g.meta?.demo ? demoTile(tile) : null,
     reviews: tile("Reviews", score ? `${score.rating.toFixed(2)}%` : "–", score ? plural(score.total, "review") : "no reviews yet", reviewsPerDay, "var(--fb-positive)", "reviews"),
     followers: tile("Followers", g.followers?.length ? g.followers[g.followers.length - 1][1] : "–", g.followers?.length ? growthLine(g.followers) : "on Steam",
       daily(14, (d) => playersAt(g.followers || [], d + DAY - 1) ?? 0), "var(--type-praise)", "followers"),
@@ -829,7 +832,7 @@ function renderStats() {
   // players, reviews, money and bugs. The rest waits behind "+ more" (remembered), and the card
   // whose chart is open stays out either way.
   const upcoming = g.meta?.status === "upcoming";
-  const main = upcoming ? ["followers", "discord", "bugs"] : ["players", "reviews", "revenue", "bugs"];
+  const main = upcoming ? ["demo", "followers", "discord", "bugs"] : ["players", "reviews", "revenue", "bugs"];
   const more = store.get("kpis-more") === "1";
   const extra = Object.keys(cards).filter((k) => !main.includes(k) && cards[k]);
   const shown = Object.keys(cards).filter((k) => cards[k] && (more || main.includes(k) || k === state.expanded));
@@ -839,6 +842,15 @@ function renderStats() {
   } }, more ? "Fewer" : `+ ${extra.filter((k) => !shown.includes(k)).length} more`) : null;
   document.getElementById("fb-stats").replaceChildren(...shown.map((k) => cards[k]), toggle);
   document.getElementById("fb-expand").replaceChildren(...(state.expanded ? [chartPanel(state.expanded)] : []));
+}
+
+function demoTile(tile) {
+  const series = state.game.demoPlayers || [];
+  const current = series.length ? series[series.length - 1][1] : null;
+  const best = Math.max(0, ...series.map(([, n]) => n));
+  return tile("Demo players", current == null ? "–" : `${current}${current && current >= best ? " 🔥" : ""}`,
+    current == null ? "counted from the next run" : current && current >= best ? "In-Game · all-time peak" : `In-Game · peak ${best}`,
+    daily(14, (d) => Math.max(playersAt(series, d) ?? 0, ...series.filter(([ts]) => ts >= d && ts < d + DAY).map(([, n]) => n))), "var(--fb-accent)", "demo");
 }
 
 // "+12 this week" (or "no change this week") under a count that's stored on change.
@@ -864,9 +876,9 @@ function reviewScore(totals) {
 
 // The big numbers above an opened chart, SteamDB-style.
 function statHeader(which) {
-  const g = state.game, series = g.players || [], t = now();
+  const g = state.game, series = (which === "demo" ? g.demoPlayers : g.players) || [], t = now();
   const stat = (value, label, cls) => h(`div.sh-stat${cls ? "." + cls : ""}`, h("div.sh-value", value), h("div.sh-label", label));
-  if (which === "players") {
+  if (which === "players" || which === "demo") {
     const current = series.length ? series[series.length - 1][1] : 0;
     const day = Math.max(current, playersAt(series, t - DAY) ?? 0, ...series.filter(([ts]) => ts >= t - DAY).map(([, n]) => n));
     const best = series.reduce((b, s) => (s[1] > b[1] ? s : b), [0, 0]);
@@ -908,12 +920,12 @@ function chartPanel(which) {
     // Never before the game's release (nothing to show there): "All" starts at the oldest data or
     // the release, whichever is later; the fixed ranges are cut at the release too.
     // Followers and Discord count from before the release too (that's when wishlists build up).
-    const own = { followers: state.game.followers, discord: state.index.discord?.members }[which];
+    const own = { followers: state.game.followers, discord: state.index.discord?.members, demo: state.game.demoPlayers || [] }[which];
     const released = own ? 0 : state.game.meta?.released || 0;
     const oldest = Math.min(end - DAY, ...(own || []).map((p) => p[0]), ...(own ? [] : [...(state.game.players || []).map((p) => p[0]), ...items().map((i) => i.created)]));
     const start = Math.min(end - DAY, Math.max(released, f.range ? end - f.range * DAY : oldest));
     const releases = markers(start, end);
-    body.replaceChildren({ players: playersChart, reviews: reviewsChart, followers: followersChart, discord: discordChart }[which](start, end, releases));
+    body.replaceChildren({ players: playersChart, demo: demoChart, reviews: reviewsChart, followers: followersChart, discord: discordChart }[which](start, end, releases));
   };
   const range = chips([[2, "48h"], [7, "1w"], [30, "1m"], [90, "3m"], [180, "6m"], [365, "1y"], [0, "max"]], f.range, (v) => { f.range = v; draw(); }, "Zoom");
   wrap.append(h("div.filters", h("span.zoom-label", "Zoom"), range), body);
@@ -2496,6 +2508,11 @@ function stepChart(start, end, releases, { title, sub, empty, aria, lines }) {
 const playersChart = (start, end, releases) => stepChart(start, end, releases, {
   title: "Concurrent players", aria: "Concurrent players over time", sub: "Steam's current player count, sampled every run.", empty: "No player data in this range.",
   lines: [{ series: state.game.players || [], color: "var(--fb-accent)", unit: "players" }],
+});
+// The demo's concurrent players, a separate app on Steam.
+const demoChart = (start, end, releases) => stepChart(start, end, releases, {
+  title: `Demo players: ${state.game.meta?.demo?.name || "Demo"}`, aria: "Concurrent demo players over time", sub: "Steam's current player count for the demo, sampled every run.", empty: "No demo player data in this range.",
+  lines: [{ series: state.game.demoPlayers || [], color: "var(--fb-accent)", unit: "players" }],
 });
 // Followers of the game's Steam community hub (feedback/community.py), which move with wishlists.
 const followersChart = (start, end, releases) => stepChart(start, end, releases, {

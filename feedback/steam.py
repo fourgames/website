@@ -144,10 +144,26 @@ def fetch_games(previous):
                 # The store's current discount; each run records it, so sale periods build up over time.
                 "discount": (d.get("price_overview") or {}).get("discount_percent", 0),
                 "store": store_fingerprint(d),
+                "demo": public_demo(d, known.get(app_id, {}).get("demo")),
             }
         )
         time.sleep(0.3)
     return games or previous
+
+
+def public_demo(d, previous):
+    """{appId, name} of the game's demo once it's out on Steam, else None. Its players are recorded
+    with the game's (run.py → record_players). Keeps the previous one if Steam can't be reached."""
+    for demo in d.get("demos") or []:
+        try:
+            entry = request("https://store.steampowered.com/api/appdetails", params={"appids": demo["appid"], "cc": "us", "l": "english"})
+        except HttpError as error:
+            print(f"[steam] demo {demo['appid']}: {error}")
+            return previous
+        entry = entry.get(str(demo["appid"])) or {}
+        if entry.get("success") and not (entry["data"].get("release_date") or {}).get("coming_soon"):
+            return {"appId": int(demo["appid"]), "name": entry["data"].get("name") or "Demo"}
+    return None
 
 
 # ---------------------------------------------------------------------------

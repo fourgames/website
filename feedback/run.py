@@ -182,16 +182,17 @@ def record_discount(state, game):
         series.append([now(), discount])
 
 
-def record_players(state, game):
+def record_players(state, game, app_id=None, key="players"):
+    """The game's player count, or (with app_id and key) its demo's in state["demoPlayers"]."""
     try:
-        count = steam.player_count(game["appId"])
+        count = steam.player_count(app_id or game["appId"])
     except steam.HttpError as error:
-        print(f"[steam] {game['name']} players: {error}")
+        print(f"[steam] {game['name']} {key}: {error}")
         status.fail("steam", f"Couldn't read the player count ({error}).")
         return
     if count is None:
         return
-    series = state["players"]
+    series = state.setdefault(key, [])
     # Store changes only: the dashboard draws it as a step line, and an unchanged count isn't a commit.
     if not series or series[-1][1] != count:
         series.append([now(), count])
@@ -1042,6 +1043,8 @@ def full_run():
                 status.fail("steam", f"Couldn't read the reviews ({error}).")
             record_players(state, game)
             record_discount(state, game)
+        if game.get("demo"):
+            record_players(state, game, game["demo"]["appId"], "demoPlayers")
         import discussions
 
         discussions.ingest(state, game, run)

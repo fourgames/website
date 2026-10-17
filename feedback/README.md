@@ -9,7 +9,7 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
    - An edit keeps the old text in `versions`.
    - A changed recommendation is recorded in `flips`.
 3. **Discussions.** It reads new threads and new replies in every subforum.
-4. **Players.** It records the current player count.
+4. **Players.** It records the current player count, and once a game's demo is out on Steam, the demo's too (`demoPlayers`, the dashboard's **Demo players** card).
 5. **Media** (`media.py`). It finds who's talking about the game outside Steam:
    - **Twitch:** streams live right now in the game's category, checked every run. The category is found through IGDB by the Steam app id, else by name. A game Twitch has no category for yet can't be followed.
    - **YouTube:** new videos that name the game, about once an hour per game (the free quota is 10,000 units a day and a search costs 100, so it searches less often with more than 3 games). Views, likes and comments of the last two weeks' videos are kept current.

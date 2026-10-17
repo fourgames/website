@@ -169,7 +169,15 @@
    "devResponseEnglish": null,
    "translatedOwn": {
     "devResponse": "341bc97f1297"
-   }
+   },
+   "playtimeRecent": 0.0,
+   "lastPlayed": 1790853839,
+   "deck": false,
+   "deckPlaytime": 0.0,
+   "votesFunny": 0,
+   "helpfulness": 0.514,
+   "comments": 0,
+   "refunded": false
   },
   "r236626239": {
    "id": "r236626239",
@@ -235,7 +243,15 @@
    "devResponseEnglish": "Thank you for playing! In the 2.0 update, the pit has become twice as deep at 1000m. Please try it again and let us know your thoughts!",
    "translatedOwn": {
     "devResponse": "d2d1b794f89b"
-   }
+   },
+   "playtimeRecent": 0.0,
+   "lastPlayed": 1790868080,
+   "deck": false,
+   "deckPlaytime": 0.0,
+   "votesFunny": 0,
+   "helpfulness": 0.514,
+   "comments": 1,
+   "refunded": false
   },
   "r236624465": {
    "id": "r236624465",
@@ -300,7 +316,15 @@
    "devResponseEnglish": "Thank you for the review! A lot has changed with the 2.0 update. Please try it again and let us know your thoughts!",
    "translatedOwn": {
     "devResponse": "e894a7ccf55a"
-   }
+   },
+   "playtimeRecent": 0.0,
+   "lastPlayed": 1790866202,
+   "deck": false,
+   "deckPlaytime": 0.0,
+   "votesFunny": 2,
+   "helpfulness": 0.524,
+   "comments": 0,
+   "refunded": false
   },
   "r236614813": {
    "id": "r236614813",
@@ -373,7 +397,15 @@
    "devResponseEnglish": "Thank you for playing! In the 2.0 update, the pit has been deepened to 1000m. Please try it again and let us know your thoughts!",
    "translatedOwn": {
     "devResponse": "6610a0dff53b"
-   }
+   },
+   "playtimeRecent": 0.0,
+   "lastPlayed": 1790856346,
+   "deck": false,
+   "deckPlaytime": 0.0,
+   "votesFunny": 0,
+   "helpfulness": 0.514,
+   "comments": 0,
+   "refunded": false
   },
   "r236561103": {
    "id": "r236561103",
@@ -462,7 +494,15 @@
    "devResponseEnglish": "Thanks for the honest review! In the 2.0 update, the chainsaw sounds like a real gasoline engine. Feel free to check it out again!",
    "translatedOwn": {
     "devResponse": "2bd6e382abba"
-   }
+   },
+   "playtimeRecent": 1.4,
+   "lastPlayed": 1791441200,
+   "deck": false,
+   "deckPlaytime": 0.0,
+   "votesFunny": 0,
+   "helpfulness": 0.536,
+   "comments": 0,
+   "refunded": false
   },
   "r236545405": {
    "id": "r236545405",
@@ -528,7 +568,15 @@
    "translatedOwn": {
     "devResponse": "859e08ddec72"
    },
-   "devRespondedAt": 1791329331
+   "devRespondedAt": 1791329331,
+   "playtimeRecent": 0.0,
+   "lastPlayed": 1790775136,
+   "deck": false,
+   "deckPlaytime": 0.0,
+   "votesFunny": 0,
+   "helpfulness": 0.536,
+   "comments": 0,
+   "refunded": false
   },
   "r236542076": {
    "id": "r236542076",
@@ -601,7 +649,15 @@
    "devResponseEnglish": "Thanks for your feedback! In the 2.0 update, the game explains better what to do. Feel free to give it another try!",
    "translatedOwn": {
     "devResponse": "c5f2bbc88872"
-   }
+   },
+   "playtimeRecent": 1.7,
+   "lastPlayed": 1792137507,
+   "deck": false,
+   "deckPlaytime": 0.0,
+   "votesFunny": 0,
+   "helpfulness": 0.538,
+   "comments": 0,
+   "refunded": false
   },
   "t594068999055121855": {
    "id": "t594068999055121855",
@@ -1455,7 +1511,15 @@
     "text": "Thanks so much, that means the world to us! We just put out Update 2.1, and one of the big changes is that reaching the ending no longer wipes your run—so you can jump back down and keep digging whenever you want.",
     "english": "Thanks so much, that means the world to us! We just put out Update 2.1, and one of the big changes is that reaching the ending no longer wipes your run—so you can jump back down and keep digging whenever you want."
    },
-   "alertedNew": true
+   "alertedNew": true,
+   "playtimeRecent": 5.5,
+   "lastPlayed": 1792097714,
+   "deck": false,
+   "deckPlaytime": 0.0,
+   "votesFunny": 0,
+   "helpfulness": 0.5,
+   "comments": 0,
+   "refunded": false
   },
   "r237770580": {
    "id": "r237770580",
@@ -3697,8 +3761,35 @@
     "comments": 1,
     "live": false,
     "upcoming": false,
-    "subscribers": 5960,
-    "category": "20"
+    "subscribers": 6250,
+    "category": "20",
+    "tags": [],
+    "topics": [
+     "Action-adventure game",
+     "Action game",
+     "Video game culture"
+    ],
+    "hd": true,
+    "captions": false,
+    "kids": false,
+    "channel": {
+     "country": "IN",
+     "handle": "@zish_gaming",
+     "videos": 318,
+     "views": 664309,
+     "since": 1637644362,
+     "avatar": "https://yt3.ggpht.com/cZyildTZG23J9p-xKhDxUiX3Mky2hg2y0W-sCdgwxOkMjAVCLuamfiWZ4SDAHBGRRoogKaEWPg=s88-c-k-c0x00ffffff-no-rj"
+    },
+    "topComments": [
+     {
+      "author": "@FourGamesAB",
+      "text": "Thanks so much for making a video on the game! The 2.0 update makes the pit 1000 m deep and changes a lot, so here's a key if you want to give it another go: YCL7Q-D5EB3-5FRGC",
+      "likes": 0,
+      "at": 1791330398,
+      "replies": 0
+     }
+    ],
+    "topCommentsAt": 1
    },
    "ytgqqB_pQWCCc": {
     "id": "ytgqqB_pQWCCc",
@@ -3805,7 +3896,35 @@
     "comments": 1,
     "live": false,
     "upcoming": false,
-    "subscribers": 5050
+    "subscribers": 5060,
+    "tags": [],
+    "topics": [
+     "Action-adventure game",
+     "Action game",
+     "Puzzle video game",
+     "Video game culture"
+    ],
+    "hd": true,
+    "captions": false,
+    "kids": false,
+    "channel": {
+     "country": "SE",
+     "handle": "@fourgamesab",
+     "videos": 463,
+     "views": 842519,
+     "since": 1631043886,
+     "avatar": "https://yt3.ggpht.com/FsN-JCCDh2escBFx1DcY89pomSYMlRof6Pb05MQzOA0yPKAk_IvwL_h8UpEv9wyWmrsYGqbo=s88-c-k-c0x00ffffff-no-rj"
+    },
+    "topComments": [
+     {
+      "author": "@FourGamesAB",
+      "text": "https://store.steampowered.com/app/3958210/Digging_A_Hole_In_Ice_With_A_Chainsaw/",
+      "likes": 0,
+      "at": 1791375314,
+      "replies": 0
+     }
+    ],
+    "topCommentsAt": 1
    },
    "wb55e09327ce62": {
     "id": "wb55e09327ce62",
@@ -3871,7 +3990,30 @@
     "comments": 0,
     "live": false,
     "upcoming": false,
-    "subscribers": 4450
+    "subscribers": 4460,
+    "tags": [
+     "MisterRed",
+     "MisterRed Plays",
+     "Funny Video Game",
+     "Video Game Let's Play",
+     "Mister Red",
+     "Mister Red Plays"
+    ],
+    "topics": [
+     "Action-adventure game",
+     "Video game culture"
+    ],
+    "hd": true,
+    "captions": false,
+    "kids": false,
+    "channel": {
+     "country": "US",
+     "handle": "@misterredproductions",
+     "videos": 1302,
+     "views": 678867,
+     "since": 1421187807,
+     "avatar": "https://yt3.ggpht.com/vPRQ_mK3jSmcHkwEDvUij0HtaVUBSFVYM8wb6Z2pBNHTMacJBpbt4LZvz2FiYOjZ6afQootc4A=s88-c-k-c0x00ffffff-no-rj"
+    }
    },
    "wb810e5b5fafc8": {
     "id": "wb810e5b5fafc8",
@@ -4682,7 +4824,7 @@
     "2026-10-14": 195,
     "2026-10-15": 176,
     "2026-10-16": 180,
-    "2026-10-17": 189
+    "2026-10-17": 192
    },
    "reviews": {
     "2026-10-05": {
@@ -4734,9 +4876,13 @@
      "negative": 2185
     },
     "2026-10-17": {
-     "positive": 18108,
+     "positive": 18107,
      "negative": 2185
     }
+   },
+   "reviewScore": {
+    "desc": "Very Positive",
+    "score": 8
    }
   },
   "3601800": {
@@ -4819,7 +4965,7 @@
     "2026-10-14": 50,
     "2026-10-15": 84,
     "2026-10-16": 67,
-    "2026-10-17": 49
+    "2026-10-17": 59
    },
    "reviews": {
     "2026-10-05": {
@@ -4874,6 +5020,10 @@
      "positive": 1533,
      "negative": 258
     }
+   },
+   "reviewScore": {
+    "desc": "Very Positive",
+    "score": 8
    }
   },
   "3585800": {
@@ -4938,7 +5088,7 @@
     "2026-10-14": 59,
     "2026-10-15": 43,
     "2026-10-16": 81,
-    "2026-10-17": 79
+    "2026-10-17": 89
    },
    "reviews": {
     "2026-10-05": {
@@ -4993,6 +5143,10 @@
      "positive": 2619,
      "negative": 678
     }
+   },
+   "reviewScore": {
+    "desc": "Mostly Positive",
+    "score": 6
    }
   },
   "3976500": {
@@ -5130,6 +5284,10 @@
      "positive": 1629,
      "negative": 287
     }
+   },
+   "reviewScore": {
+    "desc": "Very Positive",
+    "score": 8
    }
   },
   "4210580": {
@@ -5264,9 +5422,13 @@
      "negative": 230
     },
     "2026-10-17": {
-     "positive": 1815,
+     "positive": 1816,
      "negative": 230
     }
+   },
+   "reviewScore": {
+    "desc": "Very Positive",
+    "score": 8
    }
   },
   "2764460": {
@@ -5349,7 +5511,7 @@
     "2026-10-14": 1612,
     "2026-10-15": 1465,
     "2026-10-16": 1576,
-    "2026-10-17": 1717
+    "2026-10-17": 1841
    },
    "reviews": {
     "2026-10-05": {
@@ -5401,9 +5563,13 @@
      "negative": 162
     },
     "2026-10-17": {
-     "positive": 5534,
+     "positive": 5535,
      "negative": 162
     }
+   },
+   "reviewScore": {
+    "desc": "Overwhelmingly Positive",
+    "score": 9
    }
   },
   "4078200": {
@@ -5541,6 +5707,10 @@
      "positive": 985,
      "negative": 229
     }
+   },
+   "reviewScore": {
+    "desc": "Very Positive",
+    "score": 8
    }
   },
   "2009350": {
@@ -5623,7 +5793,7 @@
     "2026-10-14": 741,
     "2026-10-15": 708,
     "2026-10-16": 762,
-    "2026-10-17": 700
+    "2026-10-17": 762
    },
    "reviews": {
     "2026-10-05": {
@@ -5678,11 +5848,27 @@
      "positive": 3631,
      "negative": 629
     }
+   },
+   "reviewScore": {
+    "desc": "Very Positive",
+    "score": 8
    }
   }
  },
  "curators": {
   "at": 1791209022,
   "list": []
- }
+ },
+ "followersOnline": [
+  [
+   1792249589,
+   2
+  ]
+ ],
+ "followersInGame": [
+  [
+   1792249589,
+   0
+  ]
+ ]
 }

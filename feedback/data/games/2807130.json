@@ -1266,6 +1266,10 @@
      "positive": 12939,
      "negative": 1454
     }
+   },
+   "reviewScore": {
+    "desc": "Very Positive",
+    "score": 8
    }
   },
   "1522820": {
@@ -1400,9 +1404,13 @@
      "negative": 2115
     },
     "2026-10-17": {
-     "positive": 12845,
+     "positive": 12846,
      "negative": 2115
     }
+   },
+   "reviewScore": {
+    "desc": "Very Positive",
+    "score": 8
    }
   },
   "2902540": {
@@ -1528,6 +1536,10 @@
      "positive": 1010,
      "negative": 37
     }
+   },
+   "reviewScore": {
+    "desc": "Overwhelmingly Positive",
+    "score": 9
    }
   },
   "1269690": {
@@ -1665,6 +1677,10 @@
      "positive": 1139,
      "negative": 84
     }
+   },
+   "reviewScore": {
+    "desc": "Very Positive",
+    "score": 8
    }
   },
   "2239150": {
@@ -1802,6 +1818,10 @@
      "positive": 22968,
      "negative": 939
     }
+   },
+   "reviewScore": {
+    "desc": "Overwhelmingly Positive",
+    "score": 9
    }
   },
   "2459550": {
@@ -1939,6 +1959,10 @@
      "positive": 4346,
      "negative": 149
     }
+   },
+   "reviewScore": {
+    "desc": "Overwhelmingly Positive",
+    "score": 9
    }
   },
   "3976500": {
@@ -2076,11 +2100,27 @@
      "positive": 1629,
      "negative": 287
     }
+   },
+   "reviewScore": {
+    "desc": "Very Positive",
+    "score": 8
    }
   }
  },
  "curators": {
   "at": 1791208948,
   "list": []
- }
+ },
+ "followersOnline": [
+  [
+   1792249539,
+   26
+  ]
+ ],
+ "followersInGame": [
+  [
+   1792249539,
+   4
+  ]
+ ]
 }

@@ -227,7 +227,7 @@
     "2026-10-14": 381,
     "2026-10-15": 418,
     "2026-10-16": 394,
-    "2026-10-17": 342
+    "2026-10-17": 347
    },
    "reviews": {
     "2026-10-05": {
@@ -282,6 +282,10 @@
      "positive": 14421,
      "negative": 494
     }
+   },
+   "reviewScore": {
+    "desc": "Overwhelmingly Positive",
+    "score": 9
    }
   },
   "2113850": {
@@ -364,7 +368,7 @@
     "2026-10-14": 1933,
     "2026-10-15": 1854,
     "2026-10-16": 1765,
-    "2026-10-17": 1470
+    "2026-10-17": 1517
    },
    "reviews": {
     "2026-10-05": {
@@ -416,9 +420,13 @@
      "negative": 409
     },
     "2026-10-17": {
-     "positive": 16563,
+     "positive": 16564,
      "negative": 410
     }
+   },
+   "reviewScore": {
+    "desc": "Overwhelmingly Positive",
+    "score": 9
    }
   },
   "4030830": {
@@ -556,6 +564,10 @@
      "positive": 231,
      "negative": 5
     }
+   },
+   "reviewScore": {
+    "desc": "Very Positive",
+    "score": 8
    }
   },
   "2060480": {
@@ -675,6 +687,10 @@
      "positive": 536,
      "negative": 18
     }
+   },
+   "reviewScore": {
+    "desc": "Overwhelmingly Positive",
+    "score": 9
    }
   },
   "3136330": {
@@ -812,6 +828,10 @@
      "positive": 936,
      "negative": 79
     }
+   },
+   "reviewScore": {
+    "desc": "Very Positive",
+    "score": 8
    }
   },
   "3314340": {
@@ -946,9 +966,13 @@
      "negative": 69
     },
     "2026-10-17": {
-     "positive": 1581,
+     "positive": 1582,
      "negative": 69
     }
+   },
+   "reviewScore": {
+    "desc": "Overwhelmingly Positive",
+    "score": 9
    }
   },
   "4216670": {
@@ -1086,6 +1110,10 @@
      "positive": 479,
      "negative": 61
     }
+   },
+   "reviewScore": {
+    "desc": "Very Positive",
+    "score": 8
    }
   },
   "2943180": {
@@ -1223,6 +1251,10 @@
      "positive": 709,
      "negative": 19
     }
+   },
+   "reviewScore": {
+    "desc": "Overwhelmingly Positive",
+    "score": 9
    }
   }
  },
@@ -1234,6 +1266,22 @@
   [
    1792245322,
    0
+  ],
+  [
+   1792249544,
+   1
+  ]
+ ],
+ "followersOnline": [
+  [
+   1792249563,
+   1
+  ]
+ ],
+ "followersInGame": [
+  [
+   1792249563,
+   1
   ]
  ]
 }

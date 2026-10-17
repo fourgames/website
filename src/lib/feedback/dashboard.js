@@ -1000,6 +1000,7 @@ function achievementsView() {
   const list = a.list.slice().sort((x, y) => y.percent - x.percent);
   let drop = null;
   list.forEach((x, i) => { if (i && list[i - 1].percent - x.percent > (drop?.by || 0)) drop = { at: i, by: list[i - 1].percent - x.percent }; });
+  const since = achievementsSince(a.history || []);
   return h("div",
     about( `The share of players who unlocked each achievement, from Steam, most common first. If they follow the game's progress, a big step down is where many players stop. Updated daily, last ${ago(a.at)}. `,
       "Steam's shares are over everyone who ever played, so an update moves them slowly. The change since an update is in points; the rough share among new players (copies sold and keys activated since, from sales) shows how the players who started on the new version are doing, without collecting anything from the game."),
@@ -1011,7 +1012,6 @@ function achievementsView() {
           drop && drop.at === i && drop.by >= 10 ? h("span.pc-new.ach-drop", { title: "The biggest step down from the achievement above" }, `−${drop.by.toFixed(1)} points: biggest drop`) : null,
           h("span.ach-pct", `${x.percent.toFixed(1)}%`)),
         x.desc && x.desc !== x.name ? h("div.ach-desc", x.desc) : null,
-  const since = achievementsSince(a.history || []);
         h("div.ach-bar", h("i", { style: `width:${Math.max(0.5, x.percent)}%` })),
         since ? achievementChange(x, since) : null))));
 }

@@ -237,9 +237,6 @@ export default {
 				text: "We aim to develop licensed games for Nintendo, LEGO, and anime properties.",
 				cta: "Start a conversation",
 			},
-			principle: {
-				text: "We have never and will never accept sponsorships or paid brand deals.",
-			},
 		},
 	},
 	form: {

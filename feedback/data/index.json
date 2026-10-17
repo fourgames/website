@@ -126,9 +126,9 @@
    "activeWhat": "new post"
   },
   "news": {
-   "ok": true,
-   "message": null,
-   "since": 1791147868,
+   "ok": false,
+   "message": "Couldn't search news (HTTP 503 from news.google.com).",
+   "since": 1792213847,
    "active": 1792094638,
    "activeWhat": "new web page"
   },
@@ -161,7 +161,7 @@
    "activeWhat": "new video"
   }
  },
- "changedAt": 1792210963,
+ "changedAt": 1792213847,
  "creditAlert": null,
  "discord": {
   "members": [

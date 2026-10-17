@@ -992,7 +992,9 @@ function achievementsView() {
   let drop = null;
   list.forEach((x, i) => { if (i && list[i - 1].percent - x.percent > (drop?.by || 0)) drop = { at: i, by: list[i - 1].percent - x.percent }; });
   return h("div",
-    about( `The share of players who unlocked each achievement, from Steam, most common first. If they follow the game's progress, a big step down is where many players stop. Updated daily, last ${ago(a.at)}.`),
+    about( `The share of players who unlocked each achievement, from Steam, most common first. If they follow the game's progress, a big step down is where many players stop. Updated daily, last ${ago(a.at)}. `,
+      "Steam's shares are over everyone who ever played, so an update moves them slowly. The change since an update is in points; the rough share among new players (copies sold and keys activated since, from sales) shows how the players who started on the new version are doing, without collecting anything from the game."),
+    achievementsChart(a.history || []),
     ...list.map((x, i) => h("div.card.ach",
       x.icon ? h("img.ach-icon", { src: x.icon, alt: "", loading: "lazy" }) : null,
       h("div.ach-body",
@@ -1000,7 +1002,85 @@ function achievementsView() {
           drop && drop.at === i && drop.by >= 10 ? h("span.pc-new.ach-drop", { title: "The biggest step down from the achievement above" }, `−${drop.by.toFixed(1)} points: biggest drop`) : null,
           h("span.ach-pct", `${x.percent.toFixed(1)}%`)),
         x.desc && x.desc !== x.name ? h("div.ach-desc", x.desc) : null,
-        h("div.ach-bar", h("i", { style: `width:${Math.max(0.5, x.percent)}%` }))))));
+  const since = achievementsSince(a.history || []);
+        h("div.ach-bar", h("i", { style: `width:${Math.max(0.5, x.percent)}%` })),
+        since ? achievementChange(x, since) : null))));
+}
+
+// Copies sold plus keys activated up to a time: Steam's achievement shares count roughly these players.
+function ownersAt(t) {
+  const day = isoDay(t);
+  return salesDays().filter(([d]) => d <= day).reduce((n, [, s]) => n + (s.units || 0) + (s.activations || 0), 0);
+}
+
+// What the shares are compared with: the last sample before the newest update that has one, else the
+// first sample there is.
+function achievementsSince(history) {
+  if (history.length < 2) return null;
+  const releases = (state.game.releases || []).slice().sort((a, b) => b.time - a.time);
+  const release = releases.find((r) => history[0][0] < r.time && r.time < history[history.length - 1][0]);
+  const base = release ? history.filter(([t]) => t < release.time).pop() : history[0];
+  const [t0, shares] = base;
+  const [t1] = history[history.length - 1];
+  const owners = [ownersAt(t0), ownersAt(t1)];
+  return { label: release ? `since ${updateName(release)}` : `since ${fmtDate(t0)}`, shares, owners, newPlayers: owners[1] - owners[0] };
+}
+
+// One achievement's change since the comparison point, and its rough share among the players who
+// started after it: (now × owners now − then × owners then) ÷ new owners.
+function achievementChange(x, since) {
+  const before = since.shares[x.name];
+  if (before == null) return null;
+  const diff = x.percent - before;
+  const parts = [h("span", { class: Math.abs(diff) < 0.5 ? "" : diff > 0 ? "ach-up" : "ach-down" }, `${diff >= 0 ? "+" : "−"}${Math.abs(diff).toFixed(1)} points ${since.label}`)];
+  if (since.newPlayers >= 10) {
+    const share = Math.max(0, Math.min(100, (x.percent * since.owners[1] - before * since.owners[0]) / since.newPlayers));
+    parts.push(h("span", { title: `${since.newPlayers} copies sold or keys activated since; a rough estimate, as returning players unlock achievements too` }, ` · ≈${Math.round(share)}% of new players (was ${before.toFixed(1)}% overall)`));
+  }
+  return h("div.ach-change", ...parts);
+}
+
+// Each achievement's share over time (stored on change), with updates marked.
+function achievementsChart(history) {
+  if (history.length < 2) return null;
+  const start = history[0][0], end = Math.max(now(), history[history.length - 1][0] + 1);
+  const names = Object.keys(history[history.length - 1][1]);
+  const x = (t) => M.left + ((t - start) / (end - start)) * (W - M.left - M.right);
+  const y = (v) => H - M.bottom - (v / 100) * (H - M.top - M.bottom);
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": "Share of players with each achievement over time" });
+  yAxis(svg, y, 100, (v) => `${v}%`);
+  timeAxis(svg, x, start, end);
+  releaseMarkers(svg, x, markers(start, end));
+  const paths = {};
+  for (const name of names) {
+    let d = "";
+    history.forEach(([t, shares], i) => {
+      const v = shares[name];
+      if (v == null) return;
+      d += d ? `H${x(t).toFixed(1)}V${y(v).toFixed(1)}` : `M${x(t).toFixed(1)},${y(v).toFixed(1)}`;
+      if (i === history.length - 1) d += `H${x(end).toFixed(1)}`;
+    });
+    paths[name] = svgEl("path", { d, fill: "none", stroke: "var(--fb-muted)", "stroke-width": 1.5, opacity: 0.6, "stroke-linejoin": "round" });
+    svg.append(paths[name]);
+  }
+  const cross = svgEl("line", { y1: M.top, y2: H - M.bottom, class: "cross", visibility: "hidden" });
+  svg.append(cross);
+  const { card, tip } = chartCard("Achievements over time", "The share of all players with each achievement, sampled daily. Dashed lines are updates; a line that bends after one is the update at work.", null, svg, null);
+  const highlight = (name) => { for (const [n, p] of Object.entries(paths)) { p.setAttribute("stroke", n === name ? "var(--fb-accent)" : "var(--fb-muted)"); p.setAttribute("stroke-width", n === name ? 2.5 : 1.5); p.setAttribute("opacity", n === name || !name ? 1 : 0.35); } };
+  svg.addEventListener("pointermove", (e) => {
+    const box = svg.getBoundingClientRect();
+    const px = ((e.clientX - box.left) / box.width) * W, py = ((e.clientY - box.top) / box.height) * H;
+    const t = Math.min(end, Math.max(start, start + ((px - M.left) / (W - M.left - M.right)) * (end - start)));
+    const shares = history.filter(([s]) => s <= t).pop()?.[1] || history[0][1];
+    const rows = names.filter((n) => shares[n] != null).sort((a, b) => shares[b] - shares[a]);
+    const nearest = rows.reduce((a, n) => (Math.abs(y(shares[n]) - py) < Math.abs(y(shares[a]) - py) ? n : a), rows[0]);
+    highlight(nearest);
+    cross.setAttribute("x1", x(t)); cross.setAttribute("x2", x(t)); cross.setAttribute("visibility", "visible");
+    showTip(card, tip, svg, x(t), y(shares[nearest]), [h("div.t", fmtDate(t)),
+      ...rows.map((n) => h("div", n === nearest ? h("b", `${shares[n].toFixed(1)}% ${n}`) : `${shares[n].toFixed(1)}% ${n}`))]);
+  });
+  svg.addEventListener("pointerleave", () => { tip.style.display = "none"; cross.setAttribute("visibility", "hidden"); highlight(null); });
+  return card;
 }
 
 // Steam curators who reviewed the game (feedback/community.py, every 6 hours), most followers first,

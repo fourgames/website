@@ -4,7 +4,8 @@ percentages) and the studio's Discord server. None of it needs a key. Stdlib onl
 - Followers: the member count of the game's Steam community hub, which is what "follow" on the store
   page joins (it moves with wishlists), hourly. Stored as [time, count] on change.
 - Achievements: name, description, icon and the share of players who unlocked each, from the game's
-  public achievement stats page, daily.
+  public achievement stats page, daily. Each change is also kept in `history` ([time, {name: percent}]),
+  so the dashboard can show how the shares move around each update.
 - Discord: members and members online, from the site's invite link (src/data/site.js), hourly.
   Studio-wide, so it's kept in index.json rather than a game's file.
 - Bundles: the Steam bundles the game is in (from its store page), daily, and the store details of
@@ -80,8 +81,13 @@ def record_achievements(state, game):
             "percent": float(pct.group(1)),
         })
     # A game without achievements (or not out yet) has none: nothing to keep.
-    if found and found != (state.get("achievements") or {}).get("list"):
-        state["achievements"] = {"at": int(time.time()), "list": found}
+    old = state.get("achievements") or {}
+    if found and found != old.get("list"):
+        history = old.get("history") or []
+        shares = {x["name"]: x["percent"] for x in found}
+        if not history or history[-1][1] != shares:
+            history.append([int(time.time()), shares])
+        state["achievements"] = {"at": int(time.time()), "list": found, "history": history}
     media._ran("achievements", app_id)
 
 

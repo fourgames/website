@@ -80,7 +80,7 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
   - `releases`.
   - `manualFixes`: Claude's verdict on each fix you marked.
   - `followers`: `[time, count]`, stored only when it changes.
-  - `achievements`: `{at, list: [{name, desc, icon, percent}]}`.
+  - `achievements`: `{at, list: [{name, desc, icon, percent}], history: [[time, {name: percent}]]}`, `history` a sample per change.
   - `bundles`: `{at, list: [{id, name, image, apps, bundleDiscount, price, fullPrice}]}`, the Steam bundles it's in.
   - `partners`: the games you want to bundle it with, keyed by app id: `{name, developers, publishers, capsule, released, price, reviews}`.
   - `competitors`: the games you compare it with, keyed by app id: `{name, capsule, released, comingSoon, peaks: {day: players}, reviews: {day: {positive, negative}}, updates: [{time, name, version, url}]}`, days in UTC, kept 400 days.
@@ -103,7 +103,7 @@ This repo is public, so this data is too. It's all public on Steam anyway.
 - **Sales:** hourly from Steam's `IPartnerFinancialsService` (`sales.py`, into `data/sales.json`, which is public like the rest of the data, on purpose): net revenue per day or week with updates and discounted days marked, units sold, refund rate, lifetime totals, key activations and top countries. Steam's days are Pacific time and recent ones can still change as payments settle.
 - **Competitors:** similar games you add by store link or app id, next to yours. One line on top says what it means: *only you dropped*, *everyone dropped*, *beating the market* or *in step*, from the average daily peak players over the last 7 days against the 7 before (so games of any size compare). Below, a chart of each game's daily peak as a share of its own usual, with you, the median of the others and each of them; then a card per game with yesterday's peak, its review score and reviews this week, and its last update. Steam keeps no player history, so it compares once two weeks are collected.
 - **Curators:** the Steam curators who reviewed the game, most followers first: verdict, what they wrote, followers, and buttons to their full review, curator page and Steam group (to thank them or reply).
-- **Achievements:** the share of players who unlocked each, most common first, with the biggest step down marked: where many players stop.
+- **Achievements:** the share of players who unlocked each, most common first, with the biggest step down marked: where many players stop. A chart shows each share over time with updates marked, and each achievement shows its change since the newest update with samples on both sides (in points) and, once at least 10 copies were sold or keys activated since, a rough share among those new players ((share now × owners now − share then × owners then) ÷ new owners, from sales). Steam's shares are over everyone who ever played, so this is how to see what an update did to how far new players get, without collecting anything from the game.
 - **Coming soon:** ideas for later, each with what it would show and what it needs: data from inside the games (sessions, where players quit, crashes, hardware). Nothing there is collected yet.
 - **Steam links on the site** carry `utm_source=fourgames.se&utm_medium=website` (`src/lib/games.js`), so Steamworks' **UTM Analytics** for each game counts the visits that came from the website.
 - **Issues:** bug issues sorted by priority. Each has *Copy fix prompt* and the original posts with their translations and Steam links.

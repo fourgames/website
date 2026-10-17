@@ -1059,6 +1059,38 @@
     "icon": "https://shared.fastly.steamstatic.com/community_assets/images/apps/2807130/c4888d3ea8fe87144e7f28858df490222940a044.jpg",
     "percent": 0.1
    }
+  ],
+  "history": [
+   [
+    1791155431,
+    {
+     "Greed For Gold": 75.7,
+     "Certified Goblin Slayer": 66.6,
+     "Straw Hat": 21.2,
+     "Let There Be Light": 18.1,
+     "Bare Bones": 3.0,
+     "Plush": 3.0,
+     "Wrong Tool For The Job": 0.1,
+     "Untouchable": 0.1,
+     "Impregnable": 0.1,
+     "Pacifist": 0.1
+    }
+   ],
+   [
+    1791479080,
+    {
+     "Greed For Gold": 76.4,
+     "Certified Goblin Slayer": 67.6,
+     "Straw Hat": 20.5,
+     "Let There Be Light": 20.5,
+     "Bare Bones": 2.9,
+     "Plush": 2.9,
+     "Wrong Tool For The Job": 0.1,
+     "Untouchable": 0.1,
+     "Impregnable": 0.1,
+     "Pacifist": 0.1
+    }
+   ]
   ]
  },
  "bundles": {

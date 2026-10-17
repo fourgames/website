@@ -12,7 +12,7 @@ let DATA = DATA_OVERRIDE || `${RAW}/main/feedback/data`;
 const DAY = 86400;
 const URGENCY = { urgent: "Urgent", high: "High", medium: "Medium", low: "Low" };
 const KIND = { review: "Review", topic: "Thread", reply: "Reply" };
-const state = { index: null, games: {}, game: null, tab: "overview", filters: { issues: { status: "active", q: "", sort: "priority" }, suggestions: { status: "active", q: "", sort: "priority" }, feed: { kind: "all", category: "all", version: "all", q: "", shown: 50 }, stats: { range: 0 }, replies: { show: "open" }, media: { source: "all", shown: 30 }, sales: { range: 90 } }, sales: null };
+const state = { index: null, games: {}, game: null, home: false, tab: "issues", filters: { home: { game: "all", kind: "all", category: "all", q: "", shown: 50 }, issues: { status: "active", q: "", sort: "priority" }, suggestions: { status: "active", q: "", sort: "priority" }, feed: { kind: "all", category: "all", version: "all", q: "", shown: 50 }, stats: { range: 0 }, media: { source: "all", shown: 30 }, sales: { range: 90 } }, sales: null };
 
 const store = {
   get(k) { try { return localStorage.getItem("fb-dash:" + k); } catch { return null; } },
@@ -315,10 +315,8 @@ const ICONS = {
   issues: "M8 2l1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3 3 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4",
   suggestions: "M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4",
   feed: "M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z",
-  overview: "M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z",
   loved: "M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4 3 5.5l7 7z",
   updates: "M12 19V5M5 12l7-7 7 7M4 21h16",
-  replies: "M9 17H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v6M14 19l2 2 5-5",
   achievements: "M8 21h8M12 17v4M7 4h10v5a5 5 0 0 1-10 0zM17 5h3v2a3 3 0 0 1-3 3M7 5H4v2a3 3 0 0 0 3 3",
   bundles: "M16.5 9.4 7.5 4.2M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16zM3.3 7 12 12l8.7-5M12 22V12",
   soon: "M6 11h4M8 9v4M15 12h.01M18 10h.01M17.32 5H6.68a4 4 0 0 0-3.98 3.59L2 16a3 3 0 0 0 3 3c1 0 1.5-.5 2-1l1.41-1.41A2 2 0 0 1 9.83 16h4.34a2 2 0 0 1 1.41.59L17 18c.5.5 1 1 2 1a3 3 0 0 0 3-3l-.7-7.41A4 4 0 0 0 17.32 5z",
@@ -434,9 +432,11 @@ async function init() {
   renderStatus();
   const games = state.index.games || [];
   const hash = new URLSearchParams(location.hash.slice(1));
-  const wanted = Number(hash.get("app") || store.get("app"));
+  const wanted = hash.get("app") || store.get("app");
   state.tab = NAV.some(([, tabs]) => tabs.some(([id]) => id === hash.get("tab"))) ? hash.get("tab") : state.tab;
-  if (games.length) pickGame(games.some((g) => g.appId === wanted) ? wanted : orderedGames()[0].appId);
+  // All games first, unless a game was asked for (or was the last one open).
+  if (games.some((g) => g.appId === Number(wanted))) pickGame(Number(wanted));
+  else if (games.length) pickHome();
 }
 
 // Brand marks for the service cards: Steam, Discord and GitHub as in the site's Icon.vue, Claude
@@ -703,15 +703,18 @@ function renderGames() {
   const games = orderedGames();
   const players = (g) => g.lastPost ? `last player post ${ago(g.lastPost)}` : g.status === "upcoming" ? "coming soon, no player posts yet" : "no player posts yet";
   const sub = (g) => players(g) + (g.lastDevPost > (g.lastPost || 0) ? ` · you posted ${ago(g.lastDevPost)}` : "");
-  const item = (g) => h("button.g-item", { type: "button", title: g.name, "aria-current": String(state.game?.appId === g.appId), onclick: () => pickGame(g.appId) },
+  const item = (g) => h("button.g-item", { type: "button", title: g.name, "aria-current": String(!state.home && state.game?.appId === g.appId), onclick: () => pickGame(g.appId) },
     g.capsule ? h("img.g-thumb", { src: g.capsule, alt: "", loading: "lazy" }) : h("span.g-thumb"),
     h("span.g-name", g.name, h("span.g-sub", sub(g))));
-  document.getElementById("fb-games-side").replaceChildren(h("div.side-label", "Games"), ...games.map(item));
-  document.getElementById("fb-games-strip").replaceChildren(...games.map(item));
+  const home = () => h("button.g-item", { type: "button", "aria-current": String(state.home), onclick: pickHome },
+    h("span.g-thumb.g-all", "All"), h("span.g-name", "All games", h("span.g-sub", "needs attention and every post")));
+  document.getElementById("fb-games-side").replaceChildren(h("div.side-label", "Games"), home(), ...games.map(item));
+  document.getElementById("fb-games-strip").replaceChildren(home(), ...games.map(item));
 }
 
 async function pickGame(appId) {
   store.set("app", appId);
+  state.home = false;
   const meta = state.index.games.find((g) => g.appId === appId);
   if (!state.games[appId]) {
     document.getElementById("fb-view").replaceChildren(h("p.empty", "Loading…"));
@@ -730,7 +733,7 @@ async function pickGame(appId) {
 
 function setHash() {
   // Keep vue-router's history state; only the hash changes.
-  history.replaceState(history.state, "", `${location.pathname}${location.search}#app=${state.game.appId}&tab=${state.tab}`);
+  history.replaceState(history.state, "", `${location.pathname}${location.search}${state.home ? "#app=all" : `#app=${state.game.appId}&tab=${state.tab}`}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -807,8 +810,8 @@ function renderStats() {
   };
   const score = reviewScore(totals);
   const byDay = new Map(salesDays());
-  const revenue = daily(14, (d) => byDay.get(isoDay(d))?.net || 0);
-  const gross7 = daily(7, (d) => byDay.get(isoDay(d))?.gross || 0).reduce((a, b) => a + b, 0);
+  const revenue = daily(14, (d) => byDay.get(isoDay(d))?.gross || 0);
+  const grossAll = salesDays().reduce((a, [, t]) => a + (t.gross || 0), 0);
   // The two chart cards stay minimal, like SteamDB's: the number and what it is. Their details
   // (peaks, positive and negative counts) are in the panel that opens below.
   const cards = {
@@ -824,7 +827,7 @@ function renderStats() {
       ? tile("Discord", state.index.discord.members.at(-1)[1], [`${state.index.discord.online?.at(-1)?.[1] ?? 0} online`],
         daily(14, (d) => playersAt(state.index.discord.members, d + DAY - 1) ?? 0), "#5865f2", "discord")
       : null,
-    revenue: salesDays().length ? tile("Revenue", usd(revenue.slice(-7).reduce((a, b) => a + b, 0)), [`net, last 7 days`, `${usd(gross7)} gross`], revenue, "var(--fb-positive)") : null,
+    revenue: salesDays().length ? tile("Gross all time", usd(grossAll), `${usd(revenue.slice(-7).reduce((a, b) => a + b, 0))} in the last 7 days`, revenue, "var(--fb-positive)") : null,
     bugs: tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent", openBugsPerDay, "var(--type-bug)"),
     posts: tile("New posts", fresh.length, "last 24 h", postsPerDay),
   };
@@ -939,8 +942,7 @@ function chartPanel(which) {
 
 // The views, in groups so the list reads at a glance: what players say, the game itself, and money.
 const NAV = [
-  [null, [["overview", "Overview"]]],
-  ["Players", [["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["replies", "Replies"], ["feed", "All posts"]]],
+  ["Players", [["issues", "Bugs"], ["suggestions", "Ideas"], ["loved", "Loved"], ["feed", "All posts"]]],
   ["Game", [["updates", "Updates"], ["achievements", "Achievements"], ["media", "Media"], ["curators", "Curators"]]],
   ["Business", [["sales", "Sales"], ["bundles", "Bundles"], ["competitors", "Competitors"]]],
   ["Later", [["soon", "Coming soon"]]],
@@ -952,6 +954,15 @@ const about = (...kids) => h("details.about", h("summary", "How this works"), h(
 function render() {
   state.drawn = drawnKey(); // what's on screen, so a refresh only redraws for new data
   renderGames();
+  // On All games the views are one game's, so they're hidden.
+  document.querySelector(".fb .side-views").hidden = state.home;
+  document.getElementById("fb-nav-top").hidden = state.home;
+  if (state.home) {
+    renderHomeTop();
+    setHash();
+    document.getElementById("fb-view").replaceChildren(homeView());
+    return;
+  }
   renderHeader();
   renderStats();
   const counts = {
@@ -959,8 +970,6 @@ function render() {
     suggestions: issues("suggestion").filter(isActive).length,
     feed: items().filter((i) => !i.dev).length,
     loved: issues("praise").length,
-    replies: toReply().length,
-    overview: attention().length || null,
     achievements: state.game.achievements?.list?.length || null,
     curators: state.game.curators?.list?.length || null,
     bundles: bundleWith().length || null,
@@ -979,7 +988,7 @@ function render() {
   document.getElementById("fb-nav-side").replaceChildren(...NAV.flatMap(([group, tabs]) => [...(group ? [h("div.nav-group", group)] : []), ...tabs.map(button)]));
   document.getElementById("fb-nav-top").replaceChildren(...NAV.flatMap(([, tabs], i) => [...(i ? [h("span.nav-gap")] : []), ...tabs.map(button)]));
   setHash();
-  const view = { overview: overviewView, issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, replies: repliesView, updates: updatesView, media: mediaView, achievements: achievementsView, curators: curatorsView, bundles: bundlesView, competitors: competitorsView, sales: salesView, soon: soonView, feed: feedView }[state.tab]();
+  const view = { issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, updates: updatesView, media: mediaView, achievements: achievementsView, curators: curatorsView, bundles: bundlesView, competitors: competitorsView, sales: salesView, soon: soonView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
 }
 
@@ -1411,12 +1420,11 @@ function soonView() {
       h("p.ov-calm", h("b", "Needs: "), idea.needs, idea.link ? [" ", h("a", { href: idea.link[0], target: "_blank", rel: "noopener" }, idea.link[1], " ↗")] : null))));
 }
 
-// When the newest thing in each view arrived (the overview only sums up the others).
+// When the newest thing in each view arrived.
 const NEWEST = {
   issues: () => issues("bug").filter(isActive).map((i) => i.lastSeen),
   suggestions: () => issues("suggestion").filter(isActive).map((i) => i.lastSeen),
   loved: () => issues("praise").map((i) => i.lastSeen),
-  replies: () => toReply().map((i) => draftFor(i).at || i.created),
   updates: () => (state.game.releases || []).map((r) => r.time),
   media: () => talk().filter((m) => !m.own).map((m) => m.at),
   curators: () => (state.game.curators?.list || []).map((c) => c.seen),
@@ -1880,146 +1888,11 @@ function postView(item, focus = null) {
     h("div.meta", ...p.flags, item.forum && item.kind !== "review" ? h("span", item.forum) : null, p.link));
 }
 
-// Posts worth a reply: a negative review or a thread about something a later update fixed (Steam's
-// guidance: reply to "a bug that has since been resolved"), and recent positive reviews, thanked and
-// invited back to the newest update. Drafted by feedback/run.py; gone once you've replied on Steam,
-// the issue turns out to be still happening, the review turns negative, or you press Done
-// (remembered in this browser).
+// Whether you've answered a post on Steam: a developer response, or a post of yours later in its thread.
 function replied(item) {
   if (item.devResponse) return true;
   const thread = item.topic || item.id;
-  // Any post of yours in the thread after the player's counts, even one from before the fix.
   return items().some((i) => i.dev && (i.id === thread || i.topic === thread) && i.created > item.created);
-}
-function toReply() {
-  const done = new Set((store.get("replied") || "").split(",").filter(Boolean));
-  return items()
-    .filter((i) => draftFor(i) && !done.has(i.id) && !replied(i))
-    .sort((a, b) => b.created - a.created);
-}
-// The fixed complaints a positive review's thank-you names, while they're still fixed.
-function thanksFixes(r) {
-  return (r.fixes || []).map((f) => state.game.issues?.[f.split("@")[0]]).filter((i) => i?.status === "likely_fixed");
-}
-function draftFor(item) {
-  if (item.fixReply && state.game.issues?.[item.fixReply.issue]?.status === "likely_fixed") return item.fixReply;
-  if (item.thanksReply && item.votedUp) return item.thanksReply;
-  return null;
-}
-
-function replyCard(item) {
-  const r = draftFor(item);
-  const issue = r.issue ? state.game.issues[r.issue] : null;
-  const done = h("button.btn", { onclick: () => {
-    store.set("replied", [...(store.get("replied") || "").split(",").filter(Boolean), item.id].join(","));
-    render();
-  } }, "Done");
-  return h("div.card",
-    r === item.fixReply
-      ? h("div.meta", h("span.badge.s-fixed", `✓ Fixed in ${r.version}`), h("b", issue?.title || ""))
-      : h("div.meta", h("span.badge.s-fixed", "👍 Positive review"),
-        ...thanksFixes(r).flatMap((i) => [h("span.badge.s-fixed", `✓ Fixed in ${i.fixedIn}`), h("b", i.title)]),
-        h("span", r.update ? `invites them back for ${r.update}` : "a thank-you")),
-    h("div.reply",
-      h("div.reply-row",
-        h("div", h("div", "💬 ", ...withSpeak(r.text)), r.text !== r.english ? h("div.en", r.english) : null),
-        h("div.actions", { style: "margin:0;flex:none" },
-          h("button.btn.primary", { onclick: (e) => copy(r.text, e.currentTarget) }, "Copy reply"),
-          h("a.btn.link-btn", { href: item.url, target: "_blank", rel: "noopener" }, item.kind === "review" ? "Reply on Steam ↗" : "Open thread ↗"),
-          done))),
-    postView(item));
-}
-
-// Your answer to a player's post: the developer response on a review, or your first post in the
-// thread after theirs.
-function yourReply(item) {
-  if (item.devResponse) return { text: item.devResponse, at: null };
-  const thread = item.topic || item.id;
-  const mine = items().filter((i) => i.dev && (i.id === thread || i.topic === thread) && i.created > item.created)
-    .sort((a, b) => a.created - b.created)[0];
-  return mine ? { text: mine.text, at: mine.created } : null;
-}
-
-function repliedCard(item) {
-  const mine = yourReply(item);
-  return h("div.card",
-    h("div.meta", h("span.badge.s-fixed", "✓ Replied"), mine?.at ? h("span", fmtDate(mine.at)) : null,
-      !mine ? h("span", "marked done here") : null),
-    mine ? h("div.reply", h("div.reply-row", h("div", h("div.en", "Your reply"), h("div", ...withSpeak(mine.text))))) : null,
-    postView(item));
-}
-
-function repliesView() {
-  const f = state.filters.replies;
-  const done = new Set((store.get("replied") || "").split(",").filter(Boolean));
-  const open = toReply();
-  // Every player post you've answered, plus drafts you marked done here.
-  const answered = items()
-    .filter((i) => !i.dev && (replied(i) || ((i.fixReply || i.thanksReply) && done.has(i.id))))
-    .sort((a, b) => b.created - a.created);
-  // Tone: positive is a thank-you draft or a positive review; negative is everything else (fixes).
-  // Negative by default, remembered in this browser.
-  f.tone ??= store.get("replyTone") || "negative";
-  const positive = (i) => (draftFor(i) ? draftFor(i) === i.thanksReply : i.kind === "review" && !!i.votedUp);
-  const toned = (list) => (f.tone === "all" ? list : list.filter((i) => positive(i) === (f.tone === "positive")));
-  const list = h("div");
-  const draw = () => {
-    const o = toned(open), a = toned(answered);
-    const cards = f.show === "open" ? o.map(replyCard)
-      : f.show === "replied" ? a.map(repliedCard)
-      : [...o.map(replyCard), ...a.map(repliedCard)];
-    const empty = { open: "Nothing to reply to right now.", replied: "You haven't replied to any posts yet.", all: "Nothing here yet." }[f.show];
-    list.replaceChildren(...(cards.length ? cards : [h("p.empty", empty)]));
-  };
-  const intro = about(
-    "To reply: negative reviews and threads about something an update has since fixed (say what was fixed), and positive reviews from the last 60 days (thank them and invite them back for the newest update). Replied: posts you've already answered on Steam.");
-  const filter = chips([["open", `To reply (${open.length})`], ["replied", `Replied (${answered.length})`], ["all", "All"]], f.show, (v) => { f.show = v; draw(); }, "Show");
-  const neg = open.filter((i) => !positive(i)).length;
-  const tone = chips([["negative", `Negative (${neg})`], ["positive", `Positive (${open.length - neg})`], ["all", "Both"]], f.tone,
-    (v) => { f.tone = v; store.set("replyTone", v); draw(); }, "Tone");
-  draw();
-  return h("div", intro, h("div.filters", filter, tone), list, replyResults());
-}
-
-// Do replies turn negative reviews around? Every review that was negative at some point: whether you
-// replied on Steam, how long after it turned negative, and whether it turned positive after your
-// reply (or at all, without one). Reply times come from Steam (feedback/run.py: devRespondedAt).
-const FAST_REPLY = 3600;
-function replyOutcomes() {
-  return items().filter((i) => i.kind === "review" && !i.dev && (!i.votedUp || (i.flips || []).some((f) => f.to === "positive"))).map((i) => {
-    const at = i.devResponse ? i.devRespondedAt || null : null;
-    // When it last turned negative before your reply (or now, without one): the review itself, or a flip.
-    const negSince = (i.flips || []).filter((f) => f.to === "negative" && (!at || f.at < at)).at(-1)?.at ?? i.created;
-    const flip = (i.flips || []).find((f) => f.to === "positive" && f.at > negSince && (!i.devResponse || !at || f.at > at));
-    return { item: i, replied: !!i.devResponse, at, wait: at ? Math.max(0, at - negSince) : null, fix: !!i.fixReply, turned: !!flip && !!i.votedUp, flipAt: flip?.at };
-  });
-}
-const fmtWait = (s) => s < 3600 ? `${Math.max(1, Math.round(s / 60))} min` : s < 2 * DAY ? `${Math.round(s / 3600)} h` : `${Math.round(s / DAY)} days`;
-function replyResults() {
-  const all = replyOutcomes();
-  if (!all.length) return null;
-  const rate = (list, label, cls = "") => {
-    const n = list.length, k = list.filter((o) => o.turned).length;
-    return h(`div.impact-stat.rr-stat${cls}`, h("b", n ? `${Math.round((100 * k) / n)}%` : "–"), h("span", label), h("span", n ? `${k} of ${n} turned positive` : "none yet"));
-  };
-  const replied = all.filter((o) => o.replied), timed = replied.filter((o) => o.wait != null);
-  const flips = replied.filter((o) => o.turned).sort((a, b) => b.flipAt - a.flipAt);
-  const few = replied.length < 10 || all.length - replied.length < 10;
-  return h("article.card.reply-results",
-    h("h3", "Do replies turn reviews around?"),
-    h("p.ov-calm", `Every review that was negative at some point (${all.length}), and how many turned positive.`,
-      few ? " Too few to tell yet: it means something from about 10 on each side." : ""),
-    h("div.rr-row",
-      rate(replied, "You replied"),
-      rate(all.filter((o) => !o.replied), "No reply"),
-      rate(timed.filter((o) => o.wait < FAST_REPLY), "Replied within 1 h"),
-      rate(timed.filter((o) => o.wait >= FAST_REPLY), "Replied later"),
-      rate(replied.filter((o) => o.fix), "Said what was fixed")),
-    flips.length ? h("div.upd-section", h("b", "Turned positive after your reply"),
-      h("ul.pc-points", ...flips.map((o) => h("li",
-        h("a", { href: o.item.url, target: "_blank", rel: "noopener" }, o.item.author?.name || "A player"),
-        h("span", [o.wait != null ? `you replied ${fmtWait(o.wait)} after the review` : "you replied",
-          `it turned positive ${fmtWait(Math.max(0, o.flipAt - (o.at || o.item.created)))} later`].join(", ")))))) : null);
 }
 
 // Bugs that need you now: reported again after a fix, or high/urgent and still open.
@@ -2029,66 +1902,33 @@ function attention() {
     .sort((a, b) => b.priority - a.priority);
 }
 
-function overviewView() {
-  const go = (tab, label) => h("button.btn", { onclick: () => { state.tab = tab; render(); window.scrollTo({ top: 0 }); } }, label, " →");
-  const section = (title, count, ...body) => h("section.ov-section", h("h3", title, count != null ? h("span.ov-count", count) : null), ...body);
-  const urgent = attention();
-  // Next to anything urgent, the open complaints in the most negative reviews (not already above).
-  const costly = Object.values(state.game.issues || {}).filter((i) => i.kind !== "praise" && isActive(i) && i.negativeReviews && !urgent.includes(i))
-    .sort((a, b) => b.negativeReviews - a.negativeReviews || b.mentions - a.mentions).slice(0, 3);
-  // What more players are bringing up this week than last (bugs, ideas and praise), not already above.
-  const trending = Object.values(state.game.issues || {}).filter((i) => (i.kind === "praise" || isActive(i)) && trend(i) && !urgent.includes(i) && !costly.includes(i))
-    .sort(SORTS.trending).slice(0, 3);
-  const replies = toReply();
-  const latest = items().filter((i) => !i.dev).sort((a, b) => b.created - a.created).slice(0, 5);
-  const live = liveNow();
-  const coverage = talk().filter((m) => !isLive(m) && m.at > now() - 7 * DAY).sort((a, b) => b.at - a.at).slice(0, 3);
-  return h("div",
-    live.length ? section("🔴 Live now", live.length, ...live.map(mediaCard)) : null,
-    urgent.length
-      ? section("Needs attention", urgent.length, ...urgent.slice(0, 5).map((i) => issueCard(i)), urgent.length > 5 || issues("bug").filter(isActive).length > urgent.length ? go("issues", "All bugs") : null)
-      : section("Needs attention", null, h("p.ov-calm", "Nothing urgent: no high-priority bugs, and nothing came back after a fix.")),
-    costly.length
-      ? section("Costing you reviews", costly.length, h("p.ov-calm", "The open complaints that come up most in negative reviews."), ...costly.map((i) => issueCard(i)), go("suggestions", "All ideas"))
-      : null,
-    trending.length
-      ? section("Trending", trending.length, h("p.ov-calm", "Brought up by more players this week than the week before."), ...trending.map((i) => issueCard(i)))
-      : null,
-    replies.length
-      ? section("Worth a reply", replies.length, h("p.ov-calm", `${plural(replies.length, "post")}: fixes to tell players about and positive reviews to thank. `, go("replies", "Replies")))
-      : null,
-    coverage.length
-      ? section("New this week", null, h("p.ov-calm", "Videos, articles and posts about the game outside Steam."), ...coverage.map(mediaCard), go("media", "All media"))
-      : null,
-    section("Latest posts", null,
-      // Long reviews are cut to a few lines here; a click shows the whole post.
-      ...(latest.length ? latest.map((i) => postCard(i)) : [h("p.ov-calm", "No posts yet.")]),
-      latest.length ? go("feed", "All posts") : null),
-  );
-}
-
-function feedView() {
-  const f = state.filters.feed;
+// Every post, newest first; on the All games page every game's posts together, each with its game.
+function feedView({ everyGame = false } = {}) {
+  const f = everyGame ? state.filters.home : state.filters.feed;
   const wrap = h("div");
   const list = h("div");
+  const games = everyGame ? gamesLoaded() : [state.game];
   // Before or since the newest update: what players said about the build they're on now.
-  const update = latestUpdate();
+  const update = everyGame ? null : latestUpdate();
   const draw = () => {
     const q = f.q.toLowerCase();
-    const all = items()
-      .filter((i) => !i.dev || !(i.kind === "topic" && i.forum === "Events & Announcements"))
-      .filter((i) => f.kind === "all" || i.kind === f.kind)
-      .filter((i) => f.category === "all" || (f.category === "pending" ? !i.triage && !i.dev : i.triage?.category === f.category))
-      .filter((i) => f.version === "all" || !update || (f.version === "since") === (i.created >= update.time))
-      .filter((i) => !q || (english(i) + " " + (i.text || "") + " " + (i.title || "")).toLowerCase().includes(q))
-      .sort((a, b) => Math.max(b.created, b.updated || 0) - Math.max(a.created, a.updated || 0));
+    const all = games.filter((g) => !f.game || f.game === "all" || g.appId === f.game)
+      .flatMap((g) => Object.values(g.items || {}).map((i) => [g, i]))
+      .filter(([, i]) => !i.dev || !(i.kind === "topic" && i.forum === "Events & Announcements"))
+      .filter(([, i]) => f.kind === "all" || i.kind === f.kind)
+      .filter(([, i]) => f.category === "all" || (f.category === "pending" ? !i.triage && !i.dev : i.triage?.category === f.category))
+      .filter(([, i]) => f.version === "all" || !update || (f.version === "since") === (i.created >= update.time))
+      .filter(([, i]) => !q || (english(i) + " " + (i.text || "") + " " + (i.title || "")).toLowerCase().includes(q))
+      .sort(([, a], [, b]) => Math.max(b.created, b.updated || 0) - Math.max(a.created, a.updated || 0));
     const shown = all.slice(0, f.shown);
-    list.replaceChildren(...(shown.length ? shown.map((i) => h("div.card", postView(i))) : [h("p.empty", "Nothing here yet.")]));
+    const card = ([g, i]) => everyGame ? h("div.card", gameTag(g), inGame(g, () => postView(i))) : h("div.card", postView(i));
+    list.replaceChildren(...(shown.length ? shown.map(card) : [h("p.empty", "Nothing here yet.")]));
     if (all.length > shown.length) list.append(h("button.btn.more", { onclick: () => { f.shown += 50; draw(); } }, `Show more (${all.length - shown.length} left)`));
   };
   const sel = (label, key, options) => chips(options, f[key], (v) => { f[key] = v; f.shown = 50; draw(); }, label);
   wrap.append(
     h("div.filters",
+      everyGame ? sel("Game", "game", [["all", "All games"], ...games.map((g) => [g.appId, g.meta.name])]) : null,
       sel("Type", "kind", [["all", "All posts"], ["review", "Reviews"], ["topic", "Threads"], ["reply", "Replies"]]),
       sel("Category", "category", [["all", "Any category"], ["bug", "Bugs"], ["suggestion", "Suggestions"], ["question", "Questions"], ["praise", "Praise"], ["pending", "Not triaged yet"]]),
       update ? sel("Update", "version", [["all", "Any version"], ["since", `Since ${updateName(update)}`], ["before", `Before ${updateName(update)}`]]) : null,
@@ -2096,6 +1936,84 @@ function feedView() {
     list);
   draw();
   return wrap;
+}
+
+// ---------------------------------------------------------------------------
+// All games: what needs you in any game up front, then every game's posts in one list.
+// ---------------------------------------------------------------------------
+
+// Every game whose data is loaded, in the side list's order, with its index entry as `meta`.
+const gamesLoaded = () => orderedGames().filter((m) => state.games[m.appId]).map((m) => ({ ...state.games[m.appId], meta: m }));
+// Builds something for another game than the one picked (the helpers read `state.game`).
+function inGame(g, build) {
+  const was = state.game;
+  state.game = g;
+  try { return build(); } finally { state.game = was; }
+}
+const gameTag = (g) => h("button.game-tag", { type: "button", title: `Open ${g.meta.name}`, onclick: () => pickGame(g.appId) },
+  g.meta.capsule ? h("img", { src: g.meta.capsule, alt: "", loading: "lazy" }) : null, g.meta.name);
+const NEW_REVIEW_DAYS = 3;
+
+async function pickHome() {
+  store.set("app", "all");
+  state.home = true;
+  state.game = null;
+  document.getElementById("fb-view").replaceChildren(h("p.empty", "Loading…"));
+  await Promise.all(state.index.games.filter((g) => !state.games[g.appId])
+    .map((g) => getJson(`games/${g.appId}.json`).then((data) => { state.games[g.appId] = data; }).catch(() => {})));
+  render();
+}
+
+// Things to act on, from every game: bugs that are urgent or came back after a fix, and negative
+// reviews from the last few days you haven't answered (replying early is what turns them around).
+function homeAttention() {
+  return gamesLoaded().flatMap((g) => inGame(g, () => [
+    ...attention().map((i) => ({ g, at: i.lastSeen, rank: 2, open: () => { state.tab = i.kind === "bug" ? "issues" : "suggestions"; pickGame(g.appId); },
+      title: i.title, what: [i.status === "still_happening" ? "came back after a fix" : `${URGENCY[i.urgency]} priority ${i.kind === "bug" ? "bug" : "idea"}`, plural(i.mentions, "player"), `last ${ago(i.lastSeen)}`] })),
+    ...items().filter((i) => i.kind === "review" && !i.dev && !i.votedUp && now() - i.created < NEW_REVIEW_DAYS * DAY && !replied(i))
+      .map((i) => ({ g, at: i.created, rank: 1, href: i.url, title: (english(i).split("\n")[0] || "Negative review").slice(0, 140),
+        what: [`👎 ${i.author?.name || "a player"}`, i.playtime != null ? `${i.playtime} h` : null, ago(i.created), "not answered yet"] })),
+  ])).sort((a, b) => b.rank - a.rank || b.at - a.at);
+}
+
+function homeView() {
+  const need = homeAttention();
+  const live = gamesLoaded().flatMap((g) => inGame(g, () => liveNow().map((m) => h("div", gameTag(g), mediaCard(m)))));
+  const row = (a) => {
+    const kids = [a.g.meta.capsule ? h("img.att-thumb", { src: a.g.meta.capsule, alt: "", loading: "lazy" }) : h("span.att-thumb"),
+      h("span.att-text", h("span.att-title", a.title), h("span.att-meta", [a.g.meta.name, ...a.what].filter(Boolean).join(" · "))), h("span.att-go", a.href ? "↗" : "→")];
+    return a.href ? h("a.att-row", { href: a.href, target: "_blank", rel: "noopener" }, ...kids)
+      : h("button.att-row", { type: "button", onclick: () => { a.open(); window.scrollTo({ top: 0 }); } }, ...kids);
+  };
+  return h("div",
+    live.length ? h("section.ov-section", h("h3", "🔴 Live now", h("span.ov-count", live.length)), ...live) : null,
+    h("section.ov-section",
+      h("h3", "Needs attention", need.length ? h("span.ov-count", need.length) : null),
+      need.length ? h("div.card.att-list", ...need.map(row))
+        : h("p.ov-calm", `Nothing right now: no urgent bugs, nothing came back after a fix, and every negative review from the last ${NEW_REVIEW_DAYS} days is answered.`)),
+    h("section.ov-section", h("h3", "All posts"), feedView({ everyGame: true })));
+}
+
+// The All games header: money and bugs added up over every game.
+function renderHomeTop() {
+  document.getElementById("fb-capsule").hidden = true;
+  document.getElementById("fb-title").replaceChildren("All games");
+  document.getElementById("fb-updated").replaceChildren(`${plural(gamesLoaded().length, "game")} · newest posts first`);
+  document.getElementById("fb-links").replaceChildren();
+  const games = gamesLoaded();
+  const sales = Object.entries(state.sales?.days || {});
+  const sum = (k, since = 0) => sales.filter(([d]) => dayTime(d) >= since).reduce((a, [, apps]) => a + Object.values(apps).reduce((b, t) => b + (t[k] || 0), 0), 0);
+  const gross = daily(14, (d) => Object.values(state.sales?.days?.[isoDay(d)] || {}).reduce((a, t) => a + (t.gross || 0), 0));
+  const bugs = games.flatMap((g) => inGame(g, () => issues("bug").filter(isActive)));
+  const fresh = games.flatMap((g) => Object.values(g.items || {}).filter((i) => !i.dev && i.created >= now() - DAY));
+  const tile = (label, value, sub, trend, color) => h("div.kpi", h("div.label", label), h("div.value", value), h("div.sub", sub), trend ? spark(trend, color) : null);
+  document.getElementById("fb-stats").replaceChildren(...[
+    sales.length ? tile("Gross all time", usd(sum("gross")), `${usd(sum("net"))} net · every game`) : null,
+    sales.length ? tile("Gross, 7 days", usd(sum("gross", now() - 7 * DAY)), `${usd(sum("net", now() - 7 * DAY))} net`, gross, "var(--fb-positive)") : null,
+    tile("Open bugs", bugs.length, `${bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high").length} high or urgent`),
+    tile("New posts", fresh.length, "last 24 h"),
+  ].filter(Boolean));
+  document.getElementById("fb-expand").replaceChildren();
 }
 
 
@@ -2287,18 +2205,19 @@ function salesView() {
     // The chart starts at this game's first sale, never before (nothing to show there); the account
     // card counts the whole range, since other games sold earlier.
     const from = f.range ? end - f.range * DAY : 0;
-    const start = Math.min(end - 7 * DAY, Math.max(from, dayTime(days[0][0]) - DAY));
+    // (Key activations before launch, like press keys, don't count as the first sale.)
+    const first = days.find(([, t]) => t.units || t.gross || t.net) || days[0];
+    const start = Math.min(end - 7 * DAY, Math.max(from, dayTime(first[0]) - DAY));
     const inRange = days.filter(([d]) => dayTime(d) >= start);
     const sum = (list, k) => list.reduce((a, [, t]) => a + (t[k] || 0), 0);
     const units = sum(inRange, "units"), refunded = sum(inRange, "returnedUnits");
     const tile = (label, value, sub) => h("div.kpi", h("div.label", label), h("div.value", value), sub ? h("div.sub", sub) : null);
     body.replaceChildren(
+      // All time first (what you'll look at most), then the zoomed range.
       h("section.kpis", { "aria-label": "Sales summary" },
-        tile("Gross revenue", usd(sum(inRange, "gross")), "what players paid, before refunds and tax"),
-        tile("Net revenue", usd(sum(inRange, "net")), "after refunds and tax, before Steam's cut"),
-        tile("Units sold", units - refunded, `${units} sold, ${refunded} refunded`),
-        tile("Refund rate", units ? Math.round((100 * refunded) / units) + "%" : "–", "of units sold in this range"),
-        tile("Lifetime", usd(sum(days, "gross")), `gross · ${usd(sum(days, "net"))} net · ${sum(days, "units") - sum(days, "returnedUnits")} units`),
+        tile("Gross all time", usd(sum(days, "gross")), `${usd(sum(days, "net"))} net · ${sum(days, "units") - sum(days, "returnedUnits")} units kept`),
+        tile("Gross in range", usd(sum(inRange, "gross")), `${usd(sum(inRange, "net"))} net, after refunds and tax`),
+        tile("Units kept", units - refunded, `${units} sold, ${refunded} refunded (${units ? Math.round((100 * refunded) / units) : 0}%)`),
         sum(inRange, "activations") ? tile("Key activations", sum(inRange, "activations"), "keys from outside Steam") : null),
       revenueChart(inRange, start, end, markers(start, end)),
       accountTotals(from),
@@ -2322,8 +2241,13 @@ function revenueChart(days, start, end, releases) {
     rows[k].discount = Math.max(rows[k].discount, t.discount || 0);
   }
   const max = niceMax(Math.max(1, ...rows.map((r) => Math.max(r.gross, r.net))));
+  // A day with more refunded than sold has a negative net: it goes below the zero line, in red,
+  // with room kept for the biggest one.
+  const low = Math.min(0, ...rows.map((r) => r.net));
+  const neg = low < 0 ? Math.min(max, niceMax(-low)) : 0;
   const x = (t) => M.left + ((t - start) / (end - start)) * (W - M.left - M.right);
-  const y = (v) => H - M.bottom - (Math.max(0, v) / max) * (H - M.top - M.bottom);
+  const y = (v) => M.top + ((max - Math.max(-neg, v)) / (max + neg)) * (H - M.top - M.bottom);
+  const zero = y(0);
   const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "chart", role: "img", "aria-label": "Gross and net revenue over time" });
   const bw = Math.max(1, (W - M.left - M.right) / n - 2);
   // Days sold at a discount, from the sales themselves.
@@ -2331,20 +2255,33 @@ function revenueChart(days, start, end, releases) {
     if (r.discount) svg.append(svgEl("rect", { x: Math.max(M.left, x(b0 + k * bucket)), y: M.top, width: bw + 2, height: H - M.top - M.bottom, class: "band" }));
   });
   yAxis(svg, y, max, (v) => usd(v));
+  if (neg) {
+    svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: y(-neg), y2: y(-neg), class: "grid" }));
+    // Labelled only when it clears the $0 label above it.
+    if (y(-neg) - zero > 14) {
+      const t = svgEl("text", { x: M.left - 6, y: y(-neg) + 4, "text-anchor": "end" });
+      t.textContent = "−" + usd(neg);
+      svg.append(t);
+    }
+  }
   timeAxis(svg, x, start, end);
   releaseMarkers(svg, x, releases);
-  // Gross as a faint bar, net in front of it: the gap is refunds and tax.
+  // Gross as a faint bar, net in front of it: the gap is refunds and tax. A negative net (refunds
+  // outweighing sales that day) hangs below the zero line in red.
   const bar = (bx, v, fill, opacity = 1) => {
-    const top = y(v), base = H - M.bottom, rr = Math.min(4, bw / 2, base - top);
-    svg.append(svgEl("path", { d: `M${bx},${base}V${top + rr}Q${bx},${top} ${bx + rr},${top}H${bx + bw - rr}Q${bx + bw},${top} ${bx + bw},${top + rr}V${base}Z`, fill, opacity }));
+    const tip = y(v), down = tip > zero, rr = Math.min(4, bw / 2, Math.abs(zero - tip));
+    const s = down ? -1 : 1;
+    svg.append(svgEl("path", { d: `M${bx},${zero}V${tip + s * rr}Q${bx},${tip} ${bx + rr},${tip}H${bx + bw - rr}Q${bx + bw},${tip} ${bx + bw},${tip + s * rr}V${zero}Z`, fill, opacity }));
   };
   rows.forEach((r, k) => {
     const bx = Math.max(M.left, x(b0 + k * bucket)) + 1;
     if (r.gross > 0) bar(bx, r.gross, "var(--fb-accent)", 0.3);
     if (r.net > 0) bar(bx, r.net, "var(--fb-accent)");
+    if (r.net < 0) bar(bx, r.net, "var(--fb-negative)");
   });
   svg.append(svgEl("rect", { x: M.left, y: M.top, width: W - M.left - M.right, height: H - M.top - M.bottom, fill: "transparent" }));
-  const legend = h("div.legend", h("span", h("i", { style: "background:var(--fb-accent);opacity:.3" }), "Gross"), h("span", h("i", { style: "background:var(--fb-accent)" }), "Net"), saleLegend());
+  const legend = h("div.legend", h("span", h("i", { style: "background:var(--fb-accent);opacity:.3" }), "Gross"), h("span", h("i", { style: "background:var(--fb-accent)" }), "Net"),
+    neg ? h("span", h("i", { style: "background:var(--fb-negative)" }), "Refunds over sales") : null, saleLegend());
   const table = h("details", h("summary", "Data table"),
     h("table.data", h("tr", h("th", bucket === DAY ? "Day" : "Week of"), h("th", "Gross"), h("th", "Net"), h("th", "Sold"), h("th", "Refunded"), h("th", "Discount")),
       ...rows.map((r, k) => [k, r]).filter(([, r]) => r.units || r.net).reverse()
@@ -2357,7 +2294,7 @@ function revenueChart(days, start, end, releases) {
     const k = Math.floor((start + ((px - M.left) / (W - M.left - M.right)) * (end - start) - b0) / bucket);
     if (k < 0 || k >= n) return;
     const r = rows[k];
-    showTip(card, tip, svg, px, y(Math.max(r.gross, r.net)), [
+    showTip(card, tip, svg, px, y(Math.max(0, r.gross, r.net)), [
       h("div.t", (bucket === DAY ? "" : "Week of ") + fmtDate(b0 + k * bucket)),
       h("div", h("b", usd(r.gross, 2)), " gross"),
       h("div", h("b", usd(r.net, 2)), " net"),
@@ -2742,7 +2679,7 @@ const loadedAt = Date.now();
 
 async function refresh() {
   if (!document.getElementById("fb-view")) return clearInterval(refreshTimer); // left the page
-  if (!state.game) return;
+  if (!state.game && !state.home) return;
   if (Date.now() - loadedAt > FULL_RELOAD_MS && !window.getSelection().toString()) return location.reload();
   const loaded = DATA;
   await dataBase();
@@ -2751,13 +2688,14 @@ async function refresh() {
   if (DATA !== loaded || DATA.includes("/main/")) {
     try {
       const index = await getJson("index.json");
-      const appId = state.game.appId;
-      const game = await getJson(`games/${appId}.json`);
+      // The game on screen, or every game on All games; the others reload when picked.
+      const ids = state.home ? index.games.map((g) => g.appId) : [state.game.appId];
+      const games = Object.fromEntries(await Promise.all(ids.map(async (id) => [id, await getJson(`games/${id}.json`)])));
       await loadCleared();
       await loadSales();
       state.index = index;
-      state.games = { [appId]: game }; // other games reload when picked
-      state.game = { ...game, meta: index.games.find((g) => g.appId === appId) };
+      state.games = games;
+      if (!state.home) state.game = { ...games[ids[0]], meta: index.games.find((g) => g.appId === ids[0]) };
     } catch {
       DATA = loaded;
       return; // try again next time
@@ -2767,7 +2705,7 @@ async function refresh() {
   // posts stay open. Not while typing in a search box either (a redraw would wipe it); next round.
   if (drawnKey() === state.drawn || document.activeElement?.matches?.(".fb input")) {
     renderStatus();
-    renderHeader();
+    if (!state.home) renderHeader();
     return;
   }
   // New data: redraw, keeping the reader's place.

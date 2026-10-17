@@ -816,6 +816,92 @@
 	color: var(--fb-muted);
 	margin: 0;
 }
+
+/* All games: the "All" tile in the games list, the attention rows and each post's game */
+.fb .g-all {
+	display: grid;
+	place-items: center;
+	font-family: var(--font-heading);
+	font-size: 0.75rem;
+	font-weight: 700;
+	color: var(--fb-accent);
+}
+.fb .att-list {
+	padding: 4px;
+	display: flex;
+	flex-direction: column;
+}
+.fb .att-row {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	width: 100%;
+	text-align: left;
+	background: none;
+	border: 0;
+	border-radius: 0.5rem;
+	padding: 8px 10px;
+	color: var(--fb-ink);
+	text-decoration: none;
+	font: inherit;
+}
+.fb .att-row + .att-row {
+	border-top: 1px solid var(--fb-line);
+}
+.fb .att-row:hover {
+	background: var(--fb-hover);
+}
+.fb .att-thumb {
+	width: 56px;
+	aspect-ratio: var(--aspect-capsule);
+	border-radius: 4px;
+	object-fit: cover;
+	background: var(--fb-card-2);
+	flex: none;
+}
+.fb .att-text {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+}
+.fb .att-title {
+	font-weight: 600;
+	color: var(--fb-title);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.fb .att-meta {
+	color: var(--fb-muted);
+	font-size: 0.8125rem;
+}
+.fb .att-go {
+	color: var(--fb-muted);
+	flex: none;
+}
+.fb .game-tag {
+	display: inline-flex;
+	align-items: center;
+	gap: 8px;
+	background: none;
+	border: 0;
+	padding: 0 0 8px;
+	color: var(--fb-muted);
+	font: inherit;
+	font-size: 0.75rem;
+	font-weight: 600;
+	cursor: pointer;
+}
+.fb .game-tag:hover {
+	color: var(--fb-link);
+}
+.fb .game-tag img {
+	width: 40px;
+	aspect-ratio: var(--aspect-capsule);
+	border-radius: 3px;
+	object-fit: cover;
+}
 .fb .link-btn {
 	display: inline-flex;
 	align-items: center;

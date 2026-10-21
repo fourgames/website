@@ -1,0 +1,688 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Fonts — Montserrat (OFL, self-hosted) for headings, nav and buttons; the body
+   uses the system UI stack, like godotengine.org.
+--------------------------------------------------------------------------- */
+@font-face {
+	font-family: "Montserrat Variable";
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url("/fonts/montserrat-latin-wght-normal.woff2") format("woff2");
+	unicode-range:
+		U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329,
+		U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+/* ---------------------------------------------------------------------------
+   Japanese, Korean and Chinese. Montserrat and the system UI font carry Latin
+   text; the CJK fonts come straight after "Segoe UI" (which has none), so every
+   OS lands on its native face for the language instead of whatever the browser
+   guesses. <html lang> (src/i18n/locales.js) also picks the right Han glyphs —
+   the same character is drawn differently in ja, zh-Hans and zh-Hant.
+   --font-heading is re-declared because it resolves var(--font-sans) where it
+   is declared, on :root.
+--------------------------------------------------------------------------- */
+:root:lang(ja) {
+	--font-sans: system-ui, -apple-system, "Segoe UI", "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI",
+		"Noto Sans JP", Meiryo, Roboto, sans-serif;
+	--font-heading: "Montserrat Variable", Montserrat, var(--font-sans);
+}
+:root:lang(ko) {
+	--font-sans: system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", Roboto,
+		sans-serif;
+	--font-heading: "Montserrat Variable", Montserrat, var(--font-sans);
+}
+:root:lang(zh-Hans) {
+	--font-sans: system-ui, -apple-system, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans SC", Roboto, sans-serif;
+	--font-heading: "Montserrat Variable", Montserrat, var(--font-sans);
+}
+:root:lang(zh-Hant) {
+	--font-sans: system-ui, -apple-system, "Segoe UI", "PingFang TC", "Microsoft JhengHei", "Noto Sans TC", Roboto,
+		sans-serif;
+	--font-heading: "Montserrat Variable", Montserrat, var(--font-sans);
+}
+/* Line breaks: Korean wraps between words, not inside them; Japanese headings
+   wrap between phrases (Chromium), so a title never strands one kana. */
+:root:lang(ko) {
+	word-break: keep-all;
+	overflow-wrap: break-word;
+}
+:root:lang(ja) :is(h1, h2, h3) {
+	word-break: auto-phrase;
+}
+
+/* ---------------------------------------------------------------------------
+   Palette — follows the OS colour scheme (no toggle). Values mirror
+   godotengine.org, nudged where its weakest colours fall under WCAG AA.
+--------------------------------------------------------------------------- */
+:root {
+	color-scheme: light dark;
+	--base-color: #eff1f5;
+	--background-color: #d5daea;
+	--text-color: #4a5365;
+	--title-color: #546b99;
+	--subtitle-color: #5f6f97;
+	--date-color: #66748f;
+	--primary-color: hsl(206 58% 52%);
+	--primary-hover: hsl(206 58% 44%);
+	--link-color: hsl(206 58% 42%);
+	--accent-color: #f57389;
+	--dark-color: #333f67;
+	--card-color: #ffffff;
+	--card-hover: #f7f8fb;
+	--button-color: #ffffff;
+	--button-hover: #f3f5f9;
+	--navbar-bg: #ffffff;
+	--navbar-link: #333f67;
+	--navbar-current: var(--primary-color);
+	--line-color: rgb(0 0 0 / 0.08);
+	--line-strong: #8b93a7;
+	--shadow: 0 0 4px rgb(0 0 0 / 0.2);
+	--hero-tint: rgb(51 63 103 / 0.4);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--base-color: #25282b;
+		--background-color: #202326;
+		--text-color: hsl(0 0% 100% / 0.9);
+		--title-color: hsl(200 0% 100% / 0.85);
+		--subtitle-color: hsl(0 0% 100% / 0.7);
+		--date-color: hsl(0 0% 100% / 0.62);
+		--primary-color: #4d9fdc;
+		--primary-hover: #6ab1e6;
+		--link-color: hsl(200 60% 70%);
+		--accent-color: #5b5491;
+		--dark-color: #263256;
+		--card-color: #333639;
+		--card-hover: #3b3e42;
+		--button-color: #333639;
+		--button-hover: #3e4145;
+		--navbar-bg: #333639;
+		--navbar-link: hsl(0 0% 100% / 0.9);
+		--navbar-current: hsl(200 100% 80%);
+		--line-color: rgb(255 255 255 / 0.1);
+		--line-strong: #8f9398;
+		--shadow: 0 0 4px rgb(0 0 0 / 0.4);
+	}
+}
+
+/* ---------------------------------------------------------------------------
+   Design tokens
+--------------------------------------------------------------------------- */
+@theme {
+	--font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	--font-heading: "Montserrat Variable", Montserrat, var(--font-sans);
+	--font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+
+	--breakpoint-nav: 75rem; /* nav collapses below 1200px, like godotengine.org */
+	--container-page: 75rem;
+
+	--aspect-capsule: 92/43; /* Steam header capsule, 460x215 - show it uncropped */
+
+	--radius-card: 0.5rem;
+	--radius-btn: 0.75rem;
+
+	--text-hero: 3.75rem;
+	--text-hero--line-height: 1.22;
+	--text-hero-sm: 2.5rem; /* godotengine.org drops the hero title to 40px at <=900px */
+	--text-hero-sm--line-height: 1.22;
+	--text-h1: 2.625rem;
+	--text-h1--line-height: 1.2;
+	--text-h2: 2.25rem;
+	--text-h2--line-height: 1.2;
+	--text-h3: 1.75rem;
+	--text-h3--line-height: 1.25;
+	--text-body: 1.125rem;
+	--text-body--line-height: 1.5;
+
+	--color-white: #fff;
+	--color-black: #000;
+	--color-footer: #111111;
+	--color-footer-fg: #898989;
+	--color-donate: #f35774;
+	--color-donate-hover: #d8365a;
+	--color-success: #2f9e6a;
+	--color-warning: #c9860f;
+	--color-danger: #d64545;
+	--color-new: #fb923c;
+
+	--ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+	--animate-pulse-dot: pulse-dot 2s var(--ease-out-soft) infinite;
+
+	@keyframes pulse-dot {
+		0% {
+			transform: scale(1);
+			opacity: 0.6;
+		}
+		80%,
+		100% {
+			transform: scale(2.6);
+			opacity: 0;
+		}
+	}
+}
+
+/* Colour utilities that follow the OS scheme (bg-card, text-title, …) */
+@theme inline {
+	--color-surface: var(--base-color);
+	--color-bg: var(--background-color);
+	--color-fg: var(--text-color);
+	--color-title: var(--title-color);
+	--color-subtitle: var(--subtitle-color);
+	--color-date: var(--date-color);
+	--color-primary: var(--primary-color);
+	--color-primary-hover: var(--primary-hover);
+	--color-link: var(--link-color);
+	--color-accent: var(--accent-color);
+	--color-dark: var(--dark-color);
+	--color-card: var(--card-color);
+	--color-card-hover: var(--card-hover);
+	--color-btn: var(--button-color);
+	--color-btn-hover: var(--button-hover);
+	--color-navbar: var(--navbar-bg);
+	--color-navbar-link: var(--navbar-link);
+	--color-navbar-current: var(--navbar-current);
+	--color-line: var(--line-color);
+	--color-line-strong: var(--line-strong);
+	--shadow-card: var(--shadow);
+}
+
+/* Page column and vertical rhythm, ported from godotengine.org:
+   .container is a fixed 1200px column that goes edge-to-edge with a 16px gutter
+   below the breakpoint, and .padded adds an extra 8px side gutter on phones.
+   `padded` must stay declared AFTER `container-page` — Section.vue puts both on
+   the same element, and the phone gutter depends on that source order. */
+@utility container-page {
+	margin-inline: auto;
+	width: var(--container-page);
+	max-width: var(--container-page);
+	padding-inline: 0;
+	@media (width < 75rem) {
+		width: auto;
+		padding-inline: 1rem;
+	}
+}
+
+@utility padded {
+	padding-block: 4rem;
+	@media (width < 56.25rem) {
+		padding-block: 2rem;
+		padding-inline: 0.5rem;
+	}
+}
+
+/* ---------------------------------------------------------------------------
+   Base
+--------------------------------------------------------------------------- */
+@layer base {
+	html {
+		background-color: var(--color-bg);
+		color: var(--color-fg);
+		font-family: var(--font-sans);
+		-webkit-font-smoothing: antialiased;
+		-moz-osx-font-smoothing: grayscale;
+		-webkit-tap-highlight-color: transparent;
+		scroll-padding-top: 1rem;
+	}
+
+	body {
+		min-height: 100dvh;
+		overflow-x: clip;
+		font-size: var(--text-body);
+		line-height: var(--text-body--line-height);
+	}
+
+	h1,
+	h2,
+	h3,
+	h4 {
+		font-family: var(--font-heading);
+		font-weight: 800;
+		color: var(--color-title);
+	}
+	h1 {
+		font-size: var(--text-h1);
+		line-height: var(--text-h1--line-height);
+	}
+	h2 {
+		font-size: var(--text-h2);
+		line-height: var(--text-h2--line-height);
+	}
+	h3 {
+		font-size: var(--text-h3);
+		line-height: var(--text-h3--line-height);
+	}
+	@media (width < 48rem) {
+		h1 {
+			font-size: 2.25rem;
+		}
+		h2 {
+			font-size: 1.875rem;
+		}
+		h3 {
+			font-size: 1.375rem;
+		}
+	}
+
+	p {
+		text-wrap: pretty;
+	}
+
+	:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
+		outline: 2px solid var(--color-primary);
+		outline-offset: 2px;
+	}
+
+	:where(main, h1, h2)[tabindex="-1"]:focus {
+		outline: none;
+	}
+
+	::selection {
+		background: color-mix(in srgb, var(--color-primary) 35%, transparent);
+	}
+
+	html:has(dialog[open]) {
+		overflow: hidden;
+	}
+
+	dialog::backdrop {
+		background: rgb(0 0 0 / 0.5);
+	}
+}
+
+/* ---------------------------------------------------------------------------
+   Components
+--------------------------------------------------------------------------- */
+@layer components {
+	/* Inline text link */
+	.link {
+		color: var(--color-link);
+		text-decoration-line: underline;
+		text-decoration-color: color-mix(in srgb, var(--color-link) 35%, transparent);
+		text-underline-offset: 3px;
+		transition: text-decoration-color 150ms;
+	}
+	.link:hover {
+		text-decoration-color: currentColor;
+	}
+
+	/* Link contents brighten on hover, like godotengine.org (`body a > :not(.no-filter)`). */
+	:where(main) a > :not(.no-filter) {
+		filter: brightness(100%);
+		transition: filter 0.5s;
+	}
+	:where(main) a:hover > :not(.no-filter) {
+		filter: brightness(117.5%);
+	}
+	:where(main) a:active > :not(.no-filter) {
+		filter: brightness(82.5%);
+	}
+
+	/* Card surface (godotengine.org: flat card, 8px radius, faint shadow) */
+	.card {
+		position: relative;
+		background-color: var(--color-card);
+		border-radius: var(--radius-card);
+		box-shadow: var(--shadow-card);
+		transition:
+			transform 200ms ease-in-out,
+			background-color 150ms;
+	}
+	/* Lift on the parent's hover, not the card's own: a card that moves itself
+	   slides out from under a pointer resting on its bottom edge and flickers. */
+	:hover > .card-hover {
+		transform: translateY(-2px);
+	}
+
+	/* ---------------------------------------------------------------------
+	   Site header — a literal port of godotengine.org's navbar. Every number
+	   below was measured off their computed styles, so please don't "tidy"
+	   them: 0.2/0.4rem bar padding, 26px nav offset, 14px between links,
+	   12px link padding on a 10px radius, 13px on the donate pill.
+	--------------------------------------------------------------------- */
+
+	/* Their header pins itself to 1rem so the bar's metrics don't ride on the
+	   page's larger body type. */
+	.site-header {
+		font-size: 1rem;
+	}
+
+	/* header .container — the frosted bar itself. Column below the breakpoint
+	   so the open menu stacks underneath the logo row, like theirs. */
+	.site-bar {
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		width: 100%;
+		max-width: var(--container-page);
+		margin-inline: auto;
+		padding: 0.2rem 0.4rem;
+		background-color: rgb(134 144 154 / 0.15);
+		backdrop-filter: blur(4px);
+	}
+
+	/* #logo-link — theirs is a 136x48 image nudged 3px down to offset its
+	   baked-in whitespace; our SVG + text has none, so it centres as-is. */
+	.site-logo {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		height: 48px;
+		padding-right: 8px;
+		border-radius: 10px;
+		font-family: var(--font-heading);
+		font-weight: 800;
+		text-transform: uppercase;
+		white-space: nowrap;
+	}
+	.site-logo:hover {
+		background-color: rgb(128 128 128 / 0.1);
+	}
+
+	/* #nav */
+	.site-nav {
+		display: none;
+		width: 100%;
+	}
+	.site-nav ul {
+		list-style: none;
+		margin: 0;
+		padding-left: 0;
+	}
+	/* The ported li negative margins overlap neighbours; let the pointer fall
+	   through the li boxes to the links so no link has a dead edge. */
+	.site-nav li {
+		pointer-events: none;
+	}
+	.site-nav li > * {
+		pointer-events: auto;
+	}
+
+	/* #nav a */
+	.nav-link {
+		font-family: var(--font-heading);
+		font-size: 16px;
+		font-weight: 400;
+		padding: 12px;
+		margin-left: 14px;
+		border-radius: 10px;
+		transition: background-color 0.1s;
+	}
+	.nav-link:hover {
+		background-color: rgb(128 128 128 / 0.1);
+	}
+	/* Ours carry icons; godotengine.org's don't. */
+	.nav-link:has(svg) {
+		display: inline-flex;
+		align-items: center;
+		gap: 0.375rem;
+	}
+
+	/* .fund a — sits inside #nav, so it inherits the nav link's 16px/400
+	   Montserrat rather than the heavier .btn type. The 2px inset ring is
+	   theirs too; it makes the pill read a shade crisper than a flat fill. */
+	.nav-donate {
+		padding: 13px;
+		border-radius: var(--radius-btn);
+		background-color: var(--color-donate);
+		box-shadow: inset 0 0 0 2px var(--color-donate);
+		color: #fff;
+		font-size: 16px;
+		font-weight: 400;
+		white-space: nowrap;
+	}
+	.site-nav .nav-donate {
+		font-family: var(--font-heading);
+		margin-left: 14px;
+	}
+
+	/* #nav_toggle_btn */
+	.nav-toggle {
+		line-height: 0;
+		padding: 0.8rem;
+		border-radius: 100%;
+		transition: background-color 0.1s;
+	}
+	.nav-toggle:hover {
+		background-color: rgb(128 128 128 / 0.15);
+	}
+	.nav-toggle:active {
+		background-color: rgb(128 128 128 / 0.25);
+	}
+
+	/* .language-selector — godotengine.org's translate glyph and its frosted
+	   dropdown (their 42px glyph, 120px box, 5px radius, rgba(48,48,48,.89) fill). Below
+	   the breakpoint it becomes their "Language:" row with the options
+	   indented under it, inside the mobile menu. */
+	.lang-menu {
+		position: relative;
+	}
+	.lang-toggle {
+		display: none;
+		place-items: center;
+		width: 60px;
+		height: 43px;
+		margin-left: 4px;
+		border-radius: 10px;
+		transition: background-color 0.1s;
+	}
+	.lang-toggle:hover,
+	.lang-menu.is-open .lang-toggle {
+		background-color: rgb(128 128 128 / 0.1);
+	}
+	.lang-label {
+		display: block;
+		padding: 0.75rem 1.5rem;
+		margin: -0.4375rem 0 0 14px;
+		font-family: var(--font-heading);
+		font-size: 16px;
+	}
+	.lang-list {
+		margin-top: 0.5rem;
+		list-style: none;
+		padding: 0;
+	}
+	.lang-option {
+		display: block;
+		padding: 0.4375rem 1.5rem 0.4375rem 3rem;
+		margin-left: 14px;
+		border-radius: 10px;
+		font-family: var(--font-heading);
+		font-size: 15px;
+		white-space: nowrap;
+		transition: background-color 0.1s;
+	}
+	.lang-option:hover {
+		background-color: rgb(128 128 128 / 0.1);
+	}
+	.lang-option[aria-current] {
+		color: var(--color-navbar-current);
+	}
+
+	@media (width >= 75rem) {
+		.lang-toggle {
+			display: grid;
+		}
+		.lang-label {
+			display: none;
+		}
+		.lang-list {
+			display: none;
+			position: absolute;
+			z-index: 10;
+			top: calc(100% + 10px);
+			right: -8px;
+			min-width: 120px;
+			margin: 0;
+			padding: 4px 0;
+			border: 1px solid rgb(255 255 255 / 0.23);
+			border-radius: 5px;
+			background: rgb(48 48 48 / 0.89);
+			box-shadow: 0 8px 16px rgb(0 0 0 / 0.2);
+			backdrop-filter: blur(4px);
+		}
+		.lang-menu.is-open .lang-list {
+			display: block;
+		}
+		.lang-option {
+			padding: 5px 12px;
+			margin: 0;
+			border-radius: 0;
+			color: #fff;
+		}
+		.lang-option:hover {
+			background-color: rgb(255 255 255 / 0.1);
+		}
+		.lang-option[aria-current] {
+			color: hsl(200 100% 80%);
+		}
+	}
+
+	@media (width >= 75rem) {
+		.site-bar {
+			flex-direction: row;
+			align-items: center;
+			height: 58px;
+			border-radius: 16px;
+		}
+		.site-nav {
+			display: flex;
+			align-items: center;
+			justify-content: space-between;
+			padding-left: 26px;
+		}
+		.site-nav > ul {
+			display: flex;
+			align-items: center;
+			height: 100%;
+		}
+		.site-nav > ul > li {
+			padding-left: 1rem;
+			margin-inline: -1rem;
+		}
+		.site-nav > ul > li:first-child {
+			padding-left: 0;
+		}
+		/* .fund — the donate pill opts out of the list's negative margins. */
+		.site-nav > ul > li.fund {
+			padding-left: 7px;
+			margin-inline: 0;
+		}
+	}
+
+	/* Open menu: the nav unrolls inside the bar and the header goes opaque
+	   behind it. No backdrop, no scroll lock — same as theirs. */
+	@media (width < 75rem) {
+		.site-header.is-open {
+			background-color: var(--color-navbar);
+		}
+		.site-nav.is-open {
+			display: block;
+		}
+		.site-nav > ul {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-start;
+			margin-bottom: 16px;
+		}
+		.site-nav > ul > li {
+			width: 100%;
+			padding-top: 16px;
+			margin-inline: -16px;
+		}
+		.site-nav .nav-link {
+			display: block;
+			padding: 0.75rem 1.5rem;
+			margin-block: -0.4375rem;
+		}
+		.site-nav .nav-link:has(svg) {
+			display: flex;
+		}
+	}
+
+	/* Home hero copy stacked on an invisible English twin (HeroBanner.vue): one
+	   grid cell, so the taller of the two sets the height. */
+	.hero-stack {
+		display: grid;
+	}
+	.hero-stack > * {
+		grid-area: 1 / 1;
+	}
+
+	/* Recently published — godotengine.org .date.post-recent-highlight */
+	.is-new {
+		color: var(--color-new);
+		opacity: 1;
+	}
+	.is-new::after {
+		content: attr(data-new);
+		font-size: 80%;
+		border: 1px solid;
+		border-radius: 3px;
+		padding: 2px 3px;
+		margin-left: 8px;
+	}
+
+	/* Placeholder art for unannounced games — tinted by --hue */
+	.teaser-art {
+		background:
+			radial-gradient(120% 90% at 18% 0%, hsl(var(--hue, 212) 70% 60% / 0.7), transparent 60%),
+			linear-gradient(135deg, hsl(var(--hue, 212) 45% 38%), hsl(calc(var(--hue, 212) + 40) 45% 26%));
+	}
+
+	/* Scroll reveal — only armed by JS for elements below the fold */
+	[data-reveal="armed"] {
+		opacity: 0;
+		transform: translate3d(0, 8px, 0);
+	}
+	[data-reveal="shown"] {
+		opacity: 1;
+		transform: none;
+		transition:
+			opacity 500ms var(--ease-out-soft),
+			transform 500ms var(--ease-out-soft);
+		transition-delay: var(--reveal-delay, 0ms);
+	}
+}
+
+/* ---------------------------------------------------------------------------
+   Route view transitions (see src/lib/viewTransitions.js)
+--------------------------------------------------------------------------- */
+::view-transition-old(root),
+::view-transition-new(root) {
+	animation-duration: 150ms;
+	animation-timing-function: var(--ease-out-soft);
+}
+
+/* ---------------------------------------------------------------------------
+   Accessibility — honour reduced motion everywhere
+--------------------------------------------------------------------------- */
+@media (prefers-reduced-motion: reduce) {
+	*,
+	::before,
+	::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+		scroll-behavior: auto !important;
+	}
+	::view-transition-group(*),
+	::view-transition-old(*),
+	::view-transition-new(*) {
+		animation: none !important;
+	}
+	[data-reveal] {
+		opacity: 1 !important;
+		transform: none !important;
+	}
+}
+
+@media print {
+	[data-reveal] {
+		opacity: 1 !important;
+		transform: none !important;
+	}
+}

@@ -1,0 +1,100 @@
+name: Player feedback
+
+# Each run collects and triages new feedback every 5 minutes for about 4 hours, then starts the next
+# run. The schedule starts a run if none is going. See feedback/README.md.
+on:
+  schedule:
+    - cron: "7 */2 * * *"
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Start now, replacing the current run
+        type: boolean
+        default: true
+      resort:
+        description: Sort your games' posts again from scratch (app ids, or "all"), after the sorting rules changed (research games have their own workflow)
+        type: string
+        default: ""
+      test_discord:
+        description: Only send a test of each Discord alert (no run)
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: write
+
+# One collecting run at a time: a scheduled run waits for the current one, a forced run replaces
+# it. A Discord test runs on its own.
+concurrency:
+  group: ${{ inputs.test_discord && 'feedback-discord-test' || 'feedback' }}
+  cancel-in-progress: ${{ github.event_name == 'workflow_dispatch' && inputs.force && !inputs.test_discord }}
+
+jobs:
+  feedback:
+    runs-on: ubuntu-latest
+    timeout-minutes: 280
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      # All the data lives in a private repo, written with a deploy key: anyone can read this one.
+      - name: Checkout the data
+        uses: actions/checkout@v7
+        with:
+          repository: fourgames/feedback-data
+          ssh-key: ${{ secrets.DATA_DEPLOY_KEY }}
+          path: feedback/data
+
+      - name: Send a test to Discord
+        if: inputs.test_discord
+        run: python3 feedback/run.py --test-discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_MENTION: ${{ secrets.DISCORD_MENTION }}
+          DISCORD_RELEASES_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASES_WEBHOOK_URL }}
+          DISCORD_RELEASES_ROLE: ${{ secrets.DISCORD_RELEASES_ROLE }}
+
+      - name: Set up Python
+        if: ${{ !inputs.test_discord }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: feedback/requirements.txt
+
+      - name: Install dependencies
+        if: ${{ !inputs.test_discord }}
+        run: pip install -r feedback/requirements.txt
+
+      # Commits made with the workflow token don't trigger other workflows, so this never redeploys the
+      # site; the dashboard reads the data repo straight through GitHub's API.
+      - name: Collect every 5 minutes for 4 hours
+        if: ${{ !inputs.test_discord }}
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          feedback/loop.sh
+        env:
+          FEEDBACK_PART: own  # research games run in feedback-research.yml
+          FEEDBACK_HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
+          FEEDBACK_RESORT: ${{ inputs.resort }}
+          STEAM_PUBLISHER_KEY: ${{ secrets.STEAM_PUBLISHER_KEY }}
+          STEAM_FINANCIAL_KEY: ${{ secrets.STEAM_FINANCIAL_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_MENTION: ${{ secrets.DISCORD_MENTION }}
+          DISCORD_RELEASES_WEBHOOK_URL: ${{ secrets.DISCORD_RELEASES_WEBHOOK_URL }}
+          DISCORD_RELEASES_ROLE: ${{ secrets.DISCORD_RELEASES_ROLE }}
+          TWITCH_CLIENT_ID: ${{ secrets.TWITCH_CLIENT_ID }}
+          TWITCH_CLIENT_SECRET: ${{ secrets.TWITCH_CLIENT_SECRET }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GOOGLE_ALERTS_FEEDS: ${{ secrets.GOOGLE_ALERTS_FEEDS }}
+          GH_TOKEN: ${{ github.token }}
+
+      - name: Start the next run
+        if: ${{ !inputs.test_discord && success() }}
+        run: gh workflow run feedback.yml --ref main -f force=false
+        env:
+          GH_TOKEN: ${{ github.token }}

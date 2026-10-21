@@ -1,0 +1,147 @@
+<script setup>
+import { computed, onMounted, ref, watch } from "vue";
+import { RouterLink, useRoute } from "vue-router";
+import Icon from "@/components/ui/Icon.vue";
+import LogoMark from "@/components/ui/LogoMark.vue";
+import NavLink from "@/components/ui/NavLink.vue";
+import LanguageMenu from "./LanguageMenu.vue";
+import { DONATE, NAV_LEFT, NAV_RIGHT } from "@/data/nav.js";
+import { useI18n } from "@/i18n/index.js";
+import { reshuffleHero } from "@/lib/hero.js";
+
+// A literal port of godotengine.org's navbar: one absolute, frosted bar on every page, one <nav>
+// that the breakpoint restyles from a row into the mobile panel. Only the text colour adapts —
+// white over the hero image, navbar colour elsewhere. Geometry lives in style.css (.site-bar etc).
+const route = useRoute();
+const { t } = useI18n();
+const isHome = computed(() => route.name === "home");
+
+// Their menu is a CSS checkbox, so every tap reloads the page and resets it. We're an SPA, so close
+// it by hand — on the link click, and again on the route change for anything that redirects.
+// Visibility itself stays CSS-driven, which is what makes the desktop nav reappear cleanly when you
+// widen the window while it's open.
+const open = ref(false);
+watch(
+	() => route.fullPath,
+	() => (open.value = false),
+);
+
+// The private feedback dashboard (/fb-dash) isn't linked anywhere, but once a browser has opened it,
+// it marks itself in localStorage and gets a header link back to it. Read after mount
+// only, so the prerendered HTML (and every other visitor) never has the link.
+const showFeedback = ref(false);
+onMounted(() => {
+	try {
+		showFeedback.value = localStorage.getItem("fb-dash:visited") === "1";
+	} catch {
+		// Storage blocked: no link.
+	}
+});
+
+// The hero keeps one screenshot for the whole session, so clicking the logo is the way to ask for
+// another — whether that is a real navigation home or a no-op click while already there.
+function onLogoClick() {
+	if (isHome.value) reshuffleHero();
+}
+</script>
+
+<template>
+	<header
+		:class="[
+			'site-header absolute inset-x-0 top-0 z-40 nav:top-2 [view-transition-name:site-header]',
+			isHome ? 'text-white' : 'text-navbar-link',
+			// The open panel is navbar-coloured (white in light mode), so drop the hero's white text.
+			{ 'max-nav:text-navbar-link': open },
+			{ 'is-open': open },
+		]"
+		@keydown.esc="open = false"
+	>
+		<div class="site-bar">
+			<!-- #nav_head: the logo row. Below the breakpoint it also carries the donate pill and
+			     the menu toggle, and the nav unrolls underneath it. -->
+			<div class="flex h-[51.5px] w-full items-center justify-between nav:w-auto">
+				<NavLink to="/" class="site-logo text-lg sm:text-xl" :aria-label="t('a11y.home')" @navigate="onLogoClick">
+					<LogoMark class="size-12" />
+					<span>Four Games</span>
+				</NavLink>
+
+				<div class="flex items-center gap-1 nav:hidden">
+					<!-- .fund.mobile: the span keeps the link inline, so the pill hugs the glyphs (45px)
+					     instead of the full 24px line box a flex item would get. -->
+					<span class="relative">
+						<NavLink :to="DONATE.to" class="nav-donate" @navigate="open = false">
+							<Icon :name="DONATE.icon" class="mr-1 inline w-[13px] align-baseline" />
+							{{ t(DONATE.label) }}
+						</NavLink>
+					</span>
+					<button
+						type="button"
+						class="nav-toggle"
+						aria-controls="site-nav"
+						:aria-expanded="open"
+						@click="open = !open"
+					>
+						<Icon name="menu" class="size-6" :stroke-width="2.25" />
+						<span class="sr-only">{{ open ? t("a11y.closeMenu") : t("a11y.openMenu") }}</span>
+					</button>
+				</div>
+			</div>
+
+			<nav id="site-nav" :aria-label="t('a11y.mainNav')" :class="['site-nav', { 'is-open': open }]">
+				<ul>
+					<li v-for="link in NAV_LEFT" :key="link.to">
+						<NavLink
+							:to="link.to"
+							class="nav-link aria-[current=page]:text-navbar-current"
+							@navigate="open = false"
+						>
+							{{ t(link.label) }}
+						</NavLink>
+					</li>
+					<!-- Private and English-only, so not translated. -->
+					<li v-if="showFeedback">
+						<!-- English-only page, so no NavLink (that would localise it to /ja/fb-dash). -->
+						<RouterLink
+							to="/fb-dash"
+							class="nav-link aria-[current=page]:text-navbar-current"
+							@click="open = false"
+						>
+							Feedback
+						</RouterLink>
+					</li>
+				</ul>
+				<ul>
+					<li v-for="link in NAV_RIGHT" :key="link.label">
+						<NavLink
+							v-if="link.to"
+							:to="link.to"
+							class="nav-link aria-[current=page]:text-navbar-current"
+							@navigate="open = false"
+						>
+							{{ t(link.label) }}
+						</NavLink>
+						<a
+							v-else
+							:href="link.href"
+							target="_blank"
+							rel="noopener noreferrer"
+							class="nav-link"
+							@click="open = false"
+						>
+							<Icon v-if="link.icon" :name="link.icon" class="size-4" />
+							{{ t(link.label) }}
+							<span class="sr-only">{{ t("a11y.newTab") }}</span>
+						</a>
+					</li>
+					<LanguageMenu />
+					<li class="fund hidden nav:block">
+						<NavLink :to="DONATE.to" class="nav-donate">
+							<Icon :name="DONATE.icon" class="relative top-px mr-1 inline w-[13px] align-baseline" />
+							{{ t(DONATE.label) }}
+						</NavLink>
+					</li>
+				</ul>
+			</nav>
+		</div>
+	</header>
+</template>

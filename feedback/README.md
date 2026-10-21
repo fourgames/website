@@ -1,0 +1,159 @@
+# Player feedback
+
+Collects player feedback for every Four Games title on Steam, triages it with Claude, posts alerts to Discord and feeds the private dashboard at [fourgames.se/fb-dash](https://fourgames.se/fb-dash/). It runs from `.github/workflows/feedback.yml`. The website build doesn't use any of it.
+
+## What a run does
+
+1. **Games.** It gets the game list from the same publisher data the site uses. `games.mjs` reads `SITE.steam.publisher`/`.developer` and `GAMES`, and `steam.py` runs the same store search as `scripts/fetch-data.mjs`. New store pages are picked up automatically.
+2. **Reviews.** It reads new and edited reviews from the Steamworks `IUserReviewsService/GetAppReviews` endpoint with the publisher key and the *Updated* filter, in all languages. It retries on HTTP 429 and stops at the last review it has already seen. Hourly it reads every review instead: your reply on Steam doesn't change a review's updated time, so only a full read sees it, and when you sent it (`devRespondedAt`).
+   - An edit keeps the old text in `versions`.
+   - A changed recommendation is recorded in `flips`.
+   - Everything else Steam says about a review is kept and refreshed on each read (`review_extras` in `run.py`): hours in the last two weeks and when they last played, Steam Deck, helpful and funny votes, Steam's helpfulness score, comments under it and a refund. So is Steam's 0–9 `score` behind the rating words in `reviewTotals`.
+3. **Discussions.** It reads new threads and new replies in every subforum.
+4. **Players.** It records the current player count, and once a game's demo is out on Steam, the demo's too (`demoPlayers`, the dashboard's **Demo players** card).
+5. **Media** (`media.py`). It finds who's talking about the game outside Steam:
+   - **Twitch:** streams live right now in the game's category, checked every run, with their tags. Hourly, the category's clips and VODs too, with their views, kept 30 days (the 50 most viewed of each), so a stream nobody saw live still leaves something behind. The category is found through IGDB by the Steam app id, else by name. A game Twitch has no category for yet can't be followed.
+   - **YouTube:** new videos that name the game, about once an hour per game (the free quota is 10,000 units a day and a search costs 100, so it searches less often with more than 3 games). Views, likes and comments of the last two weeks' videos are kept current.
+   - **News:** Google News search, every 30 minutes, plus any Google Alerts feeds you add (they also cover blogs and other sites).
+   - **Web:** pages from Google Alerts that aren't on a news site Google News reads (blogs, forums, stores, wikis), in any of the game's languages. Never alerted.
+   - **Download copies:** pages from Google Alerts on download sites (torrents, repacks, "free download"), each with a link to [Google's removal form](https://reportcontent.google.com/forms/dmca_search). Never alerted, and kept off the overview and charts.
+   - **Reddit:** threads from the Google Alerts, listed under their subreddit. Never alerted. Reddit's own API isn't used: it needs Reddit's approval, and its rules don't allow sharing what it returns (this repo is public).
+
+   **Names:** once a day it reads the game's name in each of Steam's 30 languages from its store page and keeps every name it has ever had (a changed translation still finds what was written under the old one). YouTube searches use the English name and a few localized ones at a time, in turn; Google News is searched in each language's country edition, every 2 hours, by the English name and that language's names (the US edition every 30 minutes). Names waiting for Valve to set them aren't on the store yet, so they're picked up once they are.
+
+   Search results must name the game exactly and be about a game (YouTube's Gaming category, or words like *gameplay*, *Steam* or *trailer*, also in the other languages: *Spiel*, *jeu*, 게임, ゲーム…), since a game's name can also be a place or a product. Your own channel's videos and posts are listed but never alerted. A source's first search for a game only records what's already out there; only new finds get alerts, and only when they're from the last 3 days. When each source last searched is kept in `feedback/.cache`, so a fresh workflow run searches once more.
+   - **Videos and comments as feedback** (`video_post` and `ingest_youtube` in `run.py`): each reviewed video becomes a post (kind `video`) and each of a video's 20 top comments another (kind `comment`), sorted by Claude like a Steam review, so what creators and viewers run into joins your bugs and ideas and counts as one more person. A comment only about the video or the creator (`offTopic`) joins nothing and isn't shown. Neither gets a Discord ping of its own or a reply draft (there's no replying on Steam to them). The creator's own comments under their video, and yours, are skipped.
+   - **Video reviews** (`review_videos` in `run.py`): Claude reads each YouTube video's transcript and writes what you'd want from watching it: a one-line summary, how the creator felt about the game, and every bug, complaint, suggestion, question and bit of praise, each with the moment it's said (`review` on the video). The transcript is the video's own captions, read by the daily scheduled task on your Mac (`transcripts_fetch.py`, into `data/transcripts/`, deleted once the video is reviewed): YouTube blocks GitHub's servers from reading captions but not a home connection, so there's no daily limit. A video the task hasn't covered 36 hours after it's posted (your Mac was off, or it has no captions) is transcribed by Gemini instead, which opens it from Google's side. Once per video, up to 10 per game a run; a video that fails is tried again every 6 hours, 8 times. A stream longer than 2 hours is reviewed from its first 2 (`TRANSCRIBE_MAX` in `media.py`), as Gemini's free tier takes 8 hours of video a day; when that's used up the rest wait for the next day. Your own videos aren't reviewed. Needs the `GEMINI_API_KEY` secret (free); until then the status bar's **Transcripts** says so.
+   - **YouTube extras:** the same `videos.list` call (1 unit) also keeps each video's tags, topics, HD and captions, made for kids, and a premiere's start and end. Each channel's subscribers, country, @handle, video count and views are refreshed with the videos (1 unit per 50), and when a video's comment count changes, its 5 top comments are read (1 unit each).
+   - **Refund notes** (`ingest_refunds` in `run.py`): what players wrote when refunding, from each package's Steamworks refund page (*Refund data*). It needs your Steamworks login, so the collector can't read it: a daily scheduled task on your Mac runs `refunds.js` in your Chrome (Claude in Chrome, signed in to Steamworks) and `refunds_save.py` merges the notes into `data/refunds.json` through the GitHub API. Each note becomes a post (kind `refund`), sorted like a negative review; it joins bugs and ideas, weighs on their priority like a negative review, and a new one pings Discord. Packages are matched to games from the sales breakdown. The status bar's **Refund notes** says when they haven't been read for 3 days.
+   - **Steamworks stats** (`steamworks.js`, `steamworks_save.py`): the report pages Steamworks has no API for (playtime, players, controllers, downloads by region, hardware survey, Remote Play, Steam Deck) for every app on your partner account, read by the same task on your Mac in your Chrome and saved as `steamworks.json`. Each page is kept as its tables (all-zero ones left out), so a page Steam changes still reads. The dashboard shows them on each game's **Steam stats** view. Store traffic and UTM are on partner.steamgames.com, which needs its own sign-in in Chrome; not read yet.
+6. **Community** (`community.py`, no keys). Hourly, each game's **followers** on Steam (its community hub), how many of them are online and in the game right now (`followersOnline`, `followersInGame`, kept 90 days), and the studio's **Discord** members and members online (from the invite link in `src/data/site.js`, kept in `index.json`). Daily, each game's **achievements**: name, icon and the share of players who unlocked each, from its public stats page. Also daily, the **bundles** each game is in (from its store page), and the store details of the games you want to bundle it with (added on the dashboard's **Bundles** view): name, developer, price and reviews. A game you just added is looked up on the next run. Hourly, the games you compare it with (added on the dashboard's **Competitors** view): each one's player count, kept as the day's peak, its review totals and Steam's rating words, and, daily, its name, update posts and store details (`store`: recommendations, Metacritic, DLC, features, genres, platforms, languages, price). Every 6 hours, the **Steam curators** who reviewed the game: each one's verdict (recommended, not recommended or informational), what they wrote, their follower count and links to their page and full review. Steam has no official API for this; it reads the list the store's *Curators reviewing this game* page loads, so it can break if Steam changes that page.
+7. **Triage.** It sends each new or edited post to the newest Claude Haiku the API key can use (`model()` in `triage.py`, looked up once per run; Claude Haiku 5.5 if the model list can't be read), at `low` effort. A new Haiku is picked up by itself; add its price to `PRICES` so the cost is counted right. Haiku:
+   - translates the post to English;
+   - sorts it as bug, suggestion, question or praise;
+   - sets urgency and the game area;
+   - merges duplicates, across languages, into *issues* with mention counts. A mention is one distinct player.
+8. **Issues.** Every issue gets a priority score. Every bug issue gets a ready-to-paste Claude Code fix prompt.
+9. **Releases.** When a game publishes an update or patch-notes event, Claude Haiku compares the patch notes with what players said about each open issue. A line that does exactly what they asked marks the issue **likely fixed in vX**; a line that only helps marks it **partly addressed**. It becomes **still happening** only when a player says the problem is still there after the fix.
+   - For every negative review and every thread in an issue that a release fixed, Claude drafts a one- or two-sentence reply in the player's language, saying what was fixed and in which version. Steam's moderation guide suggests replying only in cases like that. The drafts show in the dashboard's **Replies** view until you reply on Steam.
+   - For every positive review from the last 60 days you haven't answered, Claude drafts a short thank-you in the player's language that mentions what they liked and invites them back for the newest update since their review (`draft_thanks_replies` in `run.py`). If the review also complained about something an update has since fixed, the thank-you says what was fixed and in which version (fix replies cover only negative reviews and threads); those reviews get a draft at any age. It's drafted again when a newer update comes out first, or its fixes change.
+10. **Discord.** It posts webhook embeds that link to the original post for:
+   - urgent issues;
+   - every new negative review, and every new post that reports a bug;
+   - reviews flipped to negative;
+   - repeated reports, at 3, 5, 10, 25… players;
+   - someone going live on Twitch (every new stream), a new YouTube video or article, with a link to join the chat or comment;
+   - a new Steam curator review;
+   - a **spike**: at least 3 players posting a negative review or a bug report in the last 24 hours, and at least 3 times their usual day (the 14 days before). It says which update went out just before, if one did, and which issues the posts are about. It pings once, then again a day later or when the count doubles (`check_spike` in `run.py`).
+
+   Every alert @mentions `DISCORD_MENTION`.
+
+   A game's first run only records a baseline, so the backfill doesn't flood Discord.
+
+11. **Research games** (`research_run` in `run.py`): other studios' games you add on the dashboard (**+ Add a research game** under the game list), to see what their players love, miss and run into before making your own take on it. Each is collected like your own games: every review (from Steam's public host; the publisher key only covers your games), every discussion thread and reply, update posts, player count (and its demo's, once one is out) and achievements, sorted by Claude into bugs, ideas and praise with patch notes matched. Not collected: alerts, reply drafts, fix prompts, player names and avatars (a big game has thousands), media, followers, sales and wishlists. They run in their own workflow (`feedback-research.yml`, `loop.sh` with `FEEDBACK_PART=research`) next to your games' one, so a big backlog never holds back your data. The first sort runs 150 posts a run; after that it checks every 6 hours. Claude stops sorting a research game once it has cost `RESEARCH_CAP` ($40), and the dashboard says so. With Haiku 5.5 a game with 10,000 reviews costs roughly $10–15 to sort.
+
+Every post's text is stored, so a post deleted on Steam isn't lost here. A file is rewritten only when its content changed, and the workflow commits only when something did.
+
+## Schedule
+
+Each workflow run does a full run every 5 minutes for about 4 hours (`loop.sh`), then starts the next run; the schedule starts one if none is going. A run with nothing new only reads from Steam: the review list, player count and update posts, and the first page of each discussion forum (threads are opened only when they have new activity). Claude is only called for new or edited posts.
+
+When anything the website shows from a game's store page changes (a new public store page, a release, a sale, new text, capsule or screenshots), the run also starts the site's *Build and deploy* workflow, so the website shows it within minutes instead of at the daily rebuild.
+
+Starting the workflow by hand (*Run workflow*) replaces the current run.
+
+## Secrets
+
+Set these under *Settings → Secrets and variables → Actions*. None of them is ever written to `data/` or the dashboard.
+
+| Secret | What it is |
+| --- | --- |
+| `STEAM_PUBLISHER_KEY` | Steamworks Web API publisher key (Users & Permissions → Manage Groups → your group → Web API key), with the *General* permission |
+| `STEAM_FINANCIAL_KEY` | For sales and wishlists: the Web API key of a **Financial API Group** ([Manage Groups](https://partner.steamgames.com/pub/groups/) → Create New Financial API Group → Manage WebAPI Key). A publisher key can't read sales, whatever its permissions. Leave its IP list empty: GitHub's runners change IP |
+| `ANTHROPIC_API_KEY` | Anthropic API key |
+| `DISCORD_WEBHOOK_URL` | The channel's webhook URL |
+| `DISCORD_MENTION` | Who to ping: `<@USER_ID>`, `<@&ROLE_ID>` or a bare user ID (optional) |
+| `DISCORD_RELEASES_WEBHOOK_URL` | A public channel's webhook: when a game goes from coming soon to released on Steam, it posts "out now" with the store link (optional) |
+| `DISCORD_RELEASES_ROLE` | The role that post pings, e.g. @Ping Games: its role ID (optional) |
+| `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` | A Twitch app from [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps): *Register Your Application*, OAuth redirect `http://localhost`, category *Analytics Tool*, client type *Confidential*. Also used for IGDB |
+| `YOUTUBE_API_KEY` | In [Google Cloud Console](https://console.cloud.google.com/): make a project, enable *YouTube Data API v3*, then *Credentials → Create credentials → API key* (restrict it to that API) |
+| `GOOGLE_ALERTS_FEEDS` | Optional. At [google.com/alerts](https://www.google.com/alerts), one alert per game for all its names joined with OR, `"Game name" OR "Localized name" OR …` (As-it-happens, Any Language, All results, *Deliver to: RSS feed*); paste the feed URLs (the RSS icon next to each alert), one per line. Reddit threads come from the same alerts. A game without one, or whose alert lacks a name Steam has, gets a *Copy prompt for Claude* card on the Media tab: Claude then makes or fixes the alert in your Chrome and resets this secret to every feed on the alerts page |
+| `GEMINI_API_KEY` | For video reviews (free). At [aistudio.google.com/apikey](https://aistudio.google.com/apikey), *Create API key*. YouTube blocks GitHub's servers from reading captions, so Gemini, which opens YouTube links from Google's side, writes each video's transcript for Claude to review. The free tier takes 8 hours of video a day |
+
+## Data
+
+All of it lives in the **private** repo [fourgames/feedback-data](https://github.com/fourgames/feedback-data), so nobody without access can read it (this repo and its Actions logs are public). The workflows run here, where Actions minutes are free for a public repo, check it out at `feedback/data` and push to it with a deploy key (the `DATA_DEPLOY_KEY` secret; its public half is the repo's deploy key with write access). The dashboard reads it through GitHub's API with your fine-grained token (only the feedback-data repo, Contents: Read and write), which it asks for once per browser; without one it shows nothing. The task on your Mac writes refund notes and video captions to it with `gh`. Paths below are in that repo.
+
+- `data/index.json` holds the game list and the status of each service.
+- `data/games/<appid>.json` holds one game:
+  - `items`: every post, keyed `r<id>` (review), `t<id>` (thread) or `c<id>` (reply);
+  - `issues`;
+  - `players`: `[time, count]`, stored only when the count changes;
+  - `reviewTotals`: per day;
+  - `releases`: each update, with its patch notes, and the `buildId` and `branch` it shipped, its `votesUp`/`votesDown`, `comments` and `tags`, refreshed every run.
+  - `manualFixes`: Claude's verdict on each fix you marked.
+  - `followers`: `[time, count]`, stored only when it changes. `followersOnline` and `followersInGame` the same, kept 90 days.
+  - `achievements`: `{at, list: [{name, desc, icon, percent}], history: [[time, {name: percent}]]}`, `history` a sample per change.
+  - `bundles`: `{at, list: [{id, name, image, apps, bundleDiscount, price, fullPrice}]}`, the Steam bundles it's in.
+  - `partners`: the games you want to bundle it with, keyed by app id: `{name, developers, publishers, capsule, released, price, reviews}`.
+  - `competitors`: the games you compare it with, keyed by app id: `{name, capsule, released, comingSoon, peaks: {day: players}, reviews: {day: {positive, negative}}, updates: [{time, name, version, url}]}`, days in UTC, kept 400 days.
+  - `curators`: `{at, list: [{id, name, url, group, avatar, followers, state, blurb, link, time, free, paid, seen}]}`, most followers first; `state` is `recommended`, `not_recommended` or `informative`, `seen` when it first showed up.
+  - `media`: `items` (streams, videos, articles and Reddit posts, keyed `tw`, `yt`, `nw`, `rd`), the game's Twitch `category` with its `clips` and `videos` (VODs), and when each source `started`.
+- `data/index.json` → each game's `details`: its store details, like a competitor's `store`.
+- `data/sales.json` holds every day's sales per game (`days`), with a `breakdown` of the same net revenue and units by platform, type (package, bundle, in-game item), package, sale or full price, currency, in-game item, refunds by country and key activations by country; `names` holds the package, bundle, sale and item names. `version` makes every day be read again once when a day's totals gain something.
+- `data/wishlists.json` holds each game's wishlists per GMT day (`wishlists.py`): adds, deletes, purchases, gifts, adds per platform, and the same per country and store language. The history goes back to the game's store page and is filled in 30 days per sync.
+- `data/cleared.json` holds what you marked fixed on the dashboard, per game.
+- `data/bundles.json` holds the games you want to bundle each game with (`{appId: {otherAppId: {at, name, status, note}}}`), written by the dashboard.
+- `data/competitors.json` holds the games you compare each game with (`{appId: {otherAppId: {at, name}}}`), written by the dashboard.
+- `data/research.json` holds the research games (`{appId: {at, name, group?}}`), written by the dashboard; a `group` (a studio, say) lists its games under their own heading. Each one's data is in `data/games/<appid>.json` like your own, and its summary in `data/research-index.json`, which only the research workflow writes.
+
+This repo is public, so this data is too. It's all public on Steam anyway.
+
+## Dashboard
+
+`/fb-dash` is a page of the site (`src/views/FeedbackView.vue`, with the dashboard itself in `src/lib/feedback/`, loaded only on that page). Nothing links to it except a header link that appears in browsers that have opened it once, it's `noindex`, and it isn't in the sitemap. It reads `feedback/data` straight from the repo on raw.githubusercontent.com, so new data shows up without a site redeploy (allow for a few minutes of CDN cache).
+
+- **Claude costs:** every Claude call's tokens are counted per game, per day and per task (sorting posts, translating your posts, checking patch notes and your fixes, merging duplicates, drafting replies), with the cost estimated at list price (`PRICES` in `triage.py`; it matches the bill when the collector is all that uses the key). The time before counting started is estimated once from the saved posts (`estimate_past_usage` in `run.py`), on the low side. The Claude card shows credit left and what it's cost; clicking it opens a 30-day chart and the breakdown per game. Set your credit balance there from the billing page whenever you top up (`data/credit.json`, written only by the dashboard); it counts down from that, and Discord pings you once when it's below $2.
+- **Status bar:** folded into one line (each service's mark and a dot) while everything works; it opens by itself when anything needs attention, and stays open in your browser once you open it. It shows which services the last run could and couldn't reach (Claude, Steam, discussions, Discord, Twitch, YouTube, news), each with a button to the fix; a missing key also gets a button to where it's made. "Out of Anthropic API credit" links straight to billing. It's recorded in `data/index.json` → `status` only when something changes.
+- **Steam links:** buttons for the store page, reviews, discussions, news, Steamworks and the Steamworks sales report.
+- **Wishlists:** hourly from Steam's `IPartnerFinancialsService/GetAppWishlistReporting` (`wishlists.py`, same key as sales). The **Wishlists** card shows how many are still on players' lists (adds minus removals, purchases and gifts) and the change this week; its chart has that over time and the adds per day. While older days are still being filled in, it says from which day it counts.
+- **Stat cards:** players now, positive reviews, wishlists, followers on Steam, Discord members, net revenue over the last 7 days (once there are sales), open bugs and new posts. Players, reviews, followers and Discord open their chart (with update dates, sales and media marked) when clicked; followers and Discord show the change over 7 and 30 days.
+- **Sales:** hourly from Steam's `IPartnerFinancialsService` (`sales.py`, into `data/sales.json`, which is public like the rest of the data, on purpose): net revenue per day or week with updates and discounted days marked, units sold, refund rate, lifetime totals, key activations and top countries. Steam's days are Pacific time and recent ones can still change as payments settle.
+- **Competitors:** similar games you add by store link or app id, next to yours. One line on top says what it means: *only you dropped*, *everyone dropped*, *beating the market* or *in step*, from the average daily peak players over the last 7 days against the 7 before (so games of any size compare). Below, a chart of each game's daily peak as a share of its own usual, with you, the median of the others and each of them; then a card per game with yesterday's peak, its review score and reviews this week, and its last update. Steam keeps no player history, so it compares once two weeks are collected.
+- **Curators:** the Steam curators who reviewed the game, most followers first: verdict, what they wrote, followers, and buttons to their full review, curator page and Steam group (to thank them or reply).
+- **Achievements:** the share of players who unlocked each, most common first, with the biggest step down marked: where many players stop. A chart shows each share over time with updates marked, and each achievement shows its change since the newest update with samples on both sides (in points) and, once at least 10 copies were sold or keys activated since, a rough share among those new players ((share now × owners now − share then × owners then) ÷ new owners, from sales). Steam's shares are over everyone who ever played, so this is how to see what an update did to how far new players get, without collecting anything from the game.
+- **More data:** everything else the collector keeps, by topic, each folded away: wishlists by country, language and platform; review details (the last 30 days' score, median hours at review, negative reviews inside the refund window, who still plays, Steam Deck, keys and free copies, the most helpful reviews); the store page's details; followers online and in the game; each update's build, votes and patch notes; sales by platform, type, package, sale, currency and country; Twitch clips and VODs, YouTube's top comments, channel countries and tags; competitors' store pages; and Claude's cost per day and task. Review cards also show helpful and funny votes, comments, Steam Deck, key or free copy, Early Access, refunded and still playing; bug and idea cards show the details players gave and Claude's verdict on a fix you marked.
+- **Coming soon:** ideas for later, each with what it would show and what it needs: data from inside the games (sessions, where players quit, crashes, hardware). Nothing there is collected yet.
+- **Steam links on the site** carry `utm_source=fourgames.se&utm_medium=website` (`src/lib/games.js`), so Steamworks' **UTM Analytics** for each game counts the visits that came from the website.
+- **Issues:** bug issues sorted by priority. Each has *Copy fix prompt* and the original posts with their translations and Steam links.
+- **Suggestions:** the same view for suggestions.
+- **Marking fixed:** each bug and idea has a round ✓. It asks what you changed (prefilled as a patch-notes line) and where the fix is: *in the next update*, or *already out in* an update you pick. The card leaves the list at once (the *Marked fixed* filter shows it; click the ✓ again to undo). The next run has Claude judge your line like patch notes, against just that issue (`apply_manual_fixes` in `run.py`): a real fix marks it **likely fixed**, with reply drafts and **still happening** as after a release; anything less marks it **partly addressed** and puts it back on the list. A fix in the next update takes that update's name when it's posted, and its reply drafts wait until then. A player reporting it again brings it back. It's saved in `data/cleared.json`, which only the dashboard writes, through GitHub's API with a fine-grained token (this repo only, *Contents: Read and write*) that you paste once per browser and that stays in that browser. Those commits say `[skip ci]`, so they don't redeploy the site. With `?data=` (a test copy), nothing is saved.
+- **Trending:** a bug, idea or praise raised by at least 2 players in the last 7 days, and at least twice as many as the 7 days before, is tagged *Trending* (hover for the counts), once the game has two weeks of posts. The overview lists the top ones, and Bugs and Ideas can sort by it.
+- **Since the latest update:** an issue first reported after the newest update is tagged *Since vX*, so you see right away what an update may have broken. Each post shows the version live when it was written, and the feed can show only posts from before or since the newest update.
+- **New on views:** a view with something from the last 48 hours that's newer than when you last opened it (in this browser, per game) is tagged *New*, like a new post.
+- **Overview:** the week in one line, what needs attention, and the latest posts.
+- **Bugs / Ideas sorting:** by priority, by negative reviews (what's costing you reviews), by most players, or only what came up in the first 2 hours of play (Steam's refund window). Each card has a *Copy patch-note line* button, e.g. "Fixed: … (reported by 3 players)".
+- **Loved:** praise grouped like ideas, most players first, with a button to copy the list for store pages and trailers.
+- **Media:** who's live on Twitch now, then every stream, video, article, Reddit post, web page and download copy, newest first and filterable by source, with the channel's size, views and a button to join the chat or comment (on a download copy, also to Google's removal form). A card on top says when the game's Google Alert is missing or lacks a name, with a prompt to give Claude to fix it. What's live and what's new this week also show on the overview, and everything but download copies is marked along the bottom of the player and review charts (a stream as a bar for as long as it ran, anything else as a dot sized by its reach), so a jump in players shows what caused it.
+- **Updates:** each update with negative reviews before and after it, what it fixed (from the patch notes or your ✓) and whether those reports stopped, and what came up since, crossed out once a later update fixed it.
+- **Replies:** negative reviews and threads about something an update has since fixed, and recent positive reviews, each with a drafted reply (Copy reply, Reply on Steam, Done).
+- **Reply results** (bottom of Replies): of every review that was negative at some point, the share that turned positive when you replied and when you didn't, replied within an hour or later, and with replies that said what was fixed; then each review that turned positive after your reply, with how fast you replied. It says when there are too few reviews to tell yet (under about 10 on each side).
+- **Feed:** every post, newest first, with filters and search.
+
+To point it at another copy of the data, add `?data=<base url>`, e.g. a local test run served by the dev server.
+
+## Listening to posts
+
+Each post and reply has a **Select** button that highlights its text; press your Speak Selection key (⌥ Esc by default, under System Settings → Accessibility → Read & Speak) to hear it in your own voice. A web page can't start macOS speech itself, and running a Shortcut from a link always brings the Shortcuts app to the front.
+
+## Running it locally
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r feedback/requirements.txt
+FEEDBACK_DATA_DIR=/tmp/fb/data FEEDBACK_DRY_RUN=1 .venv/bin/python feedback/run.py
+```
+
+- `FEEDBACK_DRY_RUN=1` skips Claude.
+- `FEEDBACK_RESORT=<app id>,…` (or `all`) sorts those games' posts again from scratch, after the sorting rules changed. On GitHub, start the workflow with the **resort** input instead. Issues get new IDs, so fixes marked on the dashboard for that game no longer apply; the run is a baseline, so no alerts are sent.
+- Without `STEAM_PUBLISHER_KEY`, reviews come from the public, keyless host.
+- Without `DISCORD_WEBHOOK_URL`, Discord payloads are printed instead of sent.

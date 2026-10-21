@@ -1,0 +1,30 @@
+{
+  "name": "fourgames-website",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22.12"
+  },
+  "scripts": {
+    "predev": "node scripts/fetch-data.mjs --ensure",
+    "dev": "vite",
+    "data": "node scripts/fetch-data.mjs",
+    "prebuild": "node scripts/fetch-data.mjs --ensure",
+    "build": "vite build --ssrManifest && vite build --ssr src/entry-server.js --outDir dist-ssr && node scripts/prerender.mjs && node scripts/og-image.mjs",
+    "preview": "node scripts/preview.mjs"
+  },
+  "dependencies": {
+    "vue": "^3.5.42",
+    "vue-router": "^5.3.1"
+  },
+  "devDependencies": {
+    "@fontsource-variable/montserrat": "^5.3.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@vitejs/plugin-vue": "^6.0.8",
+    "playwright": "^1.63.0",
+    "sharp": "^0.35.4",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.3.0"
+  }
+}

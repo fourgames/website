@@ -65,6 +65,15 @@ tr.click { cursor: pointer; } tr.click:hover td { background: color-mix(in srgb,
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 760px) { .two { grid-template-columns: 1fr; } .bars .b { grid-template-columns: 1fr 40% 40px; } }
 .empty { color: var(--muted); }
+main.wide { max-width: none; }
+.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; align-items: start; }
+@media (max-width: 1000px) { .cols { grid-template-columns: 1fr; } }
+.clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.colbars { display: flex; align-items: flex-end; gap: 2px; height: 120px; margin: 12px 0 4px; }
+.colbars span { flex: 1; background: var(--good); border-radius: 2px 2px 0 0; min-height: 1px; }
+.dl { display: grid; grid-template-columns: 74px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 4px 0; border-top: 1px solid var(--line); font-size: 13px; }
+.dl:first-child { border-top: 0; }
+.dl .dt { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .few { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 12px; }
 .fewh { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
 .fewh .meta { margin-left: auto; }
@@ -286,6 +295,47 @@ function oneScreen(all) {
     })));
 }
 
+// ---- 1. Side by side: three views at once on a wide screen -----------------
+const TYPE = { bug: ["bug", "Bug"], suggestion: ["idea", "Idea"], question: ["muted", "Question"], praise: ["love", "Praise"] };
+const postRow = (i) => {
+  const t = i.triage || {}, [cls, label] = TYPE[t.category] || ["muted", i.kind];
+  return $("div", { cls: "row" }, $("span", { cls: `pill ${cls}` }, label),
+    $("div", { cls: "grow" }, $("div", { cls: "clamp" }, t.summary || i.text || i.title || ""),
+      $("div", { cls: "meta" }, [i.kind === "review" ? (i.votedUp ? "👍 review" : "👎 review") : i.kind, i.author?.name, t.language, i.playtime != null && i.kind === "review" ? `${i.playtime} h` : null, ago(i.created)].filter(Boolean).join(" · "))));
+};
+const bugRow = (b) => $("div", { cls: "row" }, $("span", { cls: `pill ${b.kind === "bug" ? "bug" : "idea"}` }, b.urgency),
+  $("div", { cls: "grow" }, $("b", {}, b.title), $("div", { cls: "meta" }, [`${b.mentions} players`, b.negativeReviews ? `${b.negativeReviews} neg. reviews` : null, b.refunds ? `${b.refunds} refunds` : null, b.status === "still_happening" ? "still happening" : null, `last ${ago(b.lastSeen)}`].filter(Boolean).join(" · "))));
+function sideBySide(x) {
+  const posts = [...x.items].sort((a, b) => b.created - a.created).slice(0, 25);
+  const rev = x.revenue30, total = rev.reduce((a, b) => a + b, 0), maxR = Math.max(1, ...rev);
+  return $("div", {},
+    $("p", { cls: "note" }, "1. Side by side: Bugs, All posts and Sales at once, so you don't switch views. On a big screen each column is a full view; click anything to open it in the full dashboard. (Rows here are compact so more fits.)"),
+    $("div", { cls: "cols" },
+      $("div", {}, $("h2", {}, "Bugs & ideas", $("small", {}, `${x.bugs.length} bugs · ${x.ideas.length} ideas open`)), $("div", { cls: "card" }, [...x.bugs, ...x.ideas.slice(0, 8)].map(bugRow))),
+      $("div", {}, $("h2", {}, "All posts", $("small", {}, "newest first")), $("div", { cls: "card" }, posts.map(postRow))),
+      $("div", {}, $("h2", {}, "Sales", $("small", {}, "gross, last 30 days")),
+        $("div", { cls: "card" }, $("div", { cls: "tile" }, $("div", { cls: "label" }, "Last 30 days"), $("div", { cls: "value" }, money(total)), $("div", { cls: "sub" }, `${money(x.rev7)} this week`, delta(x.rev7, x.revPrev7))),
+          $("div", { cls: "colbars" }, rev.map((v, i) => $("span", { title: `${days(30)[i]}: ${money(v)}`, style: `height:${(v / maxR) * 100}%` }))),
+          $("div", { cls: "meta" }, "one bar per day")))));
+}
+
+// ---- 2. Dense: the same views, one line per thing ---------------------------
+function dense(x) {
+  const posts = [...x.items].sort((a, b) => b.created - a.created).slice(0, 60);
+  const line = (i) => {
+    const t = i.triage || {}, [cls, label] = TYPE[t.category] || ["muted", i.kind];
+    return $("div", { cls: "dl", title: i.text || "" }, $("span", { cls: `pill ${cls}` }, label),
+      $("span", { cls: "dt" }, t.summary || i.text || i.title || ""),
+      $("span", { cls: "meta" }, [i.kind === "review" ? (i.votedUp ? "👍" : "👎") : i.kind, t.language, ago(i.created)].filter(Boolean).join(" · ")));
+  };
+  return $("div", {},
+    $("p", { cls: "note" }, "2. Dense: the views you have, but one line per bug and per post until you click it, so about three times as much fits on a screen. Hover a line for the full text."),
+    $("h2", {}, "Bugs & ideas", $("small", {}, "one line each: priority, title, players, negative reviews")),
+    $("div", { cls: "card" }, [...x.bugs, ...x.ideas].map((b) => $("div", { cls: "dl" }, $("span", { cls: `pill ${b.kind === "bug" ? "bug" : "idea"}` }, b.urgency), $("span", { cls: "dt" }, $("b", {}, b.title)), $("span", { cls: "meta" }, `${b.mentions} players · ${b.negativeReviews || 0} neg${b.refunds ? ` · ${b.refunds} refunds` : ""}`)))),
+    $("h2", {}, "All posts", $("small", {}, "one line each")),
+    $("div", { cls: "card" }, posts.map(line)));
+}
+
 // ---- shell ------------------------------------------------------------------
 (async () => {
   const [index, sales, wish, sw] = await Promise.all([get("index.json"), get("sales.json"), get("wishlists.json"), get("steamworks.json")]);
@@ -293,13 +343,14 @@ function oneScreen(all) {
   const games = await Promise.all(metas.map((m) => get(`games/${m.appId}.json`)));
   const all = metas.map((m, i) => games[i] && derive(m, games[i], sales, wish, sw)).filter(Boolean)
     .sort((a, b) => (b.posts7.length + b.peak7) - (a.posts7.length + a.peak7));
-  let tab = localStorage.getItem("lab-tab") || "A", game = Number(localStorage.getItem("lab-game")) || all[0].meta.appId;
+  let tab = localStorage.getItem("lab-tab") || "1", game = Number(localStorage.getItem("lab-game")) || all[0].meta.appId;
   const draw = () => {
     localStorage.setItem("lab-tab", tab); localStorage.setItem("lab-game", game);
-    document.getElementById("tabs").replaceChildren(...[["A", "A. Briefing"], ["B", "B. Cockpit"], ["C", "C. Inbox"], ["D", "D. One screen"]].map(([k, t]) => $("button", { "aria-pressed": String(tab === k), onclick: () => { tab = k; draw(); } }, t)));
-    document.getElementById("games").replaceChildren(...(tab === "A" ? all.map((x) => $("button", { "aria-pressed": String(game === x.meta.appId), onclick: () => { game = x.meta.appId; draw(); } }, x.meta.name)) : []));
+    document.getElementById("tabs").replaceChildren(...[["1", "1. Side by side"], ["2", "2. Dense"], ["A", "A. Briefing"], ["B", "B. Cockpit"], ["C", "C. Inbox"], ["D", "D. One screen"]].map(([k, t]) => $("button", { "aria-pressed": String(tab === k), onclick: () => { tab = k; draw(); } }, t)));
+    document.getElementById("games").replaceChildren(...(["A", "1", "2"].includes(tab) ? all.map((x) => $("button", { "aria-pressed": String(game === x.meta.appId), onclick: () => { game = x.meta.appId; draw(); } }, x.meta.name)) : []));
     const x = all.find((g) => g.meta.appId === game) || all[0];
-    document.getElementById("view").replaceChildren(tab === "A" ? briefing(x) : tab === "B" ? cockpit(all, (id) => { game = id; tab = "A"; draw(); }) : tab === "C" ? inbox(all) : oneScreen(all));
+    document.getElementById("view").className = tab === "1" ? "wide" : "";
+    document.getElementById("view").replaceChildren(tab === "1" ? sideBySide(x) : tab === "2" ? dense(x) : tab === "A" ? briefing(x) : tab === "B" ? cockpit(all, (id) => { game = id; tab = "A"; draw(); }) : tab === "C" ? inbox(all) : oneScreen(all));
   };
   draw();
 })();

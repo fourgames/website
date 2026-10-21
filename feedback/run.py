@@ -363,6 +363,10 @@ def review_videos(state, game, budget):
     import triage
 
     items = (state.get("media") or {}).get("items") or {}
+    # The status says whether transcripts work now: a failure shows only while one happens this run,
+    # not until some other video happens to succeed.
+    if any(i["source"] == "youtube" for i in items.values()):
+        status.ok("transcripts")
     for video in items.values():
         if video.get("review"):
             video_post(state, video)

@@ -65,6 +65,19 @@ tr.click { cursor: pointer; } tr.click:hover td { background: color-mix(in srgb,
 .two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 @media (max-width: 760px) { .two { grid-template-columns: 1fr; } .bars .b { grid-template-columns: 1fr 40% 40px; } }
 .empty { color: var(--muted); }
+.few { display: grid; grid-template-columns: repeat(auto-fit, minmax(330px, 1fr)); gap: 12px; }
+.fewh { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+.fewh .meta { margin-left: auto; }
+.dot { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.bul { display: grid; grid-template-columns: 92px 1fr 78px; gap: 8px; align-items: center; padding: 3px 0; font-size: 12px; }
+.bl { color: var(--ink2); }
+.bt { position: relative; height: 12px; }
+.bb { position: absolute; inset: 0 auto 0 0; background: var(--track); border-radius: 3px; }
+.bv { position: absolute; top: 3px; bottom: 3px; left: 0; background: var(--ink2); border-radius: 2px; }
+.bm { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); }
+.bn { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.fewi { margin-top: 8px; border-top: 1px solid var(--line); padding-top: 6px; }
+.fewi div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 </style>
 </head>
 <body>
@@ -182,7 +195,7 @@ function briefing(x) {
     $("span", { cls: "track" }, $("span", { style: `width:${(i.mentions / maxM) * 100}%;background:var(--${kind(i)})` })),
     $("span", { cls: "num" }, i.mentions)));
   return $("div", {},
-    $("p", { cls: "note" }, "A. Briefing: one game at a time, read top to bottom in the order you'd ask: what needs me, how is it doing this week, what are players saying, how far do they get, who's covering it. Exceptions first; everything else is a trend, not a table."),
+    $("p", { cls: "note" }, "A. Briefing. Research: Shneiderman's \"overview first, zoom and filter, then details on demand\" and the inverted pyramid (most important first). One game at a time, top to bottom in the order you'd ask: what needs me, how is it doing this week, what do players say, how far do they get, who's covering it."),
     $("h2", {}, "Needs you", $("small", {}, needs.length ? `${needs.length} things` : "nothing")),
     $("div", { cls: "card" }, needs.length ? needs.map(([k, t, why, cls]) => $("div", { cls: "row" }, $("span", { cls: `pill ${cls}` }, k), $("div", { cls: "grow" }, $("b", {}, t), $("div", { cls: "meta" }, why)))) : $("p", { cls: "empty" }, "Nothing urgent: no high bugs, no new refunds, every negative review this week answered.")),
     $("h2", {}, "This week", $("small", {}, "vs the week before")),
@@ -197,7 +210,7 @@ function briefing(x) {
 // ---- B. Cockpit: every game side by side, same columns ----------------------
 function cockpit(all, pick) {
   return $("div", {},
-    $("p", { cls: "note" }, "B. Cockpit: every game as one row with the same columns, so you compare at a glance and spot the one that moved. Each trend is the last 30 days; the number is now (or this week). Click a row for its briefing."),
+    $("p", { cls: "note" }, "B. Cockpit. Research: Tufte's small multiples and sparklines: the same small chart repeated for every game on the same columns, so the one that differs pops out. Each trend is the last 30 days; the number is now (or this week). Click a row for its briefing."),
     $("div", { cls: "card", style: "overflow-x:auto" }, $("table", {},
       $("tr", {}, ["Game", "Players (30 d)", "Reviews", "Revenue (30 d)", "Wishlist adds (30 d)", "Open bugs", "New posts (7 d)"].map((t) => $("th", {}, t))),
       all.map((x) => $("tr", { cls: "click", onclick: () => pick(x.meta.appId) },
@@ -239,8 +252,38 @@ function inbox(all) {
   }));
   draw();
   return $("div", {},
-    $("p", { cls: "note" }, `C. Inbox: everything from the last 14 days across all games, ranked by how much it needs you (refunds, bugs that came back and negative reviews first; praise last). Mark things done like email. ${events.length} items.`),
+    $("p", { cls: "note" }, `C. Inbox. Research: management by exception: show only what deviates and needs a decision, ranked, and let you clear it. Everything from the last 14 days across all games (refunds, bugs that came back and negative reviews first; praise last). ${events.length} items.`),
     list);
+}
+
+// ---- D. One screen: Stephen Few's information dashboard ---------------------
+// Everything for every game on one screen without scrolling; bullet graphs (this week's bar, last
+// week's tick, the 30-day best as the faint band) instead of gauges; color only for what's wrong.
+function bullet(label, value, prev, best, text, bad = false) {
+  const max = Math.max(1, value || 0, prev || 0, best || 0);
+  return $("div", { cls: "bul", title: `${label}: ${text} · last week ${prev ?? "–"} · 30-day best ${best ?? "–"}` },
+    $("span", { cls: "bl" }, label),
+    $("span", { cls: "bt" }, $("span", { cls: "bb", style: `width:${((best || 0) / max) * 100}%` }), $("span", { cls: "bv", style: `width:${((value || 0) / max) * 100}%;${bad ? "background:var(--bad)" : ""}` }),
+      prev != null ? $("span", { cls: "bm", style: `left:${(prev / max) * 100}%` }) : null),
+    $("span", { cls: "bn" }, text));
+}
+function oneScreen(all) {
+  const sum = (a) => a.reduce((x, y) => x + (y || 0), 0);
+  return $("div", {},
+    $("p", { cls: "note" }, "D. One screen. Research: Stephen Few's information dashboard design: everything fits one screen without scrolling, bullet graphs (bar = this week, tick = last week, faint band = 30-day best) instead of gauges, and color only where something is wrong. Each game is a panel; the dot next to its name is red when something needs you."),
+    $("div", { cls: "few" }, all.map((x) => {
+      const alerts = x.bugs.filter((b) => ["urgent", "high"].includes(b.urgency) || b.status === "still_happening").length + x.items.filter((i) => i.kind === "refund" && i.created > now - 7 * DAY).length;
+      const posts7 = x.posts7.length, postsPrev = x.postsPerDay.slice(-14, -7).reduce((a, b) => a + b, 0);
+      const wAdds7 = sum(x.wishAdds30.slice(-7)), wAddsPrev = sum(x.wishAdds30.slice(-14, -7));
+      return $("div", { cls: "card fewp" },
+        $("div", { cls: "fewh" }, $("span", { cls: "dot", style: `background:${alerts ? "var(--bad)" : "var(--track)"}`, title: alerts ? `${alerts} need you` : "nothing urgent" }), $("b", {}, x.meta.name), $("span", { cls: "meta" }, x.meta.status === "upcoming" ? "coming soon" : x.pos != null ? `${x.pos}% positive · ${x.reviewsTotal} reviews` : "")),
+        bullet("Players", x.peak7, x.peakPrev7, Math.max(0, ...x.players.map((v) => v || 0)), `${x.peak7} best day`),
+        bullet("Revenue", x.rev7, x.revPrev7, null, money(x.rev7)),
+        bullet("Wishlist adds", wAdds7, wAddsPrev, null, String(wAdds7)),
+        bullet("New posts", posts7, postsPrev, null, String(posts7)),
+        bullet("Open bugs", x.bugs.length, null, null, String(x.bugs.length), alerts > 0),
+        $("div", { cls: "fewi" }, x.bugs.slice(0, 2).concat(x.ideas.slice(0, 1)).map((i) => $("div", { cls: "meta", title: i.title }, $("span", { style: `color:var(--${i.kind === "bug" ? "bug" : "idea"})` }, "● "), `${i.title} (${i.mentions})`))));
+    })));
 }
 
 // ---- shell ------------------------------------------------------------------
@@ -253,10 +296,10 @@ function inbox(all) {
   let tab = localStorage.getItem("lab-tab") || "A", game = Number(localStorage.getItem("lab-game")) || all[0].meta.appId;
   const draw = () => {
     localStorage.setItem("lab-tab", tab); localStorage.setItem("lab-game", game);
-    document.getElementById("tabs").replaceChildren(...[["A", "A. Briefing"], ["B", "B. Cockpit"], ["C", "C. Inbox"]].map(([k, t]) => $("button", { "aria-pressed": String(tab === k), onclick: () => { tab = k; draw(); } }, t)));
+    document.getElementById("tabs").replaceChildren(...[["A", "A. Briefing"], ["B", "B. Cockpit"], ["C", "C. Inbox"], ["D", "D. One screen"]].map(([k, t]) => $("button", { "aria-pressed": String(tab === k), onclick: () => { tab = k; draw(); } }, t)));
     document.getElementById("games").replaceChildren(...(tab === "A" ? all.map((x) => $("button", { "aria-pressed": String(game === x.meta.appId), onclick: () => { game = x.meta.appId; draw(); } }, x.meta.name)) : []));
     const x = all.find((g) => g.meta.appId === game) || all[0];
-    document.getElementById("view").replaceChildren(tab === "A" ? briefing(x) : tab === "B" ? cockpit(all, (id) => { game = id; tab = "A"; draw(); }) : inbox(all));
+    document.getElementById("view").replaceChildren(tab === "A" ? briefing(x) : tab === "B" ? cockpit(all, (id) => { game = id; tab = "A"; draw(); }) : tab === "C" ? inbox(all) : oneScreen(all));
   };
   draw();
 })();

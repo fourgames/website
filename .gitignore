@@ -76,3 +76,6 @@ __pycache__/
 
 # Player feedback data: its own private repo (fourgames/feedback-data), checked out here by the collector
 feedback/data/
+
+# Local test copies of the private feedback data (never commit)
+public/__fbtest/

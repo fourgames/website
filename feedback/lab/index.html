@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Dashboard lab</title>
+<!-- Three ways to lay out the feedback data, on the real data in feedback/data (run with the
+     fb-lab launch config: python3 -m http.server from feedback/). Local only, never deployed. -->
+<style>
+:root {
+  --bg: #f4f4f2; --card: #ffffff; --ink: #1d1d1f; --ink2: #55565b; --muted: #8a8b90; --line: #e4e4e0;
+  --accent: #2a78d6; --bad: #d93d3c; --warn: #c98500; --good: #1a8f5f;
+  --bug: #d93d3c; --idea: #6250d6; --love: #1a8f5f; --track: #ececea;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #1f2124; --card: #2b2d31; --ink: #f1f1f2; --ink2: #b9babf; --muted: #85878d; --line: #3a3c41;
+    --accent: #3987e5; --bad: #e66767; --warn: #e0a634; --good: #4cc38a; --bug: #e66767; --idea: #9085e9; --love: #4cc38a; --track: #3a3c41; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+header { position: sticky; top: 0; z-index: 2; background: var(--bg); border-bottom: 1px solid var(--line); padding: 12px 20px; display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+header h1 { font-size: 15px; margin: 0 8px 0 0; }
+.tabs, .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+button { font: inherit; color: inherit; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 12px; cursor: pointer; }
+button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+main { max-width: 1180px; margin: 0 auto; padding: 20px 16px 60px; }
+.note { color: var(--ink2); margin: 0 0 18px; max-width: 760px; }
+h2 { font-size: 17px; margin: 28px 0 10px; }
+h2 small { color: var(--muted); font-weight: 400; font-size: 13px; margin-left: 6px; }
+.card { background: var(--card); border-radius: 12px; padding: 14px 16px; box-shadow: 0 1px 2px rgba(0,0,0,.06); }
+.grid { display: grid; gap: 12px; }
+.tiles { grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+.tile .label { color: var(--ink2); font-size: 12px; }
+.tile .value { font-size: 26px; font-weight: 700; letter-spacing: -.02em; }
+.tile .sub { color: var(--muted); font-size: 12px; }
+.delta { font-size: 12px; font-weight: 600; margin-left: 6px; }
+.up { color: var(--good); } .down { color: var(--bad); } .flat { color: var(--muted); }
+.spark { display: block; margin-top: 6px; }
+.row { display: flex; gap: 10px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--line); }
+.row:first-child { border-top: 0; }
+.pill { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; padding: 1px 7px; border-radius: 999px; white-space: nowrap; }
+.pill.bug { color: var(--bug); background: color-mix(in srgb, var(--bug) 14%, transparent); }
+.pill.idea { color: var(--idea); background: color-mix(in srgb, var(--idea) 14%, transparent); }
+.pill.love { color: var(--love); background: color-mix(in srgb, var(--love) 14%, transparent); }
+.pill.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 16%, transparent); }
+.pill.muted { color: var(--ink2); background: var(--track); }
+.grow { flex: 1; min-width: 0; }
+.meta { color: var(--muted); font-size: 12px; white-space: nowrap; }
+.bars .b { display: grid; grid-template-columns: minmax(0, 1fr) 46% 44px; gap: 10px; align-items: center; padding: 4px 0; }
+.bars .t { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.track { height: 10px; background: var(--track); border-radius: 4px; overflow: hidden; display: flex; gap: 2px; }
+.track span { display: block; height: 100%; }
+.num { text-align: right; font-variant-numeric: tabular-nums; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 12px; color: var(--ink2); font-weight: 600; padding: 6px 8px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 10px 8px; border-bottom: 1px solid var(--line); vertical-align: middle; }
+td .big { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; }
+tr.click { cursor: pointer; } tr.click:hover td { background: color-mix(in srgb, var(--accent) 6%, transparent); }
+.game { display: flex; gap: 10px; align-items: center; min-width: 200px; }
+.game img { width: 92px; height: 43px; border-radius: 6px; object-fit: cover; }
+.inbox .item { display: grid; grid-template-columns: 28px 1fr auto; gap: 12px; padding: 12px 14px; border-radius: 10px; background: var(--card); margin-bottom: 8px; align-items: start; }
+.inbox .icon { font-size: 18px; line-height: 1.2; }
+.inbox .why { color: var(--ink2); font-size: 13px; margin-top: 2px; }
+.inbox .item.done { opacity: .45; }
+.two { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+@media (max-width: 760px) { .two { grid-template-columns: 1fr; } .bars .b { grid-template-columns: 1fr 40% 40px; } }
+.empty { color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>Dashboard lab</h1>
+  <div class="tabs" id="tabs"></div>
+  <div class="chips" id="games"></div>
+</header>
+<main id="view"><p class="empty">Loading the data…</p></main>
+<script>
+const DATA = "../data";
+const DAY = 86400, now = Date.now() / 1000;
+const $ = (tag, props = {}, ...kids) => {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props || {})) {
+    if (k.startsWith("on")) el.addEventListener(k.slice(2), v);
+    else if (v != null && v !== false) el.setAttribute(k === "cls" ? "class" : k, v);
+  }
+  for (const k of kids.flat()) if (k != null && k !== false) el.append(k.nodeType ? k : String(k));
+  return el;
+};
+const get = async (p) => { try { const r = await fetch(`${DATA}/${p}`); return r.ok ? r.json() : null; } catch { return null; } };
+const fmt = (n) => n == null ? "–" : Math.abs(n) >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(Math.round(n * 10) / 10);
+const money = (n) => `$${n >= 1000 ? (n / 1000).toFixed(1) + "k" : Math.round(n)}`;
+const ago = (t) => { const s = now - t; return s < 3600 ? `${Math.max(1, Math.round(s / 60))} min ago` : s < DAY ? `${Math.round(s / 3600)} h ago` : `${Math.round(s / DAY)} d ago`; };
+const iso = (t) => new Date(t * 1000).toISOString().slice(0, 10);
+const days = (n) => Array.from({ length: n }, (_, i) => iso(now - (n - 1 - i) * DAY));
+
+// A sparkline: the last N days as a 2px line; the last value dotted.
+function spark(values, color = "var(--accent)", w = 150, h = 32) {
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("width", w); svg.setAttribute("height", h); svg.setAttribute("class", "spark");
+  const v = values.map((x) => x ?? 0);
+  if (!v.some((x) => x)) return svg;
+  const max = Math.max(...v), min = Math.min(0, ...v);
+  const pt = (x, i) => [(i / Math.max(1, v.length - 1)) * (w - 4) + 2, h - 3 - ((x - min) / (max - min || 1)) * (h - 6)];
+  const path = document.createElementNS(ns, "path");
+  path.setAttribute("d", v.map((x, i) => (i ? "L" : "M") + pt(x, i).join(",")).join(""));
+  path.setAttribute("fill", "none"); path.setAttribute("stroke", color); path.setAttribute("stroke-width", "2"); path.setAttribute("stroke-linejoin", "round");
+  const dot = document.createElementNS(ns, "circle");
+  const [cx, cy] = pt(v.at(-1), v.length - 1);
+  dot.setAttribute("cx", cx); dot.setAttribute("cy", cy); dot.setAttribute("r", 3); dot.setAttribute("fill", color);
+  svg.append(path, dot);
+  const t = document.createElementNS(ns, "title"); t.textContent = v.join(", "); svg.append(t);
+  return svg;
+}
+const delta = (a, b, invert = false) => {
+  if (a == null || b == null || (!a && !b)) return $("span", { cls: "delta flat" }, "–");
+  const d = b ? (a - b) / b : 1, good = invert ? d < 0 : d > 0;
+  if (Math.abs(d) < 0.05) return $("span", { cls: "delta flat" }, "≈ same");
+  return $("span", { cls: `delta ${good ? "up" : "down"}` }, `${d > 0 ? "▲" : "▼"} ${Math.round(Math.abs(d) * 100)}%`);
+};
+
+// ---- derived numbers per game ----------------------------------------------
+function derive(meta, g, sales, wish, sw) {
+  const id = String(meta.appId);
+  const peakByDay = {};
+  for (const [t, n] of g.players || []) { const d = iso(t); peakByDay[d] = Math.max(peakByDay[d] || 0, n); }
+  const d30 = days(30), d14 = days(14);
+  const players = d30.map((d) => peakByDay[d] ?? null);
+  const rt = g.reviewTotals || {};
+  const rKeys = Object.keys(rt).sort();
+  const rAt = (d) => { const k = rKeys.filter((x) => x <= d).pop(); return k ? rt[k] : null; };
+  const rNow = rAt(iso(now)), r7 = rAt(iso(now - 7 * DAY));
+  const total = (r) => r ? r.positive + r.negative : 0;
+  const reviewsNew7 = total(rNow) - total(r7);
+  const pos = rNow && total(rNow) ? Math.round((rNow.positive / total(rNow)) * 100) : null;
+  const sDays = sales?.days || {};
+  const gross = (d) => sDays[d]?.[id]?.gross || 0;
+  const revenue30 = d30.map(gross);
+  const rev7 = days(7).reduce((a, d) => a + gross(d), 0), revPrev7 = days(14).slice(0, 7).reduce((a, d) => a + gross(d), 0);
+  const wDays = wish?.apps?.[id]?.days || {};
+  const wNet = (d) => { const x = wDays[d]; return x ? (x.adds || 0) - (x.deletes || 0) - (x.purchases || 0) - (x.gifts || 0) : 0; };
+  const wishAdds30 = d30.map((d) => wDays[d]?.adds || 0);
+  const wish7 = days(7).reduce((a, d) => a + wNet(d), 0);
+  const items = Object.values(g.items || {}).filter((i) => !i.dev && !i.offTopic);
+  const posts7 = items.filter((i) => i.created > now - 7 * DAY);
+  const postsPerDay = d30.map((d) => items.filter((i) => iso(i.created) === d).length);
+  const issues = Object.values(g.issues || {});
+  const open = issues.filter((i) => ["open", "still_happening"].includes(i.status));
+  const bugs = open.filter((i) => i.kind === "bug").sort((a, b) => b.priority - a.priority);
+  const ideas = open.filter((i) => i.kind === "suggestion").sort((a, b) => b.priority - a.priority);
+  const loved = issues.filter((i) => i.kind === "praise").sort((a, b) => b.mentions - a.mentions);
+  const swApp = sw?.apps?.[id];
+  const play = (swApp?.pages?.playtime || []).flatMap((t) => t.rows);
+  const median = play.find((r) => /^Median time played/.test(r[0]))?.[1];
+  const reach = play.filter((r) => /^\d+ (minutes?|hours?)/.test(r[0]) && /%$/.test(r[1] || "")).map((r) => ({ label: r[0].replace(/ 0 minutes?/, "").replace(/ hours?/g, " h").replace(/ minutes?/g, " min"), pct: parseFloat(r[1]) })).filter((m, i, a) => m.pct > 0 || (i && a[i - 1].pct > 0));
+  const media = Object.values(g.media?.items || {}).filter((m) => m.source !== "copy" && !m.own);
+  return { meta, g, players, playersNow: (g.players || []).at(-1)?.[1] ?? null, peak7: Math.max(0, ...players.slice(-7).map((x) => x || 0)), peakPrev7: Math.max(0, ...players.slice(-14, -7).map((x) => x || 0)),
+    reviewsNew7, pos, reviewsTotal: total(rNow), revenue30, rev7, revPrev7, wishAdds30, wish7, items, posts7, postsPerDay, bugs, ideas, loved, median, reach, media };
+}
+
+// ---- A. Briefing: one game, top to bottom by the questions you ask ----------
+function briefing(x) {
+  const needs = [];
+  for (const b of x.bugs.filter((b) => b.status === "still_happening" || ["urgent", "high"].includes(b.urgency)).slice(0, 4))
+    needs.push([b.status === "still_happening" ? "Still happening after a fix" : `${b.urgency} bug`, b.title, `${b.mentions} players${b.refunds ? ` · ${b.refunds} refunds` : ""}${b.negativeReviews ? ` · ${b.negativeReviews} neg. reviews` : ""}`, "bug"]);
+  const refunds = x.items.filter((i) => i.kind === "refund" && i.created > now - 14 * DAY);
+  if (refunds.length) needs.push(["Refunds", `${refunds.length} refund note${refunds.length > 1 ? "s" : ""} in 14 days`, refunds.map((r) => r.triage?.summary || r.text).slice(0, 2).join(" · "), "warn"]);
+  const neg = x.items.filter((i) => i.kind === "review" && !i.votedUp && i.created > now - 7 * DAY && !i.devResponse);
+  if (neg.length) needs.push(["Unanswered", `${neg.length} negative review${neg.length > 1 ? "s" : ""} this week`, neg.map((r) => r.triage?.summary).filter(Boolean).slice(0, 1).join(""), "bug"]);
+  const tiles = [
+    ["Players (best day, 7 d)", x.peak7, delta(x.peak7, x.peakPrev7), x.players, `now ${x.playersNow ?? "–"}`],
+    ["Reviews", x.pos != null ? `${x.pos}%` : "–", $("span", { cls: "delta flat" }, `+${x.reviewsNew7} this week`), null, `${x.reviewsTotal} in all, positive`],
+    ["Revenue (7 d, gross)", money(x.rev7), delta(x.rev7, x.revPrev7), x.revenue30, "last 30 days"],
+    ["Wishlists (7 d, net)", `${x.wish7 >= 0 ? "+" : ""}${x.wish7}`, null, x.wishAdds30, "adds per day, 30 d"],
+    ["New posts (7 d)", x.posts7.length, null, x.postsPerDay, "reviews, threads, videos…"],
+    ["Median playtime", x.median || "–", null, null, "from Steamworks"],
+  ];
+  const top = [...x.bugs.slice(0, 5), ...x.ideas.slice(0, 5)].sort((a, b) => b.mentions - a.mentions).slice(0, 8);
+  const maxM = Math.max(1, ...top.map((i) => i.mentions), ...x.loved.slice(0, 5).map((i) => i.mentions));
+  const issueBars = (list, kind) => list.map((i) => $("div", { cls: "b", title: i.title },
+    $("span", { cls: "t" }, $("span", { cls: `pill ${kind(i)}` }, kind(i) === "bug" ? "bug" : kind(i) === "love" ? "loved" : "idea"), " ", i.title),
+    $("span", { cls: "track" }, $("span", { style: `width:${(i.mentions / maxM) * 100}%;background:var(--${kind(i)})` })),
+    $("span", { cls: "num" }, i.mentions)));
+  return $("div", {},
+    $("p", { cls: "note" }, "A. Briefing: one game at a time, read top to bottom in the order you'd ask: what needs me, how is it doing this week, what are players saying, how far do they get, who's covering it. Exceptions first; everything else is a trend, not a table."),
+    $("h2", {}, "Needs you", $("small", {}, needs.length ? `${needs.length} things` : "nothing")),
+    $("div", { cls: "card" }, needs.length ? needs.map(([k, t, why, cls]) => $("div", { cls: "row" }, $("span", { cls: `pill ${cls}` }, k), $("div", { cls: "grow" }, $("b", {}, t), $("div", { cls: "meta" }, why)))) : $("p", { cls: "empty" }, "Nothing urgent: no high bugs, no new refunds, every negative review this week answered.")),
+    $("h2", {}, "This week", $("small", {}, "vs the week before")),
+    $("div", { cls: "grid tiles" }, tiles.map(([label, value, d, series, sub]) => $("div", { cls: "card tile" }, $("div", { cls: "label" }, label), $("div", {}, $("span", { cls: "value" }, value), d), series ? spark(series) : null, $("div", { cls: "sub" }, sub)))),
+    $("div", { cls: "two" },
+      $("div", {}, $("h2", {}, "What players report", $("small", {}, "players per issue")), $("div", { cls: "card bars" }, top.length ? issueBars(top, (i) => (i.kind === "bug" ? "bug" : "idea")) : $("p", { cls: "empty" }, "No open issues."))),
+      $("div", {}, $("h2", {}, "What they love"), $("div", { cls: "card bars" }, x.loved.length ? issueBars(x.loved.slice(0, 6), () => "love") : $("p", { cls: "empty" }, "Nothing yet.")))),
+    x.reach.length ? [$("h2", {}, "How far players get", $("small", {}, "share who played at least this long")), $("div", { cls: "card bars" }, x.reach.map((m) => $("div", { cls: "b" }, $("span", { cls: "t" }, m.label), $("span", { cls: "track" }, $("span", { style: `width:${m.pct}%;background:var(--accent)` })), $("span", { cls: "num" }, `${m.pct}%`))))] : null,
+    x.media.length ? [$("h2", {}, "Coverage", $("small", {}, "videos, streams, articles")), $("div", { cls: "card" }, x.media.sort((a, b) => b.at - a.at).slice(0, 6).map((m) => $("div", { cls: "row" }, $("span", { cls: "pill muted" }, m.source), $("div", { cls: "grow" }, $("a", { href: m.url, target: "_blank" }, m.title), $("div", { cls: "meta" }, [m.author, m.views != null ? `${fmt(m.views)} views` : null, m.review?.verdict && m.review.verdict !== "unclear" ? `creator: ${m.review.verdict}` : null].filter(Boolean).join(" · "))), $("span", { cls: "meta" }, ago(m.at)))))] : null);
+}
+
+// ---- B. Cockpit: every game side by side, same columns ----------------------
+function cockpit(all, pick) {
+  return $("div", {},
+    $("p", { cls: "note" }, "B. Cockpit: every game as one row with the same columns, so you compare at a glance and spot the one that moved. Each trend is the last 30 days; the number is now (or this week). Click a row for its briefing."),
+    $("div", { cls: "card", style: "overflow-x:auto" }, $("table", {},
+      $("tr", {}, ["Game", "Players (30 d)", "Reviews", "Revenue (30 d)", "Wishlist adds (30 d)", "Open bugs", "New posts (7 d)"].map((t) => $("th", {}, t))),
+      all.map((x) => $("tr", { cls: "click", onclick: () => pick(x.meta.appId) },
+        $("td", {}, $("div", { cls: "game" }, x.meta.capsule ? $("img", { src: x.meta.capsule, alt: "" }) : null, $("div", {}, $("b", {}, x.meta.name), $("div", { cls: "meta" }, x.meta.status === "upcoming" ? "coming soon" : `released`)))),
+        $("td", {}, $("span", { cls: "big" }, x.peak7), delta(x.peak7, x.peakPrev7), spark(x.players, "var(--accent)", 120, 26)),
+        $("td", {}, $("span", { cls: "big" }, x.pos != null ? `${x.pos}%` : "–"), $("div", { cls: "meta" }, `${x.reviewsTotal} · +${x.reviewsNew7} this week`)),
+        $("td", {}, $("span", { cls: "big" }, money(x.revenue30.reduce((a, b) => a + b, 0))), spark(x.revenue30, "var(--good)", 120, 26)),
+        $("td", {}, $("span", { cls: "big" }, x.wishAdds30.reduce((a, b) => a + b, 0)), spark(x.wishAdds30, "var(--idea)", 120, 26)),
+        $("td", {}, $("span", { cls: "big", style: x.bugs.some((b) => ["urgent", "high"].includes(b.urgency)) ? "color:var(--bad)" : "" }, x.bugs.length), $("div", { cls: "meta" }, x.bugs[0]?.title?.slice(0, 40) || "")),
+        $("td", {}, $("span", { cls: "big" }, x.posts7.length), spark(x.postsPerDay, "var(--muted)", 120, 26)))))));
+}
+
+// ---- C. Inbox: everything new, ranked, across games -------------------------
+function inbox(all) {
+  const events = [];
+  for (const x of all) {
+    const name = x.meta.name;
+    for (const i of x.items.filter((i) => i.created > now - 14 * DAY)) {
+      const t = i.triage || {};
+      if (i.kind === "refund") events.push([9, "💸", `Refund: ${i.refundReason || "no reason"}`, t.summary || i.text, name, i.created, i.url]);
+      else if (i.kind === "review" && !i.votedUp) events.push([i.devResponse ? 3 : 8, "👎", "Negative review", t.summary || i.text?.slice(0, 140), name, i.created, i.url]);
+      else if ((t.points || []).some((p) => p.kind === "bug")) events.push([6, "🐛", `Bug report (${i.kind})`, t.summary || "", name, i.created, i.url]);
+      else if (i.kind === "video") events.push([5, "🎬", "Video reviewed", t.summary || i.title, name, i.created, i.url]);
+      else if (i.kind === "review" && i.votedUp) events.push([2, "👍", "Positive review", t.summary || "", name, i.created, i.url]);
+    }
+    for (const b of x.bugs.filter((b) => b.status === "still_happening")) events.push([10, "🔁", "Still happening after a fix", b.title, name, b.lastSeen, null]);
+    for (const m of x.media.filter((m) => m.at > now - 14 * DAY)) events.push([4, m.source === "twitch" ? "🟣" : m.source === "youtube" ? "▶️" : "📰", `New ${m.source}`, `${m.title} — ${m.author || ""}${m.views != null ? ` · ${fmt(m.views)} views` : ""}`, name, m.at, m.url]);
+    for (const r of (x.g.releases || []).filter((r) => r.time > now - 14 * DAY)) events.push([4, "🚀", "Update out", r.name, name, r.time, r.url]);
+  }
+  events.sort((a, b) => b[0] - a[0] || b[5] - a[5]);
+  const list = $("div", { cls: "inbox" });
+  const draw = () => list.replaceChildren(...events.slice(0, 80).map((e) => {
+    const [score, icon, kind, why, game, at, url] = e;
+    const done = localStorage.getItem("lab-done:" + kind + at + why) === "1";
+    return $("div", { cls: `item${done ? " done" : ""}` }, $("span", { cls: "icon" }, icon),
+      $("div", {}, $("b", {}, kind), " ", $("span", { cls: "meta" }, `${game} · ${ago(at)}`), $("div", { cls: "why" }, why || "")),
+      $("div", { style: "display:flex;gap:6px" }, url ? $("a", { href: url, target: "_blank" }, "open") : null,
+        $("button", { onclick: () => { localStorage.setItem("lab-done:" + kind + at + why, done ? "0" : "1"); draw(); } }, done ? "undo" : "done")));
+  }));
+  draw();
+  return $("div", {},
+    $("p", { cls: "note" }, `C. Inbox: everything from the last 14 days across all games, ranked by how much it needs you (refunds, bugs that came back and negative reviews first; praise last). Mark things done like email. ${events.length} items.`),
+    list);
+}
+
+// ---- shell ------------------------------------------------------------------
+(async () => {
+  const [index, sales, wish, sw] = await Promise.all([get("index.json"), get("sales.json"), get("wishlists.json"), get("steamworks.json")]);
+  const metas = index.games;
+  const games = await Promise.all(metas.map((m) => get(`games/${m.appId}.json`)));
+  const all = metas.map((m, i) => games[i] && derive(m, games[i], sales, wish, sw)).filter(Boolean)
+    .sort((a, b) => (b.posts7.length + b.peak7) - (a.posts7.length + a.peak7));
+  let tab = localStorage.getItem("lab-tab") || "A", game = Number(localStorage.getItem("lab-game")) || all[0].meta.appId;
+  const draw = () => {
+    localStorage.setItem("lab-tab", tab); localStorage.setItem("lab-game", game);
+    document.getElementById("tabs").replaceChildren(...[["A", "A. Briefing"], ["B", "B. Cockpit"], ["C", "C. Inbox"]].map(([k, t]) => $("button", { "aria-pressed": String(tab === k), onclick: () => { tab = k; draw(); } }, t)));
+    document.getElementById("games").replaceChildren(...(tab === "A" ? all.map((x) => $("button", { "aria-pressed": String(game === x.meta.appId), onclick: () => { game = x.meta.appId; draw(); } }, x.meta.name)) : []));
+    const x = all.find((g) => g.meta.appId === game) || all[0];
+    document.getElementById("view").replaceChildren(tab === "A" ? briefing(x) : tab === "B" ? cockpit(all, (id) => { game = id; tab = "A"; draw(); }) : inbox(all));
+  };
+  draw();
+})();
+</script>
+</body>
+</html>

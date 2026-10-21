@@ -2463,3 +2463,13 @@
 .fb .sw-app {
 	margin: 1.5rem 0 0.75rem;
 }
+
+/* Who the player is (dashboard.js aboutPlayer): one quiet line under a post card's top row */
+.fb .pc-about {
+	margin: 4px 0 2px;
+	color: var(--fb-muted);
+	font-size: 0.8125rem;
+}
+.fb .pc-about .badge {
+	margin-right: 6px;
+}

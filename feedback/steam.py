@@ -296,9 +296,19 @@ def profile_url(steamid):
     return f"https://steamcommunity.com/profiles/{n if n >= STEAM64_BASE else n + STEAM64_BASE}"
 
 
+def _tag(xml, name):
+    """A tag's text in Steam's profile XML (CDATA or plain), or None."""
+    m = re.search(rf"<{name}>(?:<!\[CDATA\[)?(.*?)(?:\]\]>)?</{name}>", xml, re.S)
+    return (m.group(1).strip() or None) if m else None
+
+
 def profile(author_id):
-    """{name, avatar, url} from a player's public Steam profile (no key needed), or None. Reviews
-    carry a 64-bit Steam ID, forum posts an account ID or a profile URL."""
+    """{name, avatar, url, about} from a player's public Steam profile (no key needed), or None.
+    `about` is what helps read their feedback, as far as they made it public: where they're from
+    (someone writing English may not be a native speaker), how long they've been on Steam, whether
+    the account is limited or banned (a new limited account behind a harsh review is often an alt),
+    their hours in the last two weeks and their most played games. Reviews carry a 64-bit Steam ID,
+    forum posts an account ID or a profile URL."""
     if not author_id:
         return None
     author_id = str(author_id)
@@ -312,9 +322,17 @@ def profile(author_id):
     if url not in _profiles:
         try:
             xml = request(f"{url}/", params={"xml": 1}, as_json=False, retries=2)
-            name = re.search(r"<steamID><!\[CDATA\[(.*?)\]\]></steamID>", xml, re.S)
-            avatar = re.search(r"<avatarMedium><!\[CDATA\[(.*?)\]\]></avatarMedium>", xml)
-            _profiles[url] = {"name": name.group(1), "avatar": avatar.group(1) if avatar else None, "url": url} if name else None
+            name = _tag(xml, "steamID")
+            games = [{"name": _tag(g, "gameName"), "hours": _tag(g, "hoursOnRecord")}
+                     for g in re.findall(r"<mostPlayedGame>(.*?)</mostPlayedGame>", xml, re.S)]
+            about = {
+                "location": _tag(xml, "location"), "since": _tag(xml, "memberSince"),
+                "limited": _tag(xml, "isLimitedAccount") == "1", "vacBanned": _tag(xml, "vacBanned") == "1",
+                "tradeBan": None if _tag(xml, "tradeBanState") in (None, "None") else _tag(xml, "tradeBanState"),
+                "hours2wk": _tag(xml, "hoursPlayed2Wk"), "mostPlayed": [g for g in games if g["name"]][:5],
+            }
+            _profiles[url] = {"name": name, "avatar": _tag(xml, "avatarMedium"), "url": url,
+                              "about": {k: v for k, v in about.items() if v}} if name else None
         except HttpError:
             _profiles[url] = None
     return _profiles[url]

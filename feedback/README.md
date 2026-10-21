@@ -9,6 +9,7 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
    - An edit keeps the old text in `versions`.
    - A changed recommendation is recorded in `flips`.
    - Everything else Steam says about a review is kept and refreshed on each read (`review_extras` in `run.py`): hours in the last two weeks and when they last played, Steam Deck, helpful and funny votes, Steam's helpfulness score, comments under it and a refund. So is Steam's 0–9 `score` behind the rating words in `reviewTotals`.
+   - **Who wrote it:** each player's name, picture and profile link, and from their public Steam profile (as far as they made it public): where they're from (someone writing English may not be a native speaker), since when they're on Steam, a limited or banned account, their hours in the last two weeks and most played games (`add_profiles` in `run.py`, `steam.profile`). Read again every 30 days, at most 100 profiles a run. Steam's public profile page, no key and no Claude.
 3. **Discussions.** It reads new threads and new replies in every subforum.
 4. **Players.** It records the current player count, and once a game's demo is out on Steam, the demo's too (`demoPlayers`, the dashboard's **Demo players** card).
 5. **Media** (`media.py`). It finds who's talking about the game outside Steam:

@@ -283,21 +283,29 @@ def thread_context(state, item):
     return ctx
 
 
+PROFILE_REFRESH = 30 * DAY  # a player's public profile is read again this often
+PROFILES_PER_RUN = 100  # lookups a run, so a backlog doesn't hold one up
+
+
 def add_profiles(state):
     """The player's Steam name, picture and profile link for each post (from their public profile),
-    looked up once per post so the dashboard can show who wrote it."""
+    so the dashboard can show who wrote it, and `about`: where they're from, how long they've been
+    on Steam, limited or banned, their recent hours and most played games (steam.profile). Read
+    again every 30 days, at most PROFILES_PER_RUN a run."""
     looked_up = {}
     for item in state["items"].values():
         author = item.get("author") or {}
         if not author.get("id") or item["kind"] in OFFSITE_KINDS:
             continue
-        if "profile" not in author:
+        due = "profile" not in author or now() - author.get("aboutAt", 0) >= PROFILE_REFRESH
+        if due and (author["id"] in looked_up or len(looked_up) < PROFILES_PER_RUN):
             if author["id"] not in looked_up:
                 looked_up[author["id"]] = steam.profile(author["id"])
             profile = looked_up[author["id"]]
-            author["profile"] = profile["url"] if profile else None
+            author["profile"] = profile["url"] if profile else author.get("profile")
+            author["aboutAt"] = now()
             if profile:
-                author.update(name=profile["name"], avatar=profile["avatar"])
+                author.update(name=profile["name"], avatar=profile["avatar"], about=profile.get("about") or None)
         # The size of their library too, like Steam shows on a review.
         if "games" not in author:
             if ("games", author["id"]) not in looked_up:

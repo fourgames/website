@@ -2438,8 +2438,28 @@ function postView(item, focus = null) {
             p.when,
             versionAt(item.created),
           ].filter(Boolean).join(" · "))))),
+    aboutPlayer(item.author?.about),
     ...p.body,
     h("div.meta", ...p.flags, item.forum && item.kind !== "review" ? h("span", item.forum) : null, p.link));
+}
+
+// Who the player is, from their public Steam profile (feedback/run.py add_profiles): where they're
+// from (someone writing English may not be a native speaker), since when they're on Steam, a limited
+// or banned account (often an alt behind a harsh review), and what they play most (hover for hours).
+function aboutPlayer(about) {
+  if (!about) return null;
+  const year = about.since?.match(/\d{4}/)?.[0];
+  const games = about.mostPlayed || [];
+  const flags = [about.limited ? "Limited account" : null, about.vacBanned ? "VAC banned" : null, about.tradeBan ? `Trade ban: ${about.tradeBan}` : null].filter(Boolean);
+  const parts = [
+    about.location || null,
+    year ? `on Steam since ${year}` : null,
+    about.hours2wk && Number(about.hours2wk) > 0 ? `${about.hours2wk} h in the last 2 weeks` : null,
+    games.length ? `plays ${games.slice(0, 2).map((g) => g.name).join(", ")}` : null,
+  ].filter(Boolean);
+  if (!parts.length && !flags.length) return null;
+  return h("div.pc-about", { title: games.length ? `Most played:\n${games.map((g) => `${g.name}: ${g.hours} h`).join("\n")}` : "" },
+    ...flags.map((f) => h("span.badge.s-still", f)), parts.join(" · "));
 }
 
 // Whether you've answered a post on Steam: a developer response, or a post of yours later in its thread.

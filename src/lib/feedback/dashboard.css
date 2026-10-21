@@ -2,6 +2,12 @@
    never weighs down the site's own stylesheet. Everything is scoped to .fb and built from the
    site's palette (src/style.css), so it follows the OS light/dark scheme like every other page. */
 .fb {
+	/* Split-bar parts (dashboard.js swSplit): a validated categorical set, fixed order */
+	--sw-1: #2a78d6;
+	--sw-2: #eb6834;
+	--sw-3: #1baf7a;
+	--sw-4: #eda100;
+	--sw-5: #e87ba4;
 	--fb-card: var(--card-color);
 	--fb-card-2: var(--base-color);
 	--fb-hover: var(--card-hover);
@@ -25,6 +31,12 @@
 }
 @media (prefers-color-scheme: dark) {
 	.fb {
+		/* Split-bar parts, stepped for the dark card (validated: CVD, contrast) */
+		--sw-1: #3987e5;
+		--sw-2: #d95926;
+		--sw-3: #199e70;
+		--sw-4: #c98500;
+		--sw-5: #d55181;
 		--fb-positive: #3987e5;
 		--fb-negative: #e66767;
 		--fb-good-text: #4cc38a;
@@ -2472,4 +2484,41 @@
 }
 .fb .pc-about .badge {
 	margin-right: 6px;
+}
+.fb .sw-split-wrap {
+	margin: 4px 0 10px;
+}
+.fb .sw-split {
+	display: flex;
+	gap: 2px;
+	height: 14px;
+	max-width: 560px;
+}
+.fb .sw-split span {
+	min-width: 3px;
+}
+.fb .sw-split span:first-child {
+	border-radius: 4px 0 0 4px;
+}
+.fb .sw-split span:last-child {
+	border-radius: 0 4px 4px 0;
+}
+.fb .sw-legend {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 4px 14px;
+	margin-top: 6px;
+	font-size: 0.8125rem;
+	color: var(--fb-ink-2);
+}
+.fb .sw-legend i {
+	display: inline-block;
+	width: 10px;
+	height: 10px;
+	border-radius: 3px;
+	margin-right: 5px;
+	vertical-align: -1px;
+}
+.fb .sw-legend b {
+	color: var(--fb-ink);
 }

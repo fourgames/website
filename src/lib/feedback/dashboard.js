@@ -1305,10 +1305,27 @@ const swGroup = (title, hint, tiles, ...more) => {
   const rest = more.filter(Boolean);
   return shown.length || rest.length ? h("section.ov-section", h("h3", title), hint ? h("p.meta", hint) : null, shown.length ? h("div.kpis", ...shown) : null, ...rest) : null;
 };
-// A table of [label, number, …] rows as a bar list, its zero rows left out.
+// How a whole splits up, as one bar cut into its biggest five parts and "Other" (part-to-whole reads
+// faster along one line than as pie angles, and long names fit beside it), each part labeled with
+// its share; the full list follows for exact numbers. Colors: a validated categorical set (--sw-1..5).
+function swSplit(rows) {
+  const total = rows.reduce((a, [, n]) => a + n, 0);
+  if (!total || rows.length < 2) return null;
+  const sorted = [...rows].sort((a, b) => b[1] - a[1]);
+  const top = sorted.slice(0, sorted.length > 6 ? 5 : 6);
+  const rest = sorted.slice(top.length).reduce((a, [, n]) => a + n, 0);
+  const parts = [...top.map(([label, n], i) => ({ label, n, color: `var(--sw-${i + 1})` })), ...(rest ? [{ label: "Other", n: rest, color: "var(--fb-muted)" }] : [])];
+  const pct = (n) => `${Math.round((n / total) * 100)}%`;
+  return h("div.sw-split-wrap",
+    h("div.sw-split", { role: "img", "aria-label": parts.map((x) => `${x.label} ${pct(x.n)}`).join(", ") },
+      ...parts.map((x) => h("span", { style: `flex:${x.n};background:${x.color}`, title: `${x.label}: ${x.n} (${pct(x.n)})` }))),
+    h("div.sw-legend", ...parts.map((x) => h("span", h("i", { style: `background:${x.color}` }), h("b", pct(x.n)), " ", x.label))));
+}
+
+// A table of [label, number, …] rows as a split bar and a bar list, its zero rows left out.
 const swBars = (head, t) => {
   const rows = (t?.rows || []).slice(1).map((r) => [r[0], swNum(r[1])]).filter(([, n]) => n > 0);
-  return rows.length ? shareTable(head, rows) : null;
+  return rows.length ? h("div", swSplit(rows), shareTable(head, rows)) : null;
 };
 
 // How far players get: the share still playing at each playtime mark, with the biggest drop called out.

@@ -2522,3 +2522,51 @@
 .fb .sw-legend b {
 	color: var(--fb-ink);
 }
+
+/* Steam's verdict on a number vs other games: hard to miss */
+.fb .verdict {
+	display: inline-block;
+	padding: 2px 8px;
+	border-radius: 999px;
+	font-size: 0.75rem;
+	font-weight: 700;
+	white-space: nowrap;
+}
+.fb .verdict.vbad {
+	color: #fff;
+	background: var(--fb-negative);
+}
+.fb .verdict.vmid {
+	color: #3a2a00;
+	background: var(--fb-warning);
+}
+.fb .verdict.vgood {
+	color: #fff;
+	background: var(--fb-good-text);
+}
+.fb .verdicts {
+	display: grid;
+	gap: 6px;
+	margin-bottom: 1.25rem;
+}
+.fb .verdict-row {
+	display: flex;
+	align-items: center;
+	flex-wrap: wrap;
+	gap: 8px;
+	background: var(--fb-card);
+	box-shadow: var(--fb-shadow);
+	border-radius: var(--radius-card);
+	padding: 0.625rem 1rem;
+}
+.fb .nav-btn .count.count-bad {
+	color: #fff;
+	background: var(--fb-negative);
+	padding: 0 6px;
+	border-radius: 99px;
+	font-weight: 700;
+}
+.fb .verdict-vs {
+	color: var(--fb-muted);
+	font-size: 0.8125rem;
+}

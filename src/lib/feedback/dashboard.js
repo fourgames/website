@@ -1201,6 +1201,7 @@ function render() {
     bundles: bundleWith().length || null,
     competitors: competitors().length || null,
     soon: soonCount(),
+    stats: belowAverage() || null,
     media: liveNow().length ? `${liveNow().length} live` : talk().filter((m) => m.at > now() - 7 * DAY).length || null,
   };
   // The view on screen counts as seen now; any other view with something from the last 48 hours
@@ -1208,7 +1209,7 @@ function render() {
   store.set(`seen:${state.game.appId}:${state.tab}`, now());
   const button = ([id, label]) =>
     h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
-      icon(id), h("span", label), id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : id === "soon" ? ".count-soon" : ""}`, counts[id]) : null);
+      icon(id), h("span", label), id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : id === "soon" ? ".count-soon" : id === "stats" ? ".count-bad" : ""}`, counts[id]) : null);
   // The side card lists the views under their group's name; the phone tabs keep them in one row,
   // with a gap between groups.
   document.getElementById("fb-nav-side").replaceChildren(...nav.flatMap(([group, tabs]) => [...(group ? [h("div.nav-group", group)] : []), ...tabs.map(button)]));
@@ -1335,6 +1336,29 @@ const swNum = (c) => Number(String(c ?? "").replace(/[^\d.]/g, "")) || 0;
 const swTime = (c) => String(c || "").replace(/ 0 minutes?/, "").replace(/ hours?/g, " h").replace(/ minutes?/g, " min");
 
 const swTile = (label, value, sub) => value != null && value !== "" ? h("div.kpi", h("div.label", label), h("div.value", String(value)), h("div.sub", sub || "")) : null;
+// Steam's own verdict on a number, "(well below average as compared to other Steam games)", as a
+// colored badge: red below average, amber average, green above. Higher is better for what Steam
+// compares here (playtime); `lowerIsBetter` flips it (a refund rate).
+const STEAM_VERDICT = /\((well below|below|about|above|well above)?\s*average as compared to (other [^)]*)\)/i;
+function swVerdict(text, lowerIsBetter = false) {
+  const m = STEAM_VERDICT.exec(text || "");
+  if (!m) return null;
+  const level = (m[1] || "about").toLowerCase();
+  const rank = { "well below": -2, below: -1, about: 0, above: 1, "well above": 2 }[level] * (lowerIsBetter ? -1 : 1);
+  const word = level === "about" ? "Average" : `${level[0].toUpperCase()}${level.slice(1)} average`;
+  return { rank, word, against: m[2], node: h(`span.verdict.v${rank < 0 ? "bad" : rank > 0 ? "good" : "mid"}`, { title: `Steam: ${m[0].slice(1, -1)}` }, word) };
+}
+// Every verdict Steam gave on this app's pages, worst first, for the strip at the top.
+function swVerdicts(app) {
+  const LABEL = { playtime: (r) => `Players past ${swTime(r[0])}` };
+  const out = [];
+  for (const [page, tables] of Object.entries(app.pages || {}))
+    for (const t of tables) for (const r of t.rows || []) {
+      const v = swVerdict(r.find((c) => STEAM_VERDICT.test(c || "")));
+      if (v) out.push({ ...v, label: (LABEL[page] || ((x) => x[0]))(r), value: r[1] });
+    }
+  return out.sort((a, b) => a.rank - b.rank);
+}
 const swPct = (part, whole) => whole ? `${Math.round((part / whole) * 100)}%` : null;
 // A titled group of tiles, then whatever else it has (bars, lists); left out when Steam had nothing.
 const swGroup = (title, hint, tiles, ...more) => {
@@ -1390,7 +1414,7 @@ function swPlaytime(app) {
   return swGroup("Playtime", "How long players have played in all; the bars are the share who got past each mark.", [
     swTile("Median playtime", median && swTime(median[1]), "half played longer"),
     swTile("Average playtime", average && swTime(average[1]), "pulled up by long sessions"),
-    swTile("Past 1 hour", hour?.[1], hour?.[2]?.match(/\((.*?) as compared/)?.[1] || ""),
+    swTile("Past 1 hour", hour?.[1], swVerdict(hour?.[2])?.node || ""),
     swTile("Players measured", swValue(measured), "everyone who played"),
   ], swReach(app));
 }
@@ -1460,6 +1484,19 @@ function swOther(app) {
   return parts.filter(Boolean);
 }
 
+// How many of Steam's verdicts on the game (and its demo) are below average.
+function belowAverage() {
+  const sw = state.steamworks?.apps || {};
+  return [state.game.appId, state.game.meta?.demo?.appId].filter((id) => sw[id]).flatMap((id) => swVerdicts(sw[id])).filter((v) => v.rank < 0).length;
+}
+
+// What Steam itself says compared with other games, first, so a below-average number can't hide in a tile.
+function verdictStrip(app) {
+  const list = swVerdicts(app);
+  return list.length ? h("div.verdicts", ...list.map((v) => h("div.verdict-row", v.node,
+    h("span", h("b", v.label), v.value ? `: ${v.value}` : "", h("span.verdict-vs", ` · vs ${v.against}`))))) : null;
+}
+
 function steamStatsView() {
   const sw = state.steamworks;
   const ids = [state.game.appId, state.game.meta?.demo?.appId].filter(Boolean).map(String);
@@ -1470,7 +1507,7 @@ function steamStatsView() {
   return h("div", intro,
     ...apps.flatMap(([id, app]) => [
       apps.length > 1 ? h("h2.sw-app", id === String(state.game.appId) ? "The game" : "The demo") : null,
-      swPlaytime(app), swPlayers(app), swControllers(app), swDeck(app, sw.deck), swDownloads(app), ...swOther(app),
+      verdictStrip(app), swPlaytime(app), swPlayers(app), swControllers(app), swDeck(app, sw.deck), swDownloads(app), ...swOther(app),
     ]),
     h("p.meta", `Read from Steamworks ${sw.read ? ago(sw.read) : ""}.`));
 }

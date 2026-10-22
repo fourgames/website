@@ -2917,20 +2917,26 @@ function salesView() {
 // (their notes, read daily from Steamworks by the task on your Mac). All time: there are few.
 function refundReasons() {
   const notes = items().filter((i) => i.kind === "refund").sort((a, b) => b.created - a.created);
-  if (!notes.length) return null;
+  // Steamworks' own counts (every refund, with a note or not), once the task on your Mac has read them;
+  // before that, the notes'.
+  const stats = state.game.refundStats;
+  if (!notes.length && !stats?.refunded) return null;
   const by = {};
-  for (const n of notes) by[n.refundReason || "No reason given"] = (by[n.refundReason || "No reason given"] || 0) + 1;
-  const reasons = Object.entries(by).sort((a, b) => b[1] - a[1]);
+  if (stats?.reasons && Object.keys(stats.reasons).length) Object.assign(by, stats.reasons);
+  else for (const n of notes) by[n.refundReason || "No reason given"] = (by[n.refundReason || "No reason given"] || 0) + 1;
+  const reasons = Object.entries(by).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]);
   const line = (n) => {
     const text = english(n), original = n.text && text !== n.text ? n.text : null;
     return h("div.more-line", h("b", n.refundReason || "No reason given"), ": ", text,
       h("div.meta", `${withFlag(n.noteLanguage || "English")} · ${fmtDate(n.created)}`),
       original ? h("div.meta", original) : null);
   };
+  const rate = stats?.sold ? `${stats.refunded} of ${stats.sold} sold refunded (${Math.round((1000 * stats.refunded) / stats.sold) / 10}%), all time` : null;
+  const showCards = notes.length ? h("a", { href: "#", onclick: (e) => { e.preventDefault(); Object.assign(state.filters.feed, { kind: "refund", category: "all", version: "all", q: "" }); state.tab = "feed"; render(); } }, "Show notes as cards") : null;
   return h("div.chart-card", h("h3", "Why players refunded"),
-    h("div.sub", `${plural(notes.length, "note")} players left when refunding, all time. `,
-      h("a", { href: "#", onclick: (e) => { e.preventDefault(); Object.assign(state.filters.feed, { kind: "refund", category: "all", version: "all", q: "" }); state.tab = "feed"; render(); } }, "Show as cards"),
-      " · ", h("a", { href: notes[0].url, target: "_blank", rel: "noopener" }, "Refund page ↗")),
+    h("div.sub", [rate, notes.length ? `${plural(notes.length, "player")} left a note` : "no one left a note"].filter(Boolean).join(" · ") + ". ",
+      showCards, showCards ? " · " : null,
+      h("a", { href: notes[0]?.url || "https://partner.steampowered.com/package/steam/", target: "_blank", rel: "noopener" }, "Refund page ↗")),
     swSplit(reasons) || h("p.meta", reasons.map(([r, n]) => `${r} (${n})`).join(", ")),
     ...notes.slice(0, 5).map(line),
     notes.length > 5 ? h("details.issue-more", h("summary", `${notes.length - 5} more`), ...notes.slice(5).map(line)) : null);

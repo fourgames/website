@@ -1,6 +1,7 @@
 """Merges refund notes read by refunds.js (a JSON file, the argument) into refunds.json in the private
 data repo on GitHub, through the GitHub API (`gh`), so the checkout on this machine is never touched. Notes are only
-ever added: each keeps when it was first seen. Run by the scheduled "refund notes" task on your Mac.
+ever added: each keeps when it was first seen. Each package's lifetime counts (units sold, returned,
+refunded, refunds per reason) are replaced by the newest read. Run by the scheduled "refund notes" task on your Mac.
 
     python3 feedback/refunds_save.py notes.json
 """
@@ -43,6 +44,9 @@ def main(path):
     for package, info in read.items():
         entry = data["packages"].setdefault(package, {"name": info["name"], "notes": {}})
         entry["name"] = info["name"]
+        for key in ("reasons", "sold", "returned", "refunded"):
+            if info.get(key) is not None:
+                entry[key] = info[key]
         # Steamworks' page script changes how arrays become JSON: a list can arrive as a string.
         notes = json.loads(info["notes"]) if isinstance(info["notes"], str) else info["notes"]
         for note in notes:

@@ -475,7 +475,17 @@ def triage_clock(seconds):
 def ingest_refunds(state, game, refunds, packages):
     """The notes players left when refunding the game (data/refunds.json, read from Steamworks by the
     scheduled task on your Mac: feedback/refunds.js) as posts (kind "refund"), sorted like a negative
-    review. `packages` are the game's package ids (from the sales breakdown)."""
+    review. `packages` are the game's package ids (from the sales breakdown). Their lifetime counts
+    (every refund, with a note or not, per reason) add up into refundStats."""
+    stats = {"sold": 0, "returned": 0, "refunded": 0, "reasons": {}}
+    for package in packages:
+        p = (refunds.get("packages") or {}).get(package) or {}
+        for key in ("sold", "returned", "refunded"):
+            stats[key] += p.get(key) or 0
+        for reason, n in (p.get("reasons") or {}).items():
+            stats["reasons"][reason] = stats["reasons"].get(reason, 0) + n
+    if stats["sold"]:
+        state["refundStats"] = stats
     for package in packages:
         for nid, note in ((refunds.get("packages") or {}).get(package, {}).get("notes") or {}).items():
             if f"rf{nid}" in state["items"]:

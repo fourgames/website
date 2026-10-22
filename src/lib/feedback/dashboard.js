@@ -379,6 +379,43 @@ function langFlag(name, steamCode) {
 }
 const withFlag = (name, steamCode) => [langFlag(name, steamCode), name].filter(Boolean).join(" ");
 
+// A country with its flag, from a two-letter code (the sales and wishlist APIs) or the English name
+// Steamworks' reports print ("Korea, Republic of"); a region gets a globe instead.
+let regionNames = null;
+try { regionNames = new Intl.DisplayNames(["en"], { type: "region" }); } catch {}
+const COUNTRY_ALIASES = {
+  "korea, republic of": "kr", "russian federation": "ru", "iran (islamic republic of)": "ir", "bosnia and herzegowina": "ba",
+  "czech republic": "cz", turkey: "tr", "steam china": "cn", "hong kong": "hk", macau: "mo", macao: "mo", "viet nam": "vn",
+  "taiwan, province of china": "tw", "united states of america": "us", "moldova, republic of": "md",
+};
+const GLOBES = {
+  africa: "🌍", europe: "🌍", "western europe": "🌍", "eastern europe": "🌍", "middle east": "🌍",
+  asia: "🌏", "central asia": "🌏", "south asia": "🌏", "south east asia": "🌏", oceania: "🌏",
+  "north america": "🌎", "latin america": "🌎", "south america": "🌎", "central america": "🌎",
+};
+// Codes Intl still names but that aren't countries now ("DD" is also "Germany").
+const OLD_CODES = new Set(["BU", "CS", "DD", "DY", "EU", "EZ", "FX", "HV", "NH", "NT", "QO", "RH", "SU", "TP", "UN", "VD", "YD", "YU", "ZR", "ZZ"]);
+let countryCodes = null;
+function countryCode(name) {
+  if (!countryCodes) {
+    countryCodes = { ...COUNTRY_ALIASES };
+    for (let a = 65; a <= 90; a++) for (let b = 65; b <= 90; b++) {
+      const code = String.fromCharCode(a, b);
+      if (OLD_CODES.has(code)) continue;
+      try { const n = regionNames?.of(code); if (n && n !== code) countryCodes[n.toLowerCase()] ||= code.toLowerCase(); } catch {}
+    }
+  }
+  return countryCodes[(name || "").toLowerCase()];
+}
+function country(nameOrCode) {
+  const s = String(nameOrCode || "");
+  const code = /^[A-Za-z]{2}$/.test(s) ? s : countryCode(s);
+  // Intl's short name ("South Korea", not Steamworks' "Korea, Republic of"); Steam China stays itself.
+  const name = code && !/^steam /i.test(s) ? regionNames?.of(code.toUpperCase()) || s : s;
+  const mark = code ? flag(code) : GLOBES[s.toLowerCase()];
+  return mark ? `${mark} ${name}` : name;
+}
+
 const ICONS = {
   issues: "M8 2l1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3 3 0 1 1 6 0v1M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4",
   suggestions: "M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5M9 18h6M10 22h4",
@@ -1324,7 +1361,8 @@ function swSplit(rows) {
 
 // A table of [label, number, …] rows as a split bar and a bar list, its zero rows left out.
 const swBars = (head, t) => {
-  const rows = (t?.rows || []).slice(1).map((r) => [r[0], swNum(r[1])]).filter(([, n]) => n > 0);
+  const places = /^(Country|Region)$/.test(head[0]);
+  const rows = (t?.rows || []).slice(1).map((r) => [places ? country(r[0]) : r[0], swNum(r[1])]).filter(([, n]) => n > 0);
   return rows.length ? h("div", swSplit(rows), shareTable(head, rows)) : null;
 };
 
@@ -1361,7 +1399,7 @@ function swPlayers(app) {
   const rows = swRows(app, "players");
   const v = (re) => swValue(swFind(rows, re));
   const countries = (app.pages.players || []).find((t) => t.rows[0]?.[0] === "Country");
-  const byCountry = countries ? countries.rows.slice(1).map((r) => [r[0], swNum(r[1])]).filter(([, n]) => n > 0) : [];
+  const byCountry = countries ? countries.rows.slice(1).map((r) => [country(r[0]), swNum(r[1])]).filter(([, n]) => n > 0) : [];
   return swGroup("Players", "Daily and concurrent players over the game's whole life.", [
     swTile("Daily players lately", v(/^Recent avg daily active/), `lifetime average ${v(/^Lifetime avg daily active/) ?? "?"}`),
     swTile("Best day", v(/^Maximum daily active users/), `on average ${v(/^Average daily active users/) ?? "?"} a day`),
@@ -1792,8 +1830,6 @@ function moreWishlists() {
     for (const [into, from] of [[countries, v.countries], [languages, v.languages]])
       for (const [k, a] of Object.entries(from || {})) { const r = (into[k] ||= [0, 0, 0, 0]); a.forEach((n, i) => { r[i] += n; }); }
   }
-  let regions = null;
-  try { regions = new Intl.DisplayNames(["en"], { type: "region" }); } catch {}
   const rows = (o, name) => Object.entries(o).map(([k, [a, d, p, g]]) => [name(k), a - d - p - g, `+${a} −${d} · ${p + g} bought`]);
   const partial = wishlistPartial();
   return moreSection("Wishlists", `Steam's daily wishlist report, ${partial ? `from ${fmtDate(dayTime(partial))} (older days still filling in)` : "all days"}`,
@@ -1803,7 +1839,7 @@ function moreWishlists() {
       ["Kept", sum.adds ? share(sum.adds - sum.deletes, sum.adds) + " of adds weren't removed" : null],
     ]),
     h("h4", "Where players added it from"), shareTable(["Platform", "Adds", "Share"], [["Windows", sum.windows], ["Mac", sum.mac], ["Linux", sum.linux]].filter(([, n]) => n)),
-    Object.keys(countries).length ? [h("h4", "By country (still wishlisted)"), shareTable(["Country", "Wishlists", "Share", "Activity"], rows(countries, (k) => regions?.of(k) || k))] : null,
+    Object.keys(countries).length ? [h("h4", "By country (still wishlisted)"), shareTable(["Country", "Wishlists", "Share", "Activity"], rows(countries, country))] : null,
     Object.keys(languages).length ? [h("h4", "By store language (still wishlisted)"), shareTable(["Language", "Wishlists", "Share", "Activity"], rows(languages, (k) => k))] : null);
 }
 
@@ -1901,11 +1937,9 @@ function moreSales() {
       r[0] += net; r[1] += units;
     }
   }
-  let regions = null;
-  try { regions = new Intl.DisplayNames(["en"], { type: "region" }); } catch {}
   const label = (kind, k) => kind === "sales" ? (k === "full price" ? "Full price" : names.sales?.[k] || `Sale ${k}`)
     : kind === "packages" ? names.packages?.[k] || `Package ${k}` : kind === "bundles" ? names.bundles?.[k] || `Bundle ${k}`
-    : kind === "items" ? names.items?.[k] || `Item ${k}` : /Countries|countryReturns/.test(kind) ? (regions?.of(k) || k) : k;
+    : kind === "items" ? names.items?.[k] || `Item ${k}` : /Countries|countryReturns/.test(kind) ? country(k) : k;
   const TITLES = { platforms: "Platform", types: "Type", packages: "Package", bundles: "Bundle", sales: "Price", currencies: "Currency", items: "In-game item", countryReturns: "Refunds by country", activationCountries: "Key activations by country" };
   const tables = Object.entries(TITLES).filter(([kind]) => sum[kind]).map(([kind, title]) => {
     const rows = Object.entries(sum[kind]).map(([k, [net, units]]) => kind === "activationCountries" ? [label(kind, k), units] : [label(kind, k), net, `${units} units`]);
@@ -1927,8 +1961,6 @@ function moreMedia() {
     for (const t of [...(v.tags || []), ...(v.topics || [])]) tags[t.toLowerCase()] = (tags[t.toLowerCase()] || 0) + 1;
   }
   if (!clips.length && !vods.length && !comments.length && !Object.keys(countries).length && !tw.category) return null;
-  let regions = null;
-  try { regions = new Intl.DisplayNames(["en"], { type: "region" }); } catch {}
   const mediaLine = (m) => h("div.more-line", h("a", { href: m.url, target: "_blank", rel: "noopener" }, m.title || "Untitled"),
     h("span.meta", ` · ${m.author || ""} · ${(m.views || 0).toLocaleString("en-US")} views · ${m.at ? ago(m.at) : ""}`));
   return moreSection("Media", "Twitch clips and VODs, YouTube comments and channels",
@@ -1937,7 +1969,7 @@ function moreMedia() {
     vods.length ? [h("h4", `Twitch VODs (${vods.length})`), ...vods.sort((a, b) => b.views - a.views).slice(0, 10).map(mediaLine)] : null,
     comments.length ? [h("h4", "Top YouTube comments"), ...comments.map((v) => h("details.issue-more", h("summary", v.title),
       ...v.topComments.slice(0, 5).map((c) => h("div.more-line", h("b", c.author || "Someone"), ": ", c.text, h("span.meta", ` · ${c.likes} likes${c.replies ? ` · ${plural(c.replies, "reply")}` : ""}`)))))] : null,
-    Object.keys(countries).length ? [h("h4", "Where the YouTube channels are"), shareTable(["Country", "Videos", "Share"], Object.entries(countries).map(([k, n]) => [regions?.of(k) || k, n]))] : null,
+    Object.keys(countries).length ? [h("h4", "Where the YouTube channels are"), shareTable(["Country", "Videos", "Share"], Object.entries(countries).map(([k, n]) => [country(k), n]))] : null,
     Object.keys(tags).length ? [h("h4", "Most used video tags"), h("p.meta", Object.entries(tags).sort((a, b) => b[1] - a[1]).slice(0, 25).map(([t, n]) => `${t} (${n})`).join(", "))] : null);
 }
 
@@ -2834,6 +2866,7 @@ function salesView() {
         tile("Units kept", units - refunded, `${units} sold, ${refunded} refunded (${units ? Math.round((100 * refunded) / units) : 0}%)`),
         sum(inRange, "activations") ? tile("Key activations", sum(inRange, "activations"), "keys from outside Steam") : null),
       revenueChart(inRange, start, end, markers(start, end)),
+      refundReasons(),
       accountTotals(from),
       countryBreakdown(inRange));
   };
@@ -2841,6 +2874,28 @@ function salesView() {
   draw();
   return h("div", h("div.filters", h("span.zoom-label", "Zoom"), range,
     h("span.updated", "Steam's days are Pacific time; recent days can still change as payments settle.")), body);
+}
+
+// Why players refunded: the reason Steam asks for, split, then what they wrote, newest first
+// (their notes, read daily from Steamworks by the task on your Mac). All time: there are few.
+function refundReasons() {
+  const notes = items().filter((i) => i.kind === "refund").sort((a, b) => b.created - a.created);
+  if (!notes.length) return null;
+  const by = {};
+  for (const n of notes) by[n.refundReason || "No reason given"] = (by[n.refundReason || "No reason given"] || 0) + 1;
+  const reasons = Object.entries(by).sort((a, b) => b[1] - a[1]);
+  const line = (n) => {
+    const text = english(n), original = n.text && text !== n.text ? n.text : null;
+    return h("div.more-line", h("b", n.refundReason || "No reason given"), ": ", text,
+      h("div.meta", `${withFlag(n.noteLanguage || "English")} · ${fmtDate(n.created)}`),
+      original ? h("div.meta", original) : null);
+  };
+  return h("div.chart-card", h("h3", "Why players refunded"),
+    h("div.sub", `${plural(notes.length, "note")} players left when refunding, all time. `,
+      h("a", { href: notes[0].url, target: "_blank", rel: "noopener" }, "Refund page ↗")),
+    swSplit(reasons) || h("p.meta", reasons.map(([r, n]) => `${r} (${n})`).join(", ")),
+    ...notes.slice(0, 5).map(line),
+    notes.length > 5 ? h("details.issue-more", h("summary", `${notes.length - 5} more`), ...notes.slice(5).map(line)) : null);
 }
 
 function revenueChart(days, start, end, releases) {
@@ -2955,13 +3010,11 @@ function countryBreakdown(days) {
     const c = totals.get(cc) || [0, 0];
     totals.set(cc, [c[0] + net, c[1] + units]);
   }
-  let regions;
-  try { regions = new Intl.DisplayNames(["en"], { type: "region" }); } catch {}
   const rows = [...totals].filter(([, [net]]) => net > 0).sort((a, b) => b[1][0] - a[1][0]).slice(0, 12);
   const max = Math.max(1, ...rows.map(([, [net]]) => net));
   return h("div.chart-card", h("h3", "Top countries"), h("div.sub", rows.length ? "Net revenue and units in this range" : "No sales in this range."),
     h("div.bars", ...rows.flatMap(([cc, [net, units]]) => [
-      h("span", `${flag(cc.length === 2 ? cc : "")} ${(cc.length === 2 && regions?.of(cc)) || cc}`.trim()),
+      h("span", country(cc)),
       h("div", h("div.bar", { style: `width:${(100 * net) / max}%` })),
       h("span.n", `${usd(net)} · ${units}`)])));
 }

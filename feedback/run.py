@@ -38,6 +38,8 @@ YOUTUBE_KINDS = ("video", "comment")  # posts from YouTube (no Steam profile, no
 # Posts you can't answer on Steam and that have no Steam profile: YouTube's, and notes players left
 # when refunding (they're anonymous).
 OFFSITE_KINDS = (*YOUTUBE_KINDS, "refund")
+# Steam's refund reasons that say nothing about the game: the note stays a card but joins no bug or idea.
+NOT_GAME_REFUNDS = ("Purchased by accident",)
 # Games whose posts are all sorted again this run (app ids, or "all"); see resort().
 RESORT = set(filter(None, re.split(r"[\s,]+", os.environ.get("FEEDBACK_RESORT", ""))))
 
@@ -584,12 +586,42 @@ def triage_pending(state, game, run, budget, until=None):
         # A YouTube comment about the video or the creator, not the game: kept, but joins nothing.
         item["offTopic"] = not result.pop("about_game", True) or None
         result["points"] = [] if item["offTopic"] else result["points"] or fallback_points(result)
+        refund_rules(item, result)
         assign_issues(state, item, result, run)
         item["triage"] = result
         item["pending"] = False
         run["triaged"].append(item["id"])
         if t.urgency == "urgent":
             run["urgent"].append(item["id"])
+
+
+def refund_rules(item, result):
+    """A refund note always stays a card (it's money lost, so you see it) and is never praise, whatever
+    its words: the player wanted their money back. One that isn't about the game (bought by accident)
+    joins no bug or idea."""
+    if item["kind"] != "refund":
+        return
+    not_game = item.pop("offTopic", None) or item.get("refundReason") in NOT_GAME_REFUNDS
+    if not_game:
+        result["category"], result["points"] = "question", []
+        return
+    if result["category"] == "praise":
+        result["category"] = "suggestion"
+    for point in result["points"]:
+        if point["kind"] == "praise":
+            point["kind"], point["existing_issue"] = "complaint", None
+
+
+def recheck_refunds(state):
+    """Refund notes triaged before refund_rules, or against them, are triaged again: once each, since
+    triage then follows the rules."""
+    for item in state["items"].values():
+        t = item.get("triage")
+        if item["kind"] != "refund" or not t or item.get("pending"):
+            continue
+        not_game = item.get("offTopic") or item.get("refundReason") in NOT_GAME_REFUNDS
+        if (not_game and (item.get("issues") or item.get("offTopic"))) or t.get("category") == "praise" or any(p.get("kind") == "praise" for p in t.get("points") or []):
+            item["pending"] = True
 
 
 def assign_issues(state, item, result, run):
@@ -751,6 +783,7 @@ def process_in_order(state, game, run, budget, events):
     """Posts and updates in the order they happened: the posts before an update are triaged, then
     its patch notes are matched, then the posts after it (which then know about the fix)."""
     record_releases(state, events)
+    recheck_refunds(state)
     for release in state["releases"]:
         if release.get("checked", True):
             continue

@@ -2892,7 +2892,8 @@ function refundReasons() {
   };
   return h("div.chart-card", h("h3", "Why players refunded"),
     h("div.sub", `${plural(notes.length, "note")} players left when refunding, all time. `,
-      h("a", { href: notes[0].url, target: "_blank", rel: "noopener" }, "Refund page ↗")),
+      h("a", { href: "#", onclick: (e) => { e.preventDefault(); Object.assign(state.filters.feed, { kind: "refund", category: "all", version: "all", q: "" }); state.tab = "feed"; render(); } }, "Show as cards"),
+      " · ", h("a", { href: notes[0].url, target: "_blank", rel: "noopener" }, "Refund page ↗")),
     swSplit(reasons) || h("p.meta", reasons.map(([r, n]) => `${r} (${n})`).join(", ")),
     ...notes.slice(0, 5).map(line),
     notes.length > 5 ? h("details.issue-more", h("summary", `${notes.length - 5} more`), ...notes.slice(5).map(line)) : null);

@@ -167,8 +167,7 @@ def _partner(app_id):
     """A game's name, makers, capsule, price and reviews, from its store page's data."""
     try:
         entry = (steam.request("https://store.steampowered.com/api/appdetails", params={"appids": app_id, "cc": "us", "l": "english"}) or {}).get(str(app_id)) or {}
-        reviews = steam.request(f"https://store.steampowered.com/appreviews/{app_id}",
-                                params={"json": 1, "language": "all", "purchase_type": "all", "num_per_page": 0}).get("query_summary") or {}
+        reviews = steam.review_summary(app_id)
     except steam.HttpError as error:
         print(f"[community] app {app_id} for bundles: {error}")
         return None
@@ -233,8 +232,7 @@ def record_competitors(state, game, wanted):
             if players is not None:
                 peaks = c.setdefault("peaks", {})
                 peaks[day] = max(players, peaks.get(day, 0))
-            summary = steam.request(f"https://store.steampowered.com/appreviews/{other}",
-                                    params={"json": 1, "language": "all", "purchase_type": "all", "num_per_page": 0}).get("query_summary") or {}
+            summary = steam.review_summary(other)
             if summary.get("total_reviews") is not None:
                 c.setdefault("reviews", {})[day] = {"positive": summary.get("total_positive", 0), "negative": summary.get("total_negative", 0)}
                 c["reviewScore"] = {"desc": summary.get("review_score_desc"), "score": summary.get("review_score")}

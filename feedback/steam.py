@@ -42,7 +42,13 @@ def request(url, *, params=None, data=None, retries=6, as_json=True, timeout=30)
         try:
             with urllib.request.urlopen(req, timeout=timeout) as res:
                 raw = res.read().decode("utf-8", errors="replace")
-                return json.loads(raw) if as_json else raw
+            if not as_json:
+                return raw
+            try:
+                return json.loads(raw)
+            except ValueError:
+                # An endpoint Steam retired redirects to an HTML page: an error, like any other.
+                raise HttpError("non-JSON reply", host) from None
         except urllib.error.HTTPError as error:
             if attempt < retries and (error.code == 429 or error.code >= 500):
                 retry_after = error.headers.get("Retry-After")
@@ -220,6 +226,12 @@ def review_pages(app_id, public=False):
             return
         cursor = next_cursor
         time.sleep(1)
+
+
+def review_summary(app_id):
+    """Steam's review totals and score for any game, from the keyless reviews API."""
+    params = {"appid": app_id, "language": "all", "purchase_type": "all", "num_per_page": 0}
+    return request(PUBLIC_REVIEWS_URL, params=params).get("response", {}).get("query_summary") or {}
 
 
 def player_count(app_id):

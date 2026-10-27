@@ -262,7 +262,8 @@ def issue_digest(issues, state=None):
     return [
         {"id": i["id"], "kind": i["kind"], "title": i["title"], "area": i["area"], "mentions": i.get("mentions", 1),
          "summary": i.get("summary"), "details": "; ".join(i.get("details", [])[:3]), "said": said(i),
-         "fixedIn": i.get("fixedIn") if i.get("status") == "likely_fixed" else None, "fixReason": i.get("fixReason")}
+         "fixedIn": i.get("fixedIn") if i.get("status") == "likely_fixed" else None, "fixReason": i.get("fixReason"),
+         "fixedAt": i.get("fixedAt")}
         for i in issues
     ]
 
@@ -634,6 +635,21 @@ def recheck_refunds(state):
             item["pending"] = True
 
 
+def recheck_after_fix(state):
+    """Posts sorted before triage knew when a post and a fix were written, whose bug joined a likely-fixed
+    issue after its fix without counting as still happening, are triaged again: once each."""
+    issues = state["issues"]
+    for item in state["items"].values():
+        t = item.get("triage")
+        if not t or item.get("pending") or item.get("afterFixChecked"):
+            continue
+        for pt in t.get("points") or []:
+            issue = issues.get(pt.get("issue")) or {}
+            if pt.get("kind") == "bug" and not pt.get("still") and issue.get("status") == "likely_fixed" and item["created"] > issue.get("fixedAt", item["created"]):
+                item.update(pending=True, afterFixChecked=True)
+                break
+
+
 def assign_issues(state, item, result, run):
     """Every bug, complaint and suggestion point joins a bug or idea (an existing one it repeats, or a
     new one), so one long review can count towards several, and each idea counts every player who
@@ -794,6 +810,7 @@ def process_in_order(state, game, run, budget, events):
     its patch notes are matched, then the posts after it (which then know about the fix)."""
     record_releases(state, events)
     recheck_refunds(state)
+    recheck_after_fix(state)
     for release in state["releases"]:
         if release.get("checked", True):
             continue

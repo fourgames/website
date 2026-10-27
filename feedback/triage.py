@@ -5,6 +5,7 @@ Haiku is picked up by itself, and Claude Haiku 5.5 is used if the model list can
 without an API key."""
 
 import os
+import time
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -112,7 +113,8 @@ class Point(BaseModel):
     )
     still_after_fix: bool = Field(
         description="True only if the issue this point joins is listed as likely fixed, and the point says the problem "
-        "is still there in the fixed version. Mentioning the old problem, or an older experience, is not enough. "
+        "is still there in the fixed version, or the post is dated after the fix and the player runs into the problem "
+        "themselves. Recalling the old problem, or an older version, is not enough. "
         "A complaint about what the fix added (the issue asked for something, the point says the new thing is too "
         "much, too harsh or badly tuned) is not this issue at all: start a new one."
     )
@@ -173,8 +175,10 @@ only when the point praises that same specific thing, not just because the item'
 Praise for two things is two points (e.g. "quick updates, and the controls feel better now" is one point for the \
 developer's responsiveness and one for the controls). Questions join nothing. Each point also gets its own urgency, on the scale above.
 - Some listed issues say they were likely fixed in an update, and how. A point that joins one sets still_after_fix \
-only when it clearly says the problem persists after that fix (e.g. "still no explanation even after the update"); \
-a player describing the old problem, or playing an older version, doesn't count. A complaint about what the fix \
+when it says the problem persists after that fix (e.g. "still no explanation even after the update"), and also \
+when the post is dated after the fix and the point is the player running into the problem themselves (a creator's \
+game crashing in their video, a bug they hit today): Steam updates games by itself, so they played the fixed \
+version. A player recalling the problem from before the fix, or saying they play an older version, doesn't count. A complaint about what the fix \
 itself added, or the opposite of the issue (an issue asks for a limit or cost, the point says the new one is too \
 harsh), is a new issue, not the old one still happening.
 - Read the post the way a native speaker and Steam regular would. Steam reviews are full of memes and irony: a \
@@ -196,10 +200,11 @@ def triage(game_name, item, issues, context=None):
         return _dry_triage(item)
     issue_lines = "\n".join(
         f"{i['id']} [{i['kind']}, {i['area']}] {i['title']} ({i['mentions']} mentions)"
-        + (f" (likely fixed in {i['fixedIn']}: {i['fixReason']})" if i.get("fixedIn") else "")
+        + (f" (likely fixed in {i['fixedIn']}" + (f" on {time.strftime('%Y-%m-%d', time.gmtime(i['fixedAt']))}" if i.get("fixedAt") else "")
+           + f": {i['fixReason']})" if i.get("fixedIn") else "")
         for i in issues
     )
-    meta = [f"Game: {game_name}", f"Post type: {item['kind']}"]
+    meta = [f"Game: {game_name}", f"Post type: {item['kind']}", f"Posted: {time.strftime('%Y-%m-%d', time.gmtime(item['created']))}"]
     if item["kind"] == "review":
         meta.append(f"Review: {'recommended' if item.get('votedUp') else 'NOT recommended'}, {item.get('playtime', 0)} h played")
     if item["kind"] == "video":

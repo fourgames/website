@@ -1336,7 +1336,7 @@ def own_run(index, changed):
     # the daily one. Games from before the fingerprint existed don't count as changed.
     site_view = lambda games: {g["appId"]: g.get("store") for g in games}
     before = site_view(index["games"])
-    was_upcoming = {g["appId"] for g in index["games"] if g.get("status") == "upcoming"}
+    was_upcoming = {g["appId"] for g in index["games"] if g.get("status") == "upcoming" and not g.get("everReleased")}
     index["games"] = steam.fetch_games(index["games"])
     for game in index["games"]:
         if game["appId"] in was_upcoming and game["status"] == "released":

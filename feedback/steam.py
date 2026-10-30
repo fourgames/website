@@ -162,14 +162,16 @@ def fetch_games(previous):
         d = entry["data"]
         if d.get("type", "game") != "game" and app_id not in manual:
             continue  # a discovered DLC, demo or soundtrack
-        status = "upcoming" if (d.get("release_date") or {}).get("coming_soon") else "released"
+        # Once out, always: Steam's store can answer "coming soon" again for a while after launch.
+        was = known.get(app_id, {})
+        ever = not (d.get("release_date") or {}).get("coming_soon") or was.get("status") == "released" or was.get("everReleased", False)
+        status = "released" if ever else "upcoming"
         games.append(
             {
                 "appId": app_id,
                 "name": d.get("name") or known.get(app_id, {}).get("name") or str(app_id),
                 "status": status,
-                # Once out, always: Steam's store can answer "coming soon" again for a while after launch.
-                "everReleased": status == "released" or known.get(app_id, {}).get("status") == "released" or known.get(app_id, {}).get("everReleased", False),
+                "everReleased": ever,
                 # For ordering the dashboard's game list; Steam gives a display string ("Sep 30, 2026").
                 "released": parse_release_date((d.get("release_date") or {}).get("date")),
                 "capsule": d.get("header_image"),

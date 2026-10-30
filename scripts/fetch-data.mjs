@@ -264,7 +264,9 @@ async function fetchSteam(previous) {
 			}
 			const d = entry.data;
 			apps[appId] = {
-				status: d.release_date?.coming_soon ? "upcoming" : "released",
+				// Once released, stays released: around a launch Steam's edge caches still answer
+				// coming_soon to some regions, which would hand the hero back to the previous game.
+				status: d.release_date?.coming_soon && previous?.apps?.[appId]?.status !== "released" ? "upcoming" : "released",
 				type: d.type ?? "game",
 				name: d.name,
 				shortDescription: decodeEntities(d.short_description ?? ""),

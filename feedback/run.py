@@ -1320,7 +1320,7 @@ def full_run(part="all"):
         summary = load(RESEARCH_INDEX, None) or {"games": load(DATA / "index.json", {}).get("research", [])}
         summary["games"] = research_games(summary["games"])
         for game in summary["games"]:
-            if research_run(game):
+            if not game.get("paused") and research_run(game):
                 changed.append(game["name"])
         save(RESEARCH_INDEX, summary)
     print(f"[run] changed: {', '.join(changed) or 'nothing'}")
@@ -1475,7 +1475,13 @@ def research_games(previous):
     known = {str(g["appId"]): g for g in previous}
     games = []
     for key, entry in wanted.items():
+        # Paused on the dashboard: kept as it was, no requests and no Claude until it's resumed.
+        if entry.get("paused"):
+            if key in known:
+                games.append({**known[key], "paused": True})
+            continue
         game = known.get(key) or {"appId": int(key), "name": entry.get("name") or key, "research": True}
+        game.pop("paused", None)
         # Daily, and once for a game saved before demos were looked up.
         if media._due("research-store", key, DAY) or "status" not in game or "demo" not in game:
             try:

@@ -835,7 +835,7 @@ const RESEARCH_PATH = "research.json";
 const researchGames = () => {
   const collected = new Map((state.index?.research || []).map((g) => [g.appId, g]));
   // A game you just added shows at once, until the collector has looked it up.
-  return Object.entries(state.research || {}).map(([appId, w]) => ({ ...(collected.get(Number(appId)) || { appId: Number(appId), name: w.name || `App ${appId}`, research: true, added: w.at }), group: w.group || null }))
+  return Object.entries(state.research || {}).map(([appId, w]) => ({ ...(collected.get(Number(appId)) || { appId: Number(appId), name: w.name || `App ${appId}`, research: true, added: w.at }), group: w.group || null, paused: !!w.paused }))
     .sort((a, b) => (a.group || "").localeCompare(b.group || "") || a.name.localeCompare(b.name));
 };
 const metaOf = (appId) => [...(state.index.games || []), ...researchGames()].find((g) => g.appId === appId);
@@ -844,6 +844,7 @@ const isResearch = () => !!state.game?.meta?.research;
 const RESEARCH_TABS = ["issues", "suggestions", "loved", "feed", "updates", "achievements"];
 
 function researchStatus(g) {
+  if (g.paused) return g.pending ? `paused · ${fmtNum(g.pending)} posts not sorted` : "paused";
   if (g.added && !g.status) return "added: read on the next run (within 5 min)";
   if (g.capped) return `stopped at the Claude cap · ${fmtNum(g.pending)} posts not sorted`;
   if (g.pending) return `sorting: ${fmtNum(g.pending)} posts to go`;
@@ -874,7 +875,7 @@ function setResearch(appId, fields, done) {
     if (fields) data[appId] = { ...(data[appId] || {}), ...fields };
     else delete data[appId];
     return data;
-  }, `Feedback: research game ${appId} ${fields ? "added" : "removed"} [skip ci]`, done);
+  }, `Feedback: research game ${appId} ${fields ? ("paused" in fields ? (fields.paused ? "paused" : "resumed") : "added") : "removed"} [skip ci]`, done);
 }
 
 function renderGames() {
@@ -973,6 +974,8 @@ function renderHeader() {
   const release = (g.releases || []).filter((r) => r.version).at(-1) || (g.releases || []).at(-1);
   document.getElementById("fb-updated").replaceChildren(...[
     meta.research ? h("div", `By ${(meta.details?.developers || []).join(", ") || "another studio"} · ${researchStatus(meta)} · `,
+      h("button.linkish", { type: "button", onclick: () => setResearch(meta.appId, { paused: !state.research?.[meta.appId]?.paused }, `${meta.name} ${state.research?.[meta.appId]?.paused ? "resumed: read on the next run" : "paused: no more Claude use until you resume it"}`) }, state.research?.[meta.appId]?.paused ? "Resume" : "Pause"),
+      " · ",
       h("button.linkish", { type: "button", onclick: () => confirm(`Stop collecting ${meta.name}? What's collected stays in the repo.`) && setResearch(meta.appId, null, `${meta.name} removed`) }, "Remove")) : null,
     release ? `Latest update ${release.version ? "v" + release.version : release.name}, ${ago(release.time)}` : null,
     gameCost(g.meta?.claude),

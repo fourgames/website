@@ -1,6 +1,7 @@
 """Your own channels, announced in Discord (instead of Streamcord, which missed uploads): new YouTube
-videos, YouTube live streams and Twitch streams, posted to the public announcements webhook
-(DISCORD_RELEASES_WEBHOOK_URL) with a role ping. run.py calls check() every run, so a post lands
+videos, YouTube live streams and Twitch streams, posted to the announcements channel with a role
+ping, through its YouTube and Twitch webhooks (DISCORD_YOUTUBE_WEBHOOK_URL, DISCORD_TWITCH_WEBHOOK_URL;
+each falls back to DISCORD_RELEASES_WEBHOOK_URL). run.py calls check() every run, so a post lands
 within about 5 minutes.
 
 YouTube is read from the channel's public feed, which lists every new upload with no quota; the
@@ -12,6 +13,7 @@ already there, so turning this on never posts old videos or a stream already ann
 """
 
 import calendar
+import os
 import time
 import urllib.error
 import urllib.request
@@ -26,6 +28,9 @@ TWITCH_LOGIN = "fourgamesab"
 # The roles Streamcord pinged: "Ping Upload" for videos, "Ping Stream" for live streams.
 VIDEO_ROLE = "1179540668998221875"
 STREAM_ROLE = "1179540647280128132"
+# Webhooks named and pictured after each platform, so the post shows where it's from.
+YOUTUBE_WEBHOOK = os.environ.get("DISCORD_YOUTUBE_WEBHOOK_URL", "").strip() or notify.RELEASES_WEBHOOK
+TWITCH_WEBHOOK = os.environ.get("DISCORD_TWITCH_WEBHOOK_URL", "").strip() or notify.RELEASES_WEBHOOK
 RECENT = 2 * 86400  # older videos in the feed are never posted (a video made public late, say)
 KEEP = 200  # video ids remembered
 
@@ -78,7 +83,7 @@ def check_youtube(seen, first):
             seen[video_id] = "skipped"  # a past live stream: its live post went out, or it was missed
             continue
         if kind == "live":
-            if _post(STREAM_ROLE, f"Four Games is live on YouTube: **{entry['title']}**\nhttps://www.youtube.com/watch?v={video_id}"):
+            if _post(YOUTUBE_WEBHOOK, STREAM_ROLE, f"Four Games is live on YouTube: **{entry['title']}**\nhttps://www.youtube.com/watch?v={video_id}"):
                 seen[video_id] = "live"
             continue
         # A premiere waited as "upcoming", so its age is from when it was scheduled: it still counts.
@@ -87,7 +92,7 @@ def check_youtube(seen, first):
         if old or (seconds is not None and seconds <= 180 and _is_short(video_id)):
             seen[video_id] = "skipped"
             continue
-        if _post(VIDEO_ROLE, f"https://www.youtube.com/watch?v={video_id}"):
+        if _post(YOUTUBE_WEBHOOK, VIDEO_ROLE, f"https://www.youtube.com/watch?v={video_id}"):
             seen[video_id] = "posted"
     # Forget the oldest ids, but never what's still in the feed.
     for video_id in list(seen)[: max(0, len(seen) - KEEP)]:
@@ -149,18 +154,18 @@ def check_twitch(twitch, first):
         twitch["stream"] = stream["id"]
         return
     note = f"Four Games is live on Twitch: **{stream['title']}**\nhttps://www.twitch.tv/{TWITCH_LOGIN}"
-    if _post(STREAM_ROLE, note):
+    if _post(TWITCH_WEBHOOK, STREAM_ROLE, note):
         twitch["stream"] = stream["id"]
 
 
-def _post(role, text):
-    """Posts to the announcements webhook. The link unfurls into YouTube's or Twitch's own player.
+def _post(webhook, role, text):
+    """Posts to an announcements webhook, as the name and picture set on it in Discord. The link unfurls into YouTube's or Twitch's own player.
     Without the webhook it's only printed (local runs), and counts as posted."""
     print(f"[announce] {text.splitlines()[-1]}")
-    if not notify.RELEASES_WEBHOOK:
+    if not webhook:
         return True
     allowed = {"parse": [], "roles": [role]}
-    ok = notify.send([], note=f"<@&{role}>\n{text}", webhook=notify.RELEASES_WEBHOOK, username=None, mention=("", allowed))
+    ok = notify.send([], note=f"<@&{role}>\n{text}", webhook=webhook, username=None, mention=("", allowed))
     if ok:
         status.active("announce", "announced a video or stream")
     return ok

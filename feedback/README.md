@@ -75,7 +75,7 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `DISCORD_WEBHOOK_URL` | The channel's webhook URL |
 | `DISCORD_MENTION` | Who to ping: `<@USER_ID>`, `<@&ROLE_ID>` or a bare user ID (optional) |
-| `DISCORD_RELEASES_WEBHOOK_URL` | A public channel's webhook: when a game goes from coming soon to released on Steam, it posts "out now" with the store link, and your new videos and streams (`announce.py`) (optional) |
+| `DISCORD_RELEASES_WEBHOOK_URL` | A public channel's webhook: when a game goes from coming soon to released on Steam, it posts "out now" with the store link as **Steam**, and your new videos and streams as **YouTube** or **Twitch** (`announce.py`), each with its logo from `public/images/discord` (optional) |
 | `DISCORD_RELEASES_ROLE` | The role that post pings, e.g. @Ping Games: its role ID (optional) |
 | `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` | A Twitch app from [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps): *Register Your Application*, OAuth redirect `http://localhost`, category *Analytics Tool*, client type *Confidential*. Also used for IGDB |
 | `YOUTUBE_API_KEY` | In [Google Cloud Console](https://console.cloud.google.com/): make a project, enable *YouTube Data API v3*, then *Credentials → Create credentials → API key* (restrict it to that API) |

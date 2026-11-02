@@ -20,6 +20,9 @@ DASHBOARD_URL = "https://fourgames.se/fb-dash/"
 # (a bare role ID or "<@&ID>"). Separate from the alerts above, which are private.
 RELEASES_WEBHOOK = os.environ.get("DISCORD_RELEASES_WEBHOOK_URL", "").strip()
 RELEASES_ROLE = re.sub(r"\D", "", os.environ.get("DISCORD_RELEASES_ROLE", ""))
+# The announcements webhook posts as whatever it announces, by name and picture (public/images/discord):
+# "out now" as Steam here, your videos and streams as YouTube or Twitch (announce.py).
+STEAM_AVATAR = "https://fourgames.se/images/discord/steam.png"
 
 COLORS = {"urgent": 0xE5484D, "flip": 0xF76B15, "cluster": 0xFFC53D, "still": 0xD6409F, "negative": 0xF76B15, "bug": 0xE5484D}
 
@@ -133,7 +136,7 @@ def released(game, test=False):
     note = f"{role}**{game['name']}** is out now on Steam!\nhttps://store.steampowered.com/app/{game['appId']}/"
     if test:
         note = "Test of the release post (no ping):\n" + note
-    return send([], note=note, webhook=RELEASES_WEBHOOK, username=None, mention=("", allowed))
+    return send([], note=note, webhook=RELEASES_WEBHOOK, username="Steam", avatar=STEAM_AVATAR, mention=("", allowed))
 
 
 def _quote(item):

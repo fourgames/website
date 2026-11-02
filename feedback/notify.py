@@ -76,14 +76,16 @@ def check():
         print(f"[discord] webhook check failed: {type(error).__name__}")
 
 
-def send(embeds, ping=False, note=None, webhook=None, username="Player feedback", mention=None):
-    """Posts up to 10 embeds in one message, with an optional line of text above them. Returns True
-    when Discord accepted it (or no webhook is set)."""
+def send(embeds, ping=False, note=None, webhook=None, username="Player feedback", mention=None, avatar=None):
+    """Posts up to 10 embeds in one message, with an optional line of text above them, as `username`
+    and the `avatar` picture URL when given. Returns True when Discord accepted it (or no webhook is set)."""
     mention, allowed = mention or (_mention() if ping else ("", {"parse": []}))
     embeds = [{k: v for k, v in e.items() if v is not None} for e in embeds[:10]]
     payload = {"embeds": embeds, "allowed_mentions": allowed}
     if username:  # else the name set on the webhook in Discord
         payload["username"] = username
+    if avatar:  # else the picture set on the webhook
+        payload["avatar_url"] = avatar
     content = " ".join(part for part in (mention, note) if part)
     if content:
         payload["content"] = content

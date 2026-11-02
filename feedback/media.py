@@ -432,15 +432,19 @@ def collect_youtube(media, game, found, games):
         return False
     items = media["items"]
     marks = media.setdefault("watermarks", {})
-    # The English name every time, and the localized ones a few at a time, in turn (a search costs
-    # the same however many names it has, but a long one finds less).
+    # The English name alone every other search, and the localized ones a few at a time in between,
+    # in turn. Joined with "|", YouTube drops most of the English name's results (a roundup naming
+    # the game in its description only came back for 3 of 8 batches), so it never shares a search.
     names = [n for _, n in all_names(media, game)]
     local = names[1:]
     turn = _cache.get(f"youtube-turn:{app_id}", 0) if _cache else 0
-    batch = local[turn * 4 % len(local):][:4] if local else []
+    batch = local[turn // 2 * 4 % len(local):][:4] if local and turn % 2 else [names[0]]
     _cache[f"youtube-turn:{app_id}"] = turn + 1
-    params = {"part": "snippet", "q": " | ".join(f'"{n}"' for n in [names[0], *batch]), "type": "video", "order": "date", "maxResults": 25}
-    if marks.get("youtube"):
+    params = {"part": "snippet", "q": " | ".join(f'"{n}"' for n in batch), "type": "video", "order": "date", "maxResults": 25}
+    if batch == [names[0]] and media.get("youtubeEnglishAlone") is None:
+        # Once, the newest 25 with no date limit: what the joined searches missed before.
+        media["youtubeEnglishAlone"] = now()
+    elif marks.get("youtube"):
         # A day back: YouTube's search lists some videos hours after they're published.
         params["publishedAfter"] = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime(marks["youtube"] - 86400))
     results = youtube("search", params).get("items") or []

@@ -470,7 +470,7 @@ def collect_youtube(media, game, found, games):
             "id": key, "source": "youtube",
             "url": f"https://www.youtube.com/watch?v={vid}",
             "title": _clip(html.unescape(sn.get("title", "")), 300),
-            "text": _clip(sn.get("description"), 400),
+            "text": _clip(sn.get("description"), 1000),  # long enough for a roundup's chapters
             "author": sn.get("channelTitle"), "authorUrl": f"https://www.youtube.com/channel/{sn.get('channelId')}",
             "channelId": sn.get("channelId"),
             "at": iso_time(sn.get("publishedAt")) or now(),

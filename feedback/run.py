@@ -433,7 +433,7 @@ def review_videos(state, game, budget):
             "verdict": result.verdict, "summary": result.summary, "at": now(),
             "upTo": media.TRANSCRIBE_MAX if not stored.exists() and media.GEMINI_KEY and (item.get("duration") or 0) > media.TRANSCRIBE_MAX else None,
             "points": [{"kind": p.kind, "text": p.text, "quote": p.quote, "at": triage.parse_clock(p.at)}
-                       for p in sorted(result.points, key=lambda p: order.index(p.kind))],
+                       for p in sorted(result.points, key=lambda p: order.index(p.kind)) if p.about_this_game],
         }
         for key in ("reviewTries", "reviewTried", "reviewError"):
             item.pop(key, None)

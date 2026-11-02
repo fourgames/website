@@ -450,6 +450,7 @@ def translate(text):
 
 
 class VideoPoint(BaseModel):
+    about_this_game: bool = Field(description="False when the point is about another game in the video (a roundup or a stream of several games), not this one.")
     kind: Literal["bug", "complaint", "suggestion", "question", "praise"]
     text: str = Field(description="The point in one short English sentence, as a developer would note it, keeping the specifics.")
     quote: str = Field(description="The creator's own words this point comes from: a short exact excerpt of the transcript, in its original language.")
@@ -457,8 +458,8 @@ class VideoPoint(BaseModel):
 
 
 class VideoReview(BaseModel):
-    summary: str = Field(description="One or two short English sentences: what the video is (a let's play, a review, a stream, a short) and how the creator came across on the game overall.")
-    verdict: Literal["positive", "mixed", "negative", "unclear"] = Field(description="How the creator felt about the game overall.")
+    summary: str = Field(description="One or two short English sentences: what the video is (a let's play, a review, a stream, a short, a roundup of several games) and how the creator came across on this game, not the others.")
+    verdict: Literal["positive", "mixed", "negative", "unclear"] = Field(description="How the creator felt about this game overall, not the others in the video.")
     points: list[VideoPoint] = Field(
         description="Every bug, complaint, suggestion, question about the game and bit of specific praise, most actionable "
         "first (bugs, then complaints and suggestions, then questions, then praise). Empty if the video says nothing about the game."
@@ -476,6 +477,10 @@ game, and specific praise (what they enjoyed, laughed at or kept coming back to)
 can't find how to do something is telling the developer about the tutorial or UI.
 - Only what's about this game. Skip channel talk, sponsors, chat banter and other games, unless the creator compares \
 this game with another one.
+- Many videos cover several games (roundups of new releases, "I tried 5 games", a stream that switches games). Find \
+where this game's part starts and ends first, from the chapters in the description or where the creator starts and \
+stops playing it, and take points, summary and verdict from that part only. A bug, complaint or ending in another \
+game is not this game's, however close it is; if one slips in, mark it about_this_game false.
 - Read it the way the creator means it: let's players joke, exaggerate and play up reactions for the camera. Sarcasm \
 or a scripted scream is not a complaint; a real "this is annoying" said three times is.
 - One point per distinct thing; a thing the creator says many times is one point, with the time it first or most \

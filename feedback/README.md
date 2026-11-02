@@ -4,6 +4,7 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
 
 ## What a run does
 
+0. **Your channels** (`announce.py`). New videos on your YouTube channel, and live streams there and on Twitch, are posted to the public announcements webhook (`DISCORD_RELEASES_WEBHOOK_URL`) with the link, pinging @Ping Upload or @Ping Stream (`VIDEO_ROLE`, `STREAM_ROLE`). This replaces Streamcord, which missed uploads. YouTube is read from the channel's public feed (no quota), and the Data API tells a stream or a scheduled one from a video (1 unit a check). Shorts and past streams aren't posted, and a premiere is posted as a video when it starts. What was posted is in `data/announced.json`; each platform's first check only records what's there.
 1. **Games.** It gets the game list from the same publisher data the site uses. `games.mjs` reads `SITE.steam.publisher`/`.developer` and `GAMES`, and `steam.py` runs the same store search as `scripts/fetch-data.mjs`. New store pages are picked up automatically.
 2. **Reviews.** It reads new and edited reviews from the Steamworks `IUserReviewsService/GetAppReviews` endpoint with the publisher key and the *Updated* filter, in all languages. It retries on HTTP 429 and stops at the last review it has already seen. Hourly it reads every review instead: your reply on Steam doesn't change a review's updated time, so only a full read sees it, and when you sent it (`devRespondedAt`).
    - An edit keeps the old text in `versions`.
@@ -74,7 +75,7 @@ Set these under *Settings → Secrets and variables → Actions*. None of them i
 | `ANTHROPIC_API_KEY` | Anthropic API key |
 | `DISCORD_WEBHOOK_URL` | The channel's webhook URL |
 | `DISCORD_MENTION` | Who to ping: `<@USER_ID>`, `<@&ROLE_ID>` or a bare user ID (optional) |
-| `DISCORD_RELEASES_WEBHOOK_URL` | A public channel's webhook: when a game goes from coming soon to released on Steam, it posts "out now" with the store link (optional) |
+| `DISCORD_RELEASES_WEBHOOK_URL` | A public channel's webhook: when a game goes from coming soon to released on Steam, it posts "out now" with the store link, and your new videos and streams (`announce.py`) (optional) |
 | `DISCORD_RELEASES_ROLE` | The role that post pings, e.g. @Ping Games: its role ID (optional) |
 | `TWITCH_CLIENT_ID`, `TWITCH_CLIENT_SECRET` | A Twitch app from [dev.twitch.tv/console/apps](https://dev.twitch.tv/console/apps): *Register Your Application*, OAuth redirect `http://localhost`, category *Analytics Tool*, client type *Confidential*. Also used for IGDB |
 | `YOUTUBE_API_KEY` | In [Google Cloud Console](https://console.cloud.google.com/): make a project, enable *YouTube Data API v3*, then *Credentials → Create credentials → API key* (restrict it to that API) |

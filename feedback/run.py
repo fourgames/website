@@ -42,6 +42,8 @@ OFFSITE_KINDS = (*YOUTUBE_KINDS, "refund")
 NOT_GAME_REFUNDS = ("Purchased by accident",)
 # Games whose posts are all sorted again this run (app ids, or "all"); see resort().
 RESORT = set(filter(None, re.split(r"[\s,]+", os.environ.get("FEEDBACK_RESORT", ""))))
+# YouTube videos reviewed again this run (video ids), after the review rules changed; see review_videos().
+REVIEW_AGAIN = set(filter(None, re.split(r"[\s,]+", os.environ.get("FEEDBACK_REVIEW_AGAIN", ""))))
 
 
 def now():
@@ -366,6 +368,10 @@ def review_videos(state, game, budget):
     import triage
 
     items = (state.get("media") or {}).get("items") or {}
+    for vid in REVIEW_AGAIN:
+        # Its post stays as it was sorted; only the video's own review is written again.
+        if items.get(f"yt{vid}", {}).pop("review", None):
+            print(f"[video] yt{vid}: reviewed again")
     # The status says whether transcripts work now: a failure shows only while one happens this run,
     # not until some other video happens to succeed.
     if any(i["source"] == "youtube" for i in items.values()):

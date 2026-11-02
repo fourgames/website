@@ -41,7 +41,7 @@ while :; do
   # A run that hangs (a stuck request) is stopped, so it can't hold back fresh data for hours. Each
   # game's file is saved whole as the run goes, so what it finished is committed either way.
   if timeout -k 30 "$run_limit" python -u feedback/run.py --part "$part"; then
-    unset FEEDBACK_RESORT  # a re-sort happens once; the following runs carry on from it
+    unset FEEDBACK_RESORT FEEDBACK_REVIEW_AGAIN  # a re-sort or review happens once; the following runs carry on from it
   else
     echo "::warning::This run failed or took over $((run_limit / 60)) minutes; the next one tries again."
   fi

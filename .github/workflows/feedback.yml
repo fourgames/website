@@ -15,6 +15,10 @@ on:
         description: Sort your games' posts again from scratch (app ids, or "all"), after the sorting rules changed (research games have their own workflow)
         type: string
         default: ""
+      review_again:
+        description: Review these YouTube videos again (video ids, as in their URL), after the review rules changed
+        type: string
+        default: ""
       test_discord:
         description: Only send a test of each Discord alert (no run)
         type: boolean
@@ -79,6 +83,7 @@ jobs:
           FEEDBACK_PART: own  # research games run in feedback-research.yml
           FEEDBACK_HAS_KEY: ${{ secrets.ANTHROPIC_API_KEY != '' }}
           FEEDBACK_RESORT: ${{ inputs.resort }}
+          FEEDBACK_REVIEW_AGAIN: ${{ inputs.review_again }}
           STEAM_PUBLISHER_KEY: ${{ secrets.STEAM_PUBLISHER_KEY }}
           STEAM_FINANCIAL_KEY: ${{ secrets.STEAM_FINANCIAL_KEY }}
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}

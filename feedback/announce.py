@@ -29,6 +29,8 @@ STREAM_ROLE = "1179540647280128132"
 # Who each post comes from, so it shows where it's from: the name and picture (public/images/discord).
 YOUTUBE = ("YouTube", "https://fourgames.se/images/discord/youtube.png")
 TWITCH = ("Twitch", "https://fourgames.se/images/discord/twitch.png")
+# Live on YouTube and Twitch at once: only the first post within this long pings, the other just adds its link.
+SAME_STREAM = 15 * 60
 RECENT = 2 * 86400  # older videos in the feed are never posted (a video made public late, say)
 KEEP = 200  # video ids remembered
 
@@ -42,21 +44,21 @@ def check(state):
     state.setdefault("youtube", {})
     state.setdefault("twitch", {})
     try:
-        check_youtube(state["youtube"], not state["youtube"])
+        check_youtube(state["youtube"], not state["youtube"], state)
         status.ok("announce")
     except (media.HttpError, ET.ParseError) as error:
         print(f"[announce] YouTube: {error}")
         status.fail("announce", f"Couldn't read your YouTube channel ({error}).")
     if media.TWITCH_ID and media.TWITCH_SECRET:
         try:
-            check_twitch(state["twitch"], not state["twitch"].get("checked"))
+            check_twitch(state["twitch"], not state["twitch"].get("checked"), state)
         except media.HttpError as error:
             print(f"[announce] Twitch: {error}")
             status.fail("announce", f"Couldn't check your Twitch channel ({error}).")
     return repr(state) != before
 
 
-def check_youtube(seen, first):
+def check_youtube(seen, first, state):
     feed = ET.fromstring(media.request(f"https://www.youtube.com/feeds/videos.xml?channel_id={YOUTUBE_CHANNEL}", as_json=False))
     entries = {}
     for entry in feed.findall("a:entry", NS):
@@ -81,7 +83,7 @@ def check_youtube(seen, first):
             seen[video_id] = "skipped"  # a past live stream: its live post went out, or it was missed
             continue
         if kind == "live":
-            if _post(YOUTUBE, STREAM_ROLE, f"Four Games is live on YouTube: **{entry['title']}**\nhttps://www.youtube.com/watch?v={video_id}"):
+            if _live(state, YOUTUBE, entry["title"], f"https://www.youtube.com/watch?v={video_id}"):
                 seen[video_id] = "live"
             continue
         # A premiere waited as "upcoming", so its age is from when it was scheduled: it still counts.
@@ -142,7 +144,7 @@ def _is_short(video_id):
         return False
 
 
-def check_twitch(twitch, first):
+def check_twitch(twitch, first, state):
     streams = media.twitch("streams", {"user_login": TWITCH_LOGIN}).get("data") or []
     stream = streams[0] if streams else None
     twitch["checked"] = True
@@ -151,19 +153,32 @@ def check_twitch(twitch, first):
     if first:
         twitch["stream"] = stream["id"]
         return
-    note = f"Four Games is live on Twitch: **{stream['title']}**\nhttps://www.twitch.tv/{TWITCH_LOGIN}"
-    if _post(TWITCH, STREAM_ROLE, note):
+    if _live(state, TWITCH, stream["title"], f"https://www.twitch.tv/{TWITCH_LOGIN}"):
         twitch["stream"] = stream["id"]
 
 
+def _live(state, sender, title, url):
+    """A live stream's post. The first within SAME_STREAM pings; a second (the same stream on the other
+    platform, whichever is seen second) says "Also live" and pings no one."""
+    also = time.time() - state.get("streamPinged", 0) < SAME_STREAM
+    text = f"{'Also live' if also else 'Four Games is live'} on {sender[0]}: **{title}**\n{url}"
+    if not _post(sender, None if also else STREAM_ROLE, text):
+        return False
+    if not also:
+        state["streamPinged"] = int(time.time())
+    return True
+
+
 def _post(sender, role, text):
-    """Posts to the announcements webhook as `sender` (name, picture). The link unfurls into YouTube's or Twitch's own player.
-    Without the webhook it's only printed (local runs), and counts as posted."""
-    print(f"[announce] {text.splitlines()[-1]}")
+    """Posts to the announcements webhook as `sender` (name, picture), pinging `role` unless it's None.
+    The link unfurls into YouTube's or Twitch's own player. Without the webhook it's only printed
+    (local runs), and counts as posted."""
+    print(f"[announce] {'(no ping) ' if not role else ''}{text}")
     if not notify.RELEASES_WEBHOOK:
         return True
-    allowed = {"parse": [], "roles": [role]}
-    ok = notify.send([], note=f"<@&{role}>\n{text}", webhook=notify.RELEASES_WEBHOOK,
+    allowed = {"parse": [], "roles": [role]} if role else {"parse": []}
+    note = f"<@&{role}>\n{text}" if role else text
+    ok = notify.send([], note=note, webhook=notify.RELEASES_WEBHOOK,
                      username=sender[0], avatar=sender[1], mention=("", allowed))
     if ok:
         status.active("announce", "announced a video or stream")

@@ -11,7 +11,9 @@ settlements restate old days), rebuild each of those days from scratch, then sto
 
 import os
 import time
+from datetime import datetime, timedelta
 from decimal import Decimal
+from zoneinfo import ZoneInfo
 
 import status
 import steam
@@ -21,6 +23,9 @@ KEY = os.environ.get("STEAM_FINANCIAL_KEY", "").strip()
 # days that changed since the high-water mark, so old days would never get it otherwise).
 VERSION = 2  # 2: the per-day breakdown (platforms, types, packages, sales, currencies)
 BASE = "https://partner.steam-api.com/IPartnerFinancialsService"
+# Days (Pacific, today included) read again every sync whatever Steam says changed: its changed-dates
+# list can stall for days (from the Nov 1, 2026 clock change, while wishlists had the day).
+RECENT = 3
 
 
 def _int(v):
@@ -159,6 +164,8 @@ def sync(sales):
               "(Users & Permissions → Manage Groups), not a publisher key.")
         status.fail("sales", "Steam returns no sales data for this key: STEAM_FINANCIAL_KEY must be a Financial API Group's key, not a publisher key.")
         return True
+    today = datetime.now(ZoneInfo("America/Los_Angeles")).date()
+    dates = list(dict.fromkeys(dates + [(today - timedelta(days=n)).strftime("%Y/%m/%d") for n in range(RECENT)]))
     for date in dates:
         try:
             day, names, labels = fetch_day(date)

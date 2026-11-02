@@ -586,6 +586,7 @@ const SERVICES = {
   refunds: ["Refund notes", "What players wrote when refunding, read daily from Steamworks by a task on your Mac (feedback/refunds.js)", "no notes read yet", "https://partner.steampowered.com/package/steam/", "Steamworks"],
   claude: ["Claude", "Translates posts, sorts them into bugs and ideas, matches patch notes", "nothing sorted yet", "https://platform.claude.com/settings/billing", "Add credit"],
   discord: ["Discord", "Pings you for new negative reviews and bug reports, urgent issues, flipped reviews and shared complaints", "no alerts sent yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets"],
+  announce: ["Announcements", "Posts your new YouTube videos and your YouTube and Twitch streams in Discord's announcements channel, checked every 5 min (feedback/announce.py)", "nothing announced yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
   // Media (feedback/media.py). The last entry: where the key a missing secret needs is made.
   twitch: ["Twitch", "Who's streaming your games right now, checked every 5 min", "no streams yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets", "https://dev.twitch.tv/console/apps"],
   youtube: ["YouTube", "New videos about your games, about hourly", "no videos yet", "https://github.com/fourgames/website/settings/secrets/actions", "GitHub secrets", "https://console.cloud.google.com/apis/library/youtube.googleapis.com"],
@@ -744,7 +745,7 @@ function renderStatus() {
   const kindOf = (key) => { const s = status[key]; return !s || s.ok === undefined ? "idle" : s.ok ? "ok" : "bad"; };
   const brandMark = (key) => {
     const mark = svgEl("svg", { viewBox: "0 0 24 24", class: "svc-mark", "aria-hidden": "true", fill: "currentColor" });
-    mark.append(svgEl("path", { d: BRAND[key === "forums" || key === "sales" || key === "wishlists" || key === "refunds" ? "steam" : key === "transcripts" ? "youtube" : key], "fill-rule": key === "news" ? "evenodd" : "nonzero" }));
+    mark.append(svgEl("path", { d: BRAND[key === "forums" || key === "sales" || key === "wishlists" || key === "refunds" ? "steam" : key === "transcripts" ? "youtube" : key === "announce" ? "discord" : key], "fill-rule": key === "news" ? "evenodd" : "nonzero" }));
     return mark;
   };
   const STATE = { ok: "Working", bad: "Needs attention", idle: "Unknown" };

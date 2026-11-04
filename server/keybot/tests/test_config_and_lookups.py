@@ -21,6 +21,8 @@ def test_defaults():
     assert config.thresholds.max_days_since_upload == 60
     assert (config.low_stock, config.port, config.host) == (5, 8100, "127.0.0.1")
     assert config.db_path == "/srv/fourgames/keybot/keys.db"
+    assert config.grantrole_enabled is False
+    assert Config.from_env({**BASE, "GRANTROLE_ENABLED": "1"}).grantrole_enabled
 
 
 def test_blank_values_mean_defaults():

@@ -34,6 +34,9 @@ class Config:
     db_path: str
     host: str
     port: int
+    # /grantrole needs the guild's member list, so the privileged Server Members intent. Off unless
+    # GRANTROLE_ENABLED=1 (and the intent is switched on in the Developer Portal).
+    grantrole_enabled: bool = False
 
     @property
     def redirect_uri(self) -> str:
@@ -90,4 +93,5 @@ class Config:
             # Only Caddy on the same machine talks to it.
             host=get("HOST", "127.0.0.1") or "127.0.0.1",
             port=integer("PORT", "8100"),
+            grantrole_enabled=get("GRANTROLE_ENABLED").lower() in ("1", "true", "yes", "on"),
         )

@@ -1,4 +1,4 @@
-"""Handouts: one key per game per person, never the same key twice, even under concurrent claims."""
+"""Handouts: one key per game per person by default, never the same key twice, even under concurrent claims."""
 
 import threading
 
@@ -72,12 +72,15 @@ def test_unknown_reason_refused(store):
         store.give_key(game["id"], 1, "friend")
 
 
-def test_database_refuses_second_key_for_same_user(store):
+def test_limit_is_checked_in_the_handout_not_by_an_index(store):
+    # One key per game per person used to be a unique index; it's the game's per_user_limit now,
+    # checked inside give_key's write transaction (see test_limits.py for the concurrent cases).
+    names = {row[0] for row in store.db.execute("SELECT name FROM sqlite_master WHERE type = 'index'")}
+    assert "keys_one_per_user" not in names and "keys_by_user" in names
     game = make_game(store)
+    assert game["per_user_limit"] == 1  # the default keeps the old rule
     store.give_key(game["id"], 1, "member")
-    import sqlite3
-    with pytest.raises(sqlite3.IntegrityError):
-        store.db.execute("UPDATE keys SET status='given', given_to='1' WHERE status='available'")
+    assert store.give_key(game["id"], 1, "manual").status == "already"
 
 
 def test_add_keys_skips_duplicates_across_games(store):

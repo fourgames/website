@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import io
 import json
 import logging
 import re
 import sqlite3
 import time
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from urllib.parse import quote
 
 import aiohttp
 import discord
@@ -15,7 +17,7 @@ from discord import app_commands
 from discord.utils import escape_markdown
 
 from .config import Config
-from .db import Store
+from .db import MAX_PER_USER_LIMIT, STOCK_LOW, STOCK_OUT, Store, role_ids
 from .eligibility import Channel, evaluate
 from .keyfile import KeyFileError, read_keys
 from .lookups import TwitchAuth
@@ -28,22 +30,54 @@ REDEEM_URL = "https://store.steampowered.com/account/registerkey"
 MAX_OPEN_REQUESTS = 3
 MAX_KEY_FILE_BYTES = 1_000_000
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+POOLS_PER_PAGE = 10
+BANNED_TEXT = "You can't get keys{where} here. If you think that's a mistake, ask the Four Games team."
 
 
 @dataclass(frozen=True)
 class Outcome:
-    """What hand_out did: "given", "already" (they had one), "none" (out of keys) or "dm_failed"."""
+    """What hand_out did: "given", "already" (at the per-user limit), "none" (out of keys),
+    "banned", or "dm_failed" (the DM was required and didn't arrive; the key went back)."""
 
     status: str
     key_id: int | None = None
+    # repr=False: an Outcome in a log line or traceback never shows the key.
+    value: str | None = field(default=None, repr=False)
+    dm_sent: bool = False
+
+
+@dataclass
+class GrantReport:
+    """What /grantrole did, in counts."""
+
+    given: int = 0
+    at_limit: int = 0
+    banned: int = 0
+    dm_failed: int = 0
+    out_of_keys: int = 0
+
+    def summary(self) -> str:
+        parts = [f"**{self.given}** key(s) sent"]
+        if self.at_limit:
+            parts.append(f"{self.at_limit} skipped (already at the limit)")
+        if self.banned:
+            parts.append(f"{self.banned} skipped (banned)")
+        if self.dm_failed:
+            parts.append(f"{self.dm_failed} with DMs closed (no key used)")
+        if self.out_of_keys:
+            parts.append(f"{self.out_of_keys} not reached (out of keys)")
+        return ", ".join(parts) + "."
 
 
 class KeyBot(discord.Client):
     def __init__(self, config: Config, store: Store):
         # No privileged intents: roles and permissions come with each interaction. The guilds
-        # intent (not privileged) keeps the server's roles and channels cached.
+        # intent (not privileged) keeps the server's roles and channels cached. /grantrole needs the
+        # member list (the privileged Server Members intent), so only when it's turned on.
         intents = discord.Intents.none()
         intents.guilds = True
+        if config.grantrole_enabled:
+            intents.members = True
         # Mentions in cards and logs show who it is without pinging anyone.
         super().__init__(intents=intents, allowed_mentions=discord.AllowedMentions.none())
         self.config = config
@@ -63,8 +97,10 @@ class KeyBot(discord.Client):
         self.http_session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=20))
         # Approve/Deny buttons keep working after a restart: their custom_id carries the request id.
         self.add_dynamic_items(ApproveButton, DenyButton)
-        for command in (claim, mykeys, request_key, request_press, keys_group):
+        for command in (claim, mykeys, pools, request_key, request_press, grant, keys_group):
             self.tree.add_command(command)
+        if self.config.grantrole_enabled:
+            self.tree.add_command(grantrole)
         # Guild commands show up at once (global ones can take an hour), and the bot is for one server.
         guild = discord.Object(id=self.config.guild_id)
         self.tree.copy_global_to(guild=guild)
@@ -93,36 +129,79 @@ class KeyBot(discord.Client):
     # Handing out
 
     async def hand_out(self, user: discord.abc.User, game: sqlite3.Row, reason: str,
-                       request_id: int | None = None) -> Outcome:
-        """Takes a key and DMs it. If the DM doesn't arrive, the key goes back."""
+                       request_id: int | None = None, *, dm_required: bool = True) -> Outcome:
+        """Takes a key and DMs it.
+
+        dm_required (admin approvals, /grant, /grantrole, creator auto-approval: the DM is the only
+        way the key reaches them): if the DM doesn't arrive, the key goes back. Without it (/claim,
+        which shows the key in its reply), the DM is a receipt and a failed one changes nothing.
+        """
         given = self.store.give_key(game["id"], user.id, reason, request_id)
         if given.status != "given":
             return Outcome(given.status, given.key_id)
         try:
             await user.send(key_message(game, given.value))
+            dm_sent = True
         except discord.HTTPException as error:
-            self.store.undo_give(given.key_id, user.id)
-            log.info("couldn't DM %s key #%s for %s (%s); put it back", user.id, given.key_id, game["name"],
-                     type(error).__name__)
-            return Outcome("dm_failed")
+            if dm_required:
+                self.store.undo_give(given.key_id, user.id)
+                log.info("couldn't DM %s key #%s for %s (%s); put it back", user.id, given.key_id, game["name"],
+                         type(error).__name__)
+                return Outcome("dm_failed")
+            log.info("couldn't DM %s a copy of key #%s for %s (%s); shown in the reply only", user.id,
+                     given.key_id, game["name"], type(error).__name__)
+            dm_sent = False
         log.info("gave key #%s for %s to %s (%s)", given.key_id, game["name"], user.id, reason)
         await self.low_stock_alert(game)
-        return Outcome("given", given.key_id)
+        return Outcome("given", given.key_id, given.value, dm_sent)
 
     async def low_stock_alert(self, game: sqlite3.Row) -> None:
-        left = self.store.available_count(game["id"])
-        # Once when it drops below the line and once when it runs out, not on every key.
-        if left == 0:
-            text = f"Out of keys for **{escape_markdown(game['name'])}**. Add more with `/keys add`."
-        elif left == self.config.low_stock - 1:
-            text = (f"Running low on keys for **{escape_markdown(game['name'])}**: {left} left. "
-                    "Add more with `/keys add`.")
+        """After a handout: the LOW_STOCK line (once, as it drops below), the 10% warning and the
+        out-of-keys warning (each once until the game is restocked), in one message."""
+        store = self.store
+        left = store.available_count(game["id"])
+        name = escape_markdown(game["name"])
+        level = store.next_stock_warning(game["id"])
+        lines = []
+        if level == STOCK_OUT:
+            lines.append(f"Out of keys for **{name}**. Add more with `/keys add`.")
         else:
+            if left == self.config.low_stock - 1:
+                lines.append(f"Running low on keys for **{name}**: {left} left. Add more with `/keys add`.")
+            if level == STOCK_LOW:
+                lines.append(f"**{name}** is down to 10% of its keys: {left} of {store.total_count(game['id'])} "
+                             "left.")
+        if not lines:
             return
         try:
-            await (await self.admin_channel()).send(text)
+            await (await self.admin_channel()).send("\n".join(lines))
         except discord.HTTPException:
             log.exception("couldn't post the low-stock alert")
+
+    async def grant_to_members(self, members: list[discord.abc.User], game: sqlite3.Row) -> GrantReport:
+        """/grantrole: one key by DM to each of them (bots left out), skipping the banned and those
+        at the limit. Stops handing out once the keys run out."""
+        report = GrantReport()
+        for member in members:
+            if getattr(member, "bot", False):
+                continue
+            if report.out_of_keys:
+                report.out_of_keys += 1
+                continue
+            outcome = await self.hand_out(member, game, "manual")
+            if outcome.status == "given":
+                report.given += 1
+            elif outcome.status == "already":
+                report.at_limit += 1
+            elif outcome.status == "banned":
+                report.banned += 1
+            elif outcome.status == "dm_failed":
+                report.dm_failed += 1
+            else:
+                report.out_of_keys += 1
+        log.info("grantrole for %s: %d given, %d at limit, %d banned, %d DMs closed, %d out of keys",
+                 game["name"], report.given, report.at_limit, report.banned, report.dm_failed, report.out_of_keys)
+        return report
 
     # Requests
 
@@ -142,7 +221,9 @@ class KeyBot(discord.Client):
         game = store.game(game_id)
         if game is None:
             return "Something's off", "That game isn't in the list any more. Run /request again in Discord."
-        if store.user_key(game_id, user_id):
+        if store.is_banned(user_id, game_id):
+            return "Not available", "You can't get keys for this game. If you think that's a mistake, ask the team."
+        if store.at_limit(game_id, user_id):
             return "You already have a key", "Run /mykeys in the Four Games Discord to see it again."
         if store.open_request_for(user_id, game_id):
             return "Already waiting for review", "Your request for this game is with the team already."
@@ -167,6 +248,8 @@ class KeyBot(discord.Client):
             store.delete_request(request_id)
             if outcome.status == "already":
                 return "You already have a key", "Run /mykeys in the Four Games Discord to see it again."
+            if outcome.status == "banned":
+                return "Not available", "You can't get keys for this game. If you think that's a mistake, ask the team."
             if outcome.status == "dm_failed":
                 return ("Verified, but we couldn't DM you",
                         "Allow direct messages from server members (right-click the Four Games server → "
@@ -185,13 +268,43 @@ class KeyBot(discord.Client):
         return "Sent for review", "The team will take a look, and you'll get a DM either way."
 
 
+def redeem_url(value: str) -> str:
+    """Steam's activation page with the key filled in."""
+    return f"{REDEEM_URL}?key={quote(value, safe='-')}"
+
+
 def key_message(game: sqlite3.Row, value: str) -> str:
+    """The DM: the key itself, or (after /claim) the receipt."""
     lines = [f"Here's your Steam key for **{escape_markdown(game['name'])}**:", f"`{value}`",
-             f"Redeem it in Steam (Games → Activate a Product on Steam) or at {REDEEM_URL}"]
+             f"Redeem it: {redeem_url(value)}", "(or in Steam: Games → Activate a Product on Steam)"]
     if game["steam_app_id"]:
         lines.append(f"https://store.steampowered.com/app/{game['steam_app_id']}")
     lines.append("You can see your keys again any time with /mykeys.")
     return "\n".join(lines)
+
+
+def claim_message(game: sqlite3.Row, value: str, dm_sent: bool) -> str:
+    """The /claim reply (ephemeral: only they see it)."""
+    lines = [f"Here's your Steam key for **{escape_markdown(game['name'])}**:", f"`{value}`",
+             f"Redeem it: {redeem_url(value)}", "(or in Steam: Games → Activate a Product on Steam)"]
+    if dm_sent:
+        lines.append("A copy is in your DMs, and /mykeys shows it again any time.")
+    else:
+        lines.append("I couldn't DM you a copy (your DMs are closed), but the key is yours: "
+                     "/mykeys shows it again any time.")
+    return "\n".join(lines)
+
+
+def limit_text(limit: int) -> str:
+    return "no limit per person" if not limit else f"{limit} per person"
+
+
+def already_text(game: sqlite3.Row) -> str:
+    name = escape_markdown(game["name"])
+    limit = game["per_user_limit"]
+    if limit == 1:
+        return f"You've already had a key for **{name}**. /mykeys shows it again."
+    return f"You've had {limit} keys for **{name}**, the most one person can get. /mykeys shows them again."
 
 
 def request_embed(request: sqlite3.Row, game: sqlite3.Row, user: discord.abc.User | None) -> discord.Embed:
@@ -222,12 +335,75 @@ def request_embed(request: sqlite3.Row, game: sqlite3.Row, user: discord.abc.Use
 
 
 def is_member(user: discord.abc.User, config: Config) -> bool:
-    if not isinstance(user, discord.Member):
+    # Only server members have roles (a discord.User from a DM doesn't).
+    roles = getattr(user, "roles", None)
+    if not roles:
         return False
     role = config.member_role
     if role.isdigit():
-        return any(r.id == int(role) for r in user.roles)
-    return any(r.name.casefold() == role.casefold() for r in user.roles)
+        return any(r.id == int(role) for r in roles)
+    return any(r.name.casefold() == role.casefold() for r in roles)
+
+
+def has_claim_role(user: discord.abc.User, game: sqlite3.Row, config: Config) -> bool:
+    """Any one of the game's required roles, or the member role when it has none set."""
+    required = role_ids(game)
+    if not required:
+        return is_member(user, config)
+    return any(r.id in required for r in getattr(user, "roles", None) or [])
+
+
+def member_role_text(config: Config, guild: discord.Guild | None) -> str:
+    """MEMBER_ROLE as a mention when the role can be found, else its name."""
+    role = config.member_role
+    if role.isdigit():
+        return f"<@&{role}>"
+    found = discord.utils.find(lambda r: r.name.casefold() == role.casefold(), guild.roles) if guild else None
+    return found.mention if found else f"**{escape_markdown(role)}**"
+
+
+def roles_text(game: sqlite3.Row, config: Config, guild: discord.Guild | None) -> str:
+    required = role_ids(game)
+    if not required:
+        return member_role_text(config, guild)
+    return " or ".join(f"<@&{r}>" for r in required)
+
+
+def claim_refusal(bot: "KeyBot", user: discord.abc.User, game: sqlite3.Row,
+                  guild: discord.Guild | None = None) -> str | None:
+    """Why they can't /claim this game (ban, private, roles), or None. Stock and the per-user limit
+    are checked by the handout itself."""
+    name = escape_markdown(game["name"])
+    if bot.store.is_banned(user.id, game["id"]):
+        return BANNED_TEXT.format(where=f" for **{name}**")
+    if not game["public"]:
+        return f"Keys for **{name}** aren't open for claiming; the team hands them out."
+    if not has_claim_role(user, game, bot.config):
+        if not role_ids(game):
+            return not_member_text(bot.config)
+        return f"Keys for **{name}** are for people with the {roles_text(game, bot.config, guild)} role."
+    return None
+
+
+def claim_menu_games(bot: "KeyBot", user: discord.abc.User) -> list[sqlite3.Row]:
+    """What they could /claim now: public, in stock, under the limit, not banned, with the roles."""
+    return [g for g in bot.store.claimable_games(user.id) if has_claim_role(user, g, bot.config)]
+
+
+def fit(lines: list[str], limit: int = 2000) -> str:
+    """As many lines as fit in one message, and how many were left out."""
+    out: list[str] = []
+    used = 0
+    for index, line in enumerate(lines):
+        last = index == len(lines) - 1
+        # Room for the "…and N more" line, unless this is the last one.
+        reserve = 0 if last else len(f"…and {len(lines) - index - 1} more") + 1
+        if used + len(line) + reserve > limit:
+            out.append(f"…and {len(lines) - index} more")
+            break
+        out.append(line)
+        used += len(line) + 1
+    return "\n".join(out)[:limit]
 
 
 def is_admin(interaction: discord.Interaction, config: Config) -> bool:
@@ -281,7 +457,7 @@ def not_member_text(config: Config) -> str:
 
 
 async def claimable_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
-    return choices(interaction.client.store.claimable_games(interaction.user.id), current)
+    return choices(claim_menu_games(interaction.client, interaction.user), current)
 
 
 @app_commands.command(name="claim", description="Get a Steam key for one of our games (YouTube members)")
@@ -290,14 +466,14 @@ async def claimable_autocomplete(interaction: discord.Interaction, current: str)
 @app_commands.guild_only()
 async def claim(interaction: discord.Interaction, game: str | None = None) -> None:
     bot: KeyBot = interaction.client
-    if not is_member(interaction.user, bot.config):
-        await interaction.response.send_message(not_member_text(bot.config), ephemeral=True)
+    user = interaction.user
+    if bot.store.is_banned(user.id):
+        await interaction.response.send_message(BANNED_TEXT.format(where=""), ephemeral=True)
         return
     if game is None:
-        games = bot.store.claimable_games(interaction.user.id)
+        games = claim_menu_games(bot, user)
         if not games:
-            await interaction.response.send_message(
-                "There's nothing new to claim right now. /mykeys shows the keys you already have.", ephemeral=True)
+            await interaction.response.send_message(nothing_to_claim_text(bot, user), ephemeral=True)
             return
         await interaction.response.send_message("Which game?", view=ClaimView(games), ephemeral=True)
         return
@@ -305,25 +481,46 @@ async def claim(interaction: discord.Interaction, game: str | None = None) -> No
     if row is None:
         await interaction.response.send_message("I don't know that game. Pick one from the list.", ephemeral=True)
         return
+    refusal = claim_refusal(bot, user, row, interaction.guild)
+    if refusal:
+        await interaction.response.send_message(refusal, ephemeral=True)
+        return
     await interaction.response.defer(ephemeral=True, thinking=True)
     await claim_game(interaction, row)
 
 
+def nothing_to_claim_text(bot: "KeyBot", user: discord.abc.User) -> str:
+    public = [g for g in bot.store.games() if g["public"]]
+    if public and not any(has_claim_role(user, g, bot.config) for g in public):
+        # They have none of the roles any game asks for: tell them how to become a member.
+        return not_member_text(bot.config)
+    return "There's nothing new to claim right now. /mykeys shows the keys you already have."
+
+
 async def claim_game(interaction: discord.Interaction, game: sqlite3.Row) -> None:
-    """The claim itself. The interaction is already answered (deferred or edited), so this follows up."""
+    """The claim itself. The interaction is already answered (deferred or edited), so this follows up.
+
+    The key is shown in the (ephemeral) reply; the DM is only a copy, so closed DMs don't stop it.
+    """
     bot: KeyBot = interaction.client
     name = escape_markdown(game["name"])
-    outcome = await bot.hand_out(interaction.user, game, "member")
+    outcome = await bot.hand_out(interaction.user, game, "member", dm_required=False)
     if outcome.status == "given":
-        text = f"Your key for **{name}** is in your DMs. Enjoy!"
+        text = claim_message(game, outcome.value, outcome.dm_sent)
     elif outcome.status == "already":
-        text = f"You've already had a key for **{name}**. /mykeys shows it again."
-    elif outcome.status == "none":
-        text = f"Sorry, there are no keys left for **{name}** right now."
+        text = already_text(game)
+    elif outcome.status == "banned":
+        text = BANNED_TEXT.format(where=f" for **{name}**")
     else:
-        text = ("I couldn't DM you, so I kept the key for you. Allow direct messages from server members "
-                "(right-click the server → Privacy Settings), then run /claim again.")
-    await interaction.followup.send(text, ephemeral=True)
+        text = f"Sorry, there are no keys left for **{name}** right now."
+    try:
+        await interaction.followup.send(text, ephemeral=True)
+    except discord.HTTPException as error:
+        if outcome.status != "given":
+            raise
+        # The key is theirs either way: /mykeys shows it (and the DM may have gone out).
+        log.warning("couldn't show key #%s to %s in the reply (%s)", outcome.key_id, interaction.user.id,
+                    type(error).__name__)
 
 
 class ClaimSelect(discord.ui.Select):
@@ -334,13 +531,14 @@ class ClaimSelect(discord.ui.Select):
 
     async def callback(self, interaction: discord.Interaction) -> None:
         bot: KeyBot = interaction.client
-        # Checked again: the menu can sit there a while.
-        if not is_member(interaction.user, bot.config):
-            await interaction.response.edit_message(content=not_member_text(bot.config), view=None)
-            return
         game = bot.store.game(int(self.values[0]))
         if game is None:
             await interaction.response.edit_message(content="That game is gone. Run /claim again.", view=None)
+            return
+        # Checked again: the menu can sit there a while.
+        refusal = claim_refusal(bot, interaction.user, game, interaction.guild)
+        if refusal:
+            await interaction.response.edit_message(content=refusal, view=None)
             return
         await interaction.response.edit_message(
             content=f"Getting your key for **{escape_markdown(game['name'])}**…", view=None)
@@ -356,11 +554,14 @@ class ClaimView(discord.ui.View):
 @app_commands.command(name="mykeys", description="See the keys you've been given")
 @app_commands.guild_only()
 async def mykeys(interaction: discord.Interaction) -> None:
-    keys = interaction.client.store.user_keys(interaction.user.id)
-    if not keys:
+    store: Store = interaction.client.store
+    keys = store.user_keys(interaction.user.id)
+    prior = store.prior_claims(interaction.user.id)
+    if not keys and not prior:
         await interaction.response.send_message("You haven't been given any keys yet.", ephemeral=True)
         return
     lines = [f"**{escape_markdown(k['game'])}**: `{k['value']}`" for k in keys]
+    lines += [f"**{escape_markdown(p['game'])}**: claimed with the old KeyBot (it sent you that key)" for p in prior]
     lines.append(f"Redeem in Steam (Games → Activate a Product on Steam) or at {REDEEM_URL}")
     # Ephemeral: only they see it, and it works with DMs closed too.
     await interaction.response.send_message("\n".join(lines)[:2000], ephemeral=True)
@@ -380,8 +581,10 @@ async def request_precheck(interaction: discord.Interaction, game_name: str) -> 
     game = resolve_game(store, game_name)
     if game is None:
         text = "I don't know that game. Pick one from the list."
-    elif store.user_key(game["id"], user_id):
-        text = f"You've already had a key for **{escape_markdown(game['name'])}**. /mykeys shows it again."
+    elif store.is_banned(user_id, game["id"]):
+        text = BANNED_TEXT.format(where=f" for **{escape_markdown(game['name'])}**")
+    elif store.at_limit(game["id"], user_id):
+        text = already_text(game)
     elif store.open_request_for(user_id, game["id"]):
         text = "Your request for this game is already with the team."
     elif store.open_request_count(user_id) >= MAX_OPEN_REQUESTS:
@@ -501,10 +704,18 @@ async def decide(interaction: discord.Interaction, request_id: int, approve: boo
             if outcome.status in ("given", "already"):
                 store.finish_request(request_id, "approved", admin, outcome.key_id)
                 finished = True
-                note = f"key #{outcome.key_id}" + (" (they already had it)" if outcome.status == "already" else "")
+                if outcome.status == "given":
+                    note = f"key #{outcome.key_id}"
+                elif outcome.key_id:
+                    note = f"key #{outcome.key_id} (they were at the limit already)"
+                else:
+                    note = "no new key (they were at the limit already, from the old KeyBot)"
                 await mark_card(interaction, f"Approved by {interaction.user.mention}, {note}")
-                await interaction.followup.send(f"Done: {user.mention} has key #{outcome.key_id} for {name}.",
-                                                ephemeral=True)
+                await interaction.followup.send(f"Done: {user.mention}, {name}: {note}.", ephemeral=True)
+            elif outcome.status == "banned":
+                await interaction.followup.send(
+                    f"{user.mention} is banned from {name} (or from every game), so no key was sent. "
+                    "Deny the request, or lift the ban with `/keys unban` and press Approve again.", ephemeral=True)
             elif outcome.status == "none":
                 await interaction.followup.send(
                     f"No keys left for {name}. Add some with `/keys add`, then press Approve again.", ephemeral=True)
@@ -619,9 +830,11 @@ async def keys_status(interaction: discord.Interaction) -> None:
         return
     lines = []
     for r in rows:
+        prior = f", {r['prior']} with the old KeyBot" if r["prior"] else ""
         lines.append(f"**{escape_markdown(r['name'])}**: {r['available'] or 0} available · given "
                      f"{r['member'] or 0} member, {r['creator'] or 0} creator, {r['press'] or 0} press, "
-                     f"{r['manual'] or 0} manual · {r['open_requests']} open request(s)")
+                     f"{r['manual'] or 0} manual{prior} · {r['open_requests']} open request(s) · "
+                     f"{'public' if r['public'] else 'private'}, {limit_text(r['per_user_limit'])}")
     await interaction.response.send_message("\n".join(lines)[:2000], ephemeral=True)
 
 
@@ -641,3 +854,376 @@ async def keys_log(interaction: discord.Interaction, count: app_commands.Range[i
         lines.append(f"{when} **{escape_markdown(r['game'])}** → <@{r['given_to']}> ({r['reason']}{extra}), "
                      f"key #{r['id']}")
     await interaction.response.send_message("\n".join(lines)[:2000], ephemeral=True)
+
+
+@keys_group.command(name="game-settings",
+                    description="See or change who can claim a game, how many keys each, public or private")
+@app_commands.describe(game="Which game",
+                       public="Public: members can /claim it. Private: only the team hands it out",
+                       per_user_limit=f"Keys one person can have, every reason counted (0 = no limit, at most "
+                                      f"{MAX_PER_USER_LIMIT})",
+                       add_role="A role that may /claim it (any one of the listed roles is enough)",
+                       remove_role="Take a role off the list",
+                       clear_roles="Empty the list, so the member role (MEMBER_ROLE) decides again")
+@app_commands.autocomplete(game=all_games_autocomplete)
+async def keys_game_settings(interaction: discord.Interaction, game: str, public: bool | None = None,
+                             per_user_limit: app_commands.Range[int, 0, MAX_PER_USER_LIMIT] | None = None,
+                             add_role: discord.Role | None = None, remove_role: discord.Role | None = None,
+                             clear_roles: bool = False) -> None:
+    if not await require_admin(interaction):
+        return
+    bot: KeyBot = interaction.client
+    row = resolve_game(bot.store, game)
+    if row is None:
+        await interaction.response.send_message("I don't know that game.", ephemeral=True)
+        return
+    roles = None
+    if clear_roles or add_role or remove_role:
+        roles = [] if clear_roles else role_ids(row)
+        if add_role and add_role.id not in roles:
+            roles.append(add_role.id)
+        if remove_role:
+            roles = [r for r in roles if r != remove_role.id]
+    changed = public is not None or per_user_limit is not None or roles is not None
+    if changed:
+        row = bot.store.update_game_settings(row["id"], public=public, per_user_limit=per_user_limit,
+                                             required_role_ids=roles)
+        log.info("%s changed the settings of %s", interaction.user.id, row["name"])
+    await interaction.response.send_message(
+        ("Updated. " if changed else "") + settings_text(row, bot.config, interaction.guild), ephemeral=True)
+
+
+def settings_text(game: sqlite3.Row, config: Config, guild: discord.Guild | None) -> str:
+    who = roles_text(game, config, guild) + ("" if role_ids(game) else " (the member role)")
+    visibility = "public (members can /claim it)" if game["public"] else "private (only the team hands it out)"
+    return (f"**{escape_markdown(game['name'])}**\n"
+            f"Visibility: {visibility}\n"
+            f"Per person: {limit_text(game['per_user_limit'])}\n"
+            f"Who can /claim it: {who}")
+
+
+# Everyone: /pools
+
+
+def pool_line(game: sqlite3.Row, config: Config, guild: discord.Guild | None) -> str:
+    name = escape_markdown(game["name"])
+    stock = f"{game['available']} key(s) left"
+    if not game["public"]:
+        return f"**{name}** · private (handed out by the team) · {limit_text(game['per_user_limit'])} · {stock}"
+    return (f"**{name}** · public · {limit_text(game['per_user_limit'])} · {stock} · "
+            f"for {roles_text(game, config, guild)}")
+
+
+def pool_pages(lines: list[str], per_page: int = POOLS_PER_PAGE) -> list[str]:
+    chunks = [lines[i:i + per_page] for i in range(0, len(lines), per_page)] or [[]]
+    if len(chunks) == 1:
+        return [fit(chunks[0])]
+    return [fit(chunk + [f"Page {n} of {len(chunks)}"]) for n, chunk in enumerate(chunks, 1)]
+
+
+class PagesView(discord.ui.View):
+    def __init__(self, pages: list[str]):
+        super().__init__(timeout=300)
+        self.pages = pages
+        self.page = 0
+        self.update_buttons()
+
+    def update_buttons(self) -> None:
+        self.previous_page.disabled = self.page == 0
+        self.next_page.disabled = self.page == len(self.pages) - 1
+
+    async def turn(self, interaction: discord.Interaction, step: int) -> None:
+        self.page = max(0, min(len(self.pages) - 1, self.page + step))
+        self.update_buttons()
+        await interaction.response.edit_message(content=self.pages[self.page], view=self)
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary)
+    async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        await self.turn(interaction, -1)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        await self.turn(interaction, 1)
+
+
+@app_commands.command(name="pools", description="Our games with keys: who can claim them, how many, and what's left")
+@app_commands.guild_only()
+async def pools(interaction: discord.Interaction) -> None:
+    bot: KeyBot = interaction.client
+    games = bot.store.games()
+    if not games:
+        await interaction.response.send_message("No games have keys yet.", ephemeral=True)
+        return
+    pages = pool_pages([pool_line(g, bot.config, interaction.guild) for g in games])
+    if len(pages) == 1:
+        await interaction.response.send_message(pages[0], ephemeral=True)
+    else:
+        await interaction.response.send_message(pages[0], view=PagesView(pages), ephemeral=True)
+
+
+# Admins: /grant and /grantrole
+
+
+def grant_text(outcome: Outcome, user: discord.abc.User, game: sqlite3.Row) -> str:
+    name = escape_markdown(game["name"])
+    if outcome.status == "given":
+        return f"Sent: {user.mention} has key #{outcome.key_id} for **{name}** by DM."
+    if outcome.status == "already":
+        return (f"{user.mention} already has {limit_text(game['per_user_limit'])} for **{name}** "
+                "(the per-user limit), so no key was sent. Raise it with `/keys game-settings` if needed.")
+    if outcome.status == "banned":
+        return f"{user.mention} is banned from **{name}** (or from every game), so no key was sent."
+    if outcome.status == "dm_failed":
+        return f"Couldn't DM {user.mention} (their DMs are closed), so no key was used."
+    return f"No keys left for **{name}**. Add some with `/keys add`."
+
+
+@app_commands.command(name="grant", description="Send someone one key by DM (Four Games team)")
+@app_commands.describe(user="Who gets it", game="Which game")
+@app_commands.autocomplete(game=all_games_autocomplete)
+@app_commands.guild_only()
+async def grant(interaction: discord.Interaction, user: discord.User, game: str) -> None:
+    if not await require_admin(interaction):
+        return
+    bot: KeyBot = interaction.client
+    row = resolve_game(bot.store, game)
+    if row is None:
+        await interaction.response.send_message("I don't know that game.", ephemeral=True)
+        return
+    if user.bot:
+        await interaction.response.send_message("Bots can't redeem keys.", ephemeral=True)
+        return
+    await interaction.response.defer(ephemeral=True, thinking=True)
+    outcome = await bot.hand_out(user, row, "manual")
+    log.info("%s granted %s a key for %s: %s", interaction.user.id, user.id, row["name"], outcome.status)
+    await interaction.followup.send(grant_text(outcome, user, row), ephemeral=True)
+
+
+async def role_members(guild: discord.Guild, role_id: int) -> list[discord.Member]:
+    """Everyone with the role, from the member cache (complete with the Server Members intent)."""
+    if not guild.chunked:
+        await guild.chunk()
+    role = guild.get_role(role_id)
+    return [m for m in role.members if not m.bot] if role else []
+
+
+class GrantRoleView(discord.ui.View):
+    def __init__(self, role_id: int, game_id: int, admin_id: int):
+        super().__init__(timeout=180)
+        self.role_id, self.game_id, self.admin_id = role_id, game_id, admin_id
+        self.used = False
+
+    async def interaction_check(self, interaction: discord.Interaction) -> bool:
+        return interaction.user.id == self.admin_id
+
+    @discord.ui.button(label="Send the keys", style=discord.ButtonStyle.success)
+    async def confirm(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        bot: KeyBot = interaction.client
+        if self.used or not await require_admin(interaction):
+            return
+        self.used = True
+        self.stop()
+        game = bot.store.game(self.game_id)
+        if game is None or interaction.guild is None:
+            await interaction.response.edit_message(content="That game is gone.", view=None)
+            return
+        await interaction.response.edit_message(content="Sending keys…", view=None)
+        members = await role_members(interaction.guild, self.role_id)
+        report = await bot.grant_to_members(members, game)
+        text = f"<@&{self.role_id}>, **{escape_markdown(game['name'])}**: {report.summary()}"
+        try:
+            await interaction.followup.send(text, ephemeral=True)
+        except discord.HTTPException:
+            # A big role can take longer than the reply stays open: the admin channel gets it instead.
+            try:
+                await (await bot.admin_channel()).send(f"/grantrole by {interaction.user.mention}: {text}")
+            except discord.HTTPException:
+                log.exception("couldn't report the grantrole result")
+
+    @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
+    async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        self.used = True
+        self.stop()
+        await interaction.response.edit_message(content="Cancelled; nothing was sent.", view=None)
+
+
+def grantrole_prompt(members: list[discord.abc.User], store: Store, game: sqlite3.Row, role_mention: str) -> str:
+    """The confirmation: members with the role against the keys in stock."""
+    eligible = sum(1 for m in members
+                   if not store.is_banned(m.id, game["id"]) and not store.at_limit(game["id"], m.id))
+    stock = store.available_count(game["id"])
+    name = escape_markdown(game["name"])
+    lines = [f"Send one **{name}** key by DM to everyone with {role_mention}?",
+             f"{len(members)} member(s) with the role, {eligible} of them can get one "
+             f"(the others are banned or at the limit). {stock} key(s) in stock."]
+    if eligible > stock:
+        lines.append(f"Not enough keys for everyone: it stops after {stock}.")
+    return "\n".join(lines)
+
+
+@app_commands.command(name="grantrole", description="Send one key by DM to everyone with a role (Four Games team)")
+@app_commands.describe(role="Everyone with this role", game="Which game")
+@app_commands.autocomplete(game=all_games_autocomplete)
+@app_commands.guild_only()
+async def grantrole(interaction: discord.Interaction, role: discord.Role, game: str) -> None:
+    if not await require_admin(interaction):
+        return
+    bot: KeyBot = interaction.client
+    row = resolve_game(bot.store, game)
+    if row is None:
+        await interaction.response.send_message("I don't know that game.", ephemeral=True)
+        return
+    await interaction.response.defer(ephemeral=True, thinking=True)
+    members = await role_members(interaction.guild, role.id)
+    if not members:
+        await interaction.followup.send(f"Nobody (but bots) has {role.mention}.", ephemeral=True)
+        return
+    await interaction.followup.send(grantrole_prompt(members, bot.store, row, role.mention),
+                                    view=GrantRoleView(role.id, row["id"], interaction.user.id), ephemeral=True)
+
+
+# Admins: bans, lookup, export
+
+
+def where_text(game: sqlite3.Row | None) -> str:
+    return f"**{escape_markdown(game['name'])}**" if game else "every game"
+
+
+async def optional_game(interaction: discord.Interaction, name: str | None) -> tuple[bool, sqlite3.Row | None]:
+    """(ok, the game or None for every game). Answers when the name is unknown."""
+    if name is None:
+        return True, None
+    row = resolve_game(interaction.client.store, name)
+    if row is None:
+        await interaction.response.send_message("I don't know that game.", ephemeral=True)
+        return False, None
+    return True, row
+
+
+@keys_group.command(name="ban", description="Stop someone getting keys: for one game, or every game")
+@app_commands.describe(user="Who", game="Only this game (leave out for every game)")
+@app_commands.autocomplete(game=all_games_autocomplete)
+async def keys_ban(interaction: discord.Interaction, user: discord.User, game: str | None = None) -> None:
+    if not await require_admin(interaction):
+        return
+    ok, row = await optional_game(interaction, game)
+    if not ok:
+        return
+    store: Store = interaction.client.store
+    new = store.ban(user.id, row["id"] if row else None, by=str(interaction.user.id))
+    log.info("%s banned %s from %s", interaction.user.id, user.id, row["name"] if row else "every game")
+    text = f"{user.mention} is banned from {where_text(row)}" + ("." if new else " (already was).")
+    await interaction.response.send_message(text + " Keys they already have stay theirs.", ephemeral=True)
+
+
+@keys_group.command(name="unban", description="Lift a ban (for one game, or the every-game one)")
+@app_commands.describe(user="Who", game="The game's ban (leave out for the every-game ban)")
+@app_commands.autocomplete(game=all_games_autocomplete)
+async def keys_unban(interaction: discord.Interaction, user: discord.User, game: str | None = None) -> None:
+    if not await require_admin(interaction):
+        return
+    ok, row = await optional_game(interaction, game)
+    if not ok:
+        return
+    store: Store = interaction.client.store
+    lifted = store.unban(user.id, row["id"] if row else None)
+    log.info("%s unbanned %s from %s (%s)", interaction.user.id, user.id, row["name"] if row else "every game",
+             lifted)
+    text = (f"Lifted {user.mention}'s ban from {where_text(row)}." if lifted
+            else f"{user.mention} had no ban for {where_text(row)}.")
+    if store.user_bans(user.id):
+        text += " They still have another ban: `/keys lookup` shows it."
+    await interaction.response.send_message(text, ephemeral=True)
+
+
+@keys_group.command(name="bans", description="Who's banned: everyone, or those a game's bans apply to")
+@app_commands.describe(game="Only bans that apply to this game (its own and the every-game ones)")
+@app_commands.autocomplete(game=all_games_autocomplete)
+async def keys_bans(interaction: discord.Interaction, game: str | None = None) -> None:
+    if not await require_admin(interaction):
+        return
+    ok, row = await optional_game(interaction, game)
+    if not ok:
+        return
+    bans = interaction.client.store.bans(row["id"] if row else None)
+    if not bans:
+        await interaction.response.send_message("No bans.", ephemeral=True)
+        return
+    lines = [f"<@{b['user_id']}> · {escape_markdown(b['game']) if b['game'] else 'every game'} · "
+             f"{discord.utils.format_dt(discord.utils.parse_time(b['created_at']), 'd')}" for b in bans]
+    await interaction.response.send_message(fit(lines), ephemeral=True)
+
+
+def lookup_user_lines(store: Store, user_id: int) -> list[str]:
+    """Everything handed to them, with the key values (only ever shown ephemerally to an admin)."""
+    lines = []
+    for k in store.user_keys(user_id):
+        when = discord.utils.format_dt(discord.utils.parse_time(k["given_at"]), "d")
+        extra = f", request #{k['request_id']}" if k["request_id"] else ""
+        lines.append(f"**{escape_markdown(k['game'])}**: key #{k['id']} `{k['value']}` ({k['reason']}{extra}, {when})")
+    for p in store.prior_claims(user_id):
+        note = f": {escape_markdown(p['note'])}" if p["note"] else ""
+        lines.append(f"**{escape_markdown(p['game'])}**: claimed with the old KeyBot{note}")
+    for b in store.user_bans(user_id):
+        lines.append(f"Banned from {escape_markdown(b['game']) if b['game'] else 'every game'}")
+    return lines
+
+
+def lookup_key_text(key: sqlite3.Row) -> str:
+    head = f"Key #{key['id']} `{key['value']}` for **{escape_markdown(key['game'])}**"
+    if key["status"] == "available":
+        return f"{head}: not given out yet."
+    when = discord.utils.format_dt(discord.utils.parse_time(key["given_at"]), "f")
+    extra = f", request #{key['request_id']}" if key["request_id"] else ""
+    return f"{head}: given to <@{key['given_to']}> ({key['given_to']}), {key['reason']}{extra}, {when}."
+
+
+@keys_group.command(name="lookup", description="Every key someone got, or who has a key")
+@app_commands.describe(user="Whose keys", key="A key (or #id): who has it")
+async def keys_lookup(interaction: discord.Interaction, user: discord.User | None = None,
+                      key: app_commands.Range[str, 1, 100] | None = None) -> None:
+    if not await require_admin(interaction):
+        return
+    store: Store = interaction.client.store
+    if (user is None) == (key is None):
+        await interaction.response.send_message("Give either `user:` or `key:`.", ephemeral=True)
+        return
+    if user is not None:
+        lines = lookup_user_lines(store, user.id)
+        text = fit([f"{user.mention} ({user.id}):"] + lines) if lines else f"{user.mention} has no keys from us."
+        await interaction.response.send_message(text, ephemeral=True)
+        return
+    row = store.key_by_value(key)
+    match = re.fullmatch(r"#?(\d{1,18})", key.strip())
+    if row is None and match:
+        row = store.key_by_id(int(match[1]))
+    await interaction.response.send_message(lookup_key_text(row) if row else "No such key here.", ephemeral=True)
+
+
+def export_filename(game: sqlite3.Row) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "-", game["name"].lower()).strip("-") or f"game-{game['id']}"
+    return f"{slug}-unclaimed-keys.txt"
+
+
+@keys_group.command(name="export", description="Download a game's unclaimed keys as a .txt file (only you see it)")
+@app_commands.describe(game="Which game")
+@app_commands.autocomplete(game=all_games_autocomplete)
+async def keys_export(interaction: discord.Interaction, game: str) -> None:
+    if not await require_admin(interaction):
+        return
+    store: Store = interaction.client.store
+    row = resolve_game(store, game)
+    if row is None:
+        await interaction.response.send_message("I don't know that game.", ephemeral=True)
+        return
+    values = store.unclaimed_keys(row["id"])
+    if not values:
+        await interaction.response.send_message(f"**{escape_markdown(row['name'])}** has no unclaimed keys.",
+                                                ephemeral=True)
+        return
+    log.info("%s exported %d unclaimed key(s) of %s", interaction.user.id, len(values), row["name"])
+    data = io.BytesIO(("\n".join(values) + "\n").encode())
+    await interaction.response.send_message(
+        f"{len(values)} unclaimed key(s) for **{escape_markdown(row['name'])}**. They stay in the bot; "
+        "delete the file once you're done with it.",
+        file=discord.File(data, filename=export_filename(row)), ephemeral=True)

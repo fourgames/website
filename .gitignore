@@ -79,3 +79,7 @@ feedback/data/
 
 # Local test copies of the private feedback data (never commit)
 public/__fbtest/
+
+# The key bot's local test database (server/keybot/keys.local) and its SQLite side files
+*.local-shm
+*.local-wal

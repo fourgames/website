@@ -1,0 +1,27 @@
+# The subdomains the server answers for. Caddy gets and renews each one's HTTPS certificate by
+# itself (Let's Encrypt), once the subdomain's A record in Strato points at the server.
+# Install: sudo cp server/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
+# fourgames.se itself stays on GitHub Pages.
+# Once the company email exists, add a global block with `email you@fourgames.se` for expiry notices.
+
+# Short links. Same targets as SITE.links in src/data/site.js.
+discord.fourgames.se {
+	redir https://discord.gg/bQTPTc5Qrt
+}
+
+youtube.fourgames.se {
+	redir https://www.youtube.com/@FourGamesAB
+}
+
+steam.fourgames.se {
+	redir https://store.steampowered.com/publisher/fourgamesab
+}
+
+github.fourgames.se {
+	redir https://github.com/fourgames
+}
+
+# Later: the player data API.
+# api.fourgames.se {
+# 	reverse_proxy localhost:8000
+# }

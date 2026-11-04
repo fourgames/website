@@ -1,0 +1,25 @@
+# The player feedback loop (feedback/loop.sh) as an always-on service, in place of the
+# feedback.yml and feedback-research.yml workflows. One instance per part, each in its own checkout
+# so their git pulls never collide:
+#   feedback@own       your games      (/srv/fourgames/own)
+#   feedback@research  research games  (/srv/fourgames/research)
+# loop.sh ends after 4 hours, as it does on GitHub; systemd starts it again right away, which also
+# picks up a changed loop.sh. Logs: journalctl -u feedback@own -f
+[Unit]
+Description=Four Games player feedback (%i)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=fourgames
+WorkingDirectory=/srv/fourgames/%i
+EnvironmentFile=/etc/fourgames/feedback.env
+Environment=FEEDBACK_PART=%i
+Environment=PATH=/srv/fourgames/venv/bin:/usr/local/bin:/usr/bin:/bin
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/fourgames/%i/feedback/loop.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

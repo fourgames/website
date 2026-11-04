@@ -1,0 +1,3 @@
+# The push alerts' dependencies, in their own venv (/srv/fourgames/alerts-venv). The announce check
+# itself runs with the feedback loop's venv (FEEDBACK_PYTHON).
+aiohttp>=3.9,<4

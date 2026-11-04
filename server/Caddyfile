@@ -42,6 +42,10 @@ api.fourgames.se {
 	handle /contact* {
 		reverse_proxy localhost:8101
 	}
+	# YouTube WebSub and Twitch EventSub pushes (server/alerts): instant stream and video posts.
+	handle /alerts/* {
+		reverse_proxy localhost:8102
+	}
 	# The key bot's creator verification (server/keybot).
 	handle /keybot/* {
 		reverse_proxy localhost:8100

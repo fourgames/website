@@ -1312,10 +1312,10 @@ def full_run(part="all"):
 
         notify.check()
         # Your own new videos and streams, first: they're worth announcing before the slower work.
+        # Under the lock it shares with the server's push-started checks, whose saves it takes over.
         import announce
 
-        announced = load(DATA / "announced.json", {})
-        if announce.check(announced) and save(DATA / "announced.json", announced):
+        if announce.run(DATA / "announced.json"):
             changed.append("announced")
         index = load(DATA / "index.json", {"schemaVersion": SCHEMA_VERSION, "games": []})
         index.pop("research", None)  # in research-index.json now

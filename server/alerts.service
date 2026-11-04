@@ -1,0 +1,34 @@
+# Push alerts (server/alerts): YouTube and Twitch tell it the moment there's a new video or stream,
+# and it starts the feedback loop's own announce check (feedback/announce.py --push) right away, so
+# Discord hears within a minute instead of up to 5. It never posts by itself, and the loop's checks
+# every 5 minutes carry on either way. Listens on localhost:8102 (Caddy forwards
+# https://api.fourgames.se/alerts/* to it). Setup: server/alerts/README.md.
+# Logs: journalctl -u alerts -f
+[Unit]
+Description=Four Games push alerts (YouTube, Twitch)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=fourgames
+# The checkout feedback-setup.sh made; python -m alerts finds the package here.
+WorkingDirectory=/srv/fourgames/own/server
+# The loop's secrets first (the check needs its Discord webhook and YouTube and Twitch keys), then
+# this service's own.
+EnvironmentFile=/etc/fourgames/feedback.env
+EnvironmentFile=/etc/fourgames/alerts.env
+Environment=PYTHONUNBUFFERED=1
+# The service runs in its own venv (aiohttp); the check runs with the loop's (FEEDBACK_PYTHON).
+ExecStart=/srv/fourgames/alerts-venv/bin/python -m alerts
+Restart=always
+RestartSec=10
+# A stop goes to the service alone, which lets a running check finish (it could be between posting
+# and saving what it posted); anything still running after 2 minutes is killed.
+KillMode=mixed
+TimeoutStopSec=120
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

@@ -1,25 +1,41 @@
 """Your own channels, announced in Discord (instead of Streamcord, which missed uploads): new YouTube
 videos, YouTube live streams and Twitch streams, posted to the public announcements webhook
 (DISCORD_RELEASES_WEBHOOK_URL) with a role ping, named and pictured as YouTube or Twitch. run.py
-calls check() every run, so a post lands within about 5 minutes.
+calls run() every run, so a post lands within about 5 minutes. On the server, server/alerts hears
+from YouTube and Twitch the moment something's new and starts a check right away
+(`announce.py --push`): the same check, under a lock shared with the loop's, so nothing is posted twice.
 
 YouTube is read from the channel's public feed, which lists every new upload with no quota; the
 Data API (1 unit per check) then tells a live stream or a scheduled one from a video. Shorts and
 past live streams aren't posted. Twitch is asked whether the channel is live right now.
 
 What was posted is kept in data/announced.json. Each platform's first check only records what's
-already there, so turning this on never posts old videos or a stream already announced.
+already there, so turning this on never posts old videos or a stream already announced. A push-started
+check saves to .cache/announced-pending.json instead (data/ is only changed by the loop's run, between
+its pulls and commits), and the loop's next check carries it over into data/announced.json.
 """
 
 import calendar
+import fcntl
+import json
+import os
 import time
 import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
+from contextlib import contextmanager
+from pathlib import Path
 
 import media
 import notify
 import status
+
+HERE = Path(__file__).resolve().parent
+DATA = Path(os.environ.get("FEEDBACK_DATA_DIR") or HERE / "data")  # as in run.py
+# One check at a time, the loop's or a push-started one: two at once could post the same video twice.
+LOCK = HERE / ".cache" / "announce.lock"
+# What push-started checks saved since the loop's last check (not committed; see run()).
+PENDING = HERE / ".cache" / "announced-pending.json"
 
 YOUTUBE_CHANNEL = "UCGf6yX8yYzo1FBzhmKhFduA"  # the same channel as src/data/site.js
 TWITCH_LOGIN = "fourgamesab"
@@ -35,6 +51,62 @@ RECENT = 2 * 86400  # older videos in the feed are never posted (a video made pu
 KEEP = 200  # video ids remembered
 
 NS = {"a": "http://www.w3.org/2005/Atom", "yt": "http://www.youtube.com/xml/schemas/2015"}
+
+
+@contextmanager
+def locked():
+    """Holds LOCK, waiting while another check (the loop's or a push-started one) has it. The lock
+    goes with the process, so a check that's stopped or crashes never leaves it held."""
+    LOCK.parent.mkdir(parents=True, exist_ok=True)
+    with open(LOCK, "a") as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        yield
+
+
+def run(path=None, push=False):
+    """One check, under the lock, from the newest state: PENDING when a push-started check left one,
+    else `path` (data/announced.json). The loop's check (push=False) saves to `path`, taking PENDING
+    over, and returns True when `path` changed. A push-started one saves to PENDING only, so data/
+    never changes between the loop's pull and its run, and returns True when it changed."""
+    path = Path(path or DATA / "announced.json")
+    with locked():
+        state = _load(PENDING)
+        pending = state is not None
+        if not pending:
+            state = _load(path) or {}
+        changed = check(state)
+        if push:
+            return changed and _save(PENDING, state)
+        if not pending:
+            return changed and _save(path, state)
+        # The newest state is always in one of the two files, even if this stops halfway.
+        _save(PENDING, state)
+        try:
+            os.replace(PENDING, path)
+        except OSError:  # data/ on another disk (FEEDBACK_DATA_DIR)
+            _save(path, state)
+            PENDING.unlink()
+        return True
+
+
+def _load(path):
+    try:
+        return json.loads(Path(path).read_text())
+    except (FileNotFoundError, ValueError):
+        return None
+
+
+def _save(path, state):
+    """run.py's save(): the same format, written whole then moved, and only when it changed."""
+    path = Path(path)
+    text = json.dumps(state, ensure_ascii=False, indent=1) + "\n"
+    if path.exists() and path.read_text() == text:
+        return False
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
+    tmp.write_text(text)
+    tmp.replace(path)
+    return True
 
 
 def check(state):
@@ -183,3 +255,13 @@ def _post(sender, role, text):
     if ok:
         status.active("announce", "announced a video or stream")
     return ok
+
+
+if __name__ == "__main__":
+    # python feedback/announce.py --push: one check now, started by server/alerts when YouTube or
+    # Twitch says something's new. Same environment as the loop (/etc/fourgames/feedback.env).
+    import sys
+
+    if sys.argv[1:] != ["--push"]:
+        sys.exit("usage: python feedback/announce.py --push")
+    print(f"[announce] push-started check: {'saved' if run(push=True) else 'nothing new'}")

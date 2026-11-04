@@ -17,6 +17,7 @@ something does, like the player data API's database.
 | `feedback@research.service.d/` | The research part's longer run limit |
 | `feedback.env.example` | Which secrets go in `/etc/fourgames/feedback.env` |
 | `contact/`, `contact.service` | The website's contact form backend (in place of Formspree), mailing messages to support@: [contact/README.md](contact/README.md) |
+| `alerts/`, `alerts.service` | Push notifications from YouTube and Twitch that start the loop's announce check at once, so new videos and streams reach Discord within a minute: [alerts/README.md](alerts/README.md) |
 | `Caddyfile` | The subdomains: `discord`, `youtube`, `steam`, `github` (short links) and `api` (status, key bot) |
 | `status-page/` | The public status page at `status.fourgames.se`: static files Caddy serves from `/srv/fourgames/own/server/status-page` |
 

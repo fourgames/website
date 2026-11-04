@@ -43,6 +43,8 @@ export const SITE = {
 		exclude: [],
 	},
 	formspree: "https://formspree.io/f/mbdplgvl",
+	// The press kit (/press) shows this address when it's set; until then it points press to Discord.
+	press: { email: null },
 };
 
 export const SOCIALS = [

@@ -20,6 +20,7 @@ export const FOOTER_COLUMNS = [
 			{ label: "footer.studio.code", to: "/code" },
 			{ label: "footer.studio.jobs", to: "/jobs" },
 			{ label: "footer.studio.contact", to: "/jobs#contact" },
+			{ label: "footer.studio.press", to: "/press" },
 		],
 	},
 	{

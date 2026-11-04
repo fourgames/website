@@ -1,5 +1,5 @@
-// Tiny head manager. Every route is static, so head tags depend only on route.meta.head and the
-// page's language. Server: renderHeadTags() → HTML string for the prerendered page. Client:
+// Tiny head manager. Head tags depend only on route.meta.head and the page's language (plus, for a
+// page like a game's press kit, the params its meta.head.params reads off the route). Server: renderHeadTags() → HTML string for the prerendered page. Client:
 // installHead() keeps tags in sync.
 import { SITE, SOCIALS } from "@/data/site.js";
 import { LOCALES, localizePath, stripLocale } from "@/i18n/locales.js";
@@ -13,8 +13,10 @@ const OG_IMAGE = {
 export function getHead(route, i18n) {
 	const { t, locale } = i18n;
 	const head = route.meta?.head ?? {};
+	// Placeholders in the page's title and description, e.g. a press kit's game name.
+	const params = head.params?.(i18n, route) ?? {};
 	// A page without translations (the private dashboard) gives its title and description as text.
-	const pageTitle = head.title ?? (head.key ? t(`head.${head.key}.title`) : SITE.name);
+	const pageTitle = head.title ?? (head.key ? t(`head.${head.key}.title`, params) : SITE.name);
 	const title = head.absoluteTitle ? pageTitle : `${pageTitle} · ${SITE.name}`;
 	const robots = head.robots ?? "index, follow";
 	const indexable = !robots.includes("noindex");
@@ -29,7 +31,7 @@ export function getHead(route, i18n) {
 		: [];
 	return {
 		title,
-		description: head.description ?? (head.key ? t(`head.${head.key}.description`) : t("site.tagline")),
+		description: head.description ?? (head.key ? t(`head.${head.key}.description`, params) : t("site.tagline")),
 		robots,
 		canonical: indexable ? SITE.url + localizePath(englishPath, locale.code) : null,
 		alternates,

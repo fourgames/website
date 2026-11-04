@@ -122,6 +122,13 @@ for (const { target, locale } of pages) {
 
 	await mkdir(path.dirname(path.join(DIST, file)), { recursive: true });
 	await writeFile(path.join(DIST, file), html);
+	// A page with pages under it (press.html and press/…) is a folder too: GitHub Pages may answer
+	// /press with the folder, so it also gets the page as the folder's index.
+	const folder = file.replace(/\.html$/, "");
+	if (folder !== file && pages.some((p) => (p.locale.code === LOCALES[0].code ? p.target.file : `${p.locale.code}/${p.target.file}`).startsWith(`${folder}/`))) {
+		await mkdir(path.join(DIST, folder), { recursive: true });
+		await writeFile(path.join(DIST, folder, "index.html"), html);
+	}
 	console.log(`prerender: ${url.padEnd(12)} → dist/${file} (${(html.length / 1024).toFixed(1)} KB)`);
 }
 

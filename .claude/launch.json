@@ -3,20 +3,18 @@
   "configurations": [
     {
       "name": "dev",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "/Users/danny/.local/node/bin/node",
       "runtimeArgs": [
-        "run",
-        "dev"
+        "node_modules/vite/bin/vite.js"
       ],
       "port": 5173,
       "autoPort": true
     },
     {
       "name": "preview",
-      "runtimeExecutable": "npm",
+      "runtimeExecutable": "/Users/danny/.local/node/bin/node",
       "runtimeArgs": [
-        "run",
-        "preview"
+        "scripts/preview.mjs"
       ],
       "port": 4173
     },

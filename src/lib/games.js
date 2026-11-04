@@ -99,7 +99,7 @@ const VAGUE_RELEASE_DATES = new Set(["coming soon", "to be announced", "tba", "t
 
 // release_date.date is a display string, not a date: a real day ("Sep 29, 2026"), a quarter
 // ("Q1 2026"), a bare year, or one of the phrases above. Anything specific is worth showing.
-function upcomingDate(date) {
+export function upcomingDate(date) {
 	const normalised = date?.trim().replace(/[.!]$/, "").toLowerCase();
 	return normalised && !VAGUE_RELEASE_DATES.has(normalised) ? date.trim() : null;
 }

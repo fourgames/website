@@ -2,14 +2,19 @@
 import { computed } from "vue";
 import Badge from "@/components/ui/Badge.vue";
 import Logo from "@/components/ui/Logo.vue";
+import NavLink from "@/components/ui/NavLink.vue";
 import PlatformIcons from "./PlatformIcons.vue";
 import { SITE } from "@/data/site.js";
 import { useI18n } from "@/i18n/index.js";
 import { gameStatusLabel, priceLabel } from "@/lib/games.js";
 
 // Showcase card, godotengine.org/showcase style: capsule art, title + studio, platform icons,
-// then the live Steam genres and price.
-const props = defineProps({ game: { type: Object, required: true } });
+// then the live Steam genres and price. Links to the Steam page, or with `to` to a page of ours
+// (the press kit's game cards go to /press/<slug>).
+const props = defineProps({
+	game: { type: Object, required: true },
+	to: { type: String, default: undefined },
+});
 
 const { t } = useI18n();
 const price = computed(() => priceLabel(props.game, t));
@@ -19,10 +24,9 @@ const status = computed(() => (price.value ? null : gameStatusLabel(props.game, 
 </script>
 
 <template>
-	<a
-		:href="game.storeUrl"
-		target="_blank"
-		rel="noopener noreferrer"
+	<component
+		:is="to ? NavLink : 'a'"
+		v-bind="to ? { to } : { href: game.storeUrl, target: '_blank', rel: 'noopener noreferrer' }"
 		class="group block h-full rounded-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-primary"
 	>
 		<article
@@ -64,7 +68,7 @@ const status = computed(() => (price.value ? null : gameStatusLabel(props.game, 
 				</span>
 				<span v-else-if="status" class="shrink-0 opacity-65">{{ status }}</span>
 			</div>
-			<span class="sr-only">{{ $t("a11y.newTab") }}</span>
+			<span v-if="!to" class="sr-only">{{ $t("a11y.newTab") }}</span>
 		</article>
-	</a>
+	</component>
 </template>

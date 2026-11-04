@@ -8,7 +8,11 @@ import { renderHeadTags } from "./lib/head.js";
 import { createI18n, loadMessages } from "./i18n/index.js";
 import { localeFromPath } from "./i18n/locales.js";
 
-export { prerenderTargets } from "./router/routes.js";
+import { prerenderTargets as routeTargets } from "./router/routes.js";
+import { pressTargets } from "./lib/press.js";
+
+// Every static page, plus one press kit per game the build found on Steam.
+export const prerenderTargets = [...routeTargets, ...pressTargets()];
 export { SITE } from "./data/site.js";
 export { LOCALES, localizePath } from "./i18n/locales.js";
 export { default as enMessages } from "./i18n/messages/en.js";

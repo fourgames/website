@@ -288,6 +288,16 @@ async function fetchSteam(previous) {
 				// All of them: the hero shuffles across every screenshot of the latest game, and only one
 				// is ever put in the DOM (see HeroBanner.vue), so a long list costs nothing.
 				screenshots: (d.screenshots ?? []).map((s) => ({ thumb: s.path_thumbnail, full: s.path_full })),
+				// For the press kit (/press/<game>): the factsheet, description, trailers and art files.
+				// All from this same response, so they cost no extra request.
+				developers: d.developers ?? [],
+				publishers: d.publishers ?? [],
+				website: d.website || null,
+				languages: steamLanguages(d.supported_languages),
+				about: steamAbout(d.about_the_game),
+				capsuleImage: d.capsule_image ?? null,
+				backgroundImage: d.background_raw ?? null,
+				movies: (d.movies ?? []).map(steamMovie),
 				i18n: await fetchSteamTranslations(appId, d, previous?.apps?.[appId]?.i18n),
 			};
 		} catch (error) {
@@ -317,6 +327,8 @@ async function fetchSteamTranslations(appId, en, previous = {}) {
 	// Compared by file, not URL: the ?t= cache-buster changes on every store edit.
 	const shotKey = (shots) => shots.map((s) => s.full.split("?")[0]).join();
 	const englishShots = shotKey(shotsOf(en));
+	const englishAbout = JSON.stringify(steamAbout(en.about_the_game));
+	const englishLanguages = steamLanguages(en.supported_languages).join();
 	const out = {};
 	for (const [code, language] of Object.entries(STEAM_LANGUAGES)) {
 		await sleep(300);
@@ -326,6 +338,8 @@ async function fetchSteamTranslations(appId, en, previous = {}) {
 			if (!d) throw new Error("empty response");
 			const blurb = decodeEntities(d.short_description ?? "");
 			const shots = shotsOf(d);
+			const about = steamAbout(d.about_the_game);
+			const languages = steamLanguages(d.supported_languages);
 			out[code] = {
 				name: d.name && d.name !== en.name ? d.name : null,
 				// A localized capsule has its own file (header_japanese.jpg), so compare the path, not the
@@ -337,6 +351,9 @@ async function fetchSteamTranslations(appId, en, previous = {}) {
 				shortDescription: blurb && blurb !== english ? blurb : null,
 				genres: (d.genres ?? []).map((g) => g.description).slice(0, 3),
 				releaseDate: d.release_date?.date || null,
+				// Press kit text, kept only where this language really differs from the English page.
+				about: JSON.stringify(about) !== englishAbout ? about : null,
+				languages: languages.join() !== englishLanguages ? languages : null,
 			};
 		} catch (error) {
 			if (previous[code]) out[code] = previous[code];
@@ -344,6 +361,85 @@ async function fetchSteamTranslations(appId, en, previous = {}) {
 		}
 	}
 	return out;
+}
+
+// supported_languages is an HTML string: "English<strong>*</strong>, French, …<br><strong>*</strong>languages
+// with full audio support". Just the names, in Steam's order.
+function steamLanguages(html = "") {
+	const list = String(html ?? "").split(/<br\s*\/?>/i)[0];
+	return decodeEntities(list.replace(/<[^>]+>/g, ""))
+		.replace(/\*/g, "")
+		.split(",")
+		.map((name) => name.trim())
+		.filter(Boolean);
+}
+
+// The store page's "About this game" as plain text, for the press kit: sections of
+// { heading, paragraphs, items }, split at each heading. Images and videos are dropped, and no
+// markup survives, so the site renders it as text and never has to trust Steam's HTML.
+function steamAbout(html = "") {
+	const sections = [];
+	let section = { heading: null, paragraphs: [], items: [] };
+	let buffer = "";
+	let target = null; // "heading" | "item" while inside <h*> or <li>
+	const text = () => decodeEntities(buffer.replace(/\s+/g, " "));
+	const flush = () => {
+		const value = text();
+		buffer = "";
+		if (value) section.paragraphs.push(value);
+	};
+	const cleaned = String(html ?? "")
+		.replace(/<(video|script|style)\b[\s\S]*?<\/\1>/gi, "")
+		.replace(/<img\b[^>]*>/gi, "");
+	for (const [, close, rawTag, rawText] of cleaned.matchAll(/<(\/?)([a-z0-9]+)\b[^>]*>|([^<]+)/gi)) {
+		const tag = rawTag?.toLowerCase();
+		if (rawText !== undefined) {
+			buffer += rawText;
+			continue;
+		}
+		if (/^h[1-6]$/.test(tag)) {
+			if (!close) {
+				if (target !== "item") flush();
+				target = "heading";
+			} else if (target === "heading") {
+				const heading = text();
+				buffer = "";
+				target = null;
+				if (heading) {
+					sections.push(section);
+					section = { heading, paragraphs: [], items: [] };
+				}
+			}
+		} else if (tag === "li") {
+			if (!close) {
+				flush();
+				target = "item";
+			} else if (target === "item") {
+				const item = text();
+				buffer = "";
+				target = null;
+				if (item) section.items.push(item);
+			}
+		} else if (["p", "br", "ul", "ol", "div"].includes(tag)) {
+			// Inside a list item these only break lines; elsewhere they end a paragraph.
+			if (target === "item" || target === "heading") buffer += " ";
+			else flush();
+		}
+	}
+	flush();
+	sections.push(section);
+	return sections.filter((s) => s.paragraphs.length || s.items.length);
+}
+
+// A trailer. Newer uploads only come as adaptive streams (HLS/DASH); older ones also have MP4/WebM files.
+function steamMovie(m) {
+	return {
+		name: m.name ?? null,
+		thumbnail: m.thumbnail ?? null,
+		mp4: m.mp4?.max ?? null,
+		webm: m.webm?.max ?? null,
+		hls: m.hls_h264 ?? null,
+	};
 }
 
 // Pull the hero game's screenshots down and re-encode them as AVIF at both the sizes the hero asks

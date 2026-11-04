@@ -3,7 +3,7 @@ import I18nT from "@/components/ui/I18nT.vue";
 import { SITE } from "@/data/site.js";
 import { useI18n } from "@/i18n/index.js";
 
-// One sentence of the privacy policy, with its links: {email}, {imy}, {dbip} and {yourData}
+// One sentence of the privacy policy, with its links: {email}, {imy}, {discord}, {dbip} and {yourData}
 // render as links wherever a translation puts them.
 defineProps({ keypath: { type: String, required: true } });
 
@@ -19,6 +19,11 @@ const email = SITE.privacy.email;
 		<template #imy>
 			<a href="https://www.imy.se/en/" target="_blank" rel="noopener noreferrer" class="link"
 				>{{ t("privacy.imy") }}<span class="sr-only"> {{ t("a11y.newTab") }}</span></a
+			>
+		</template>
+		<template #discord>
+			<a :href="SITE.links.discord" target="_blank" rel="noopener noreferrer" class="link"
+				>{{ SITE.links.discord.replace(/^https:\/\//, "") }}<span class="sr-only"> {{ t("a11y.newTab") }}</span></a
 			>
 		</template>
 		<template #dbip>

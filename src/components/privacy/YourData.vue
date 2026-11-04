@@ -3,7 +3,6 @@ import { computed, onMounted, ref, useId } from "vue";
 import Button from "@/components/ui/Button.vue";
 import I18nT from "@/components/ui/I18nT.vue";
 import Icon from "@/components/ui/Icon.vue";
-import PolicyText from "@/components/privacy/PolicyText.vue";
 import { SITE } from "@/data/site.js";
 import { useI18n } from "@/i18n/index.js";
 import { formatDate, formatNumber } from "@/lib/format.js";
@@ -217,10 +216,8 @@ const dangerButton =
 				<Icon name="clock" class="size-5 text-date" />
 				{{ t(state === "unreachable" ? "privacy.data.unreachableTitle" : "privacy.data.errorTitle") }}
 			</h3>
+			<p class="mt-3">{{ t(state === "unreachable" ? "privacy.data.unreachable" : "privacy.data.error") }}</p>
 			<p class="mt-3">
-				<PolicyText :keypath="state === 'unreachable' ? 'privacy.data.unreachable' : 'privacy.data.error'" />
-			</p>
-			<p v-if="state === 'unreachable'" class="mt-3">
 				<I18nT keypath="privacy.data.status">
 					<template #status>
 						<a :href="SITE.status" target="_blank" rel="noopener noreferrer" class="link"

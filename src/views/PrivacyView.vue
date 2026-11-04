@@ -4,7 +4,6 @@ import Section from "@/components/ui/Section.vue";
 import PageHeader from "@/components/layout/PageHeader.vue";
 import PolicyText from "@/components/privacy/PolicyText.vue";
 import YourData from "@/components/privacy/YourData.vue";
-import { SITE } from "@/data/site.js";
 import { useI18n } from "@/i18n/index.js";
 import { formatDate } from "@/lib/format.js";
 
@@ -27,12 +26,12 @@ const topics = TOPICS.map((id) => {
 	<PageHeader :title="t('privacy.title')" :description="t('privacy.description')">
 		<div class="flex flex-wrap gap-3">
 			<Button to="/privacy#your-data" variant="blue" icon="shield">{{ t("privacy.seeData") }}</Button>
-			<Button :href="`mailto:${SITE.privacy.email}`" icon="mail">{{ t("privacy.emailUs") }}</Button>
 		</div>
 	</PageHeader>
 
 	<Section id="policy" :title="t('privacy.policy.title')" :description="t('privacy.updated', { date: formatDate(UPDATED, locale.intl) })">
 		<div class="max-w-3xl space-y-10">
+			<p>{{ t("privacy.policy.intro") }}</p>
 			<section v-for="topic in topics" :id="`policy-${topic.id}`" :key="topic.id" :aria-labelledby="`policy-${topic.id}-title`">
 				<h3 :id="`policy-${topic.id}-title`" class="text-xl">{{ t(`privacy.policy.${topic.id}.title`) }}</h3>
 				<p v-for="i in topic.body" :key="`b${i}`" class="mt-3">

@@ -346,71 +346,62 @@ export default {
 		title: "Privacy",
 		description: "What our games and this website collect, why, and how you stay in control. In plain words, not legalese.",
 		seeData: "See your data",
-		emailUs: "Email us",
 		updated: "Last updated {date}",
 		imy: "IMY",
 		policy: {
 			title: "Our privacy policy",
+			intro: "In short: our games tell us how they run so we can make them better. We never sell anything, and you can opt out here at any time.",
 			control: {
 				title: "Seeing your data and opting out",
 				body: [
-					"Sign in with Steam under {yourData} below to see a summary, download everything, opt out (or back in), or anonymise your data now rather than after up to 24 months. Opting out applies to all our games from their next start. Anonymising can't be undone, and you can't see or download the data afterwards.",
-					"It's here, not in the games, so you can always reach it, even from your phone or after a refund. Signing in with Steam proves the data is yours, so nobody else can see, download or change it.",
+					"Sign in with Steam under {yourData} below to see your data, download it, opt out (or back in), or anonymise it right away. Opting out counts for all our games from their next start. Anonymising can't be undone, and afterwards you can't see or download the data. It's on the website so you can always reach it, even from your phone, and the Steam sign-in proves the data is yours.",
 				],
 			},
 			games: {
 				title: "What our games collect",
 				body: [
-					"Only our games whose Steam page links to this policy collect data, and each may collect some or all of the following. Our older games collect nothing.",
-					"Most of it is about how the game runs, not about you, but under the EU's GDPR it's personal data because it's linked to your Steam account.",
+					"Only our games whose Steam page links to this policy collect data. Most of it is about how the game runs, not about you, but it counts as personal data under the GDPR because it's linked to your Steam account.",
 				],
 				list: [
-					"Your Steam account, as a scrambled ID (a pseudonym) that only our server can link back to you. If you play a demo and then the full game, we can see both. From Steam: achievements you unlock, your Steam language, and whether you play through Family Sharing, Remote Play Together or Big Picture.",
-					"Sessions and playtime, when you're active or idle (including when you open the Steam overlay), and where in the game you stopped.",
-					"Your actions in the game (including the menus and help screens you open), your position in a level every few seconds and where you die, and a short summary of the game's state now and then (like your level or money), which can let us replay a session.",
-					"The game's version, your settings and which ones you change, and which of our DLC you own.",
-					"Hardware: operating system, processor model and cores, graphics card and driver version, memory, screen size and refresh rate, graphics settings, and whether it's a Steam Deck. No serial numbers or other device IDs.",
-					"Performance per level (frame rate, stutters, load times, memory) and your input device (keyboard and mouse, controller type, touch, or Steam Deck docked or handheld).",
-					"Your country and region, worked out from your IP address with DB-IP's database ({dbip}) when a session starts. The IP address itself is never stored.",
-					"Crash reports, which can include the end of the game's log.",
+					"Your Steam account, as a scrambled ID, plus Steam details like achievements, language and Family Sharing.",
+					"What you do in the game and how it runs: playtime, which levels you play, which items you use, which menus you open, where you are and where you die, plus frame rate and load times.",
+					"Your hardware, input device and settings. No serial numbers or device IDs.",
+					"Your country and region (we never keep your IP address). Worked out with DB-IP ({dbip}).",
+					"Crash reports, with the end of the game's log.",
 				],
 				after: [
-					"Never your name, email, payment details, messages or anything about other games. The games show no notice; this policy is linked from their Steam pages and fourgames.se.",
+					"Never your name, email, payment details or messages. We never record what you type, and nothing outside the game.",
 				],
 			},
 			website: {
 				title: "This website and Discord",
 				list: [
-					"The contact form sends us the email address you enter, your message and any PDF you attach.",
-					"No tracking cookies, analytics or ads. Signing in here sets one cookie on api.fourgames.se, for this page only, for 1 hour.",
-					"Our Discord key bot stores your Discord user ID, the keys it gave you and, for /request, the YouTube or Twitch channel it checked.",
+					"The contact form sends us the email address you enter, your message and any PDF you attach. The site has no tracking cookies, analytics or ads; signing in here sets one cookie for 1 hour.",
+					"Our Discord key bot stores your Discord ID, the keys it gave you and, for /request, the channel it checked.",
 				],
 			},
 			why: {
 				title: "Why",
-				body: ["To fix bugs and crashes and to balance our games. Our legal basis is our legitimate interest in improving them, so collection is on by default."],
-				list: [
-					"Hardware and settings: to fix problems on specific hardware, which we can then get and test on.",
-					"Country and region: to choose languages and prices.",
-					"Feedback: if you write a Steam review or discussion post about one of our games, we can look at your game data next to it (Steam shows your account there publicly).",
+				body: [
+					"To fix bugs and crashes, balance the games, fix problems on certain hardware, choose languages and prices, and act on feedback you give in Steam reviews and posts. It's based on our legitimate interest in improving our games, so it's on by default.",
 				],
 			},
 			storage: {
 				title: "Where it's stored and for how long",
 				body: [
-					"On our server at Strato in Germany (EU). Summaries across many players may be kept in our private GitHub repository (GitHub, USA).",
-					"Your data stays linked to your account for up to 24 months after you last played one of our games. Then it's anonymised automatically: the link to your Steam account is removed for good. We may keep the anonymised rest for as long as it helps improve our games.",
+					"On our server at Strato in Germany (EU). Summaries across many players may also be kept on GitHub (USA). Your data stays linked to your account for up to 24 months after you last play. Then it's anonymised automatically, and we may keep the anonymised data.",
 				],
 			},
 			sharing: {
 				title: "Sharing",
-				body: ["We don't share or sell your data, and we don't show ads."],
+				body: [
+					"We don't share or sell your data, and we don't show ads.",
+				],
 			},
 			who: {
 				title: "Who's responsible",
 				body: [
-					"Four Games (Danny Karlsson, Sweden), later Four Games AB. Questions about your data: {email}.",
-					"You can also contact {imy}, the Swedish data protection authority.",
+					"Four Games (Sweden). Questions: ask us on Discord ({discord}), or email {email}. You can also contact {imy}, the Swedish data protection authority.",
 				],
 			},
 		},
@@ -428,10 +419,10 @@ export default {
 				anonymised: "Done. Your data is anonymised and data collection is off for your Steam account. You've been signed out.",
 			},
 			unreachableTitle: "We can't reach our server right now",
-			unreachable: "Nothing's wrong with your data. Our server is just not answering at the moment. Please try again in a little while, or email us at {email}.",
+			unreachable: "Nothing's wrong with your data. Our server is just not answering at the moment. Please try again in a little while.",
 			status: "See what's working right now on {status}.",
 			errorTitle: "Something went wrong",
-			error: "We couldn't load your data. Please try again, or email us at {email}.",
+			error: "We couldn't load your data. Please try again.",
 			retry: "Try again",
 			actionUnreachable: "We can't reach our server right now. Please try again in a little while.",
 			actionError: "That didn't work. Please try again.",

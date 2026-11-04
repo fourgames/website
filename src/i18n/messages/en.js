@@ -404,7 +404,7 @@ export default {
 			},
 			sharing: {
 				title: "Sharing",
-				body: ["We don't sell your data and don't show ads. We may show overall statistics publicly, for example in our videos and streams about making our games, but never in a way that shows who you are."],
+				body: ["We don't share or sell your data, and we don't show ads."],
 			},
 			who: {
 				title: "Who's responsible",

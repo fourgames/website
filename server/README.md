@@ -1,6 +1,6 @@
 # The server
 
-A Strato VPS S (1 vCore, 2 GB RAM, 60 GB, Ubuntu) for what needs to run all the time: the player
+A Strato VPS S (1 vCore, 2 GB RAM, 60 GB, Ubuntu 26.04, IP 82.165.18.23) for what needs to run all the time: the player
 feedback loop (instead of GitHub Actions), the subdomains' short links with HTTPS, and later the
 player data API and Discord bots. The website itself stays on GitHub Pages, and the data stays in
 the `fourgames/feedback-data` repo.
@@ -16,7 +16,7 @@ something does, like the player data API's database.
 | `feedback@.service` | `feedback/loop.sh` as a systemd service, one instance per part (`own`, `research`) |
 | `feedback@research.service.d/` | The research part's longer run limit |
 | `feedback.env.example` | Which secrets go in `/etc/fourgames/feedback.env` |
-| `Caddyfile` | The subdomains (`discord`, `youtube`, `steam`, `github`, later `api`) |
+| `Caddyfile` | The subdomains: `discord`, `youtube`, `steam`, `github` (short links) and `api` (status, key bot) |
 
 ## 1. Log in with your key
 

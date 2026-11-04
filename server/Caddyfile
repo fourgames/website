@@ -2,7 +2,11 @@
 # itself (Let's Encrypt), once the subdomain's A record in Strato points at the server.
 # Install: sudo cp server/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy
 # fourgames.se itself stays on GitHub Pages.
-# Once the company email exists, add a global block with `email you@fourgames.se` for expiry notices.
+
+{
+	# Let's Encrypt writes here if a certificate ever fails to renew.
+	email danny@fourgames.se
+}
 
 # Short links. Same targets as SITE.links in src/data/site.js.
 discord.fourgames.se {

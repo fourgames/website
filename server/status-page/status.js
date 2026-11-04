@@ -71,19 +71,26 @@ async function checkFeedback(part) {
 	return { state: "down", detail: `${when}, and none since` };
 }
 
-async function checkKeyBot() {
+// A service's /health answer: Caddy answers 502 when the service itself isn't running.
+async function checkHealth(path, judge = () => null) {
 	try {
-		const response = await fetchWithTimeout(`${API}/keybot/health`);
-		if (!response.ok) {
-			// Caddy answers 502 when the bot itself isn't running.
-			return { state: "down", detail: "It isn't answering right now." };
-		}
+		const response = await fetchWithTimeout(`${API}${path}`);
+		if (!response.ok) return { state: "down", detail: "It isn't answering right now." };
 		const data = await response.json();
-		if (data && data.ok === true) return { state: "running", detail: `Answered ${ago(0)}` };
-		return { state: "down", detail: "It answered, but not as expected." };
+		if (!data || data.ok !== true) return { state: "down", detail: "It answered, but not as expected." };
+		return judge(data) ?? { state: "running", detail: `Answered ${ago(0)}` };
 	} catch {
 		return { state: "unknown", detail: "Couldn't reach it right now." };
 	}
+}
+
+// The alerts service also says whether YouTube and Twitch are still sending to it.
+function judgeAlerts(data) {
+	const youtube = data.youtube?.subscribed === true;
+	const twitch = data.twitch?.subscription === "enabled";
+	if (youtube && twitch) return null;
+	const missing = [!youtube && "YouTube", !twitch && "Twitch"].filter(Boolean).join(" and ");
+	return { state: "delayed", detail: `${missing} not connected right now; posts still go out within 5 minutes` };
 }
 
 function checkLinks() {
@@ -96,7 +103,9 @@ const CHECKS = {
 	website: checkWebsite,
 	own: () => checkFeedback("own"),
 	research: () => checkFeedback("research"),
-	keybot: checkKeyBot,
+	keybot: () => checkHealth("/keybot/health"),
+	contact: () => checkHealth("/contact/health"),
+	alerts: () => checkHealth("/alerts/health", judgeAlerts),
 	links: checkLinks,
 };
 

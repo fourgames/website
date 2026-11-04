@@ -40,6 +40,8 @@ api.fourgames.se {
 	}
 	# The website's contact form (server/contact), in place of Formspree.
 	handle /contact* {
+		# The status page reads /contact/health from the visitor's browser.
+		header /contact/health Access-Control-Allow-Origin https://status.fourgames.se
 		reverse_proxy localhost:8101
 	}
 	# YouTube WebSub and Twitch EventSub pushes (server/alerts): instant stream and video posts.

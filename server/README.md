@@ -89,7 +89,7 @@ sides of the switch.
 
 **Back to GitHub:** `sudo systemctl disable --now feedback@own feedback@research` and
 `rm /srv/fourgames/status/*.json` on the server (or the dashboard reports the server as stopped),
-then `gh workflow enable` both workflows and start them (*Run workflow*).
+then `gh workflow enable` both workflows and start them (*Run workflow*). The Sales API (financial) key is locked to the server's IP in Steamworks, so on GitHub the sales and wishlist numbers fail until that lock is lifted; the alerts service (`server/alerts`) must be stopped too, since GitHub's runs don't see its pending file.
 
 ## 5. Subdomains with HTTPS
 

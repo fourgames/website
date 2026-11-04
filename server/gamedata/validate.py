@@ -18,7 +18,8 @@ from typing import Any
 from .limits import Refused
 
 EVENT_TYPES = frozenset({"action", "snapshot", "progress", "rng", "error", "custom",
-                         "perf", "load", "input", "idle", "setting_changed", "screen", "marker"})
+                         "perf", "load", "input", "idle", "setting_changed", "screen", "marker",
+                         "position", "death", "overlay", "achievement", "steam", "ui"})
 MAX_EVENTS = 2000
 MAX_CRASH_EVENTS = 500
 MAX_SEQ = 100_000

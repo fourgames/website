@@ -358,16 +358,16 @@ export default {
 			},
 			games: {
 				title: "What our games collect",
-				body: ["This applies only to our games whose Steam page links to this policy. They may collect some or all of the following; our older games collect nothing."],
+				body: ["This applies only to our games whose Steam page links to this policy. Depending on the game, they may collect some or all of the following; our older games collect nothing."],
 				list: [
 					"Your Steam account, stored as a scrambled ID (a pseudonym) that only our server can link back to your account. If you play a demo and later the full game, we can see both.",
 					"Play sessions and playtime, when you're active or idle, and where in the game you stopped playing.",
-					"Detailed in-game actions, and a snapshot of the game's state every 30 seconds or so, so we can replay a session.",
+					"Detailed in-game actions and occasional snapshots of the game's state, which can let us replay a session.",
 					"The game's version, your settings and which ones you change, and which of our DLC you own.",
 					"Hardware: operating system, processor model and core count, graphics card and driver version, memory, screen size and refresh rate, graphics settings, and whether it's a Steam Deck. No serial numbers or other IDs that identify your device.",
 					"Performance and input: frame rate, stutters, load times and memory use per level, and your input device (keyboard and mouse, controller type, touch, or Steam Deck docked or handheld).",
 					"Your country and region, worked out from your IP address when a session starts. The IP address itself is never stored.",
-					"Crash reports, with the end of the game's log.",
+					"Crash reports, which can include the end of the game's log.",
 				],
 				after: [
 					"Not your name, email, payment details, messages or anything about other games. The games don't show a notice: this policy is linked from each game's Steam page and from fourgames.se.",
@@ -376,7 +376,7 @@ export default {
 			website: {
 				title: "This website and Discord",
 				list: [
-					"The contact form sends us your email address, your message and any PDF you attach.",
+					"The contact form sends us the email address you enter, your message and any PDF you attach.",
 					"No tracking cookies, analytics or ads. Signing in on this page sets one cookie on api.fourgames.se, only for this page, for 1 hour.",
 					"Our Discord key bot stores your Discord user ID, the keys it gave you and, for /request, the YouTube or Twitch channel it checked.",
 				],

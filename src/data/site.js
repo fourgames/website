@@ -44,7 +44,8 @@ export const SITE = {
 		// Repos to hide from the Open Source page (dot-repos like .github are always hidden).
 		exclude: [],
 	},
-	formspree: "https://formspree.io/f/mbdplgvl",
+	// The contact form's backend on our server (server/contact): it mails each message to support@.
+	contact: "https://api.fourgames.se/contact",
 	// The press kit (/press) shows this address (an alias of danny@ at Strato).
 	press: { email: "press@fourgames.se" },
 };

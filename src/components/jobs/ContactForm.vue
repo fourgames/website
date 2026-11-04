@@ -1,11 +1,12 @@
 <script setup>
-import { ref, useId } from "vue";
+import { onMounted, ref, useId } from "vue";
 import Button from "@/components/ui/Button.vue";
 import Icon from "@/components/ui/Icon.vue";
 import { SITE } from "@/data/site.js";
 import { useI18n } from "@/i18n/index.js";
 
-// Posts to Formspree. Works without JS (plain form POST); with JS it submits in-page.
+// Posts to our own backend (server/contact), which mails the message to support@. It needs JS: the
+// script adds _elapsed (ms since the form appeared), which the backend checks against bots.
 const { t, code } = useI18n();
 const emailId = useId();
 const messageId = useId();
@@ -15,18 +16,24 @@ const message = ref("");
 const isSubmitting = ref(false);
 const status = ref(null); // null | "success" | "error"
 let resetTimer;
+let shownAt = 0;
+
+onMounted(() => (shownAt = performance.now()));
 
 async function submit(event) {
 	clearTimeout(resetTimer);
 	isSubmitting.value = true;
 	status.value = null;
 	try {
-		const response = await fetch(SITE.formspree, {
+		const body = new FormData(event.target);
+		body.set("_elapsed", String(Math.round(performance.now() - shownAt)));
+		const response = await fetch(SITE.contact, {
 			method: "POST",
-			body: new FormData(event.target),
+			body,
 			headers: { Accept: "application/json" },
 		});
-		if (!response.ok) throw new Error(`HTTP ${response.status}`);
+		const result = await response.json().catch(() => ({}));
+		if (!response.ok || !result.ok) throw new Error(`HTTP ${response.status}`);
 		status.value = "success";
 		email.value = "";
 		message.value = "";
@@ -43,11 +50,12 @@ const fieldClass =
 </script>
 
 <template>
-	<form :action="SITE.formspree" method="POST" class="card flex h-full flex-col p-6 sm:p-8" @submit.prevent="submit">
+	<form :action="SITE.contact" method="POST" class="card flex h-full flex-col p-6 sm:p-8" @submit.prevent="submit">
 		<h3 class="text-xl">{{ t("form.title") }}</h3>
 		<p class="mt-1 text-sm text-date">{{ t("form.subtitle") }}</p>
 
 		<input type="hidden" name="_subject" :value="`New message from fourgames.se (${code})`" />
+		<input type="hidden" name="_elapsed" value="" />
 		<!-- Honeypot for bots: hidden from people and assistive tech. -->
 		<div class="hidden" aria-hidden="true">
 			<label>{{ t("form.honeypot") }} <input type="text" name="_gotcha" tabindex="-1" autocomplete="off" /></label>

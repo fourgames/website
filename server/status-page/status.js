@@ -93,6 +93,12 @@ function judgeAlerts(data) {
 	return { state: "delayed", detail: `${missing} not connected right now; posts still go out within 5 minutes` };
 }
 
+// The game-data service also reports when its disk is getting full.
+function judgeGamedata(data) {
+	if (data.disk?.low_space) return { state: "delayed", detail: "Running, but its disk is nearly full" };
+	return null;
+}
+
 function checkLinks() {
 	// The short links run on the same server and Caddy as this page, so this page loading means
 	// that server is up. Each link isn't opened one by one.
@@ -106,6 +112,7 @@ const CHECKS = {
 	keybot: () => checkHealth("/keybot/health"),
 	contact: () => checkHealth("/contact/health"),
 	alerts: () => checkHealth("/alerts/health", judgeAlerts),
+	gamedata: () => checkHealth("/gamedata/health", judgeGamedata),
 	links: checkLinks,
 };
 

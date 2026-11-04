@@ -1,6 +1,5 @@
 <script setup>
 import Button from "@/components/ui/Button.vue";
-import I18nT from "@/components/ui/I18nT.vue";
 import Section from "@/components/ui/Section.vue";
 import PageHeader from "@/components/layout/PageHeader.vue";
 import PolicyText from "@/components/privacy/PolicyText.vue";
@@ -17,7 +16,7 @@ const UPDATED = "2026-11-04";
 const { t, raw, locale } = useI18n();
 
 // Each topic is privacy.policy.<id>: a title, paragraphs (body) and an optional list.
-const TOPICS = ["who", "games", "website", "why", "where", "retention", "sharing", "optOut", "rights"];
+const TOPICS = ["control", "games", "website", "why", "storage", "sharing", "who"];
 const topics = TOPICS.map((id) => {
 	const topic = raw(`privacy.policy.${id}`) ?? {};
 	return { id, body: topic.body?.length ?? 0, list: topic.list?.length ?? 0, after: topic.after?.length ?? 0 };
@@ -48,16 +47,6 @@ const topics = TOPICS.map((id) => {
 					<PolicyText :keypath="`privacy.policy.${topic.id}.after.${i - 1}`" />
 				</p>
 			</section>
-			<!-- DB-IP's free geolocation data (CC BY 4.0) asks for this credit. -->
-			<p class="text-sm text-date">
-				<I18nT keypath="privacy.credit">
-					<template #dbip>
-						<a href="https://db-ip.com" target="_blank" rel="noopener noreferrer" class="link"
-							>DB-IP<span class="sr-only"> {{ t("a11y.newTab") }}</span></a
-						>
-					</template>
-				</I18nT>
-			</p>
 		</div>
 	</Section>
 

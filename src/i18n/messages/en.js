@@ -349,76 +349,69 @@ export default {
 		emailUs: "Email us",
 		updated: "Last updated {date}",
 		imy: "IMY",
-		credit: "IP geolocation by {dbip}",
 		policy: {
 			title: "Our privacy policy",
-			who: {
-				title: "Who's responsible",
-				body: ["Four Games (Danny Karlsson, Sweden), which becomes Four Games AB once the company is founded. Questions about your data: {email}."],
+			control: {
+				title: "Seeing your data and opting out",
+				body: [
+					"Sign in with Steam under {yourData} below to see a summary, download everything, opt out (or back in), or anonymise your data now rather than after up to 24 months. Opting out applies to all our games from their next start. Anonymising can't be undone, and you can't see or download the data afterwards.",
+					"It's here, not in the games, so you can always reach it, even from your phone or after a refund. Signing in with Steam proves the data is yours, so nobody else can see, download or change it.",
+				],
 			},
 			games: {
 				title: "What our games collect",
-				body: ["This applies only to our games whose Steam page links to this policy. Depending on the game, they may collect some or all of the following; our older games collect nothing.", "Most of what we collect is about how the game runs, not about you: performance, crashes and what happens in the game. It counts as personal data under the EU's GDPR only because it's linked to your Steam account. We want to be as open as possible about how we handle it, so everything is listed here."],
+				body: [
+					"Only our games whose Steam page links to this policy collect data, and each may collect some or all of the following. Our older games collect nothing.",
+					"Most of it is about how the game runs, not about you, but under the EU's GDPR it's personal data because it's linked to your Steam account.",
+				],
 				list: [
-					"Your Steam account, stored as a scrambled ID (a pseudonym) that only our server can link back to your account. If you play a demo and later the full game, we can see both.",
-					"Play sessions and playtime, when you're active or idle, and where in the game you stopped playing.",
-					"Detailed in-game actions and occasional snapshots of the game's state, which can let us replay a session.",
+					"Your Steam account, as a scrambled ID (a pseudonym) that only our server can link back to you. If you play a demo and then the full game, we can see both.",
+					"Sessions and playtime, when you're active or idle, and where in the game you stopped.",
+					"Your actions in the game, and a short summary of the game's state now and then (like your level, money or position), which can let us replay a session.",
 					"The game's version, your settings and which ones you change, and which of our DLC you own.",
-					"Hardware: operating system, processor model and core count, graphics card and driver version, memory, screen size and refresh rate, graphics settings, and whether it's a Steam Deck. No serial numbers or other IDs that identify your device.",
-					"Performance and input: frame rate, stutters, load times and memory use per level, and your input device (keyboard and mouse, controller type, touch, or Steam Deck docked or handheld).",
-					"Your country and region, worked out from your IP address when a session starts. The IP address itself is never stored.",
+					"Hardware: operating system, processor model and cores, graphics card and driver version, memory, screen size and refresh rate, graphics settings, and whether it's a Steam Deck. No serial numbers or other device IDs.",
+					"Performance per level (frame rate, stutters, load times, memory) and your input device (keyboard and mouse, controller type, touch, or Steam Deck docked or handheld).",
+					"Your country and region, worked out from your IP address with DB-IP's database ({dbip}) when a session starts. The IP address itself is never stored.",
 					"Crash reports, which can include the end of the game's log.",
 				],
 				after: [
-					"Not your name, email, payment details, messages or anything about other games. The games don't show a notice: this policy is linked from each game's Steam page and from fourgames.se.",
+					"Never your name, email, payment details, messages or anything about other games. The games show no notice; this policy is linked from their Steam pages and fourgames.se.",
 				],
 			},
 			website: {
 				title: "This website and Discord",
 				list: [
 					"The contact form sends us the email address you enter, your message and any PDF you attach.",
-					"No tracking cookies, analytics or ads. Signing in on this page sets one cookie on api.fourgames.se, only for this page, for 1 hour.",
+					"No tracking cookies, analytics or ads. Signing in here sets one cookie on api.fourgames.se, for this page only, for 1 hour.",
 					"Our Discord key bot stores your Discord user ID, the keys it gave you and, for /request, the YouTube or Twitch channel it checked.",
 				],
 			},
 			why: {
 				title: "Why",
-				body: [
-					"To fix bugs and crashes and to balance our games. Our legal basis is our legitimate interest in improving them, which is why collection is on by default.",
-					"Hardware and settings: to find and fix problems that only happen on certain hardware, so we can get the same hardware and test on it.",
-					"Country and region: to know where our players are, so we can choose languages and prices.",
-					"To understand feedback: if you write a Steam review or discussion post about one of our games, we can look at your game data next to it (Steam shows your account on those publicly).",
+				body: ["To fix bugs and crashes and to balance our games. Our legal basis is our legitimate interest in improving them, so collection is on by default."],
+				list: [
+					"Hardware and settings: to fix problems on specific hardware, which we can then get and test on.",
+					"Country and region: to choose languages and prices.",
+					"Feedback: if you write a Steam review or discussion post about one of our games, we can look at your game data next to it (Steam shows your account there publicly).",
 				],
 			},
-			where: {
-				title: "Where it's stored",
-				body: ["On our server at Strato in Germany (EU). Aggregated summaries across many players may be kept in our private GitHub repository (GitHub, USA)."],
-			},
-			retention: {
-				title: "How long",
-				body: ["We keep your data linked to your account for up to 24 months after you last played one of our games. After that it's anonymised automatically: the link to your Steam account is removed for good. Anonymised data can't be traced back to you, and we may keep it for as long as it's useful for improving our games."],
+			storage: {
+				title: "Where it's stored and for how long",
+				body: [
+					"On our server at Strato in Germany (EU). Summaries across many players may be kept in our private GitHub repository (GitHub, USA).",
+					"Your data stays linked to your account for up to 24 months after you last played one of our games. Then it's anonymised automatically: the link to your Steam account is removed for good. We may keep the anonymised rest for as long as it helps improve our games.",
+				],
 			},
 			sharing: {
 				title: "Sharing",
-				body: ["We don't share or sell your data, and we don't show ads."],
+				body: ["We don't sell your data and don't show ads. We may show overall statistics publicly, for example in our videos and streams about making our games, but never in a way that shows who you are."],
 			},
-			optOut: {
-				title: "How to opt out",
+			who: {
+				title: "Who's responsible",
 				body: [
-					"Sign in with Steam under {yourData} below and switch it off. It applies to all our games from the next time you start one. The games have no opt-out switch of their own; some may link to this page.",
-					"We put this on the website so you can always reach it, even if you can't open the game any more (say you refunded it or aren't at your computer), and it works on your phone too. Signing in with Steam proves the data is yours, so nobody else can see, download or change it.",
+					"Four Games (Danny Karlsson, Sweden), later Four Games AB. Questions about your data: {email}.",
+					"You can also contact {imy}, the Swedish data protection authority.",
 				],
-			},
-			rights: {
-				title: "Your rights",
-				body: ["Under {yourData} you can:"],
-				list: [
-					"See a summary of your data.",
-					"Download all of it.",
-					"Opt out, or back in.",
-					"Anonymise it now, instead of waiting up to 24 months. It's then no longer linked to you, so you can't see or download it afterwards. This can't be undone.",
-				],
-				after: ["You can also contact {imy}, the Swedish data protection authority."],
 			},
 		},
 		data: {
@@ -436,6 +429,7 @@ export default {
 			},
 			unreachableTitle: "We can't reach our server right now",
 			unreachable: "Nothing's wrong with your data. Our server is just not answering at the moment. Please try again in a little while, or email us at {email}.",
+			status: "See what's working right now on {status}.",
 			errorTitle: "Something went wrong",
 			error: "We couldn't load your data. Please try again, or email us at {email}.",
 			retry: "Try again",

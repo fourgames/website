@@ -52,6 +52,8 @@ export const SITE = {
 	// (server/gamedata, see server/gamedata/SPEC.md). The page calls it from the browser, with a cookie.
 	privacy: { email: "privacy@fourgames.se" },
 	gamedata: "https://api.fourgames.se/gamedata/v1",
+	// The server's public status page; the privacy page links it when the API doesn't answer.
+	status: "https://status.fourgames.se",
 };
 
 export const SOCIALS = [

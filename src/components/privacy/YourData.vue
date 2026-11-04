@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref, useId } from "vue";
 import Button from "@/components/ui/Button.vue";
+import I18nT from "@/components/ui/I18nT.vue";
 import Icon from "@/components/ui/Icon.vue";
 import PolicyText from "@/components/privacy/PolicyText.vue";
 import { SITE } from "@/data/site.js";
@@ -218,6 +219,15 @@ const dangerButton =
 			</h3>
 			<p class="mt-3">
 				<PolicyText :keypath="state === 'unreachable' ? 'privacy.data.unreachable' : 'privacy.data.error'" />
+			</p>
+			<p v-if="state === 'unreachable'" class="mt-3">
+				<I18nT keypath="privacy.data.status">
+					<template #status>
+						<a :href="SITE.status" target="_blank" rel="noopener noreferrer" class="link"
+							>{{ SITE.status.replace(/^https:\/\//, "") }}<span class="sr-only"> {{ t("a11y.newTab") }}</span></a
+						>
+					</template>
+				</I18nT>
 			</p>
 			<div class="mt-6">
 				<Button icon="arrow-right" @click="load">{{ t("privacy.data.retry") }}</Button>

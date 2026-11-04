@@ -48,6 +48,10 @@ export const SITE = {
 	contact: "https://api.fourgames.se/contact",
 	// The press kit (/press) shows this address (an alias of danny@ at Strato).
 	press: { email: "press@fourgames.se" },
+	// The privacy page (/privacy): who to write to, and the player-data API it signs in to with Steam
+	// (server/gamedata, see server/gamedata/SPEC.md). The page calls it from the browser, with a cookie.
+	privacy: { email: "privacy@fourgames.se" },
+	gamedata: "https://api.fourgames.se/gamedata/v1",
 };
 
 export const SOCIALS = [

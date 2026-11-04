@@ -100,6 +100,13 @@ jobs:
 
       - name: Start the next run
         if: ${{ !inputs.test_discord && success() }}
-        run: gh workflow run feedback.yml --ref main -f force=false
+        # GitHub's API sometimes answers a dispatch with a 500; try again before giving up.
+        run: |
+          for wait in 10 30 60 120 300; do
+            gh workflow run feedback.yml --ref main -f force=false && exit 0
+            echo "Dispatch failed, trying again in $wait s"
+            sleep $wait
+          done
+          gh workflow run feedback.yml --ref main -f force=false
         env:
           GH_TOKEN: ${{ github.token }}

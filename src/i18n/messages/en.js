@@ -365,9 +365,9 @@ export default {
 					"Most of it is about how the game runs, not about you, but under the EU's GDPR it's personal data because it's linked to your Steam account.",
 				],
 				list: [
-					"Your Steam account, as a scrambled ID (a pseudonym) that only our server can link back to you. If you play a demo and then the full game, we can see both.",
-					"Sessions and playtime, when you're active or idle, and where in the game you stopped.",
-					"Your actions in the game, and a short summary of the game's state now and then (like your level, money or position), which can let us replay a session.",
+					"Your Steam account, as a scrambled ID (a pseudonym) that only our server can link back to you. If you play a demo and then the full game, we can see both. From Steam: achievements you unlock, your Steam language, and whether you play through Family Sharing, Remote Play Together or Big Picture.",
+					"Sessions and playtime, when you're active or idle (including when you open the Steam overlay), and where in the game you stopped.",
+					"Your actions in the game (including the menus and help screens you open), your position in a level every few seconds and where you die, and a short summary of the game's state now and then (like your level or money), which can let us replay a session.",
 					"The game's version, your settings and which ones you change, and which of our DLC you own.",
 					"Hardware: operating system, processor model and cores, graphics card and driver version, memory, screen size and refresh rate, graphics settings, and whether it's a Steam Deck. No serial numbers or other device IDs.",
 					"Performance per level (frame rate, stutters, load times, memory) and your input device (keyboard and mouse, controller type, touch, or Steam Deck docked or handheld).",

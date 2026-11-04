@@ -1,0 +1,2 @@
+# The collector uses only Python's standard library (3.13), so its venv needs nothing installed.
+# For the tests: pytest.

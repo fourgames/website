@@ -18,6 +18,7 @@ something does, like the player data API's database.
 | `feedback.env.example` | Which secrets go in `/etc/fourgames/feedback.env` |
 | `contact/`, `contact.service` | The website's contact form backend (in place of Formspree), mailing messages to support@: [contact/README.md](contact/README.md) |
 | `alerts/`, `alerts.service` | Push notifications from YouTube and Twitch that start the loop's announce check at once, so new videos and streams reach Discord within a minute: [alerts/README.md](alerts/README.md) |
+| `steamdata/`, `steamdata.service` | The Steam market-data collector: a daily snapshot of every game (reviews, price, discount, tags, release), player counts, metadata and which games are Godot, into one SQLite file: [steamdata/README.md](steamdata/README.md) |
 | `Caddyfile` | The subdomains: `discord`, `youtube`, `steam`, `github` (short links) and `api` (status, key bot) |
 | `status-page/` | The public status page at `status.fourgames.se`: static files Caddy serves from `/srv/fourgames/own/server/status-page` |
 

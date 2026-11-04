@@ -1,0 +1,32 @@
+# The Steam market-data collector (server/steamdata): a daily snapshot of every game on Steam,
+# player counts, metadata and engine hints, into /srv/fourgames/steamdata/steam.db. One process
+# that runs all the time, at a slow, fixed pace. Setup: server/steamdata/README.md.
+# Logs: journalctl -u steamdata -f
+[Unit]
+Description=Four Games Steam market-data collector
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=fourgames
+# The checkout feedback-setup.sh made; python -m steamdata finds the package here.
+WorkingDirectory=/srv/fourgames/own/server
+EnvironmentFile=/etc/fourgames/steamdata.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/fourgames/steamdata-venv/bin/python -m steamdata
+Restart=always
+RestartSec=30
+# It shares one core and 2 GB with everything else: it goes last, and can't take much.
+Nice=10
+CPUWeight=20
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+MemoryHigh=200M
+MemoryMax=400M
+# It needs nothing beyond its own files: keep it from writing to the system.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

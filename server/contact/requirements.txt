@@ -1,0 +1,3 @@
+# The contact form's dependencies, in its own venv (/srv/fourgames/contact-venv). Mail goes out with
+# the standard library's smtplib, so aiohttp is all it needs.
+aiohttp>=3.9,<4

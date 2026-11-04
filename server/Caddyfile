@@ -38,6 +38,10 @@ api.fourgames.se {
 		header Cache-Control no-store
 		file_server
 	}
+	# The website's contact form (server/contact), in place of Formspree.
+	handle /contact* {
+		reverse_proxy localhost:8101
+	}
 	# The key bot's creator verification (server/keybot).
 	handle /keybot/* {
 		reverse_proxy localhost:8100

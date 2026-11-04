@@ -1,0 +1,25 @@
+# The website's contact form backend (server/contact), in place of Formspree: a small web server on
+# localhost:8101 (Caddy forwards https://api.fourgames.se/contact to it) that mails each message to
+# support@. Setup: server/contact/README.md.
+# Logs: journalctl -u contact -f
+[Unit]
+Description=Four Games contact form
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=fourgames
+# The checkout feedback-setup.sh made; python -m contact finds the package here.
+WorkingDirectory=/srv/fourgames/own/server
+EnvironmentFile=/etc/fourgames/contact.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/fourgames/contact-venv/bin/python -m contact
+Restart=always
+RestartSec=10
+# It keeps nothing on disk: keep it from writing to the system.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

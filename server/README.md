@@ -16,7 +16,9 @@ something does, like the player data API's database.
 | `feedback@.service` | `feedback/loop.sh` as a systemd service, one instance per part (`own`, `research`) |
 | `feedback@research.service.d/` | The research part's longer run limit |
 | `feedback.env.example` | Which secrets go in `/etc/fourgames/feedback.env` |
+| `contact/`, `contact.service` | The website's contact form backend (in place of Formspree), mailing messages to support@: [contact/README.md](contact/README.md) |
 | `Caddyfile` | The subdomains: `discord`, `youtube`, `steam`, `github` (short links) and `api` (status, key bot) |
+| `status-page/` | The public status page at `status.fourgames.se`: static files Caddy serves from `/srv/fourgames/own/server/status-page` |
 
 ## 1. Log in with your key
 

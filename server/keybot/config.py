@@ -37,10 +37,6 @@ class Config:
     # /grantrole needs the guild's member list, so the privileged Server Members intent. Off unless
     # GRANTROLE_ENABLED=1 (and the intent is switched on in the Developer Portal).
     grantrole_enabled: bool = False
-    # The game-data service's internal API (server/gamedata, localhost only), for /privacy. Without
-    # the key, /privacy only links fourgames.se/privacy.
-    gamedata_internal_url: str = "http://127.0.0.1:8103/gamedata/v1"
-    gamedata_internal_key: str = ""
 
     @property
     def redirect_uri(self) -> str:
@@ -98,6 +94,4 @@ class Config:
             host=get("HOST", "127.0.0.1") or "127.0.0.1",
             port=integer("PORT", "8100"),
             grantrole_enabled=get("GRANTROLE_ENABLED").lower() in ("1", "true", "yes", "on"),
-            gamedata_internal_url=(get("GAMEDATA_INTERNAL_URL") or "http://127.0.0.1:8103/gamedata/v1").rstrip("/"),
-            gamedata_internal_key=get("GAMEDATA_INTERNAL_KEY"),
         )

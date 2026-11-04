@@ -19,12 +19,7 @@ TTL_SECONDS = 15 * 60
 
 
 class StateError(Exception):
-    """The state is unusable. str(error) is "invalid" or "expired". An expired state's contents
-    are still in error.state (its signature was good), so the page can say which command to rerun."""
-
-    def __init__(self, reason: str, state: "State | None" = None):
-        super().__init__(reason)
-        self.state = state
+    """The state is unusable. str(error) is "invalid" or "expired"."""
 
 
 @dataclass(frozen=True)
@@ -33,10 +28,6 @@ class State:
     user_id: int
     game_id: int
     expires_at: int
-    # What the link is for: "request" (a creator's /request, for game_id) or "privacy" (/privacy,
-    # with action one of privacy.ACTIONS and game_id 0).
-    purpose: str = "request"
-    action: str = ""
 
 
 def _b64(data: bytes) -> str:
@@ -52,17 +43,14 @@ def _signature(secret: str, body: str) -> str:
 
 
 def sign_state(secret: str, user_id: int, game_id: int, now: float | None = None,
-               ttl: int = TTL_SECONDS, nonce: str | None = None, purpose: str = "request",
-               action: str = "") -> tuple[str, State]:
+               ttl: int = TTL_SECONDS, nonce: str | None = None) -> tuple[str, State]:
     """A new token and what's in it."""
     now = time.time() if now is None else now
-    state = State(nonce or secrets.token_urlsafe(16), int(user_id), int(game_id), int(now) + ttl,
-                  purpose, action)
-    data = {"n": state.nonce, "u": str(state.user_id), "g": state.game_id, "e": state.expires_at}
-    if purpose != "request":
-        # Signed with the rest, so a /request link can't be turned into a /privacy one or back.
-        data.update(p=purpose, a=action)
-    body = _b64(json.dumps(data, separators=(",", ":")).encode())
+    state = State(nonce or secrets.token_urlsafe(16), int(user_id), int(game_id), int(now) + ttl)
+    body = _b64(json.dumps(
+        {"n": state.nonce, "u": str(state.user_id), "g": state.game_id, "e": state.expires_at},
+        separators=(",", ":"),
+    ).encode())
     return f"{body}.{_signature(secret, body)}", state
 
 
@@ -77,10 +65,9 @@ def verify_state(secret: str, token: str, now: float | None = None) -> State:
         raise StateError("invalid")
     try:
         data = json.loads(_unb64(body))
-        state = State(str(data["n"]), int(data["u"]), int(data["g"]), int(data["e"]),
-                      str(data.get("p", "request")), str(data.get("a", "")))
-    except (ValueError, KeyError, TypeError, AttributeError):
+        state = State(str(data["n"]), int(data["u"]), int(data["g"]), int(data["e"]))
+    except (ValueError, KeyError, TypeError):
         raise StateError("invalid") from None
     if now >= state.expires_at:
-        raise StateError("expired", state)
+        raise StateError("expired")
     return state

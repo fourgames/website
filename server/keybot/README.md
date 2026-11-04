@@ -10,7 +10,6 @@ creator verification on `localhost:8100`, behind Caddy at `https://api.fourgames
 | Anyone with a key | `/mykeys` | Shows their keys again, only to them (and the games they claimed with the old KeyBot). |
 | Everyone | `/pools` | The games: public or private, keys per person, keys left, and which roles can claim them. Pages of 10. |
 | Content creators | `/request game:` | A one-time **Verify your channel** link (15 minutes). They sign in with Discord, which shows us their *verified* YouTube and Twitch connections. A YouTube channel with 1,000+ subscribers and an upload in the last 60 days, or a Twitch channel with 500+ followers, gets the key by DM at once; anything else goes to the admin channel. |
-| Players | `/privacy` | Says in two lines what our games collect, links [fourgames.se/privacy](https://fourgames.se/privacy), and has four buttons: **Opt out**, **Opt back in**, **Download my data**, **Show what you have**. Each gives a one-time sign-in link (15 minutes) like `/request`'s; the login shows us their *verified* Steam connection, and the bot does it through the game-data service's internal API (`server/gamedata`). The page shows the result (for a download, the service's one-time link, only there); the bot also answers under the button, or by DM after a restart. No verified Steam connection: it explains how to link Steam in Discord or use the website's Steam sign-in. The steamid is used for that one request: never stored in the bot's database, never logged. Without `GAMEDATA_INTERNAL_KEY`, `/privacy` only links the website. |
 | Press | `/request-press game: outlet: email:` | Always goes to the admin channel. The email isn't checked yet; once the company mail exists, the bot could send a confirmation link first. |
 | The team (Manage Server, or the `ADMIN_ROLE_ID` role) | `/grant user: game:` | One key to that person by DM (also from private games). Keeps to the game's per-person limit and refuses banned people. If their DMs are closed, no key is used and you're told. |
 | | `/grantrole role: game:` | One key by DM to everyone with the role, after a confirmation that shows how many people have it, how many can get one and how many keys are left. Skips the banned and those at the limit, and says how many got one. Off unless `GRANTROLE_ENABLED=1` (see below). |
@@ -58,8 +57,7 @@ lock, so two claims at the same moment can't get the same key or go over the lim
 key ids, never keys. A database from an older version is updated in place when the bot starts (new
 settings get their defaults; nothing is lost).
 
-The code: `bot.py` (commands, buttons, handouts), `web.py` (the verify login), `privacy.py`
-(`/privacy`'s Steam connection and game-data calls), `db.py`,
+The code: `bot.py` (commands, buttons, handouts), `web.py` (the verify login), `db.py`,
 `admin.py` (the command line for the server), `lookups.py` (YouTube and Twitch), `eligibility.py`
 (the thresholds), `keyfile.py`, `state.py` (the signed verify links), `config.py`. Settings are in
 `keybot.env.example`.
@@ -108,12 +106,6 @@ sudo install -m 644 server/keybot.service /etc/systemd/system/keybot.service
 sudo systemctl daemon-reload && sudo systemctl enable --now keybot
 journalctl -u keybot -f               # "commands synced to guild …" means it's up
 ```
-
-**`/privacy`** needs the game-data service (`server/gamedata`) running on the same machine: set
-`GAMEDATA_INTERNAL_KEY` in `/etc/fourgames/keybot.env` to the same value as in
-`/etc/fourgames/gamedata.env` (and `GAMEDATA_INTERNAL_URL` only if it doesn't listen on
-`http://127.0.0.1:8103/gamedata/v1`), then restart the bot. It uses the same Discord login and
-redirect as `/request`, so nothing changes in the Developer Portal.
 
 **Caddy**: the `api.fourgames.se` block in `server/Caddyfile` needs the key bot's route (it's there,
 commented out):

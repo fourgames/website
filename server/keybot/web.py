@@ -2,8 +2,7 @@
 
 /verify checks the link from /request and sends the person to Discord's login (scopes identify and
 connections). Discord sends them back to /callback, where we read their verified YouTube and Twitch
-connections, look the channels up, and approve or pass the request to the admins. A /privacy link
-goes the same way, but /callback reads the verified Steam connection and does the privacy action.
+connections, look the channels up, and approve or pass the request to the admins.
 
 Caddy forwards https://api.fourgames.se/keybot/* here. The routes answer both with and without the
 /keybot prefix, so it works whether Caddy strips it (handle_path) or not (handle).
@@ -20,9 +19,8 @@ from urllib.parse import urlencode
 import aiohttp
 from aiohttp import web
 
-from . import privacy
 from .lookups import look_up
-from .state import State, StateError, verify_state
+from .state import StateError, verify_state
 
 if TYPE_CHECKING:
     from .bot import KeyBot
@@ -49,37 +47,24 @@ PAGE = """<!doctype html>
   @media (prefers-color-scheme: dark) {{ body {{ background: #161616; color: #eee; }} }}
 </style>
 </head>
-<body><main><h1>{title}</h1><p>{text}</p>{link}</main></body>
+<body><main><h1>{title}</h1><p>{text}</p></main></body>
 </html>
 """
 
 
-def page(title: str, text: str | list[str], status: int = 200,
-         link: tuple[str, str] | None = None) -> web.Response:
-    lines = [text] if isinstance(text, str) else text
-    link_html = ""
-    if link:
-        link_html = (f'<p><br><a href="{html.escape(link[1], quote=True)}" rel="noreferrer">'
-                     f"{html.escape(link[0])}</a></p>")
-    body = PAGE.format(title=html.escape(title), text="<br>".join(html.escape(line) for line in lines),
-                       link=link_html)
+def page(title: str, text: str, status: int = 200) -> web.Response:
+    body = PAGE.format(title=html.escape(title), text=html.escape(text))
     # no-store: the page can say things about the person; no cache should keep it.
     return web.Response(text=body, status=status, content_type="text/html",
                         headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"})
 
 
-def command_for(state: State | None) -> str:
-    """The command that makes a new link of this kind."""
-    return "/privacy" if state is not None and state.purpose == "privacy" else "/request"
-
-
-def expired_page(reason: str, state: State | None = None) -> web.Response:
-    command = command_for(state)
+def expired_page(reason: str) -> web.Response:
     if reason == "expired":
-        return page("This link has expired", f"Links work for 15 minutes. Run {command} again in Discord.", 400)
+        return page("This link has expired", "Links work for 15 minutes. Run /request again in Discord.", 400)
     if reason == "used":
-        return page("This link was already used", f"Run {command} again in Discord for a new one.", 400)
-    return page("This link doesn't work", f"Run {command} again in Discord for a new one.", 400)
+        return page("This link was already used", "Run /request again in Discord for a new one.", 400)
+    return page("This link doesn't work", "Run /request again in Discord for a new one.", 400)
 
 
 async def verify(request: web.Request) -> web.Response:
@@ -88,9 +73,9 @@ async def verify(request: web.Request) -> web.Response:
     try:
         state = verify_state(bot.config.state_secret, token)
     except StateError as error:
-        return expired_page(str(error), error.state)
+        return expired_page(str(error))
     if not bot.store.state_usable(state.nonce):
-        return expired_page("used", state)
+        return expired_page("used")
     query = urlencode({
         "client_id": bot.config.client_id,
         "redirect_uri": bot.config.redirect_uri,
@@ -104,21 +89,17 @@ async def verify(request: web.Request) -> web.Response:
 async def callback(request: web.Request) -> web.Response:
     bot: KeyBot = request.app[BOT_KEY]
     if request.query.get("error"):
-        try:
-            cancelled = verify_state(bot.config.state_secret, request.query.get("state", ""))
-        except StateError as error:
-            cancelled = error.state
-        return page("Cancelled", f"Nothing was sent. Run {command_for(cancelled)} again in Discord whenever you like.")
+        return page("Cancelled", "Nothing was sent. Run /request again in Discord whenever you like.")
     try:
         state = verify_state(bot.config.state_secret, request.query.get("state", ""))
     except StateError as error:
-        return expired_page(str(error), error.state)
+        return expired_page(str(error))
     code = request.query.get("code")
     if not code:
-        return expired_page("invalid", state)
+        return expired_page("invalid")
     # One use per link, taken before anything else so a reload can't run it twice.
     if not bot.store.use_state(state.nonce):
-        return expired_page("used", state)
+        return expired_page("used")
 
     session = bot.http_session
     try:
@@ -130,17 +111,12 @@ async def callback(request: web.Request) -> web.Response:
             await revoke(session, bot, token)  # we only needed it for these two reads
     except (aiohttp.ClientError, TimeoutError, ValueError, KeyError) as error:
         log.warning("Discord login failed: %s", type(error).__name__)
-        command = command_for(state)
-        return page("Discord login didn't work", f"Run {command} again in Discord and try once more.", 502)
+        return page("Discord login didn't work", "Run /request again in Discord and try once more.", 502)
 
-    # The link belongs to whoever ran the command. Someone else's login can't stand in for them.
+    # The link belongs to whoever ran /request. Someone else's login can't stand in for them.
     if str(me.get("id")) != str(state.user_id):
-        command = command_for(state)
         return page("That's a different Discord account",
-                    f"Sign in with the account you used for {command}, then run {command} again.", 403)
-
-    if state.purpose == "privacy":
-        return await privacy_callback(bot, state, connections)
+                    "Sign in with the account you used for /request, then run /request again.", 403)
 
     try:
         channels = await look_up(session, bot.config.youtube_api_key, bot.twitch, connections)
@@ -149,21 +125,6 @@ async def callback(request: web.Request) -> web.Response:
         log.exception("creator verification failed for %s", state.user_id)
         return page("Something went wrong", "Try /request again in Discord in a bit.", 500)
     return page(title, text)
-
-
-async def privacy_callback(bot: KeyBot, state: State, connections) -> web.Response:
-    """/privacy's action for their verified Steam connection. The steamid lives only in this call."""
-    try:
-        result = await privacy.perform(bot.http_session, bot.config, state.action,
-                                       connections if isinstance(connections, list) else [],
-                                       bot.privacy_game_names())
-    except Exception as error:
-        # Type only: nothing identifying in the log.
-        log.error("privacy %s failed: %s", state.action, type(error).__name__)
-        return page("Something went wrong", "Try /privacy again in Discord in a bit.", 500)
-    log.info("privacy %s: %s", state.action, result.status)
-    await bot.privacy_followup(state.nonce, state.user_id, result.discord_text)
-    return page(result.title, result.lines, result.status, link=result.link)
 
 
 async def exchange_code(session: aiohttp.ClientSession, bot: KeyBot, code: str) -> str:

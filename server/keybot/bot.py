@@ -21,9 +21,7 @@ from .db import MAX_PER_USER_LIMIT, STOCK_LOW, STOCK_OUT, Store, role_ids
 from .eligibility import Channel, evaluate
 from .keyfile import KeyFileError, read_keys
 from .lookups import TwitchAuth
-from .privacy import ACTIONS as PRIVACY_ACTIONS, BUTTONS_TEXT as PRIVACY_BUTTONS_TEXT
-from .privacy import INTRO_TEXT as PRIVACY_INTRO_TEXT, NO_KEY_TEXT as PRIVACY_NO_KEY_TEXT
-from .state import TTL_SECONDS, sign_state
+from .state import sign_state
 
 log = logging.getLogger("keybot")
 
@@ -34,8 +32,6 @@ MAX_KEY_FILE_BYTES = 1_000_000
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 POOLS_PER_PAGE = 10
 BANNED_TEXT = "You can't get keys{where} here. If you think that's a mistake, ask the Four Games team."
-# Discord lets a bot follow up on an interaction for 15 minutes; stay a little under.
-FOLLOWUP_SECONDS = 14 * 60
 
 
 @dataclass(frozen=True)
@@ -91,9 +87,6 @@ class KeyBot(discord.Client):
         self.http_session: aiohttp.ClientSession | None = None
         self.twitch = TwitchAuth(config.twitch_client_id, config.twitch_client_secret)
         self.web_runner = None
-        # /privacy links waiting for their login: nonce → (the button press, when). Only in memory,
-        # to answer in the same ephemeral thread; after a restart the answer goes by DM instead.
-        self.privacy_pending: dict[str, tuple[discord.Interaction, float]] = {}
 
     async def setup_hook(self) -> None:
         from .web import start_web  # here, so the web module can import this one
@@ -104,7 +97,7 @@ class KeyBot(discord.Client):
         self.http_session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=20))
         # Approve/Deny buttons keep working after a restart: their custom_id carries the request id.
         self.add_dynamic_items(ApproveButton, DenyButton)
-        for command in (claim, mykeys, pools, request_key, request_press, privacy_command, grant, keys_group):
+        for command in (claim, mykeys, pools, request_key, request_press, grant, keys_group):
             self.tree.add_command(command)
         if self.config.grantrole_enabled:
             self.tree.add_command(grantrole)
@@ -132,40 +125,6 @@ class KeyBot(discord.Client):
     async def admin_channel(self) -> discord.abc.Messageable:
         channel = self.get_channel(self.config.admin_channel_id)
         return channel or await self.fetch_channel(self.config.admin_channel_id)
-
-    # /privacy
-
-    def privacy_link(self, interaction: discord.Interaction, action: str, now: float | None = None) -> str:
-        """A one-time verify link for that action (no steamid in it: that comes from the login)."""
-        now = time.time() if now is None else now
-        token, state = sign_state(self.config.state_secret, interaction.user.id, 0, now,
-                                  purpose="privacy", action=action)
-        # game_id 0: the verify-link table has no game for these, and needs none.
-        self.store.save_state(state.nonce, interaction.user.id, 0, state.expires_at, int(now))
-        self.privacy_pending = {n: v for n, v in self.privacy_pending.items() if now - v[1] < TTL_SECONDS}
-        self.privacy_pending[state.nonce] = (interaction, now)
-        return f"{self.config.public_base_url}/verify?state={token}"
-
-    def privacy_game_names(self) -> dict[int, str]:
-        return {g["steam_app_id"]: g["name"] for g in self.store.games() if g["steam_app_id"]}
-
-    async def privacy_followup(self, nonce: str, user_id: int, text: str, now: float | None = None) -> str:
-        """Tells them the result in Discord: under the button they pressed, or else by DM.
-        Returns "followup", "dm" or "none"."""
-        now = time.time() if now is None else now
-        pending = self.privacy_pending.pop(nonce, None)
-        if pending and now - pending[1] < FOLLOWUP_SECONDS:
-            try:
-                await pending[0].followup.send(text, ephemeral=True)
-                return "followup"
-            except discord.HTTPException:
-                pass
-        try:
-            user = await self.user_by_id(user_id)
-            await user.send(text)
-            return "dm"
-        except discord.HTTPException:
-            return "none"
 
     # Handing out
 
@@ -658,50 +617,6 @@ async def request_key(interaction: discord.Interaction, game: str) -> None:
         "verified YouTube or Twitch connection (add it under User Settings → Connections first). "
         "The link works once, for 15 minutes.",
         view=view, ephemeral=True)
-
-
-# Everyone: /privacy
-
-
-@app_commands.command(name="privacy", description="Our games' data about you: opt out, opt back in, download or see it")
-async def privacy_command(interaction: discord.Interaction) -> None:
-    bot: KeyBot = interaction.client
-    text, view = privacy_reply(bot.config)
-    if view is None:
-        await interaction.response.send_message(text, ephemeral=True)
-    else:
-        await interaction.response.send_message(text, view=view, ephemeral=True)
-
-
-def privacy_reply(config: Config) -> tuple[str, "PrivacyView | None"]:
-    """/privacy's answer: the buttons, or only the website when the game-data key isn't set."""
-    if not config.gamedata_internal_key:
-        return PRIVACY_INTRO_TEXT + "\n" + PRIVACY_NO_KEY_TEXT, None
-    return PRIVACY_INTRO_TEXT + "\n" + PRIVACY_BUTTONS_TEXT, PrivacyView()
-
-
-class PrivacyButton(discord.ui.Button):
-    def __init__(self, action: str):
-        super().__init__(label=PRIVACY_ACTIONS[action], style=discord.ButtonStyle.secondary)
-        self.action = action
-
-    async def callback(self, interaction: discord.Interaction) -> None:
-        bot: KeyBot = interaction.client
-        url = bot.privacy_link(interaction, self.action)
-        view = discord.ui.View()
-        view.add_item(discord.ui.Button(label="Sign in with Discord", style=discord.ButtonStyle.link, url=url))
-        await interaction.response.send_message(
-            f"**{PRIVACY_ACTIONS[self.action]}**: sign in with Discord so we can see the Steam account linked "
-            "to it (verified ones only; add it under User Settings → Connections). We use it for this "
-            "and don't keep it. The link works once, for 15 minutes.",
-            view=view, ephemeral=True)
-
-
-class PrivacyView(discord.ui.View):
-    def __init__(self):
-        super().__init__(timeout=TTL_SECONDS)
-        for action in PRIVACY_ACTIONS:
-            self.add_item(PrivacyButton(action))
 
 
 @app_commands.command(name="request-press", description="Press: ask for a review key for one of our games")

@@ -358,7 +358,7 @@ export default {
 			},
 			games: {
 				title: "What our games collect",
-				body: ["This applies only to our games whose Steam page links to this policy. Depending on the game, they may collect some or all of the following; our older games collect nothing."],
+				body: ["This applies only to our games whose Steam page links to this policy. Depending on the game, they may collect some or all of the following; our older games collect nothing.", "Most of what we collect is about how the game runs, not about you: performance, crashes and what happens in the game. It counts as personal data under the EU's GDPR only because it's linked to your Steam account. We want to be as open as possible about how we handle it, so everything is listed here."],
 				list: [
 					"Your Steam account, stored as a scrambled ID (a pseudonym) that only our server can link back to your account. If you play a demo and later the full game, we can see both.",
 					"Play sessions and playtime, when you're active or idle, and where in the game you stopped playing.",

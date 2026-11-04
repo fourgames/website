@@ -1,0 +1,225 @@
+@font-face {
+	font-family: "Montserrat Variable";
+	font-style: normal;
+	font-weight: 100 900;
+	font-display: swap;
+	src: url("fonts/montserrat-latin-wght-normal.woff2") format("woff2");
+}
+
+/* The site's palette (src/style.css), following the OS colour scheme like fourgames.se. */
+:root {
+	color-scheme: light dark;
+	--base-color: #eff1f5;
+	--text-color: #4a5365;
+	--title-color: #546b99;
+	--date-color: #66748f;
+	--link-color: hsl(206 58% 42%);
+	--card-color: #ffffff;
+	--line-color: rgb(0 0 0 / 0.08);
+	--shadow: 0 0 4px rgb(0 0 0 / 0.2);
+
+	/* Pills: dark text on a pale tint, each pair at WCAG AA or better. */
+	--ok-fg: #17653a;
+	--ok-bg: #dcf3e4;
+	--warn-fg: #7a4a00;
+	--warn-bg: #fdefcf;
+	--down-fg: #a3192f;
+	--down-bg: #fde2e6;
+	--unknown-fg: #4a5365;
+	--unknown-bg: #e3e6ee;
+
+	--font-sans: system-ui, -apple-system, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+	--font-heading: "Montserrat Variable", Montserrat, var(--font-sans);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--base-color: #25282b;
+		--text-color: hsl(0 0% 100% / 0.9);
+		--title-color: hsl(200 0% 100% / 0.85);
+		--date-color: hsl(0 0% 100% / 0.62);
+		--link-color: hsl(200 60% 70%);
+		--card-color: #333639;
+		--line-color: rgb(255 255 255 / 0.1);
+		--shadow: 0 0 4px rgb(0 0 0 / 0.4);
+
+		--ok-fg: #9be3b4;
+		--ok-bg: #1e3d2b;
+		--warn-fg: #f6d48a;
+		--warn-bg: #45361a;
+		--down-fg: #ffb3bf;
+		--down-bg: #4a2229;
+		--unknown-fg: hsl(0 0% 100% / 0.85);
+		--unknown-bg: #44484d;
+	}
+}
+
+*,
+*::before,
+*::after {
+	box-sizing: border-box;
+}
+
+html {
+	background: var(--base-color);
+	color: var(--text-color);
+	font-family: var(--font-sans);
+	-webkit-font-smoothing: antialiased;
+	-moz-osx-font-smoothing: grayscale;
+}
+
+body {
+	margin: 0;
+	background: var(--base-color);
+	font-size: 1rem;
+	line-height: 1.5;
+	overflow-x: clip;
+}
+
+.page {
+	max-width: 44rem;
+	margin: 0 auto;
+	padding: 2rem 1rem 3rem;
+}
+
+a {
+	color: var(--link-color);
+}
+a:focus-visible {
+	outline: 2px solid var(--link-color);
+	outline-offset: 2px;
+	border-radius: 2px;
+}
+
+h1,
+h2 {
+	font-family: var(--font-heading);
+	color: var(--title-color);
+	margin: 0;
+}
+
+.header {
+	display: flex;
+	gap: 1rem;
+	align-items: flex-start;
+	margin-bottom: 1.5rem;
+}
+.logo {
+	flex: none;
+	width: 3rem;
+	height: 3rem;
+}
+h1 {
+	font-size: 1.75rem;
+	font-weight: 800;
+	line-height: 1.2;
+}
+.summary {
+	margin: 0.35rem 0 0;
+	font-size: 1.125rem;
+	font-weight: 600;
+}
+.updated {
+	margin: 0.15rem 0 0;
+	color: var(--date-color);
+	font-size: 0.9375rem;
+}
+
+.rows {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	background: var(--card-color);
+	border-radius: 0.5rem;
+	box-shadow: var(--shadow);
+}
+.row {
+	display: flex;
+	gap: 0.75rem;
+	align-items: flex-start;
+	justify-content: space-between;
+	padding: 1rem;
+}
+.row + .row {
+	border-top: 1px solid var(--line-color);
+}
+.row-text {
+	min-width: 0;
+}
+h2 {
+	font-size: 1.0625rem;
+	font-weight: 700;
+	line-height: 1.3;
+}
+.desc,
+.detail {
+	margin: 0.15rem 0 0;
+	overflow-wrap: anywhere;
+}
+.detail {
+	color: var(--date-color);
+	font-size: 0.9375rem;
+}
+
+.pill {
+	flex: none;
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.2rem 0.65rem;
+	border-radius: 999px;
+	font-size: 0.875rem;
+	font-weight: 700;
+	white-space: nowrap;
+}
+/* A shape as well as a colour, so the state never rests on colour alone (the text says it too). */
+.pill::before {
+	content: "";
+	width: 0.55rem;
+	height: 0.55rem;
+	background: currentColor;
+	border-radius: 50%;
+}
+.pill[data-state="running"] {
+	color: var(--ok-fg);
+	background: var(--ok-bg);
+}
+.pill[data-state="delayed"] {
+	color: var(--warn-fg);
+	background: var(--warn-bg);
+}
+.pill[data-state="delayed"]::before {
+	border-radius: 1px;
+}
+.pill[data-state="down"] {
+	color: var(--down-fg);
+	background: var(--down-bg);
+}
+.pill[data-state="down"]::before {
+	border-radius: 1px;
+	transform: rotate(45deg);
+}
+.pill[data-state="unknown"] {
+	color: var(--unknown-fg);
+	background: var(--unknown-bg);
+}
+.pill[data-state="unknown"]::before {
+	background: transparent;
+	border: 2px solid currentColor;
+}
+
+.note {
+	margin: 1rem 0 0;
+}
+
+.footer {
+	margin-top: 1.5rem;
+	color: var(--date-color);
+	font-size: 0.9375rem;
+}
+.footer p {
+	margin: 0;
+}
+.footer a {
+	color: var(--link-color);
+}

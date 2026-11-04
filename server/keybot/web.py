@@ -151,8 +151,14 @@ async def revoke(session: aiohttp.ClientSession, bot: KeyBot, token: str) -> Non
         pass  # it expires by itself within a week
 
 
+STATUS_PAGE_ORIGIN = "https://status.fourgames.se"
+
+
 async def health(request: web.Request) -> web.Response:
-    return web.json_response({"ok": True, "time": int(time.time())})
+    # The status page (server/status-page) reads this from the visitor's browser.
+    return web.json_response({"ok": True, "time": int(time.time())},
+                             headers={"Access-Control-Allow-Origin": STATUS_PAGE_ORIGIN,
+                                      "Cache-Control": "no-store"})
 
 
 def build_app(bot: KeyBot) -> web.Application:

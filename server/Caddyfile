@@ -31,7 +31,10 @@ github.fourgames.se {
 api.fourgames.se {
 	handle_path /status/* {
 		root * /srv/fourgames/status
-		header Access-Control-Allow-Origin https://fourgames.se
+		# The dashboard on fourgames.se and the status page both read it.
+		@cors header_regexp Origin ^https://(status\.)?fourgames\.se$
+		header @cors Access-Control-Allow-Origin {http.request.header.Origin}
+		header Vary Origin
 		header Cache-Control no-store
 		file_server
 	}
@@ -39,4 +42,11 @@ api.fourgames.se {
 	handle /keybot/* {
 		reverse_proxy localhost:8100
 	}
+}
+
+# The public status page (server/status-page): plain files, the checks run in the visitor's browser.
+status.fourgames.se {
+	root * /srv/fourgames/own/server/status-page
+	header Cache-Control "no-cache"
+	file_server
 }

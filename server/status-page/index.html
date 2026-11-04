@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Four Games status</title>
+<meta name="description" content="Whether the Four Games website, player feedback, research, Discord key bot and short links are running.">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+<script src="status.js" defer></script>
+</head>
+<body>
+<div class="page">
+  <header class="header">
+    <img class="logo" src="logo.svg" alt="" width="48" height="48">
+    <div>
+      <h1>Four Games status</h1>
+      <p class="summary" id="summary" aria-live="polite">Checking…</p>
+      <p class="updated" id="updated">Not checked yet</p>
+    </div>
+  </header>
+
+  <main>
+    <ul class="rows" id="rows">
+      <li class="row" data-check="website">
+        <div class="row-text">
+          <h2>Website</h2>
+          <p class="desc">fourgames.se, with our games, news and press kit.</p>
+          <p class="detail">Not checked yet</p>
+        </div>
+        <span class="pill" data-state="unknown">Unknown</span>
+      </li>
+      <li class="row" data-check="own">
+        <div class="row-text">
+          <h2>Player feedback</h2>
+          <p class="desc">Collects and sorts what players say about our games.</p>
+          <p class="detail">Not checked yet</p>
+        </div>
+        <span class="pill" data-state="unknown">Unknown</span>
+      </li>
+      <li class="row" data-check="research">
+        <div class="row-text">
+          <h2>Research</h2>
+          <p class="desc">Collects what players say about other games, to learn from.</p>
+          <p class="detail">Not checked yet</p>
+        </div>
+        <span class="pill" data-state="unknown">Unknown</span>
+      </li>
+      <li class="row" data-check="keybot">
+        <div class="row-text">
+          <h2>Discord key bot</h2>
+          <p class="desc">Hands out game keys and checks creators on our Discord.</p>
+          <p class="detail">Not checked yet</p>
+        </div>
+        <span class="pill" data-state="unknown">Unknown</span>
+      </li>
+      <li class="row" data-check="links">
+        <div class="row-text">
+          <h2>Short links</h2>
+          <p class="desc">discord, youtube, steam and github.fourgames.se.</p>
+          <p class="detail">Not checked yet</p>
+        </div>
+        <span class="pill" data-state="unknown">Unknown</span>
+      </li>
+    </ul>
+    <noscript><p class="note">This page needs JavaScript to check each part.</p></noscript>
+  </main>
+
+  <footer class="footer">
+    <p>Checks again every minute. <a href="https://fourgames.se">fourgames.se</a> · Need help? Ask on <a href="https://discord.fourgames.se">our Discord</a>.</p>
+  </footer>
+</div>
+</body>
+</html>

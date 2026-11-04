@@ -259,7 +259,7 @@ func test_a_crash_report_says_where_the_run_was() -> void:
 	_drain(later)
 	var crash: Dictionary = later.transport.to("/crash")[0]
 	assert_eq(crash.json.quit_point, {"last_scene": "res://level.tscn", "last_screen": "pause",
-			"playtime_s": 30.0, "first_session": true})
+			"playtime_s": 30.0, "first_session": true, "last_position": null})
 	assert_true(crash.text.contains("\"playtime_s\":30"), "the playtime goes as a whole number")
 	assert_false(crash.text.contains("\"playtime_s\":30.0"))
 	var ringed: Array = crash.json.last_events.filter(func(event: Dictionary) -> bool: return event.type == "perf")

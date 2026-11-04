@@ -15,6 +15,7 @@ const APP_ID := 5207970
 ## The wall clock every instance in a test reads; a test moves it to play a later launch.
 var now := 0.0
 var _made: Array[Node] = []
+var _staged: Array[Node] = []
 
 
 func setup() -> void:
@@ -27,6 +28,17 @@ func teardown() -> void:
 		node._release_catcher()
 		node.free()
 	_made.clear()
+	for node in _staged:
+		if is_instance_valid(node):
+			node.free()
+	_staged.clear()
+
+
+## `node` in the running tree, as a game's player would be; freed after the test.
+func _stage(node: Node) -> Node:
+	(Engine.get_main_loop() as SceneTree).root.add_child(node)
+	_staged.append(node)
+	return node
 
 
 #region Helpers

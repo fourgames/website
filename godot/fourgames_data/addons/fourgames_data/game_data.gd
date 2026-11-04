@@ -14,7 +14,10 @@ extends Node
 ##   GameData.set_setting(key, value)   a setting changed
 ##
 ## and, when the game knows them, GameData.screen(name) (the menu or screen now
-## up), GameData.mark_playing() (the player can play: the end of the boot) and
+## up), GameData.ui(event, data) (tutorial_skipped, help_opened),
+## GameData.track_player(node) (whose position the heatmaps follow),
+## GameData.death(cause, data), GameData.achievement(api_name),
+## GameData.mark_playing() (the player can play: the end of the boot) and
 ## GameData.loaded(what, ms) (a load the game timed itself); and, for a game that
 ## wants them, opted_out()/set_opt_out() and PRIVACY_URL. The Steam ticket, the
 ## session, batching, the disk queue, retries, the quit and crashes all happen
@@ -31,6 +34,14 @@ extends Node
 ##   idle            the window lost focus, or no input for IDLE_AFTER_S, and back
 ##   setting_changed set_setting() with its old and new value
 ##   screen          screen(name)
+##   ui              "screen": how long a screen was up, as the next one comes
+##   position        every position_every_s while playing and not idle, when the
+##                   tracked player has moved: scene, x, y (z), its turn
+##   death           death(): the scene and where the player stood
+##   overlay         the Steam overlay opened or closed
+##   steam           once: Steam's language, Family Sharing, Remote Play, Big
+##                   Picture (and again when a Remote Play session comes or goes)
+##   achievement     an unlock Steam stored, or achievement(): name, scene, playtime
 ##   error           script and engine errors (ErrorCatcher)
 ##
 ## and /session/end's summary says where the session stopped (last scene and
@@ -141,6 +152,10 @@ const STEAM_INPUT_TYPES: Array[String] = ["unknown", "steam_controller", "xbox36
 		"steam_controller2", "steam_frame_controller_pair"]
 ## The most DLC a session lists.
 const DLC_MAX := 200
+## How far the tracked player must have moved for a new "position": a pixel in
+## 2D, five centimetres in 3D.
+const MOVED_2D := 1.0
+const MOVED_3D := 0.05
 
 enum State { OFF, STARTING, LIVE, OPTED_OUT }
 
@@ -170,6 +185,8 @@ var log_path := ""
 var share_hardware := true
 ## The game_version sessions report: application/config/version when empty.
 var game_version := ""
+## How often the tracked player's position is sampled, in seconds of play.
+var position_every_s := 3.0
 
 var _state := State.OFF
 var _started := false
@@ -239,6 +256,17 @@ var _idle := false
 var _idle_since := 0.0
 var _active_s := 0.0
 var _idle_s := 0.0
+## The node track_player() named, held weakly so a freed player is no trouble,
+## and the last position it was seen at ({} before any).
+var _player: WeakRef = null
+var _position_since := 0.0
+var _last_position := {}
+var _screen_since := 0.0
+## Achievements recorded this session, by name, so Steam's callback and the
+## game's own call make one event between them.
+var _achieved := {}
+## Steam's side of the session (_steam_context()), asked once.
+var _steam_info := {}
 
 
 #region Lifecycle
@@ -310,6 +338,11 @@ func advance(delta: float) -> void:
 		if _perf_since >= PERF_EVERY_S:
 			_perf("interval")
 		_watch_idle(delta)
+		_position_since += delta
+		if _position_since >= position_every_s:
+			_position_since = 0.0
+			if not _idle and not (is_inside_tree() and get_tree().paused):
+				_sample_position()
 		_ring.flush()
 	if _pump_due and _clock >= _retry_at:
 		_pump()
@@ -385,6 +418,8 @@ func start(app_id: int, settings := {}) -> void:
 	_watch_the_player()
 	_open_session()
 	_record("input", "", _input_info(true))
+	_record("steam", "", _steam_context())
+	_hear_steam()
 	if _play_ms >= 0:
 		_boot_event("mark_playing")
 	if catch_errors:
@@ -435,13 +470,57 @@ func set_setting(key: String, value: Variant) -> void:
 
 
 ## The menu or screen now up ("main_menu", "options", "map"), when the game
-## names them: a "screen" event, and where /session/end says the player left.
+## names them: a "screen" event, a "ui" "screen" event with the seconds the one
+## before was up, and where /session/end says the player left.
 func screen(screen_name: String) -> void:
 	if screen_name == _screen:
 		return
 	var from := _screen
+	_leave_screen()
 	_screen = screen_name
+	_screen_since = _clock
 	_record("screen", "", {"name": screen_name, "from": from})
+
+
+## Something the player did with the interface rather than the game: a "ui"
+## event, named by the game in snake_case ("tutorial_skipped", "help_opened",
+## "hint_shown"), with the screen it happened on.
+func ui(event_name: String, data := {}) -> void:
+	var with_screen := data.duplicate()
+	if not with_screen.has("screen"):
+		with_screen["screen"] = _screen
+	_record("ui", event_name, with_screen)
+
+
+## The node the player is, a Node2D or a Node3D, for the heatmaps. Call it
+## again after a respawn or a scene change; null stops the tracking.
+func track_player(node: Node) -> void:
+	_player = weakref(node) if node is Node2D or node is Node3D else null
+	_position_since = 0.0
+	_last_position = {}
+	_sample_position()
+
+
+## The player died: a "death" event with the scene and where they stood, the
+## cause and anything else the game adds.
+func death(cause := "", data := {}) -> void:
+	var event: Dictionary = _plain(data)
+	event["cause"] = cause
+	event["scene"] = _scene
+	var at := _player_at()
+	for key: String in at:
+		if key != "scene":
+			event[key] = at[key]
+	_record("death", "", event)
+
+
+## An achievement unlocked, for a game that would rather say so than wait for
+## Steam's callback; once per name per session either way.
+func achievement(api_name: String) -> void:
+	if _achieved.has(api_name) or not is_recording():
+		return
+	_achieved[api_name] = true
+	_record("achievement", "", {"name": api_name, "scene": _scene, "playtime_s": int(_t)})
 
 
 ## The player can play now: the end of the boot, once a run. Without it the
@@ -572,8 +651,12 @@ func shutdown() -> void:
 		_state = State.OFF
 		return
 	_perf("quit")
+	_leave_screen()
 	if _boots.is_empty():
 		_boot_event("quit")
+	var here := _player_at()
+	if not here.is_empty():
+		_last_position = here
 	_cut_batch()
 	var summary := {
 		"events": _counts.values().reduce(func(sum: int, n: int) -> int: return sum + n, 0),
@@ -582,6 +665,7 @@ func shutdown() -> void:
 		"progress": _last_progress,
 		"last_scene": _scene,
 		"last_screen": _screen,
+		"last_position": _last_position if not _last_position.is_empty() else null,
 		"playtime_s": int(_t),
 		"active_s": int(_active_s),
 		"idle_s": int(_idle_s),
@@ -656,6 +740,7 @@ func _start_members(gameplay: bool) -> String:
 		"first_session": _session_number == 1 if gameplay else null,
 		"input": _input_info(true) if share else null,
 		"dlc": _dlc() if gameplay else null,
+		"steam": _steam_context() if gameplay else null,
 	}
 	var text := JSON.stringify(body, "", false)
 	return text.substr(1, text.length() - 2)
@@ -940,6 +1025,7 @@ func _read_crash() -> void:
 		"last_screen": str(info.get("last_screen", "")),
 		"playtime_s": int(info.get("playtime_s", 0)),
 		"first_session": bool(info.get("first_session", false)),
+		"last_position": _last_position_in(events),
 	}
 	_crash_members = "\"crashed_session_id\":%s,\"game_version\":%s,\"log_tail\":%s,\"last_events\":[%s],\"signal\":%s,\"os\":%s,\"quit_point\":%s" % [
 		sid_json, JSON.stringify(str(info.get("game_version", _version()))), JSON.stringify(tail),
@@ -1225,6 +1311,111 @@ func _deck_mode() -> String:
 		return ""
 	var size := DisplayServer.screen_get_size(DisplayServer.window_get_current_screen())
 	return "handheld" if size in DECK_SCREENS else "docked"
+
+
+## Where the tracked player stands: {scene, x, y, rot} in 2D, {scene, x, y,
+## z, yaw} in 3D; {} when nothing is tracked or it has left the tree.
+func _player_at() -> Dictionary:
+	var node: Node = _player.get_ref() if _player != null else null
+	if node == null or not node.is_inside_tree():
+		return {}
+	if node is Node2D:
+		var flat := node as Node2D
+		var at := flat.global_position
+		return {"scene": _scene, "x": snappedf(at.x, 0.1), "y": snappedf(at.y, 0.1),
+				"rot": snappedf(flat.global_rotation, 0.01)}
+	var deep := node as Node3D
+	var where := deep.global_position
+	return {"scene": _scene, "x": snappedf(where.x, 0.01), "y": snappedf(where.y, 0.01),
+			"z": snappedf(where.z, 0.01), "yaw": snappedf(deep.global_rotation.y, 0.01)}
+
+
+## A "position" when the player has moved since the last one, or is in
+## another scene; standing still sends nothing.
+func _sample_position() -> void:
+	if not is_recording():
+		return
+	var at := _player_at()
+	if at.is_empty():
+		return
+	if not _last_position.is_empty() and at.scene == _last_position.scene:
+		var dz := float(at.get("z", 0.0)) - float(_last_position.get("z", 0.0))
+		var moved := Vector3(at.x - _last_position.x, at.y - _last_position.y, dz).length()
+		if moved <= (MOVED_3D if at.has("z") else MOVED_2D):
+			return
+	_last_position = at
+	_record("position", "", at)
+
+
+## The last position a crashed run's ring holds, for its quit point; null for none.
+static func _last_position_in(events: PackedStringArray) -> Variant:
+	var json := JSON.new()
+	for i in range(events.size() - 1, -1, -1):
+		if events[i].contains("\"position\"") and json.parse(events[i]) == OK \
+				and json.data is Dictionary and json.data.get("type") == "position":
+			return json.data.get("data")
+	return null
+
+
+## The screen up until now, and for how long: a "ui" "screen" event.
+func _leave_screen() -> void:
+	if _screen.is_empty() or not is_recording():
+		return
+	_record("ui", "screen", {"screen": _screen, "seconds": snappedf(_clock - _screen_since, 0.1)})
+
+
+## Steam's side of the session: its language against the game's, whether the
+## game is borrowed through Family Sharing (a yes or no: never whose it is),
+## Remote Play and Big Picture.
+func _steam_context() -> Dictionary:
+	if not _steam_info.is_empty():
+		return _steam_info
+	var shared := bool(_ask_steam(&"isSubscribedFromFamilySharing", false))
+	if not shared and _steam != null and _steam.has_method(&"getAppOwner") and _steam.has_method(&"getSteamID"):
+		var owner := int(_steam.call(&"getAppOwner"))
+		shared = owner != 0 and owner != int(_steam.call(&"getSteamID"))
+	_steam_info = {
+		"ui_language": str(_ask_steam(&"getSteamUILanguage", "")),
+		"game_language": str(_ask_steam(&"getCurrentGameLanguage", "")),
+		"locale": TranslationServer.get_locale(),
+		"family_shared": shared,
+		"remote_play": int(_ask_steam(&"getSessionCount", 0)) > 0,
+		"big_picture": bool(_ask_steam(&"isSteamInBigPictureMode", false)),
+	}
+	return _steam_info
+
+
+func _ask_steam(method: StringName, fallback: Variant) -> Variant:
+	return _steam.call(method) if _steam != null and _steam.has_method(method) else fallback
+
+
+## Steam's own news: the overlay, achievements stored, Remote Play sessions.
+func _hear_steam() -> void:
+	var hooks := {
+		&"overlay_toggled": _on_overlay_toggled,
+		&"user_achievement_stored": _on_achievement_stored,
+		&"remote_play_session_connected": _on_remote_play,
+		&"remote_play_session_disconnected": _on_remote_play,
+	}
+	for hook: StringName in hooks:
+		if _steam.has_signal(hook) and not _steam.is_connected(hook, hooks[hook]):
+			_steam.connect(hook, hooks[hook])
+
+
+## Only that it opened or closed, and where the player was.
+func _on_overlay_toggled(active: bool, _user_initiated: bool, _app_id: int) -> void:
+	_record("overlay", "", {"open": active, "scene": _scene, "screen": _screen})
+
+
+## Steam stores progress the same way; an unlock is the one with no progress.
+func _on_achievement_stored(_game_id: int, _group: bool, api_name: String, _progress: int, out_of: int) -> void:
+	if out_of == 0:
+		achievement(api_name)
+
+
+func _on_remote_play(_session_id: int) -> void:
+	_steam_info = {}
+	_record("steam", "", {"remote_play": int(_ask_steam(&"getSessionCount", 0)) > 0})
 
 
 ## The game's DLC and whether the player owns each, for session/start.

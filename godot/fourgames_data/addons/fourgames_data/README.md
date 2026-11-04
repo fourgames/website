@@ -39,13 +39,18 @@ the ticket never arrives.
 | `GameData.progress(data)` | How far they are: `{"day": 4, "coins": 120}`. The last one is also in the session's summary. |
 | `GameData.snapshot(data)` | A small state summary; call it every ~30 s. |
 | `GameData.set_setting(key, value)` | A setting changed. Before `start()` it only fills in the session's settings. |
-| `GameData.screen(name)` | The menu or screen now up (`"main_menu"`, `"options"`). Optional. |
+| `GameData.screen(name)` | The menu or screen now up (`"main_menu"`, `"options"`). Optional; the time spent on each one is recorded. |
+| `GameData.ui(event, data)` | Something done with the interface rather than the game (see the conventions below). Optional. |
+| `GameData.track_player(node)` | The player's `Node2D` or `Node3D`, for the heatmaps. Call it again after a respawn or a scene change; `null` stops it. Optional. |
+| `GameData.death(cause, data)` | The player died; the scene and where they stood are added. Optional. |
+| `GameData.achievement(api_name)` | An achievement unlocked. Optional: Steam's `user_achievement_stored` is heard anyway, and a name counts once a session either way. |
 | `GameData.mark_playing()` | The player can actually play: the end of the boot. Optional; without it the first scene change after the main scene stands in. |
 | `GameData.loaded(what, ms)` | A load the game timed itself (a threaded one). Optional. |
 | `GameData.rng(name, seed)` / `GameData.custom(name, data)` | A seed rolled from; anything else. |
 | `GameData.opted_out()` / `GameData.set_opt_out(on)` | For a game that shows its own switch. Optional: players opt out on the website or with `/privacy` in the Discord bot, and the server tells the game at session start. |
 | `GameData.PRIVACY_URL` | `https://fourgames.se/privacy`, for a "Privacy" link. |
 | `GameData.share_hardware` | Set false before `start()` to send no machine, settings or controller details (`consent.hardware`). |
+| `GameData.position_every_s` | How often the tracked player's position is sampled (3 s). |
 
 Data values may be numbers, strings, bools, `Vector2`/`Vector2i` (sent as
 `[x, y]`), arrays and dictionaries a few levels deep; objects are dropped.
@@ -63,14 +68,33 @@ Each is an event in the `/v1/events` batches, with no call from the game:
 | `idle` | focus lost, or no input for 60 s, and back | `idle`, `why` (`unfocused`, `no_input`), `after_s` (how long the state before lasted) |
 | `setting_changed` | `set_setting()` with a new value | `key`, `old`, `new` (hardware consent only) |
 | `screen` | `screen(name)` | `name`, `from` |
+| `ui` `"screen"` | the screen changes, and at quit | `screen`, `seconds` it was up |
+| `ui` `<event>` | `ui(event, data)` | the game's data and the `screen` it happened on |
+| `position` | every `position_every_s` while playing (not idle, not paused), when the tracked player has moved over 1 px (2D) or 5 cm (3D) | `scene`, `x`, `y`, `rot` in 2D; `scene`, `x`, `y`, `z`, `yaw` in 3D |
+| `death` | `death(cause, data)` | the game's data, `cause`, `scene` and the position fields |
+| `overlay` | the Steam overlay opens or closes | `open`, `scene`, `screen`, nothing else |
+| `steam` | once at start, and when a Remote Play session comes or goes | `ui_language` (Steam's), `game_language` (the one set for the game in Steam), `locale` (the game's), `family_shared` (a yes or no: never whose copy it is), `remote_play`, `big_picture` |
+| `achievement` | Steam stored an unlock, or `achievement()` | `name`, `scene`, `playtime_s` |
 | `error` | a script or engine error, once each per session (50 at most) | `message`, `file`, `line`, `function`; repeats are counted in the summary |
 
 `/session/start` also carries `boot_kind`, `first_session`, `input` (hardware
-consent only) and `dlc` (`[{app_id, owned}]` from Steam's DLC list), and
-`/session/end`'s `summary` carries `events`, `actions`, `errors`, `progress`,
-`last_scene`, `last_screen`, `playtime_s`, `active_s`, `idle_s`,
-`first_session`, `session_number` and `boot_kind`. Its `seq` is the number of
-event batches the session sent.
+consent only), `dlc` (`[{app_id, owned}]` from Steam's DLC list) and `steam`
+(as the `steam` event), and `/session/end`'s `summary` carries `events`,
+`actions`, `errors`, `progress`, `last_scene`, `last_screen`, `last_position`,
+`playtime_s`, `active_s`, `idle_s`, `first_session`, `session_number` and
+`boot_kind`. Its `seq` is the number of event batches the session sent. No
+screenshots are ever taken or sent.
+
+### Naming screens and interface events
+
+- Screens are snake_case nouns for what is up, the same name every time:
+  `main_menu`, `options`, `pause`, `map`, `shop`, `inventory`, `credits`. Call
+  `screen("")` when the player is back in plain gameplay with nothing over it.
+- `ui` events are snake_case, the thing first and then what happened to it, in
+  the past tense: `tutorial_skipped`, `tutorial_finished`, `help_opened`,
+  `hint_shown`, `hint_dismissed`, `keybind_changed`, `save_deleted`. Put the
+  detail in the data (`ui("tutorial_skipped", {"step": 2})`), not in the name.
+- Deaths name their cause the same way: `fell`, `drowned`, `enemy_slime`.
 
 Hardware is `os`, `cpu`, `cpu_cores`, `ram_mb`, `gpu`, `gpu_driver`,
 `renderer`, `screen`, `refresh_hz` and `steam_deck`, and nothing else: no
@@ -103,7 +127,8 @@ serial numbers, MAC addresses, device ids or `OS.get_unique_id()`.
   Finding it at the next `start()` means that run never quit: its ring, the
   last 64 KB of the log it left (Godot renames `godot.log` to `godot<date>.log`
   at each start, so it is that one), the signal the log names (`SIGSEGV`, or
-  `unclean exit` when the log says nothing) and where it was (`quit_point`) go to
+  `unclean exit` when the log says nothing) and where it was (`quit_point`:
+  scene, screen, playtime, first session, and the ring's last position) go to
   `/crash` under the new session's token, and the new session's
   `previous_crash` names it. The player's home folder is scrubbed from the log.
 - **Off** in the editor, in debug builds and in tests unless

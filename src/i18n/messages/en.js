@@ -405,7 +405,8 @@ export default {
 			optOut: {
 				title: "How to opt out",
 				body: [
-					"Sign in with Steam under {yourData} below and switch it off (your phone works too). It applies to all our games from the next time you start one. The games have no opt-out switch of their own; some may link to this page.",
+					"Sign in with Steam under {yourData} below and switch it off. It applies to all our games from the next time you start one. The games have no opt-out switch of their own; some may link to this page.",
+					"We put this on the website so you can always reach it, even if you can't open the game any more (say you refunded it or aren't at your computer), and it works on your phone too. Signing in with Steam proves the data is yours, so nobody else can see, download or change it.",
 				],
 			},
 			rights: {

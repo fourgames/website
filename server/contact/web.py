@@ -14,13 +14,15 @@ import ipaddress
 import json
 import logging
 import secrets
+from dataclasses import replace
 from typing import Callable
+from urllib.parse import parse_qsl, unquote
 
 import aiohttp
 from aiohttp import web
 
 from . import mail
-from .checks import RateLimiter, Rejected, check
+from .checks import ATTACHMENT, RateLimiter, Rejected, check, check_attachment
 from .config import Config
 
 log = logging.getLogger("contact.web")
@@ -32,8 +34,9 @@ SALT = web.AppKey("salt", bytes)
 SEND = web.AppKey("send", Callable)
 SESSION = web.AppKey("session", aiohttp.ClientSession)
 
-# Form posts are small; anything bigger isn't from our form.
-MAX_BODY = 64 * 1024
+# The text fields are small; anything bigger isn't from our form. A request with a PDF may be the
+# PDF's limit (config.max_attachment) plus this.
+MAX_TEXT = 64 * 1024
 
 
 def client_ip(request: web.Request) -> str:
@@ -75,21 +78,99 @@ def answer(request: web.Request, status: int, error: str | None = None) -> web.R
     return web.json_response(body, status=status, headers=headers)
 
 
-async def read_fields(request: web.Request) -> dict[str, str]:
+class Form:
+    """What the visitor sent: the text fields, and the PDF if there is one (name and bytes, unchecked)."""
+
+    def __init__(self, fields: dict[str, str], file: tuple[str, bytes] | None = None):
+        self.fields = fields
+        self.file = file
+
+
+def too_big() -> Rejected:
+    return Rejected("the message is too long", status=413)
+
+
+async def read_body(request: web.Request, limit: int) -> bytes:
+    """The whole body, but never more than `limit` bytes of it in memory."""
+    if request.content_length is not None and request.content_length > limit:
+        raise too_big()
+    body = bytearray()
+    async for chunk in request.content.iter_chunked(64 * 1024):
+        body += chunk
+        if len(body) > limit:
+            raise too_big()
+    return bytes(body)
+
+
+async def read_part(part, limit: int, used: int) -> bytes:
+    """One multipart part, stopping as soon as the request would go over `limit` in total."""
+    data = bytearray()
+    while chunk := await part.read_chunk(64 * 1024):
+        data += chunk
+        if used + len(data) > limit:
+            raise too_big()
+    return bytes(data)
+
+
+async def read_multipart(request: web.Request, max_attachment: int) -> Form:
+    """Streams the parts: the text fields may take MAX_TEXT, the one PDF max_attachment, and it
+    stops (413) once the request goes over that, so nothing big is ever buffered."""
+    limit = MAX_TEXT + max_attachment
+    if request.content_length is not None and request.content_length > limit:
+        raise too_big()
+    fields: dict[str, str] = {}
+    file: tuple[str, bytes] | None = None
+    used = text = 0
+    reader = await request.multipart()
+    while (part := await reader.next()) is not None:
+        if not isinstance(part, aiohttp.BodyPartReader):
+            raise Rejected("nested multipart isn't supported")
+        data = await read_part(part, limit, used)
+        used += len(data)
+        if part.filename is not None:
+            # A file field. An empty one (no file chosen) is the same as none.
+            if part.name != ATTACHMENT or (not part.filename and not data):
+                continue
+            if file is not None:
+                raise Rejected("only one file can be attached")
+            if len(data) > max_attachment:
+                raise Rejected(f"the file is too big (at most {max_attachment // (1024 * 1024)} MB)", status=413)
+            # Browsers (and aiohttp) percent-encode some characters in the name, e.g. %22 for ".
+            file = (unquote(part.filename), data)
+        else:
+            text += len(data)
+            if text > MAX_TEXT:
+                raise too_big()
+            try:
+                value = data.decode(part.get_charset(default="utf-8"))
+            except (LookupError, UnicodeDecodeError):
+                raise Rejected("the form isn't valid text") from None
+            if part.name:
+                fields[part.name] = value
+    return Form(fields, file)
+
+
+async def read_form(request: web.Request, max_attachment: int) -> Form:
+    if request.content_type == "multipart/form-data":
+        return await read_multipart(request, max_attachment)
     if request.content_type == "application/json":
         try:
-            data = await request.json()
+            data = json.loads(await read_body(request, MAX_TEXT))
         except (json.JSONDecodeError, UnicodeDecodeError):
             raise Rejected("the body isn't valid JSON") from None
         if not isinstance(data, dict):
             raise Rejected("the body must be a JSON object")
-    elif request.content_type in ("application/x-www-form-urlencoded", "multipart/form-data"):
-        data = await request.post()
+    elif request.content_type == "application/x-www-form-urlencoded":
+        body = await read_body(request, MAX_TEXT)
+        try:
+            data = dict(parse_qsl(body.decode(request.charset or "utf-8"), keep_blank_values=True))
+        except (LookupError, UnicodeDecodeError):
+            raise Rejected("the form isn't valid text") from None
     else:
         raise Rejected("send the form as form data or JSON", status=415)
-    # Only text fields; anything else (a file, a nested object) counts as empty.
-    return {str(k): v if isinstance(v, str) else (str(v) if isinstance(v, (int, float)) else "")
-            for k, v in data.items()}
+    # Only text fields; anything else (a nested object) counts as empty. Files only come as multipart.
+    return Form({str(k): v if isinstance(v, str) else (str(v) if isinstance(v, (int, float)) else "")
+                 for k, v in data.items()})
 
 
 async def contact(request: web.Request) -> web.Response:
@@ -105,7 +186,10 @@ async def contact(request: web.Request) -> web.Response:
         return answer(request, 429, "too many messages, please try again later")
 
     try:
-        submission = check(await read_fields(request), config.min_seconds)
+        form = await read_form(request, config.max_attachment)
+        submission = check(form.fields, config.min_seconds)
+        if form.file is not None:
+            submission = replace(submission, attachment=check_attachment(*form.file, config.max_attachment))
     except Rejected as rejected:
         log.info("rejected %s: %s", who, rejected.reason)
         if rejected.silent:
@@ -119,7 +203,8 @@ async def contact(request: web.Request) -> web.Response:
         # The error's type only: SMTP errors can quote the addresses.
         log.error("send failed for %s: %s", who, type(error).__name__)
         return answer(request, 502, "the message couldn't be sent, please try again later")
-    log.info("sent for %s", who)
+    # Never the file's name or content.
+    log.info("sent for %s%s", who, " with a PDF" if submission.attachment else "")
 
     if config.discord_webhook_url:
         try:
@@ -156,7 +241,8 @@ async def _session(app: web.Application):
 
 
 def make_app(config: Config, send: Callable | None = None) -> web.Application:
-    app = web.Application(client_max_size=MAX_BODY, middlewares=[errors])
+    # read_form enforces the real limits while streaming; this is aiohttp's own backstop.
+    app = web.Application(client_max_size=MAX_TEXT + config.max_attachment, middlewares=[errors])
     app[CONFIG] = config
     app[LIMITER] = RateLimiter(config.rate_limit, config.rate_window)
     app[SALT] = secrets.token_bytes(16)

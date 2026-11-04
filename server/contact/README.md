@@ -8,7 +8,7 @@ Nothing is stored on the server.
 
 | Route | What it does |
 | --- | --- |
-| `POST /contact` (or `POST /`) | Takes the form, as form data or JSON: `email`, `message`, `_subject` (hidden, says the site language), `_gotcha` (the honeypot) and `_elapsed`. Answers `{"ok": true}`, or `{"ok": false, "error": "…"}` with 400 (bad fields, spam), 403 (another site), 413 (too big), 415 (not form data or JSON), 429 (too many) or 502 (the mail didn't go out). |
+| `POST /contact` (or `POST /`) | Takes the form, as form data or JSON: `email`, `message`, `_subject` (hidden, says the site language), `_gotcha` (the honeypot) and `_elapsed`, plus an optional `attachment` (one PDF, multipart form data only). Answers `{"ok": true}`, or `{"ok": false, "error": "…"}` with 400 (bad fields, not a PDF, spam), 403 (another site), 413 (too big), 415 (not form data or JSON), 429 (too many) or 502 (the mail didn't go out). |
 | `GET /health` | `{"ok": true}` |
 
 The routes answer with or without the `/contact` prefix, so Caddy's `handle` and `handle_path` both work.
@@ -26,15 +26,33 @@ The routes answer with or without the `/contact` prefix, so Caddy's `handle` and
 - **Links**: more than 3 links, or forum/HTML link markup (`[url=`, `<a href`), is refused.
 - **Origin**: only posts from `https://fourgames.se` (`CONTACT_ALLOWED_ORIGINS`) are taken; CORS lets
   only that origin read the answer.
-- **Limits**: a valid-looking email (at most 254 characters), a message of 2 to 5,000 characters, a
-  request body of at most 64 KB.
+- **Limits**: a valid-looking email (at most 254 characters), a message of 2 to 5,000 characters, at
+  most 64 KB of text fields, and a request of at most the PDF limit plus 64 KB.
+
+## The PDF attachment
+
+People may attach one CV or portfolio as a PDF (the `attachment` field), up to 5 MB
+(`CONTACT_MAX_ATTACHMENT_MB`). It arrives in the email as an `application/pdf` attachment.
+
+- **Checked by its name and its bytes**: the name must end in `.pdf` and the content start with `%PDF-`;
+  the content type the browser sends is ignored. Anything else is refused with 400.
+- **Size**: multipart posts are read part by part and the read stops (413) as soon as the PDF goes over
+  its limit or the request over the limit plus 64 KB, so nothing big is held in memory. Forms without a
+  file (and JSON or urlencoded posts) still have the 64 KB limit.
+- **The name in the email** is made safe: no folders, ASCII only (accents dropped, other characters
+  become `_`), at most 80 characters, always ending in `.pdf`; `attachment.pdf` when nothing usable is
+  left (e.g. a name in Japanese).
+- Only a field called `attachment` counts; other file fields are ignored. An empty file field (no file
+  chosen) is the same as none.
 
 ## Privacy
 
 The logs show only the outcome and a short hash of the IP (salted per run, so it can't be turned back
-into the IP), e.g. `sent for 66880d6aef5b` or `rejected 66880d6aef5b: sent too fast`. Never a message,
-an email address or an IP; aiohttp's access log is off. The optional Discord notice says only
-`New contact form message from someone at studio.com, subject: …`.
+into the IP), e.g. `sent for 66880d6aef5b`, `sent for 66880d6aef5b with a PDF` or
+`rejected 66880d6aef5b: sent too fast`. Never a message, an email address, an IP, or an attached file's
+name or content; aiohttp's access log is off. The optional Discord notice says only
+`New contact form message from someone at studio.com, subject: …`, plus `, with a PDF attached` when
+there is one.
 
 The code: `web.py` (the routes, CORS, IP and logging), `checks.py` (fields, honeypot, time, links, rate
 limit), `mail.py` (the email and the Discord notice), `config.py`. Settings are in `contact.env.example`.

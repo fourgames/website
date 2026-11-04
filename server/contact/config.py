@@ -30,6 +30,8 @@ class Config:
     # Per IP: at most rate_limit messages per rate_window seconds.
     rate_limit: int
     rate_window: int
+    # The largest PDF (a CV or portfolio) the form may attach, in bytes.
+    max_attachment: int
     host: str
     port: int
 
@@ -67,6 +69,7 @@ class Config:
             min_seconds=number("CONTACT_MIN_SECONDS", "3", float),
             rate_limit=number("CONTACT_RATE_LIMIT", "5"),
             rate_window=number("CONTACT_RATE_WINDOW", "3600"),
+            max_attachment=int(number("CONTACT_MAX_ATTACHMENT_MB", "5", float) * 1024 * 1024),
             # Only Caddy on the same machine talks to it.
             host=get("HOST", "127.0.0.1"),
             port=number("PORT", "8101"),

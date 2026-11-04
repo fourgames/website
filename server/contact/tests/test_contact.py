@@ -6,11 +6,12 @@ import asyncio
 import logging
 import smtplib
 
+import aiohttp
 import pytest
 from aiohttp.test_utils import TestClient, TestServer
 
 from contact import mail
-from contact.checks import RateLimiter, Rejected, check
+from contact.checks import RateLimiter, Rejected, check, safe_filename
 from contact.config import Config, ConfigError
 from contact.web import make_app
 
@@ -295,3 +296,152 @@ def test_send_email_uses_starttls(monkeypatch):
     mail.send_email(cfg, mail.build_email(cfg, sub, "abc"))
     assert calls == [("connect", "smtp.strato.com", 587), ("starttls",),
                      ("login", "support@fourgames.se"), ("send", "ana@studio.com")]
+
+
+# The PDF attachment
+
+PDF = b"%PDF-1.7\n" + b"x" * 2000 + b"\n%%EOF\n"
+
+
+def upload(data: bytes, filename: str, content_type: str = "application/pdf", fields=None, name="attachment"):
+    """A multipart post like the browser's FormData, with one file."""
+    async def steps(client):
+        form = aiohttp.FormData()
+        for key, value in (GOOD if fields is None else fields).items():
+            form.add_field(key, value)
+        form.add_field(name, data, filename=filename, content_type=content_type)
+        response = await client.post("/contact", data=form, headers={"Origin": ORIGIN, "Accept": "application/json"})
+        return response.status, await response.json(), dict(response.headers)
+    return steps
+
+
+def test_config_attachment_limit():
+    assert config().max_attachment == 5 * 1024 * 1024
+    assert config(CONTACT_MAX_ATTACHMENT_MB="2").max_attachment == 2 * 1024 * 1024
+
+
+def test_pdf_is_attached_to_the_email():
+    outbox = Outbox()
+    # The browser's content type doesn't matter; the name and the bytes do.
+    status, body, _ = run(config(), outbox, upload(PDF, "Ana CV.PDF", content_type="application/octet-stream"))
+    assert (status, body) == (200, {"ok": True})
+    [message] = outbox.sent
+    [part] = list(message.iter_attachments())
+    assert part.get_content_type() == "application/pdf"
+    assert part.get_filename() == "Ana CV.pdf"
+    assert part.get_content() == PDF
+    assert "we'd love to work with you" in message.get_body(("plain",)).get_content()
+
+
+def test_no_attachment_multipart_still_works():
+    async def steps(client):
+        form = aiohttp.FormData()
+        for key, value in GOOD.items():
+            form.add_field(key, value)
+        # What a browser sends for a file input with nothing chosen.
+        form.add_field("attachment", b"", filename="", content_type="application/octet-stream")
+        response = await client.post("/contact", data=form, headers={"Origin": ORIGIN})
+        return response.status, await response.json()
+    outbox = Outbox()
+    assert run(config(), outbox, steps) == (200, {"ok": True})
+    [message] = outbox.sent
+    assert not message.is_multipart()
+    assert list(message.iter_attachments()) == []
+
+
+def test_non_pdf_rejected():
+    outbox = Outbox()
+    status, body, _ = run(config(), outbox, upload(b"MZ\x90\x00 not a pdf", "setup.exe", content_type="application/pdf"))
+    assert status == 400 and body["ok"] is False and "PDF" in body["error"]
+    assert outbox.sent == []
+
+
+def test_fake_pdf_without_magic_bytes_rejected():
+    outbox = Outbox()
+    status, body, _ = run(config(), outbox, upload(b"<html>hello</html>", "cv.pdf"))
+    assert status == 400 and "isn't a PDF" in body["error"]
+    assert outbox.sent == []
+
+
+def test_too_big_pdf_413():
+    outbox = Outbox()
+    big = PDF + b"x" * (1024 * 1024)
+    status, body, _ = run(config(CONTACT_MAX_ATTACHMENT_MB="1"), outbox, upload(big, "cv.pdf"))
+    assert status == 413 and body["ok"] is False
+    assert outbox.sent == []
+
+
+def test_way_too_big_request_413():
+    # Over the whole request's limit (PDF limit + 64 KB): stopped while reading.
+    status, body, _ = run(config(CONTACT_MAX_ATTACHMENT_MB="1"), Outbox(), upload(PDF + b"x" * (3 * 1024 * 1024), "cv.pdf"))
+    assert status == 413 and body["ok"] is False
+
+
+def test_big_text_fields_in_multipart_413():
+    status, body, _ = run(config(), Outbox(), upload(PDF, "cv.pdf", fields={**GOOD, "message": "x" * 70_000}))
+    assert status == 413 and body["ok"] is False
+
+
+def test_other_file_fields_are_ignored():
+    outbox = Outbox()
+    status, _, _ = run(config(), outbox, upload(b"whatever", "x.exe", name="other"))
+    assert status == 200
+    assert list(outbox.sent[0].iter_attachments()) == []
+
+
+def test_honeypot_with_pdf_sends_nothing():
+    outbox = Outbox()
+    status, body, _ = run(config(), outbox, upload(PDF, "cv.pdf", fields={**GOOD, "_gotcha": "x"}))
+    assert (status, body) == (200, {"ok": True}) and outbox.sent == []
+
+
+@pytest.mark.parametrize("name, safe", [
+    ("CV.PDF", "CV.pdf"),
+    ("../../etc/passwd.pdf", "passwd.pdf"),
+    ("C:\\Users\\ana\\Mörk Åsa CV.pdf", "Mork Asa CV.pdf"),
+    ("履歴書.pdf", "attachment.pdf"),
+    (".pdf", "attachment.pdf"),
+    ("my<cv>\r\nBcc: x.pdf", "my_cv_Bcc_ x.pdf"),
+    ("a" * 200 + ".pdf", "a" * 76 + ".pdf"),
+])
+def test_safe_filename(name, safe):
+    assert safe_filename(name) == safe
+
+
+def test_logs_and_discord_never_show_the_file(monkeypatch, caplog):
+    caplog.set_level(logging.INFO)
+    seen = []
+
+    async def fake_notify(session, url, sub):
+        seen.append(sub)
+    monkeypatch.setattr(mail, "notify_discord", fake_notify)
+    cfg = config(CONTACT_DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/1/x")
+    run(cfg, Outbox(), upload(PDF, "Secret Name CV.pdf"))
+    run(cfg, Outbox(), upload(b"nope", "Secret Name CV.pdf"))
+    assert "Secret Name" not in caplog.text and "%PDF" not in caplog.text
+    assert "sent for" in caplog.text
+    assert seen and seen[0].attachment is not None
+
+
+def test_discord_text_mentions_the_pdf_only():
+    posted = []
+
+    class FakeResponse:
+        async def __aenter__(self):
+            return self
+        async def __aexit__(self, *exc):
+            return False
+        def raise_for_status(self):
+            pass
+
+    class FakeSession:
+        def post(self, url, json, timeout):
+            posted.append(json["content"])
+            return FakeResponse()
+    sub = check(GOOD, 3)
+    from dataclasses import replace
+    from contact.checks import check_attachment
+    sub = replace(sub, attachment=check_attachment("Secret Name CV.pdf", PDF, 5 * 1024 * 1024))
+    asyncio.run(mail.notify_discord(FakeSession(), "https://x", sub))
+    assert posted == ["New contact form message from someone at studio.com, subject: "
+                      "New message from fourgames.se (en), with a PDF attached"]

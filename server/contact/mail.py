@@ -22,7 +22,12 @@ def build_email(config: Config, sub: Submission, ip_hash: str) -> EmailMessage:
     mail["Subject"] = sub.subject
     mail["Date"] = formatdate(localtime=False)
     mail["Message-ID"] = make_msgid(domain=config.mail_from.rpartition("@")[2] or None)
-    mail.set_content(f"From: {sub.email}\n\n{sub.message}\n\n--\nSent with the contact form on fourgames.se (sender {ip_hash}).\n")
+    attached = f"\n\nAttached: {sub.attachment.filename}" if sub.attachment else ""
+    mail.set_content(f"From: {sub.email}\n\n{sub.message}{attached}\n\n--\nSent with the contact form on fourgames.se (sender {ip_hash}).\n")
+    if sub.attachment:
+        # Checked in checks.py: a .pdf name (made safe) and content that starts like a PDF.
+        mail.add_attachment(sub.attachment.data, maintype="application", subtype="pdf",
+                            filename=sub.attachment.filename)
     return mail
 
 
@@ -43,6 +48,8 @@ def mask_email(email: str) -> str:
 async def notify_discord(session: aiohttp.ClientSession, url: str, sub: Submission) -> None:
     # No message text and no address: just that there's something in the inbox.
     content = f"New contact form message from {mask_email(sub.email)}, subject: {sub.subject}"
+    if sub.attachment:
+        content += ", with a PDF attached"
     payload = {"content": content[:1900], "allowed_mentions": {"parse": []}}
     async with session.post(url, json=payload, timeout=aiohttp.ClientTimeout(total=10)) as response:
         response.raise_for_status()

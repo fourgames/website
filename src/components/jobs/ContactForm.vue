@@ -10,23 +10,60 @@ import { useI18n } from "@/i18n/index.js";
 const { t, code } = useI18n();
 const emailId = useId();
 const messageId = useId();
+const fileId = useId();
+const fileErrorId = useId();
+
+// Matches the backend's CONTACT_MAX_ATTACHMENT_MB (default 5).
+const MAX_FILE_MB = 5;
+const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
 const email = ref("");
 const message = ref("");
 const isSubmitting = ref(false);
 const status = ref(null); // null | "success" | "error"
+const file = ref(null); // the chosen PDF, or null
+const fileError = ref(""); // the inline error for the file, or ""
+const fileInput = ref(null);
+const removeButton = ref(null);
 let resetTimer;
 let shownAt = 0;
 
 onMounted(() => (shownAt = performance.now()));
 
+// The same rule as the backend, which goes by the name (and the file's first bytes), not the type.
+function isPdf(chosen) {
+	return chosen.name.toLowerCase().endsWith(".pdf");
+}
+
+function chooseFile(event) {
+	// A wrong file stays shown with its error (and the remove button) until it's removed or replaced.
+	const chosen = event.target.files?.[0] ?? null;
+	file.value = chosen;
+	fileError.value = "";
+	if (!chosen) return;
+	if (!isPdf(chosen)) fileError.value = t("form.fileNotPdf");
+	else if (chosen.size > MAX_FILE_BYTES) fileError.value = t("form.fileTooBig", { max: MAX_FILE_MB });
+}
+
+function removeFile() {
+	file.value = null;
+	fileError.value = "";
+	if (fileInput.value) fileInput.value.value = "";
+}
+
 async function submit(event) {
 	clearTimeout(resetTimer);
+	if (fileError.value) {
+		removeButton.value?.focus();
+		return;
+	}
 	isSubmitting.value = true;
 	status.value = null;
 	try {
 		const body = new FormData(event.target);
 		body.set("_elapsed", String(Math.round(performance.now() - shownAt)));
+		body.delete("attachment");
+		if (file.value) body.set("attachment", file.value, file.value.name);
 		const response = await fetch(SITE.contact, {
 			method: "POST",
 			body,
@@ -37,6 +74,7 @@ async function submit(event) {
 		status.value = "success";
 		email.value = "";
 		message.value = "";
+		removeFile();
 		resetTimer = setTimeout(() => (status.value = null), 8000);
 	} catch {
 		status.value = "error";
@@ -89,6 +127,45 @@ const fieldClass =
 					:disabled="isSubmitting"
 					:class="[fieldClass, 'min-h-36 resize-y py-3']"
 				></textarea>
+			</div>
+			<div>
+				<label :for="fileId" class="mb-2 block text-sm font-semibold">{{ t("form.file", { max: MAX_FILE_MB }) }}</label>
+				<input
+					v-show="!file"
+					:id="fileId"
+					ref="fileInput"
+					type="file"
+					name="attachment"
+					accept="application/pdf,.pdf"
+					:disabled="isSubmitting"
+					:class="[
+						fieldClass,
+						'py-3 file:mr-4 file:cursor-pointer file:rounded-btn file:border-0 file:bg-line file:px-3 file:py-1 file:text-sm file:font-semibold file:text-fg',
+					]"
+					@change="chooseFile"
+				/>
+				<div
+					v-if="file"
+					:aria-describedby="fileError ? fileErrorId : undefined"
+					:class="[fieldClass, 'flex h-12 items-center gap-3', fileError && 'border-danger']"
+				>
+					<span class="min-w-0 flex-1 truncate">{{ file.name }}</span>
+					<button
+						ref="removeButton"
+						type="button"
+						class="-mr-2 inline-flex size-8 shrink-0 items-center justify-center rounded-btn text-date transition-colors hover:text-fg focus-visible:outline-2 focus-visible:outline-primary/40 disabled:opacity-60"
+						:aria-label="t('form.fileRemove', { name: file.name })"
+						:title="t('form.fileRemove', { name: file.name })"
+						:disabled="isSubmitting"
+						@click="removeFile"
+					>
+						<Icon name="close" class="size-4" />
+					</button>
+				</div>
+				<p v-if="fileError" :id="fileErrorId" role="alert" class="mt-2 flex items-start gap-2 text-sm text-danger">
+					<Icon name="alert" class="mt-0.5 size-4" />
+					{{ fileError }}
+				</p>
 			</div>
 		</div>
 

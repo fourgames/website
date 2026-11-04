@@ -1,0 +1,14 @@
+# Runs gamedata-geo.service once a month. DB-IP publishes each month's file at its start; the 3rd
+# leaves room, and the updater takes last month's file until the new one is out. Persistent: a run
+# missed while the server was off happens at the next boot.
+# Install: sudo systemctl enable --now gamedata-geo.timer   Check: systemctl list-timers gamedata-geo
+[Unit]
+Description=Monthly geo database update for the game-data API
+
+[Timer]
+OnCalendar=*-*-03 04:30:00
+RandomizedDelaySec=1h
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,27 @@
+# Fetches this month's DB-IP "IP to City Lite" database (free, CC BY 4.0) for the game-data API's
+# country and region, checks it and swaps it in (server/gamedata/geoupdate.py). Started monthly by
+# gamedata-geo.timer; run it by hand with: sudo systemctl start gamedata-geo
+# The API notices the new file by itself within a minute, so it needs no restart.
+# Logs: journalctl -u gamedata-geo
+[Unit]
+Description=Four Games game data: monthly geo database update
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=fourgames
+WorkingDirectory=/srv/fourgames/own/server
+# For GEOIP_DB and DATA_DIR; it reads nothing else from it.
+EnvironmentFile=/etc/fourgames/gamedata.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/fourgames/gamedata-venv/bin/python -m gamedata.geoupdate
+# A download and an unzip of ~130 MB: in the background, behind everything else.
+Nice=10
+CPUWeight=20
+IOSchedulingClass=idle
+MemoryMax=200M
+TimeoutStartSec=30min
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full

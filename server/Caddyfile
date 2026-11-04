@@ -48,6 +48,13 @@ api.fourgames.se {
 	handle /alerts/* {
 		reverse_proxy localhost:8102
 	}
+	# Player game data (server/gamedata). Its internal lookup is for the server itself only.
+	handle /gamedata/v1/internal/* {
+		respond 404
+	}
+	handle /gamedata/* {
+		reverse_proxy localhost:8103
+	}
 	# The key bot's creator verification (server/keybot).
 	handle /keybot/* {
 		reverse_proxy localhost:8100

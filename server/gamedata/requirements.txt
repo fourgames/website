@@ -1,0 +1,4 @@
+# The game-data API's dependencies, in its own venv (/srv/fourgames/gamedata-venv). SQLite, gzip and
+# zip come with Python. maxminddb reads DB-IP's country/region database. For the tests: pytest.
+aiohttp>=3.9,<4
+maxminddb>=2.5,<3

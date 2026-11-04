@@ -1,0 +1,30 @@
+# The player game-data API (server/gamedata): the games send sessions, actions, hardware, settings and
+# crash reports; players see, download, opt out of or anonymise theirs on fourgames.se/privacy. A small
+# web server on localhost:8103 (Caddy forwards https://api.fourgames.se/gamedata/* to it), with its
+# data in /srv/fourgames/gamedata. Setup: server/gamedata/README.md.
+# Logs: journalctl -u gamedata -f
+[Unit]
+Description=Four Games player game data
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=fourgames
+# The checkout feedback-setup.sh made; python -m gamedata finds the package here.
+WorkingDirectory=/srv/fourgames/own/server
+EnvironmentFile=/etc/fourgames/gamedata.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/fourgames/gamedata-venv/bin/python -m gamedata
+Restart=always
+RestartSec=10
+# It shares one core and 2 GB with everything else; a download being zipped is its biggest moment.
+MemoryHigh=300M
+MemoryMax=500M
+# It writes only its own data folder (/srv/fourgames/gamedata, which ProtectSystem=full leaves
+# writable): keep it from writing to the system.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

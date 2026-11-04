@@ -11,6 +11,7 @@ import CSS from "./dashboard.css?inline";
 const DATA_OVERRIDE = new URLSearchParams(location.search).get("data")?.replace(/\/$/, "");
 const DATA_REPO = "https://api.github.com/repos/fourgames/feedback-data";
 const SITE_REPO = "https://api.github.com/repos/fourgames/website";
+const SERVER_STATUS = "https://api.fourgames.se/status/own.json";
 let DATA = "main"; // the data commit on screen
 const DAY = 86400;
 const URGENCY = { urgent: "Urgent", high: "High", medium: "Medium", low: "Low" };
@@ -473,9 +474,26 @@ function daily(n, valueOf) {
 // ---------------------------------------------------------------------------
 
 // Points DATA at the newest data commit and shows when it was made. Falls back to "main" if the
-// GitHub API is unreachable or rate-limited.
+// GitHub API is unreachable or rate-limited. And, at the same time, how the server's last run went.
 async function dataBase() {
   if (DATA_OVERRIDE) return;
+  await Promise.all([apiBase(), serverBase()]);
+}
+
+// The server's feedback loop (feedback@own) writes how each run went to a status file, served
+// without GitHub (server/Caddyfile). Missing (before the switch-over) or unreachable: null, and the
+// collector's state comes from the workflow runs as before.
+async function serverBase() {
+  try {
+    const res = await fetch(SERVER_STATUS, { cache: "no-store", signal: AbortSignal.timeout(5000) });
+    const s = res.ok ? await res.json() : null;
+    state.server = typeof s?.lastRunAt === "number" ? s : null;
+  } catch {
+    state.server = null;
+  }
+}
+
+async function apiBase() {
   const read = (k) => { try { return JSON.parse(store.get(k)); } catch { return null; } };
   // A recent answer is reused, so refreshing the page doesn't ask GitHub again (unauthenticated
   // calls are limited to 60 an hour per connection).
@@ -594,6 +612,26 @@ const SERVICES = {
   news: ["News", "Articles about your games on Google News, and articles, Reddit threads, web pages and download copies from your Google Alerts", "nothing found yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs", "https://www.google.com/alerts"],
   github: ["GitHub", "Runs it all every 5 min, saves the data, rebuilds the site on store changes", "no changes yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
 };
+// The GitHub card's text and link while the collector runs on the server instead of the workflow.
+const ON_SERVER = ["Runs it all every 5 min on the server, saves the data to GitHub, rebuilds the site on store changes", "https://github.com/fourgames/website/blob/main/server/README.md", "Server setup"];
+
+// Whether the collector works: from the server's status file while it's fresh (a run every 5 min),
+// otherwise from the workflow runs (`checks`), as before the switch-over. A stale server file with no
+// workflow running means the server's loop stopped. `t`: now, in seconds.
+const SERVER_STALE = 15 * 60;
+function collector(checks, server, t) {
+  if (server && t - server.lastRunAt < SERVER_STALE) {
+    return { onServer: true, ok: !!server.lastRunOk, message: server.lastRunOk ? null : "The last run on the server failed.", since: server.lastRunAt };
+  }
+  if (server && !checks?.running) {
+    return { onServer: true, ok: false, message: "The collector on the server stopped: no run for over 15 min.", since: server.lastRunAt };
+  }
+  return {
+    ok: checks ? checks.running || checks.ok : undefined,
+    message: checks && !checks.running && !checks.ok ? "The collecting workflow stopped with an error." : null,
+    since: checks?.at,
+  };
+}
 
 // ---------------------------------------------------------------------------
 // What Claude costs. feedback/run.py counts every call's tokens per game, per day and per task
@@ -727,8 +765,8 @@ function renderStatus() {
   const el = document.getElementById("fb-status");
   if (!el || !state.index) return;
   const status = { ...(state.index.status || {}) };
-  // GitHub's state comes from the workflow runs (unknown when its API limit is used up); its last
-  // change from the data itself, or the newest data commit.
+  // GitHub's state comes from the server's status file or the workflow runs (unknown when its API
+  // limit is used up; see collector); its last change from the data itself, or the newest data commit.
   // The last known run state is kept for an hour, so a page load during GitHub's hourly API limit
   // still shows it.
   if (state.checks) store.set("checks", JSON.stringify({ ...state.checks, seen: now() }));
@@ -736,9 +774,7 @@ function renderStatus() {
   try { kept = JSON.parse(store.get("checks")); } catch {}
   const checks = state.checks || (kept && now() - kept.seen < 3600 ? kept : null);
   status.github = {
-    ok: checks ? checks.running || checks.ok : undefined,
-    message: checks && !checks.running && !checks.ok ? "The collecting workflow stopped with an error." : null,
-    since: checks?.at,
+    ...collector(checks, state.server, now()),
     active: Math.max(state.index.changedAt || 0, state.dataChanged || 0) || null,
     activeWhat: "data changed",
   };
@@ -773,7 +809,9 @@ function renderStatus() {
     const s = status[key];
     const kind = kindOf(key);
     // Out of credit is the one with a fix behind a button; other services link to where they're fixed.
-    const fix = key === "claude" && s && !/credit/i.test(s.message || "") ? ["https://platform.claude.com/settings/keys", "API keys"] : [href, action];
+    // The GitHub card while the collector runs on the server: says so, and links to its setup.
+    const onServer = key === "github" && s?.onServer;
+    const fix = key === "claude" && s && !/credit/i.test(s.message || "") ? ["https://platform.claude.com/settings/keys", "API keys"] : onServer ? ON_SERVER.slice(1) : [href, action];
     const mark = brandMark(key);
     // A card: mark, name and state; what it does; and at the bottom (so every card lines up) what it
     // last did and when. Problems get their message and fix below that.
@@ -789,7 +827,7 @@ function renderStatus() {
     return h(`div.svc.svc-${kind}${opens ? ".svc-open" : ""}`, opens ? { role: "button", tabindex: "0", "aria-expanded": String(!!state.costsOpen), onclick: toggle, onkeydown: toggle } : null,
       h("div.svc-head", mark, h("b", name),
         h("span.svc-state", h("span.svc-dot"), STATE[kind])),
-      h("div.svc-what", what),
+      h("div.svc-what", onServer ? ON_SERVER[0] : what),
       key === "claude" ? claudeCard() : null,
       key === "github" ? siteBuilt() : null,
       h("div.svc-last", s?.active ? `${s.activeWhat || "last activity"} ${ago(s.active)}` : none),

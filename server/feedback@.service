@@ -17,6 +17,8 @@ EnvironmentFile=/etc/fourgames/feedback.env
 Environment=FEEDBACK_PART=%i
 Environment=PATH=/srv/fourgames/venv/bin:/usr/local/bin:/usr/bin:/bin
 Environment=PYTHONUNBUFFERED=1
+# How each run went, for the dashboard (served at api.fourgames.se/status/<part>.json).
+Environment=FEEDBACK_STATUS_DIR=/srv/fourgames/status
 ExecStart=/srv/fourgames/%i/feedback/loop.sh
 Restart=always
 RestartSec=10

@@ -21,7 +21,18 @@ github.fourgames.se {
 	redir https://github.com/fourgames
 }
 
-# Later: the player data API.
-# api.fourgames.se {
-# 	reverse_proxy localhost:8000
-# }
+# The player data API. For now the feedback loop's status: feedback/loop.sh writes
+# /srv/fourgames/status/<part>.json after each run, and the dashboard (fourgames.se/fb-dash) reads it
+# to tell the collector is running.
+api.fourgames.se {
+	handle_path /status/* {
+		root * /srv/fourgames/status
+		header Access-Control-Allow-Origin https://fourgames.se
+		header Cache-Control no-store
+		file_server
+	}
+	# Later: the key bot.
+	# handle /keybot/* {
+	# 	reverse_proxy localhost:8100
+	# }
+}

@@ -76,6 +76,9 @@ if grep -qE '^(ANTHROPIC_API_KEY|STEAM_PUBLISHER_KEY|GH_TOKEN)=$' "$ENV"; then
   exit 0
 fi
 
+echo "== Status folder (each run's outcome, which Caddy serves to the dashboard)"
+install -d -m 755 "$ROOT/status"
+
 echo "== Services (installed, not started)"
 sudo install -m 644 "$SRC/feedback@.service" /etc/systemd/system/feedback@.service
 sudo install -d /etc/systemd/system/feedback@research.service.d

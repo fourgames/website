@@ -79,11 +79,13 @@ ssh fourgames-server 'sudo systemctl enable --now feedback@own feedback@research
 ssh fourgames-server 'journalctl -u feedback@own -f'
 ```
 
-The dashboard's **GitHub** status still reads the Actions runs, so it needs changing to read the
-server's runs before (or right after) switching over.
+The dashboard's **GitHub** status reads the server's `api.fourgames.se/status/own.json` (written by
+`loop.sh` after each run) while it's fresh, and the Actions runs otherwise, so it's right on both
+sides of the switch.
 
-**Back to GitHub:** `sudo systemctl disable --now feedback@own feedback@research` on the server, then
-`gh workflow enable` both workflows and start them (*Run workflow*).
+**Back to GitHub:** `sudo systemctl disable --now feedback@own feedback@research` and
+`rm /srv/fourgames/status/*.json` on the server (or the dashboard reports the server as stopped),
+then `gh workflow enable` both workflows and start them (*Run workflow*).
 
 ## 5. Subdomains with HTTPS
 

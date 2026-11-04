@@ -5,8 +5,10 @@ export const SITE = {
 	url: "https://fourgames.se",
 	// The tagline and hero copy are translated, so they live in src/i18n/messages (site, hero).
 	links: {
-		// discord.fourgames.se currently has a broken HTTPS certificate, so link straight to the invite.
-		discord: "https://discord.gg/bQTPTc5Qrt",
+		// The short link (the server's Caddy redirects it to the invite, server/Caddyfile).
+		discord: "https://discord.fourgames.se",
+		// The invite itself: feedback/community.py reads member counts from its code.
+		discordInvite: "https://discord.gg/bQTPTc5Qrt",
 		youtube: "https://www.youtube.com/@FourGamesAB",
 		youtubeJoin: "https://www.youtube.com/@FourGamesAB/join",
 		youtubeSubscribe: "https://www.youtube.com/@FourGamesAB?sub_confirmation=1",
@@ -43,8 +45,8 @@ export const SITE = {
 		exclude: [],
 	},
 	formspree: "https://formspree.io/f/mbdplgvl",
-	// The press kit (/press) shows this address when it's set; until then it points press to Discord.
-	press: { email: null },
+	// The press kit (/press) shows this address (an alias of danny@ at Strato).
+	press: { email: "press@fourgames.se" },
 };
 
 export const SOCIALS = [

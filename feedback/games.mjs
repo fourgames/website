@@ -9,6 +9,6 @@ console.log(
 		publisher: SITE.steam?.publisher ?? null,
 		developer: SITE.steam?.developer ?? null,
 		appIds: GAMES.map((g) => g.appId),
-		discord: SITE.links?.discord ?? null,
+		discord: SITE.links?.discordInvite ?? SITE.links?.discord ?? null,
 	}),
 );

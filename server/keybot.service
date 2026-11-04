@@ -1,0 +1,25 @@
+# The Discord key bot (server/keybot), replacing the third-party KeyBot. One process: the bot plus
+# the small web server for creator verification on localhost:8100 (Caddy forwards
+# https://api.fourgames.se/keybot/* to it). Setup: server/keybot/README.md.
+# Logs: journalctl -u keybot -f
+[Unit]
+Description=Four Games key bot (Discord)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=fourgames
+# The checkout feedback-setup.sh made; python -m keybot finds the package here.
+WorkingDirectory=/srv/fourgames/own/server
+EnvironmentFile=/etc/fourgames/keybot.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/fourgames/keybot-venv/bin/python -m keybot
+Restart=always
+RestartSec=10
+# The bot needs nothing beyond its own files: keep it from writing to the system.
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

@@ -31,8 +31,8 @@ api.fourgames.se {
 		header Cache-Control no-store
 		file_server
 	}
-	# Later: the key bot.
-	# handle /keybot/* {
-	# 	reverse_proxy localhost:8100
-	# }
+	# The key bot's creator verification (server/keybot).
+	handle /keybot/* {
+		reverse_proxy localhost:8100
+	}
 }

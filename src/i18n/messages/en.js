@@ -29,11 +29,11 @@ export default {
 		jobs: {
 			title: "Work with us",
 			description:
-				"Guest series for YouTube creators, co-development and publishing with indie studios, and franchise collaborations. Get in touch with Four Games.",
+				"Guest series for YouTube educators, co-development and publishing with indie studios, and franchise collaborations. Get in touch with Four Games.",
 		},
 		press: {
 			title: "Press kit",
-			description: "The Four Games press kit: studio factsheet, logos, our games and how to get a key for coverage.",
+			description: "The Four Games press kit for press and content creators: studio factsheet, logos, our games and how to get a key for coverage.",
 		},
 		principles: {
 			title: "Principles",
@@ -243,8 +243,9 @@ export default {
 	},
 	jobs: {
 		title: "Work with us",
-		description: "We collaborate with creators, studios and brands who care about great games as much as we do.",
+		description: "We collaborate with educators, studios and brands who care about great games as much as we do. Making videos, streams or articles about our games? The press kit has keys and assets.",
 		getInTouch: "Get in touch",
+		forCreators: "Creators & press",
 		ways: "Ways to work with us",
 		contact: {
 			title: "Get in touch",
@@ -255,7 +256,7 @@ export default {
 		licensedIp: "Licensed IP",
 		partners: {
 			series: {
-				audience: "YouTube Creators",
+				audience: "YouTube Educators",
 				title: "Guest Series",
 				text: "Featuring educational series on our channel to provide exposure to your work.",
 				cta: "Pitch a series",
@@ -294,7 +295,7 @@ export default {
 	},
 	press: {
 		title: "Press kit",
-		description: "Facts, logos and art for writing about Four Games and our games. Everything here is free to use in coverage.",
+		description: "For press and content creators: facts, logos, art and keys for covering Four Games and our games. Everything here is free to use in articles, videos and streams.",
 		getKey: "Get a key",
 		factsheet: "Factsheet",
 		about: "About",

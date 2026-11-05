@@ -25,11 +25,11 @@ export default {
 		},
 		jobs: {
 			title: "合作",
-			description: "为 YouTube 创作者提供客座系列，与独立工作室联合开发和发行，以及品牌授权合作。欢迎联系 Four Games。",
+			description: "为 YouTube 教育创作者提供客座系列，与独立工作室联合开发和发行，以及品牌授权合作。欢迎联系 Four Games。",
 		},
 		press: {
 			title: "媒体资料包",
-			description: "Four Games 媒体资料包：工作室概况、标志、我们的游戏，以及如何获取评测用激活码。",
+			description: "面向媒体和内容创作者的 Four Games 媒体资料包：工作室概况、标志、我们的游戏，以及如何获取评测用激活码。",
 		},
 		principles: {
 			title: "理念",
@@ -238,8 +238,9 @@ export default {
 	},
 	jobs: {
 		title: "与我们合作",
-		description: "我们与同样热爱优秀游戏的创作者、工作室和品牌携手合作。",
+		description: "我们与同样热爱优秀游戏的教育创作者、工作室和品牌携手合作。想为我们的游戏制作视频、直播或文章？激活码和素材请见媒体资料包。",
 		getInTouch: "联系我们",
+		forCreators: "创作者与媒体",
 		ways: "合作方式",
 		contact: {
 			title: "联系我们",
@@ -250,7 +251,7 @@ export default {
 		licensedIp: "授权 IP",
 		partners: {
 			series: {
-				audience: "YouTube 创作者",
+				audience: "YouTube 教育创作者",
 				title: "客座系列",
 				text: "在我们的频道上推出教学系列，让更多人看到你的作品。",
 				cta: "提议一个系列",
@@ -289,7 +290,7 @@ export default {
 	},
 	press: {
 		title: "媒体资料包",
-		description: "报道 Four Games 和我们的游戏所需的资料、标志和美术素材，均可在报道中免费使用。",
+		description: "面向媒体和内容创作者：报道 Four Games 和我们的游戏所需的资料、标志、美术素材和激活码，均可在文章、视频和直播中免费使用。",
 		getKey: "获取激活码",
 		factsheet: "概况",
 		about: "关于",

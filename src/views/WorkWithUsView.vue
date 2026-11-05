@@ -15,7 +15,11 @@ const { t } = useI18n();
 		:title="t('jobs.title')"
 		:description="t('jobs.description')"
 	>
-		<Button to="/jobs#contact" variant="blue" icon="mail">{{ t("jobs.getInTouch") }}</Button>
+		<!-- Creators covering our games (videos, streams, keys) belong on /press, not here. -->
+		<div class="flex flex-wrap gap-3">
+			<Button to="/jobs#contact" variant="blue" icon="mail">{{ t("jobs.getInTouch") }}</Button>
+			<Button to="/press" variant="ghost" class="bg-card shadow-card">{{ t("jobs.forCreators") }}</Button>
+		</div>
 	</PageHeader>
 
 	<Section id="collaborations" :title="t('jobs.ways')">

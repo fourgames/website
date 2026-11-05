@@ -28,11 +28,11 @@ export default {
 		jobs: {
 			title: "협업",
 			description:
-				"YouTube 크리에이터를 위한 게스트 시리즈, 인디 스튜디오와의 공동 개발 및 퍼블리싱, 프랜차이즈 협업. Four Games에 연락해 주세요.",
+				"YouTube 교육 크리에이터를 위한 게스트 시리즈, 인디 스튜디오와의 공동 개발 및 퍼블리싱, 프랜차이즈 협업. Four Games에 연락해 주세요.",
 		},
 		press: {
 			title: "프레스 키트",
-			description: "Four Games 프레스 키트: 스튜디오 팩트 시트, 로고, 게임 목록, 취재용 키를 받는 방법을 모았어요.",
+			description: "언론과 콘텐츠 크리에이터를 위한 Four Games 프레스 키트: 스튜디오 팩트 시트, 로고, 게임 목록, 취재용 키를 받는 방법을 모았어요.",
 		},
 		principles: {
 			title: "원칙",
@@ -242,8 +242,9 @@ export default {
 	},
 	jobs: {
 		title: "함께 일해요",
-		description: "저희만큼 좋은 게임을 아끼는 크리에이터, 스튜디오, 브랜드와 협업합니다.",
+		description: "저희만큼 좋은 게임을 아끼는 교육 크리에이터, 스튜디오, 브랜드와 협업합니다. 저희 게임으로 영상, 방송, 기사를 만드시나요? 키와 자료는 프레스 키트에 있어요.",
 		getInTouch: "연락하기",
+		forCreators: "크리에이터 및 언론",
 		ways: "협업 방식",
 		contact: {
 			title: "연락하기",
@@ -255,7 +256,7 @@ export default {
 		licensedIp: "라이선스 IP",
 		partners: {
 			series: {
-				audience: "YouTube 크리에이터",
+				audience: "YouTube 교육 크리에이터",
 				title: "게스트 시리즈",
 				text: "저희 채널에서 교육 시리즈를 소개해 여러분의 작품을 알려 드려요.",
 				cta: "시리즈 제안하기",
@@ -294,7 +295,7 @@ export default {
 	},
 	press: {
 		title: "프레스 키트",
-		description: "Four Games와 저희 게임을 소개할 때 필요한 정보, 로고, 아트를 모았어요. 기사와 영상에 자유롭게 사용하세요.",
+		description: "언론과 콘텐츠 크리에이터를 위한 페이지예요. Four Games와 저희 게임을 소개할 때 필요한 정보, 로고, 아트, 키를 모았어요. 기사, 영상, 방송에 자유롭게 사용하세요.",
 		getKey: "키 받기",
 		factsheet: "팩트 시트",
 		about: "소개",

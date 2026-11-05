@@ -156,8 +156,12 @@ def test_godot_games_are_sampled_hourly(store, rng):
     store.add_manual_signal(10, "godot", "the developer told us", NOW + 60)
     a = app(store, 10)
     assert a["godot"] == 1 and a["players_due"] == int(NOW) + cadence.HOUR  # an hour after the last
-    assert store.save_players(10, 50, NOW, rng) <= 1.1 * cadence.HOUR
+    assert store.save_players(10, 150, NOW, rng) <= 1.1 * cadence.HOUR
     assert store.save_players(10, 0, NOW + 10, rng) <= 1.1 * 6 * cadence.HOUR
+    assert 0.9 * 4 * cadence.HOUR <= store.save_players(10, 5, NOW + 20, rng) <= 1.1 * 4 * cadence.HOUR
+    for _ in range(6):  # nobody, again and again: backs off to a week
+        last = store.save_players(10, 0, NOW + 30, rng)
+    assert 0.9 * 7 * cadence.DAY <= last <= 1.1 * 7 * cadence.DAY
 
 
 def test_new_reviews_wake_a_quiet_game(store, rng):

@@ -25,8 +25,11 @@ RETRY_LATER = HOUR
 
 # Player counts: (at least this many players at the last sample, hours until the next one).
 PLAYER_TIERS = [(100, 4), (10, 12), (1, 24)]
-GODOT_TIERS = [(10, 1), (1, 2)]
+# The Godot set is ~10,000 games since SteamDB's list (most with nobody playing), so only the
+# busy ones are hourly, and empty ones back off like the rest, to a week at most.
+GODOT_TIERS = [(100, 1), (10, 2), (1, 4)]
 GODOT_ZERO_HOURS = 6
+GODOT_ZERO_MAX_DAYS = 7
 # Just released (the first 14 days): at least every 4 hours (Godot set: every hour).
 NEW_RELEASE_DAYS = 14
 NEW_RELEASE_HOURS = 4
@@ -55,10 +58,14 @@ def players_interval(count: int | None, zeros: int, godot: bool, released_days_a
     players = count or 0
     new = released_days_ago is not None and 0 <= released_days_ago <= NEW_RELEASE_DAYS
     if godot:
-        hours = next((h for low, h in GODOT_TIERS if players >= low), GODOT_ZERO_HOURS)
         if new:
-            hours = 1
-        return jitter(hours * HOUR, rng)
+            return jitter(HOUR, rng)
+        if players >= 1:
+            return jitter(next(h for low, h in GODOT_TIERS if players >= low) * HOUR, rng)
+        # Nobody: 6 hours, then 1, 2, 4 and at most 7 days.
+        if zeros <= 1:
+            return jitter(GODOT_ZERO_HOURS * HOUR, rng)
+        return jitter(min(2 ** (zeros - 2), GODOT_ZERO_MAX_DAYS) * DAY, rng)
     if players >= 1:
         hours = next(h for low, h in PLAYER_TIERS if players >= low)
         if new:

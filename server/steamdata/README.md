@@ -62,7 +62,7 @@ evenly instead of the pace going up.
 
 The numbers below assume what Steam looks like: about 150,000 games, ~2,500 with 100+ players at
 any time, ~7,000 with 10-99, ~15,000 with 1-9, ~700 released in the last 14 days, and a Godot set of
-~500. `python -m steamdata.stats` shows the real counts and the backlog after the first week.
+~10,000 (since SteamDB's list; ~1,500 of them with anyone playing). `python -m steamdata.stats` shows the real counts and the backlog after the first week.
 
 **api.steampowered.com**, `WEBAPI_PER_MINUTE=60`: at most 86,400 a day; the Steam Web API terms
 allow 100,000.
@@ -71,8 +71,8 @@ allow 100,000.
 | --- | --- |
 | App list (10,000 apps per page) | ~25 |
 | Daily snapshot, 150,000 games / 100 | 1,500 |
-| Player counts: 2,500 × 6 + 7,000 × 2 + 15,000 × 1 + ~125,000 nobody / ~25 days + new releases ~4,000 + Godot set ≤ 500 × 24 | ~65,000 |
-| **Total** | **~66,500** (~46 a minute) |
+| Player counts: 2,500 × 6 + 7,000 × 2 + 15,000 × 1 + ~125,000 nobody / ~25 days + new releases ~4,000 + Godot set: ~100 × 24 + ~400 × 12 + ~1,000 × 6 + ~8,500 nobody / ~5 days | ~70,000 |
+| **Total** | **~71,500** (~50 a minute) |
 
 **store.steampowered.com/api/appdetails**, `APPDETAILS_PER_5MIN=120` (Steam allows about 200): at
 most 34,560 a day. The first pass over 150,000 games takes about 4.5 days, newest first. After that:

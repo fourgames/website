@@ -61,6 +61,13 @@ sessions.json - one entry per time you started a game
   playtime_s       Seconds played, as the game reported at the end.
   end_seq          The number of uploads the game said it made.
   summary          The game's end-of-session summary (for example how far you got).
+  active_s, idle_s, first_session, last_scene, last_screen
+                   From the end too: seconds played and away, whether it was the first session on
+                   that computer, and the scene and screen it ended on.
+  boot_kind, input_type, input_controller, dlc
+                   Whether it was a first start or the first after an update, what you played
+                   with, and which of the game's DLC you have.
+  test             true for a test session: one of our own test accounts trying a game out.
 
 hardware.json - per session, only when allowed
   os, cpu, cpu_cores, ram_mb, gpu, gpu_driver, renderer, screen_w, screen_h, refresh_hz,
@@ -79,9 +86,14 @@ events/<app_id>/<session_id>/<seq>.json - what happened in a session, one file p
                  type  action (something you did, named by the game, e.g. plant_seed),
                        snapshot (a short summary of the game's state, about every 30 seconds),
                        progress (how far you are), rng (random seed changes),
-                       error (a non-fatal error in the game's scripts), custom
+                       error (a non-fatal error in the game's scripts), custom,
+                       perf (frame rate and memory, about every 30 seconds), load (loading
+                       times), input (keyboard, controller or touch), idle (away or back),
+                       setting_changed, screen and ui (menus), position (where you were),
+                       death, overlay (the Steam overlay), steam, achievement
                  name  the action's name
                  data  details, for example where and what
+  test         true when the session was a test session (see sessions.json).
 
 crashes.json - one entry per crash the game reported at its next start
   crash_id, session_id   The report's id, and the session that sent it.
@@ -90,6 +102,7 @@ crashes.json - one entry per crash the game reported at its next start
                          The version, how it ended (e.g. SIGSEGV or 'unclean exit'), the system,
                          and when we got the report.
   events                 How many of the last events came with it.
+  test                   Whether the session that reported it was a test session.
   log_file               The file with the game's log and last events.
 
 crashes/<crash_id>.json - the crash's details
@@ -104,7 +117,7 @@ TIME_COLUMNS = {"created", "updated", "started", "ended", "last_seen", "received
 JSON_COLUMNS = {"previous_crash", "summary", "data", "last_progress"}
 # Internal bookkeeping a player doesn't need (the pid is in player.json; paths are ours).
 HIDDEN_COLUMNS = {"pid", "path", "bytes"}
-BOOL_COLUMNS = {"opted_out", "consent_hardware", "steam_deck"}
+BOOL_COLUMNS = {"opted_out", "consent_hardware", "steam_deck", "test"}
 
 
 def clean_row(row) -> dict[str, Any]:
@@ -147,10 +160,13 @@ def build(data_dir: str | Path, pid: str, link_months: int) -> IO[bytes]:
             }))
             for table in ("sessions", "hardware", "settings"):
                 archive.writestr(f"{table}.json", dump([clean_row(row) for row in store.rows(table, pid)]))
+            # What a test session sent says so too, so a file read on its own can't be mistaken.
+            tests = store.test_session_ids(pid)
 
             crashes = []
             for row in store.rows("crashes", pid):
                 entry = clean_row(row)
+                entry["test"] = row["session_id"] in tests
                 entry["log_file"] = None
                 if row["path"]:
                     try:
@@ -171,6 +187,8 @@ def build(data_dir: str | Path, pid: str, link_months: int) -> IO[bytes]:
                 except (OSError, ValueError):
                     continue
                 batch["received"] = iso(batch.get("received"))
+                if row["session_id"] in tests:
+                    batch["test"] = True
                 archive.writestr(f"events/{row['app_id']}/{row['session_id']}/{row['seq']}.json",
                                  json.dumps(batch, ensure_ascii=False))
     except BaseException:

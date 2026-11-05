@@ -208,25 +208,50 @@ def start_reply(cfg: Config, session_id: str | None, token: str | None) -> web.R
     })
 
 
+def unknown_app() -> Refused:
+    """What validate.start answers for an app id we don't take: also what a test app answers anyone
+    who isn't one of GAMEDATA_TEST_STEAMIDS, once Steam has said who they are."""
+    return validate.bad("this game doesn't send data here", "unknown_app")
+
+
+async def ask_steam(app: web.Application, app_id: int, call):
+    """Steam's answer about a ticket, its refusals as the game's errors."""
+    try:
+        return await call
+    except TicketRejected:
+        log.info("session start for app %s: ticket refused by Steam", app_id)
+        raise Refused(401, "bad_ticket", "Steam didn't accept the ticket") from None
+    except SteamError as error:
+        log.warning("session start for app %s: Steam unavailable (%s)", app_id, error)
+        raise Refused(502, "steam_unavailable", "Steam can't be reached, try again later",
+                      {"Retry-After": "60"}) from None
+
+
 async def session_start(request: web.Request) -> web.Response:
     app = request.app
     cfg, store, limits = app[CONFIG], app[STORE], app[LIMITS]
     check_rate(limits.start_ip, ip_key(request), "session start per IP")
-    start = validate.start(await read_json(request, *START_CAPS), cfg.app_ids)
+    start = validate.start(await read_json(request, *START_CAPS), cfg.app_ids | cfg.test_app_ids)
+    # Taken from anyone, or only (as a test session) from the test accounts. An app in both lists
+    # takes everyone, and marks the test accounts' sessions test.
+    open_app = start.app_id in cfg.app_ids
+    test_app = start.app_id in cfg.test_app_ids
     if not start.gameplay:
-        # The game's own switch is off: nothing to check, nothing stored.
+        # The game's own switch is off: nothing to check, nothing stored. Except that a test app
+        # must first know it's a tester asking, or it would answer as a known app.
+        if not open_app:
+            steamid, _ = await ask_steam(app, start.app_id, app[STEAM].authenticate_ticket(start.app_id, start.ticket))
+            if steamid not in cfg.test_steamids:
+                log.info("session start for app %s: not a test account", start.app_id)
+                raise unknown_app()
         log.info("session start for app %s: gameplay consent off", start.app_id)
         return start_reply(cfg, None, None)
 
-    try:
-        steamid, owns = await app[STEAM].player_for_ticket(start.app_id, start.ticket)
-    except TicketRejected:
-        log.info("session start for app %s: ticket refused by Steam", start.app_id)
-        raise Refused(401, "bad_ticket", "Steam didn't accept the ticket") from None
-    except SteamError as error:
-        log.warning("session start for app %s: Steam unavailable (%s)", start.app_id, error)
-        raise Refused(502, "steam_unavailable", "Steam can't be reached, try again later",
-                      {"Retry-After": "60"}) from None
+    steamid, owns = await ask_steam(app, start.app_id, app[STEAM].player_for_ticket(start.app_id, start.ticket))
+    test = test_app and steamid in cfg.test_steamids
+    if not test and not open_app:
+        log.info("session start for app %s: not a test account", start.app_id)
+        raise unknown_app()
     pid = make_pid(cfg.pepper, steamid)
     if not owns:
         log.info("session start %s app %s: doesn't own the game", short(pid), start.app_id)
@@ -246,7 +271,7 @@ async def session_start(request: web.Request) -> web.Response:
     info = {"game_version": start.game_version, "build_id": start.build_id, "godot_version": start.godot_version,
             "platform": start.platform, "locale": start.locale, "consent_hardware": start.hardware_consent,
             "previous_crash": start.previous_crash, "country": country, "region": region,
-            "boot_kind": start.boot_kind, "dlc": start.dlc, "owns_full_game": owns_full_game}
+            "boot_kind": start.boot_kind, "dlc": start.dlc, "owns_full_game": owns_full_game, "test": test}
     if start.hardware_consent and start.input is not None:
         # What they play with is about their devices: only with the hardware consent.
         info.update(input_type=start.input["type"], input_controller=start.input["controller"])
@@ -258,8 +283,8 @@ async def session_start(request: web.Request) -> web.Response:
         log.info("session start %s app %s: opted out", short(pid), start.app_id)
         return start_reply(cfg, None, None)
     token = sign(cfg.token_secret, "session", {"s": session_id, "p": pid, "a": start.app_id}, SESSION_TTL)
-    log.info("session start %s app %s%s", short(pid), start.app_id,
-             "" if start.hardware_consent else " (no hardware)")
+    log.info("session start %s app %s%s%s", short(pid), start.app_id,
+             "" if start.hardware_consent else " (no hardware)", " (test)" if test else "")
     return start_reply(cfg, session_id, token)
 
 
@@ -568,13 +593,16 @@ async def internal_lookup(request: web.Request) -> web.Response:
     steamids = body.get("steamids")
     if not isinstance(steamids, list) or len(steamids) > MAX_LOOKUP:
         raise Refused(400, "bad_request", f"steamids must be a list of at most {MAX_LOOKUP} SteamID64s")
+    include_test = body.get("include_test", False)
+    if not isinstance(include_test, bool):
+        raise Refused(400, "bad_request", "include_test must be true or false")
     by_pid: dict[str, str] = {}
     for index, value in enumerate(steamids):
         steamid = valid_steamid(value)
         if steamid is None:
             raise Refused(400, "bad_steamid", f"steamids[{index}] isn't a SteamID64 (17 digits)")
         by_pid[make_pid(cfg.pepper, steamid)] = steamid
-    found = request.app[STORE].lookup(list(by_pid), cfg.demo_of)
+    found = request.app[STORE].lookup(list(by_pid), cfg.demo_of, include_test)
     log.info("lookup: %d steamids, %d with data or an opt-out", len(by_pid), len(found))
     return ok({"players": {by_pid[pid]: entry for pid, entry in found.items()}})
 

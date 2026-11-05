@@ -25,7 +25,10 @@ func test_it_is_off_in_a_debug_run_unless_asked() -> void:
 
 func test_without_steam_it_is_off() -> void:
 	var gd := _launch()
-	gd.steam = null
+	# No stand-in: GameData looks for the GodotSteam singleton itself. This
+	# project has GodotSteam (for the test game), so where it is loaded the
+	# stand-in is something that is not Steam, which GameData must not use.
+	gd.steam = null if not Engine.has_singleton(&"Steam") else RefCounted.new()
 	gd.start(APP_ID, {})
 	gd.action("plant", {})
 	gd.advance(120.0)

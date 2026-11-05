@@ -37,6 +37,34 @@ func test_perf_goes_every_30_s_and_at_a_scene_change() -> void:
 	assert_eq(loads[1].data.by, "scene_change", "the first change after the main scene ends the boot")
 
 
+## change_scene_to_file() leaves the tree with no current scene for a frame:
+## the load still goes from the old scene to the new one, with the frame the
+## load took, and no scene "" comes in between.
+func test_the_frame_between_two_scenes_is_part_of_the_change() -> void:
+	var gd := _live(_launch())
+	var menu := Node.new()
+	menu.scene_file_path = "res://menu.tscn"
+	var level := Node.new()
+	level.scene_file_path = "res://level.tscn"
+	gd.scene_changed("res://menu.tscn", 0.0)
+	gd.watch_scene(menu)
+	gd.frame(16.0)
+	gd.frame(300.0)
+	gd.watch_scene(null)
+	gd.frame(20.0)
+	gd.watch_scene(level)
+	gd.frame(16.0)
+	gd.watch_scene(level)
+	gd.advance(60.0)
+	_drain(gd)
+	var loads := _sent_of(gd, "load").filter(func(event: Dictionary) -> bool: return event.name == "scene")
+	assert_eq(loads.size(), 1)
+	assert_eq(loads[0].data, {"scene": "res://level.tscn", "from": "res://menu.tscn", "ms": 300.0})
+	assert_eq(gd._scene, "res://level.tscn")
+	menu.free()
+	level.free()
+
+
 func test_frames_out_of_focus_are_not_counted() -> void:
 	var gd := _live(_launch())
 	gd.set_focused(false)

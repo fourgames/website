@@ -83,3 +83,9 @@ public/__fbtest/
 # The key bot's local test database (server/keybot/keys.local) and its SQLite side files
 *.local-shm
 *.local-wal
+
+# GodotSteam's binaries (~30 MB) for the fourgames_data test project (its .gdextension stays): copied in by
+# godot/fourgames_data/tools/get_godotsteam.sh, never committed.
+godot/fourgames_data/addons/godotsteam/osx/
+godot/fourgames_data/addons/godotsteam/win64/
+godot/fourgames_data/addons/godotsteam/linux64/

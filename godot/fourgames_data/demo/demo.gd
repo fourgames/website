@@ -3,9 +3,9 @@ extends Control
 ## A stand-in game that calls the GameData API the way a real one would, to try
 ## the plugin by hand and to show where each call goes:
 ##
-##   start() once Steam is up -- here a frame after boot, since this project
-##   has no GodotSteam, so it reports "off: Steam is not here" unless a game's
-##   own Steam manager has started it; action() on a press; progress() when the
+##   start() once Steam is up -- here a frame after boot, without bringing
+##   Steam up (the test game in res://game/ does that), so it is only a guide to
+##   where each call goes; action() on a press; progress() when the
 ##   "day" turns; snapshot() every SNAPSHOT_S; set_setting() as a setting moves;
 ##   and a "Privacy policy" link to PRIVACY_URL.
 ##

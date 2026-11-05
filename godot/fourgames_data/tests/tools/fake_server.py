@@ -8,7 +8,8 @@ token and the gzip, and writes every request it got, body unzipped, to --record.
 
 --check reads a record back and says whether a whole session arrived: one
 /session/start with a hex ticket and an int app_id, gzipped /events whose seq
-climbs from 0, and a /session/end, all under the session's own token.
+climbs from 0, and a /session/end, all under the session's own token. With
+--expect type,type:name,... (play_check.sh) it also wants an event of each.
 """
 import argparse
 import gzip
@@ -71,7 +72,7 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(data)
 
 
-def check(path):
+def check(path, expect=""):
     seen = json.load(open(path))
     problems = []
     starts = [r for r in seen if r["path"] == "/session/start"]
@@ -102,6 +103,11 @@ def check(path):
     if len(sids) != 1:
         problems.append("batches name %d sessions" % len(sids))
     names = [e.get("name") for r in events for e in r["body"]["events"]]
+    kinds = {e["type"] for r in events for e in r["body"]["events"]}
+    kinds |= {"%s:%s" % (e["type"], e.get("name")) for r in events for e in r["body"]["events"]}
+    for wanted in filter(None, expect.split(",")):
+        if wanted not in kinds:
+            problems.append("no %s event arrived" % wanted)
     print("record: %d requests, %d events (%s)" % (len(seen), len(names), ", ".join(sorted(set(filter(None, names))))))
     for problem in problems:
         print("PROBLEM: " + problem)
@@ -113,9 +119,10 @@ def main():
     parser.add_argument("--port", type=int, default=8765)
     parser.add_argument("--record")
     parser.add_argument("--check")
+    parser.add_argument("--expect", default="")
     args = parser.parse_args()
     if args.check:
-        sys.exit(check(args.check))
+        sys.exit(check(args.check, args.expect))
     server = ThreadingHTTPServer(("127.0.0.1", args.port), Handler)
     server.record = args.record
     server.serve_forever()

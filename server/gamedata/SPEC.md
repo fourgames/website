@@ -64,6 +64,14 @@ Reply:
 ```
 If the player opted out (server-side) or `consent.gameplay` is false: `opted_out: true`, no session
 is created, and the plugin stores nothing and sends nothing until the next launch.
+
+**Test mode:** an app in `GAMEDATA_TEST_APP_IDS` takes sessions only from the Steam accounts in
+`GAMEDATA_TEST_STEAMIDS` (after the ticket and, as always, ownership are checked); anyone else gets the
+same `400 unknown_app` as an app that isn't listed. Such a session is marked `test` (a column on the
+session; its events, hardware, settings and crashes follow it). An app in both `GAMEDATA_APP_IDS` and
+`GAMEDATA_TEST_APP_IDS` takes everyone and marks only the testers' sessions. Test sessions are the
+player's data like any other (`/v1/me`, the download, opt-out, anonymising, retention) and carry
+`"test": true` there; the internal lookup and anything built on it leave them out.
 `hardware`/`settings` are stored only when `consent.hardware` is true.
 
 **`POST /v1/events`** (`Authorization: Bearer <token>`, body gzip JSON, `Content-Encoding: gzip`)
@@ -113,6 +121,7 @@ require `Origin: https://fourgames.se` (CSRF) and JSON bodies.
 127.0.0.1 (Caddy answers 404 for `/gamedata/v1/internal/*` from outside): `{"steamids": [...]}` (max
 200) → each player's per-game summary, so a Steam review or discussion post can be shown next to its
 author's game data. Opted-out or anonymised players return only `{"opted_out": true}`.
+Test sessions are left out unless the request says `"include_test": true`.
 
 ## The Godot plugin: `addons/fourgames_data`
 

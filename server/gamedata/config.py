@@ -7,6 +7,8 @@ from dataclasses import dataclass, field
 from typing import Mapping
 from urllib.parse import urlsplit
 
+from .signing import valid_steamid
+
 
 class ConfigError(Exception):
     pass
@@ -32,6 +34,11 @@ class Config:
     steam_publisher_key: str = field(repr=False)
     # The games that may send data. Empty (the default): none, until their app ids are added.
     app_ids: frozenset[int]
+    # Test mode: apps whose sessions are only taken from the test_steamids accounts, every one of
+    # them marked test (kept and downloadable like the rest, left out of the internal lookup).
+    test_app_ids: frozenset[int] = frozenset()
+    # The steamid64s allowed to send test sessions. They're ours, but still never shown in a repr.
+    test_steamids: frozenset[str] = field(default=frozenset(), repr=False)
     # Demo app id -> its full game's app id (GAMEDATA_DEMO_OF), for "played the demo, owns the game".
     demo_of: dict[int, int]
     data_dir: str
@@ -113,6 +120,20 @@ class Config:
         if app_ids and min(app_ids) <= 0:
             raise ConfigError("GAMEDATA_APP_IDS must be Steam app ids (positive numbers)")
 
+        raw_test_ids = get("GAMEDATA_TEST_APP_IDS")
+        try:
+            test_app_ids = frozenset(int(part) for part in raw_test_ids.split(",") if part.strip())
+        except ValueError:
+            raise ConfigError(f"GAMEDATA_TEST_APP_IDS must be Steam app ids separated by commas, not {raw_test_ids!r}") from None
+        if test_app_ids and min(test_app_ids) <= 0:
+            raise ConfigError("GAMEDATA_TEST_APP_IDS must be Steam app ids (positive numbers)")
+        test_steamids: set[str] = set()
+        for part in (p.strip() for p in get("GAMEDATA_TEST_STEAMIDS").split(",") if p.strip()):
+            steamid = valid_steamid(part)
+            if steamid is None:
+                raise ConfigError("GAMEDATA_TEST_STEAMIDS must be SteamID64s (17 digits) separated by commas")
+            test_steamids.add(steamid)
+
         raw_demos = get("GAMEDATA_DEMO_OF")
         demo_of: dict[int, int] = {}
         for pair in (p.strip() for p in raw_demos.split(",") if p.strip()):
@@ -142,6 +163,8 @@ class Config:
             token_secret=secrets["GAMEDATA_TOKEN_SECRET"],
             steam_publisher_key=get("STEAM_PUBLISHER_KEY"),
             app_ids=app_ids,
+            test_app_ids=test_app_ids,
+            test_steamids=frozenset(test_steamids),
             demo_of=demo_of,
             data_dir=data_dir,
             geoip_db=get("GEOIP_DB", f"{data_dir}/geo/dbip-city-lite.mmdb"),

@@ -31,7 +31,8 @@ work. Errors are JSON, `{"ok": false, "error": "<code>", "message": "…"}`, wit
 Each entry of `games` (in `/v1/me` and the lookup) is one app id, so a player's demo and full game show
 as two entries under the same player: `app_id`, `sessions`, `playtime_s` (what the game reported at the
 end, or the latest event time for a session without an end), `first_seen` and `last_seen` (unix seconds),
-`countries` (ISO codes played from). With `GAMEDATA_DEMO_OF`, a demo's entry adds `demo_of` (the game's
+`countries` (ISO codes played from). A game with test sessions (see Test mode) adds `test_sessions` (how
+many) and, when every one of them is, `"test": true`. With `GAMEDATA_DEMO_OF`, a demo's entry adds `demo_of` (the game's
 app id) and `owns_game` (they've played the full game, or Steam said they own it at a demo session's
 start), and the full game's entry adds `played_demo`.
 
@@ -41,12 +42,37 @@ start), and the full game's entry adds `played_demo`.
 and retry later (`Retry-After` says when). Any other 4xx (`bad_request`, `bad_event`, `too_large`,
 `session_mismatch`, …): the batch will never be taken, drop it.
 
+## Test mode
+
+For trying a game (or the `godot/fourgames_data` test project) against the live server without its
+sessions counting as players' data in our tools:
+
+```
+GAMEDATA_TEST_APP_IDS=5207970
+GAMEDATA_TEST_STEAMIDS=76561198xxxxxxxxx
+```
+
+- A session start for an app in `GAMEDATA_TEST_APP_IDS` is checked with Steam as usual (the ticket, and
+  that the account owns the game). If the account is one of `GAMEDATA_TEST_STEAMIDS`, the session is
+  started and marked test (`sessions.test`; its event batches, hardware, settings and crash reports
+  follow their session). Anyone else gets the same `400 unknown_app` an unlisted app gets, with the
+  game's switch off too.
+- An app in both `GAMEDATA_APP_IDS` and `GAMEDATA_TEST_APP_IDS` takes everyone; only the testers'
+  sessions are marked test. `GAMEDATA_APP_IDS` on its own works as before.
+- Test sessions are the player's like any other: `/v1/me` counts them (each game adds `test_sessions`,
+  and `"test": true` when they all are), the download has them with `"test": true` in `sessions.json`,
+  `crashes.json` and their `events/…` files, and opting out, anonymising and the retention treat them
+  the same.
+- The internal lookup leaves them out (and the hardware, progress, versions and crashes they sent);
+  send `"include_test": true` to see them. A player with only test sessions isn't in its answer.
+- Databases made before test mode get the column (default 0, not test) when the service starts.
+
 ## What's stored, and how
 
 | | Where | Kept |
 | --- | --- | --- |
 | Players: `pid`, opted out, created, updated | `gamedata.db` | always |
-| Sessions: game version and build, engine, platform, language, country and region, boot kind, input device, DLC, the end's numbers and summary, the latest progress event | `gamedata.db` | always |
+| Sessions: game version and build, engine, platform, language, country and region, boot kind, input device, DLC, the end's numbers and summary, the latest progress event, whether it's a test session | `gamedata.db` | always |
 | Hardware (OS, CPU and cores, RAM, GPU and driver, renderer, screen and refresh rate, Steam Deck) and the game's settings, per session | `gamedata.db` | only with `consent.hardware`; any other hardware key (a device id) is dropped |
 | Event batches | `raw/<app_id>/<yyyy-mm>/<session_id>/<seq>.json.gz`, indexed in `gamedata.db` | always |
 | Crash reports | `crashes/<app_id>/<yyyy-mm>/<crash_id>.json.gz` (log tail, last events), indexed in `gamedata.db` | always |
@@ -73,7 +99,7 @@ and retry later (`Retry-After` says when). Any other 4xx (`bad_request`, `bad_ev
 - **Never trust the client.** Every session starts with a Steam Web API ticket
   (`getAuthTicketForWebApi("fourgames-gamedata")`), checked with `ISteamUserAuth/AuthenticateUserTicket`
   (identity `fourgames-gamedata`, the publisher key, on `partner.steam-api.com`). The app id must be in
-  `GAMEDATA_APP_IDS`, and the player must own the game: a ticket from their own copy proves it
+  `GAMEDATA_APP_IDS` (or `GAMEDATA_TEST_APP_IDS`, for a test account), and the player must own the game: a ticket from their own copy proves it
   (`ownersteamid`), anything else (Steam Family Sharing) is asked with `ISteamUser/CheckAppOwnership`.
 - **Session tokens** are signed (HMAC-SHA256 with `GAMEDATA_TOKEN_SECRET`) and hold the session id, pid,
   app id and expiry (24 hours). Each upload must match its token's session, and the player must still be
@@ -111,7 +137,7 @@ curl -s localhost:8103/v1/internal/lookup -H "X-Internal-Key: $GAMEDATA_INTERNAL
   -H 'Content-Type: application/json' -d '{"steamids": ["76561198000000001"]}'
 ```
 
-At most 200 steamids. The answer is `{"ok": true, "players": {"<steamid>": …}}`: players without data
+At most 200 steamids; `"include_test": true` counts test sessions too (left out by default). The answer is `{"ok": true, "players": {"<steamid>": …}}`: players without data
 are left out, and opted-out or anonymised players show only `{"opted_out": true}`. Everyone else has
 `{"opted_out": false, "games": [...]}`, each game with the fields above plus `last_version`, `crashes`,
 `progress` (the data of their latest progress event), `hardware` (the latest, in the shape the game sends

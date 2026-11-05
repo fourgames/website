@@ -79,8 +79,8 @@ extends Node
 ##
 ## Seams for tests and local testing: `transport`, `steam`, `root_dir`,
 ## `base_url`, `unix_now`, `ticks_msec`, `force_enabled`, advance(delta), which
-## _process forwards to, and note_input()/frame()/scene_changed(), which the
-## window's input, each frame and the scene tree feed.
+## _process forwards to, and note_input()/frame()/watch_scene()/scene_changed(),
+## which the window's input, each frame and the scene tree feed.
 
 const Queue := preload("queue.gd")
 const Ring := preload("ring.gd")
@@ -247,6 +247,8 @@ var _last_frame_usec := 0
 var _last_frame_ms := 0.0
 var _scene := ""
 var _scene_id := 0
+## The longest frame since the tree last had a current scene (watch_scene()).
+var _changing_ms := 0.0
 var _screen := ""
 var _focused := true
 var _last_input_at := 0.0
@@ -288,12 +290,26 @@ func _process(delta: float) -> void:
 		if _last_frame_usec > 0:
 			frame((now - _last_frame_usec) / 1000.0)
 		_last_frame_usec = now
-		var scene := get_tree().current_scene
-		var id := scene.get_instance_id() if scene != null else 0
-		if id != _scene_id:
-			_scene_id = id
-			scene_changed(scene.scene_file_path if scene != null else "", _last_frame_ms)
+		watch_scene(get_tree().current_scene)
 	advance(delta)
+
+
+## The scene tree's current scene, this frame. A change_scene_to_file() leaves
+## the tree without one for a frame, between the old scene going and the new one
+## coming: that frame is part of the change, not a scene of its own, so the
+## "load" goes from the old scene to the new one, with the longest frame of the
+## change (the load is in one of them).
+func watch_scene(scene: Node) -> void:
+	if scene == null:
+		_changing_ms = maxf(_changing_ms, _last_frame_ms)
+		return
+	var id := scene.get_instance_id()
+	if id == _scene_id:
+		_changing_ms = 0.0
+		return
+	_scene_id = id
+	scene_changed(scene.scene_file_path, maxf(_last_frame_ms, _changing_ms))
+	_changing_ms = 0.0
 
 
 func _notification(what: int) -> void:

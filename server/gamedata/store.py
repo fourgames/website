@@ -69,7 +69,8 @@ CREATE TABLE IF NOT EXISTS sessions (
     idle_s           REAL,
     first_session    INTEGER,
     last_scene       TEXT,
-    last_screen      TEXT
+    last_screen      TEXT,
+    test             INTEGER NOT NULL DEFAULT 0  -- a test session (GAMEDATA_TEST_APP_IDS): not in the lookup
 );
 CREATE INDEX IF NOT EXISTS sessions_by_pid ON sessions(pid, app_id);
 CREATE INDEX IF NOT EXISTS sessions_by_app ON sessions(app_id, started);
@@ -141,13 +142,19 @@ CREATE TABLE IF NOT EXISTS anonymised (
 
 """
 
+# Columns added after the first release, for a database made before them: (table, column, definition).
+# Hardware, settings, batches and crashes have no test column: they follow their session's.
+MIGRATIONS = (
+    ("sessions", "test", "INTEGER NOT NULL DEFAULT 0"),
+)
+
 # Every table with a pid column: anonymising rewrites them all.
 PID_TABLES = ("sessions", "hardware", "settings", "batches", "crashes")
 
 # What session/start and session/end may fill in, besides the ids and times.
 SESSION_INFO = ("game_version", "build_id", "godot_version", "platform", "locale", "country", "region",
                 "consent_hardware", "previous_crash", "boot_kind", "input_type", "input_controller", "dlc",
-                "owns_full_game")
+                "owns_full_game", "test")
 SESSION_END = ("active_s", "idle_s", "first_session", "last_scene", "last_screen")
 
 HARDWARE_COLUMNS = ("os", "cpu", "cpu_cores", "ram_mb", "gpu", "gpu_driver", "renderer",
@@ -216,6 +223,24 @@ class Store:
         # in free pages.
         self.db.execute("PRAGMA secure_delete=ON")
         self.db.executescript(SCHEMA)
+        self._migrate()
+
+    def _migrate(self) -> None:
+        """Adds the columns a database made by an older version lacks. Inside one write transaction
+        that looks again, so two connections opening at once (the service and an export) can't both
+        add one. ADD COLUMN with a constant default leaves the existing rows as they are, with it."""
+        def missing() -> list[tuple[str, str, str]]:
+            have: dict[str, set[str]] = {}
+            for table, column, _ in MIGRATIONS:
+                if table not in have:
+                    have[table] = {row["name"] for row in self.db.execute(f"PRAGMA table_info({table})")}
+            return [m for m in MIGRATIONS if m[1] not in have[m[0]]]
+
+        if not missing():
+            return
+        with self.transaction() as db:
+            for table, column, definition in missing():
+                db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
 
     def close(self) -> None:
         self.db.close()
@@ -266,6 +291,7 @@ class Store:
                 db.execute("UPDATE players SET updated = ? WHERE pid = ?", (now, pid))
             values = {column: info.get(column) for column in SESSION_INFO}
             values["consent_hardware"] = int(bool(info.get("consent_hardware")))
+            values["test"] = int(bool(info.get("test")))
             for column in ("previous_crash", "dlc"):
                 if values[column] is not None:
                     values[column] = json.dumps(values[column], ensure_ascii=False)
@@ -288,6 +314,11 @@ class Store:
                 db.execute("INSERT INTO settings (session_id, pid, app_id, created, data) VALUES (?, ?, ?, ?, ?)",
                            (session_id, pid, app_id, now, json.dumps(settings, ensure_ascii=False)))
         return session_id
+
+    def test_session_ids(self, pid: str) -> set[str]:
+        """The player's test sessions (the export marks what they sent)."""
+        return {row[0] for row in self.db.execute("SELECT session_id FROM sessions WHERE pid = ? AND test = 1",
+                                                  (pid,))}
 
     def session(self, session_id: str) -> Session | None:
         row = self.db.execute("SELECT session_id, pid, app_id, started, ended FROM sessions WHERE session_id = ?",
@@ -376,24 +407,32 @@ class Store:
 
     # What a player sees
 
-    def _games(self, pids: list[str], demo_of: dict[int, int]) -> dict[str, dict[int, dict[str, Any]]]:
+    def _games(self, pids: list[str], demo_of: dict[int, int],
+               include_test: bool = True) -> dict[str, dict[int, dict[str, Any]]]:
         """pid -> app_id -> the per-game summary both /v1/me and the lookup show: sessions,
         playtime, first and last seen (unix seconds), the countries played from, and for demos
         (GAMEDATA_DEMO_OF) which game they're the demo of and whether the player owns it (they've
         played it, or Steam said so at a demo session's start); full games with a demo say whether
-        the player played it."""
+        the player played it. With include_test, a game with test sessions also says how many
+        (test_sessions), and "test": true when they all are; without it, test sessions don't count."""
         marks = ",".join("?" * len(pids))
         games: dict[str, dict[int, dict[str, Any]]] = {}
         owns: dict[tuple[str, int], bool] = {}
         for row in self.db.execute(
                 f"""SELECT pid, app_id, COUNT(*) AS sessions, SUM(COALESCE(playtime_s, last_t, 0)) AS playtime_s,
                            MIN(started) AS first_seen, MAX(last_seen) AS last_seen,
-                           GROUP_CONCAT(DISTINCT country) AS countries, MAX(owns_full_game) AS owns_full_game
-                    FROM sessions WHERE pid IN ({marks}) GROUP BY pid, app_id ORDER BY pid, app_id""", pids):
-            games.setdefault(row["pid"], {})[row["app_id"]] = {
+                           GROUP_CONCAT(DISTINCT country) AS countries, MAX(owns_full_game) AS owns_full_game,
+                           SUM(test) AS test_sessions
+                    FROM sessions WHERE pid IN ({marks}) {"" if include_test else "AND test = 0"}
+                    GROUP BY pid, app_id ORDER BY pid, app_id""", pids):
+            game = games.setdefault(row["pid"], {})[row["app_id"]] = {
                 "app_id": row["app_id"], "sessions": row["sessions"], "playtime_s": round(row["playtime_s"] or 0),
                 "first_seen": row["first_seen"], "last_seen": row["last_seen"],
                 "countries": sorted(set(row["countries"].split(","))) if row["countries"] else []}
+            if row["test_sessions"]:
+                game["test_sessions"] = row["test_sessions"]
+                if row["test_sessions"] == row["sessions"]:
+                    game["test"] = True
             owns[(row["pid"], row["app_id"])] = bool(row["owns_full_game"])
         demos_of = {game: demo for demo, game in demo_of.items()}
         for pid, by_app in games.items():
@@ -411,12 +450,14 @@ class Store:
         by_app = self._games([pid], demo_of or {}).get(pid, {})
         return {"opted_out": self.opted_out(pid), "games": [by_app[app] for app in sorted(by_app)]}
 
-    def lookup(self, pids: list[str], demo_of: dict[int, int] | None = None) -> dict[str, dict[str, Any]]:
+    def lookup(self, pids: list[str], demo_of: dict[int, int] | None = None,
+               include_test: bool = False) -> dict[str, dict[str, Any]]:
         """For the internal lookup, per pid: {"opted_out": True} for opted-out (and anonymised)
         players, with nothing else; {"opted_out": False, "games": [...]} for players with data.
         Pids with neither are left out. Each game has _games's fields, plus the latest version,
         crash count, latest progress, latest hardware, regions and boot kinds. A few grouped
-        queries for all the pids at once."""
+        queries for all the pids at once. Test sessions, and the hardware and crashes they sent,
+        are left out unless include_test (a player with only test sessions has no data here)."""
         pids = list(dict.fromkeys(pids))
         if not pids:
             return {}
@@ -425,12 +466,15 @@ class Store:
         opted = {row[0] for row in db.execute(
             f"SELECT pid FROM players WHERE opted_out = 1 AND pid IN ({marks})", pids)}
         wanted = [pid for pid in pids if pid not in opted]
-        games = self._games(wanted, demo_of or {}) if wanted else {}
+        games = self._games(wanted, demo_of or {}, include_test) if wanted else {}
         for by_app in games.values():
             for game in by_app.values():
                 game.update({"last_version": None, "crashes": 0, "progress": None, "hardware": None,
                              "regions": [], "boot_kinds": {}})
         marks = ",".join("?" * len(wanted))
+        # The sessions to count, as a filter on sessions and on the tables that follow a session.
+        real = "" if include_test else "AND test = 0"
+        real_session = "" if include_test else "AND session_id NOT IN (SELECT session_id FROM sessions WHERE test = 1)"
 
         def each(sql: str) -> Iterator[tuple[sqlite3.Row, dict[str, Any]]]:
             for row in db.execute(sql, wanted):
@@ -446,29 +490,30 @@ class Store:
             for row, game in latest(
                     f"""SELECT pid, app_id, game_version, ROW_NUMBER() OVER (
                                PARTITION BY pid, app_id ORDER BY started DESC, rowid DESC) AS rn
-                        FROM sessions WHERE pid IN ({marks}) AND game_version IS NOT NULL"""):
+                        FROM sessions WHERE pid IN ({marks}) AND game_version IS NOT NULL {real}"""):
                 game["last_version"] = row["game_version"]
             for row, game in latest(
                     f"""SELECT pid, app_id, last_progress, ROW_NUMBER() OVER (
                                PARTITION BY pid, app_id ORDER BY started DESC, rowid DESC) AS rn
-                        FROM sessions WHERE pid IN ({marks}) AND last_progress IS NOT NULL"""):
+                        FROM sessions WHERE pid IN ({marks}) AND last_progress IS NOT NULL {real}"""):
                 game["progress"] = json.loads(row["last_progress"])
             for row, game in latest(
                     f"""SELECT *, ROW_NUMBER() OVER (
                                PARTITION BY pid, app_id ORDER BY created DESC, rowid DESC) AS rn
-                        FROM hardware WHERE pid IN ({marks})"""):
+                        FROM hardware WHERE pid IN ({marks}) {real_session}"""):
                 game["hardware"] = hardware_dict(row)
             for row, game in each(
                     f"""SELECT DISTINCT pid, app_id, country, region FROM sessions
-                        WHERE pid IN ({marks}) AND country IS NOT NULL AND region IS NOT NULL
+                        WHERE pid IN ({marks}) AND country IS NOT NULL AND region IS NOT NULL {real}
                         ORDER BY country, region"""):
                 game["regions"].append({"country": row["country"], "region": row["region"]})
             for row, game in each(
                     f"""SELECT pid, app_id, boot_kind, COUNT(*) AS n FROM sessions
-                        WHERE pid IN ({marks}) AND boot_kind IS NOT NULL GROUP BY pid, app_id, boot_kind"""):
+                        WHERE pid IN ({marks}) AND boot_kind IS NOT NULL {real} GROUP BY pid, app_id, boot_kind"""):
                 game["boot_kinds"][row["boot_kind"]] = row["n"]
             for row, game in each(
-                    f"SELECT pid, app_id, COUNT(*) AS n FROM crashes WHERE pid IN ({marks}) GROUP BY pid, app_id"):
+                    f"""SELECT pid, app_id, COUNT(*) AS n FROM crashes WHERE pid IN ({marks}) {real_session}
+                        GROUP BY pid, app_id"""):
                 game["crashes"] = row["n"]
 
         out: dict[str, dict[str, Any]] = {pid: {"opted_out": True} for pid in pids if pid in opted}

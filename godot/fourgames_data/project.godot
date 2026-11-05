@@ -12,16 +12,27 @@ config_version=5
 
 config/name="fourgames_data"
 config/version="1.0.0"
-run/main_scene="res://demo/demo.tscn"
+run/main_scene="res://game/title.tscn"
 config/features=PackedStringArray("4.7", "GL Compatibility")
 
 [autoload]
 
 GameData="*res://addons/fourgames_data/game_data.gd"
+TestGame="*res://game/test_game.gd"
+
+[display]
+
+window/stretch/mode="canvas_items"
+window/stretch/aspect="keep"
 
 [editor_plugins]
 
 enabled=PackedStringArray("res://addons/fourgames_data/plugin.cfg")
+
+[fourgames_data_test]
+
+collect_in_debug=true
+base_url=""
 
 [rendering]
 

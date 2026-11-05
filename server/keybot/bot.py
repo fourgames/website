@@ -117,8 +117,6 @@ class KeyBot(discord.Client):
         # The sync replaces the guild's whole command list, so old commands (/mykeys, /pools, …) go.
         await self.tree.sync(guild=guild)
         self.web_runner = await start_web(self)
-        if self.config.request_expire_days > 0:
-            self.expire_task = asyncio.create_task(self.expire_loop())
         log.info("commands synced to guild %s; web on %s:%s", self.config.guild_id, self.config.host,
                  self.config.port)
 
@@ -138,6 +136,9 @@ class KeyBot(discord.Client):
 
     async def on_ready(self) -> None:
         log.info("logged in as %s (%s)", self.user, self.user.id if self.user else "?")
+        # on_ready comes again after a reconnect; one loop is enough.
+        if self.config.request_expire_days > 0 and self.expire_task is None:
+            self.expire_task = asyncio.create_task(self.expire_loop())
 
     async def user_by_id(self, user_id: int) -> discord.User:
         return self.get_user(user_id) or await self.fetch_user(user_id)
@@ -149,7 +150,6 @@ class KeyBot(discord.Client):
     # Requests nobody answered
 
     async def expire_loop(self) -> None:
-        await self.wait_until_ready()
         while not self.is_closed():
             try:
                 await self.expire_requests()

@@ -1243,7 +1243,7 @@ function chartCard(chart) {
 // A series with `pace` draws its last step dashed (this year, extrapolated to a whole year).
 function lineChart({ labels, series, fmt, yLabel, note }) {
   const h = C.h, svgEl = C.svgEl;
-  const W = 760, H = 280, M = { top: 18, right: 150, bottom: 30, left: 50 };
+  const W = 760, H = 280, M = { top: 18, right: 200, bottom: 30, left: 50 };
   const vals = series.flatMap((s) => s.values).filter((v) => v != null);
   const max = niceMax(Math.max(...vals, 0) * 1.05 || 1);
   const n = labels.length;
@@ -1262,7 +1262,7 @@ function lineChart({ labels, series, fmt, yLabel, note }) {
   const isPace = (s, i) => s.pace && i === n - 1;
   // End labels, pushed apart when they'd overlap.
   const ends = series.map((s) => { const i = s.values.findLastIndex((v) => v != null); return { s, i, y: y(s.values[i]) }; }).sort((a, b) => a.y - b.y);
-  for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 30) ends[k].y = ends[k - 1].y + 30;
+  for (let k = 1; k < ends.length; k++) if (ends[k].y - ends[k - 1].y < 36) ends[k].y = ends[k - 1].y + 36;
   for (const s of series) {
     const solidTo = s.pace ? n - 2 : n - 1;
     let d = "";
@@ -1274,7 +1274,10 @@ function lineChart({ labels, series, fmt, yLabel, note }) {
   for (const e of ends) {
     const paced = isPace(e.s, e.i);
     svg.append(svgEl("circle", { cx: x(e.i), cy: y(e.s.values[e.i]), r: 4, fill: paced ? "var(--fb-card)" : e.s.color, stroke: paced ? e.s.color : "var(--fb-card)", "stroke-width": 2 }));
-    text({ x: x(e.i) + 10, y: e.y + 4, class: "mm-endlabel" }, `${fmt(e.s.values[e.i])}`);
+    // An index alone reads like a count ("256" games?): say it as times-2018 with the real number next to it.
+    const v = e.s.values[e.i];
+    text({ x: x(e.i) + 10, y: e.y + 4, class: "mm-endlabel" }, e.s.raw && v != null
+      ? `×${(v / 100).toFixed(1)} · ${e.s.rawFmt(e.s.raw[e.i])}` : `${fmt(v)}`);
     text({ x: x(e.i) + 10, y: e.y + 18, class: "mm-endname" }, paced ? `${e.s.name} (pace)` : e.s.name);
   }
   const cross = svgEl("line", { y1: M.top, y2: H - M.bottom, class: "mm-cross", visibility: "hidden" });

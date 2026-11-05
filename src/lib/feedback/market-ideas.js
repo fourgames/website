@@ -313,7 +313,10 @@ async function refresh(v) {
     v.error = null;
   } catch (e) {
     if (e.signedOut) return;
-    v.error = e.status === 404 ? "The game-data server doesn't have the ideas yet (deploy server/gamedata/ideas.py and restart gamedata)." : `Couldn't load the ideas: ${e.message}`;
+    // 404/405: the server still runs code from before ideas.py (it needs a restart to pick it up).
+    v.error = [404, 405].includes(e.status) || /HTTP 40[45]\b/.test(e.message || "")
+      ? "The game-data server isn't running the ideas code yet: it needs the new package and a restart (see server/gamedata/README.md, My game ideas)."
+      : `Couldn't load the ideas: ${e.message}`;
   } finally {
     v.loading = false;
   }

@@ -256,7 +256,7 @@ export default {
 		faq: {
 			title: "Quick answers",
 			key: { q: "Can I get a key for a game?", a: "Making a video, stream or article? Use /request in our {discord}; the {press} has the details. Want every game? They're free for YouTube members." },
-			bug: { q: "I found a bug or need help with a game.", a: "Tell us in our {discord}. That's where we see it fastest and can ask what happened." },
+			bug: { q: "I found a bug or need help with a game.", a: "Post in the game's Steam discussions, on its Steam page. That's where we keep track of bugs and can reply to everyone who has the same problem. Our {discord} works too." },
 			data: { q: "What data do your games collect, and can I delete it?", a: "It's all on our {privacy} page. Sign in with Steam there to download your data, opt out or anonymise it yourself." },
 			down: { q: "Is something down?", a: "Our {status} page shows what's working right now." },
 			coverage: { q: "Can I make videos or streams of your games?", a: "Yes. Logos, art and trailers in our {press} are free to use in articles, videos and streams." },

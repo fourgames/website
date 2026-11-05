@@ -489,7 +489,10 @@ function paintList(v) {
   const head = h("div.mki-listhead",
     h("h3", all.length ? `${live.length} idea${live.length === 1 ? "" : "s"}` : "No ideas yet"),
     v.market?.day ? h("span.mki-muted", `Market data of ${v.market.day}`) : null,
-    archived ? h("button.mki-link", { type: "button", onclick: () => { v.showArchived = !v.showArchived; paintList(v); } }, v.showArchived ? "Hide archived" : `Show ${archived} archived`) : null);
+    archived ? h("button.mki-link", { type: "button", onclick: () => { v.showArchived = !v.showArchived; paintList(v); } }, v.showArchived ? "Hide archived" : `Show ${archived} archived`) : null,
+    live.length > 1 ? h("button.btn.mki-all", { type: "button", disabled: !!v.rescoringAll || v.busy.size > 0 && [...v.busy.values()].some((b) => !b.error),
+      title: "Asks Claude again for every idea that isn't archived, one after another, with today's market data",
+      onclick: () => rescoreAll(v) }, v.rescoringAll ? `Re-scoring ${v.rescoringAll.i} of ${v.rescoringAll.n}…` : `Re-score all ${live.length} with Claude`) : null);
   if (!all.length) { v.list.replaceChildren(head, h("p.mki-muted", "Your scored ideas show up here, newest first.")); return; }
   v.list.replaceChildren(head, ...shown.map((idea) => card(v, idea)));
   if (v.flash) {
@@ -606,6 +609,19 @@ async function rescore(v, idea) {
   paintList(v);
 }
 
+// Every live idea, one after another (the server runs at most two Claude calls at once anyway).
+async function rescoreAll(v) {
+  const queue = (v.ideas || []).filter((i) => !i.archived);
+  v.rescoringAll = { i: 0, n: queue.length };
+  for (const idea of queue) {
+    v.rescoringAll.i++;
+    await rescore(v, idea);
+    if (!v.ideas?.some((i) => i.id === idea.id) || v.busy.get(idea.id)?.error && /sign/i.test(v.busy.get(idea.id).error)) break;
+  }
+  v.rescoringAll = null;
+  paintList(v);
+}
+
 async function remove(v, idea) {
   const short = idea.text.length > 60 ? idea.text.slice(0, 57) + "…" : idea.text;
   if (!globalThis.confirm?.(`Delete "${short}" and its whole score history? This can't be undone.`)) return;
@@ -699,6 +715,7 @@ const CSS = `
 .mkv-ideas .mki-warn { color: var(--fb-ink-2); font-size: 0.85rem; margin: 8px 0 0; border-left: 3px solid var(--fb-warning); padding-left: 8px; }
 .mkv-ideas .mki-listhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 8px; }
 .mkv-ideas .mki-listhead h3 { margin: 0; font-size: 1rem; color: var(--fb-title); }
+.mkv-ideas .mki-all { margin-left: auto; }
 .mkv-ideas .mki-link { appearance: none; border: 0; background: none; padding: 0; font: inherit; font-size: 0.85rem; color: var(--fb-link); cursor: pointer; text-decoration: underline; }
 .mkv-ideas .mki-card { background: var(--fb-card); border: 1px solid var(--fb-line); border-radius: 12px; padding: 14px; margin-bottom: 14px; min-width: 0; }
 .mkv-ideas .mki-card.mki-new { outline: 2px solid var(--fb-accent); }

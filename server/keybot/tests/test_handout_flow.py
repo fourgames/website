@@ -314,13 +314,13 @@ def test_grant_to_members_counts(bot):
     members = [FakeMember(1), FakeMember(2), FakeMember(3), FakeMember(4, dms_open=False),
                FakeMember(5), FakeMember(6), FakeMember(7), FakeMember(99, bot=True)]
     prompt = grantrole_prompt([m for m in members if not m.bot], bot.store, game, "<@&700>")
-    assert "7 member(s) with the role, 5 of them can get one" in prompt and "3 key(s) in stock" in prompt
+    assert "7 member(s) with the role, 5 of them can get one" in prompt and "3 keys in stock" in prompt
     assert "it stops after 3" in prompt
     report = asyncio.run(bot.grant_to_members(members, game))
     assert (report.given, report.banned, report.at_limit, report.dm_failed, report.out_of_keys) == (3, 1, 1, 1, 1)
     assert [m.id for m in members if m.sent] == [1, 5, 6]
     assert bot.store.available_count(game["id"]) == 0
-    assert "**3** key(s) sent" in report.summary()
+    assert "**3 keys** sent" in report.summary()
 
 
 # Stock warnings

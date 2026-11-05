@@ -57,7 +57,7 @@ class GrantReport:
     out_of_keys: int = 0
 
     def summary(self) -> str:
-        parts = [f"**{self.given}** key(s) sent"]
+        parts = [f"**{plural(self.given, 'key')}** sent"]
         if self.at_limit:
             parts.append(f"{self.at_limit} skipped (already at the limit)")
         if self.banned:
@@ -1001,7 +1001,7 @@ async def keys_add(interaction: discord.Interaction, file: discord.Attachment, g
     log.info("%s added %d key(s) to %s (%d known, %d repeated in the file)", interaction.user.id, added,
              row["name"], known, repeats)
     await interaction.followup.send(
-        f"{head}Added **{added}** key(s) to **{escape_markdown(row['name'])}**.\n"
+        f"{head}Added **{plural(added, 'key')}** to **{escape_markdown(row['name'])}**.\n"
         f"Skipped {known} already in the database and {repeats} repeated in the file.\n"
         f"Available now: {bot.store.available_count(row['id'])}.", ephemeral=True)
 
@@ -1074,7 +1074,7 @@ async def keys_game(interaction: discord.Interaction, game: str, public: bool | 
         return
     log.info("%s exported %d unclaimed key(s) of %s", interaction.user.id, len(values), row["name"])
     data = io.BytesIO(("\n".join(values) + "\n").encode())
-    await reply(interaction, f"{prefix}{len(values)} unclaimed key(s) for **{name}**. They stay in the bot; "
+    await reply(interaction, f"{prefix}{plural(len(values), 'unclaimed key')} for **{name}**. They stay in the bot; "
                              "delete the file once you're done with it.",
                 file=discord.File(data, filename=export_filename(row)))
 
@@ -1187,7 +1187,7 @@ def grantrole_prompt(members: list[discord.abc.User], store: Store, game: sqlite
     name = escape_markdown(game["name"])
     lines = [f"Send one **{name}** key by DM to everyone with {role_mention}?",
              f"{len(members)} member(s) with the role, {eligible} of them can get one "
-             f"(the others are banned or at the limit). {stock} key(s) in stock."]
+             f"(the others are banned or at the limit). {plural(stock, 'key')} in stock."]
     if eligible > stock:
         lines.append(f"Not enough keys for everyone: it stops after {stock}.")
     return "\n".join(lines)

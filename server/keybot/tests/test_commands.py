@@ -386,21 +386,21 @@ def test_add_to_an_existing_game_reports_duplicates(admin):
     game = stock(admin)
     file = FakeAttachment("Key\nAAAAA-BBBBB-00000\nNEW00-AAAAA-BBBBB\nNEW00-AAAAA-BBBBB\n", "batch.csv")
     text, _ = ask(admin, "add", file=file, game="Hidden Ones")
-    assert text == ("Added **1** key(s) to **Hidden Ones**.\n"
+    assert text == ("Added **1 key** to **Hidden Ones**.\n"
                     "Skipped 1 already in the database and 1 repeated in the file.\nAvailable now: 4.")
     assert admin.store.available_count(game["id"]) == 4
 
 
 def test_add_with_name_creates_the_game(admin):
     text, _ = ask(admin, "add", file=FakeAttachment("NEW00-AAAAA-BBBBB\n"), name=" New Game ", steam_app_id=555)
-    assert text.startswith("Added the game **New Game** (Steam app 555).\nAdded **1** key(s) to **New Game**.")
+    assert text.startswith("Added the game **New Game** (Steam app 555).\nAdded **1 key** to **New Game**.")
     row = admin.store.game_by_name("New Game")
     assert row["steam_app_id"] == 555 and admin.store.available_count(row["id"]) == 1
     # name: of a game it has already just adds to it; steam_app_id: then sets the id.
     text, _ = ask(admin, "add", file=FakeAttachment("NEW00-AAAAA-CCCCC\n"), name="New Game")
-    assert text.startswith("Added **1** key(s) to **New Game**.")
+    assert text.startswith("Added **1 key** to **New Game**.")
     text, _ = ask(admin, "add", file=FakeAttachment("NEW00-AAAAA-DDDDD\n"), game="New Game", steam_app_id=556)
-    assert text.startswith("Set the Steam app id of **New Game** (Steam app 556).\nAdded **1** key(s)")
+    assert text.startswith("Set the Steam app id of **New Game** (Steam app 556).\nAdded **1 key**")
     assert admin.store.game_by_name("New Game")["steam_app_id"] == 556
 
 
@@ -575,7 +575,7 @@ def test_game_export_sends_the_unclaimed_keys(admin):
     game = stock(admin)
     admin.store.give_key(game["id"], 1, "member")
     text, kwargs = ask(admin, "game", game="Hidden Ones", export=True)
-    assert text == ("2 unclaimed key(s) for **Hidden Ones**. They stay in the bot; "
+    assert text == ("2 unclaimed keys for **Hidden Ones**. They stay in the bot; "
                     "delete the file once you're done with it.")
     file = kwargs["file"]
     assert file.filename == "hidden-ones-unclaimed-keys.txt"
@@ -583,7 +583,7 @@ def test_game_export_sends_the_unclaimed_keys(admin):
     assert admin.store.available_count(game["id"]) == 2  # the keys stay in the bot
     # With a change too: the settings first, then the file.
     text, kwargs = ask(admin, "game", game="Hidden Ones", public=False, export=True)
-    assert text.startswith("Updated. **Hidden Ones**\nVisibility: private") and "\n\n2 unclaimed key(s)" in text
+    assert text.startswith("Updated. **Hidden Ones**\nVisibility: private") and "\n\n2 unclaimed keys" in text
     assert "file" in kwargs
 
 

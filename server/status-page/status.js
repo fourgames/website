@@ -134,6 +134,83 @@ async function checkBroadcast() {
 	return { state: "delayed", detail: `${down.join(", ")} not sending right now; it keeps trying` };
 }
 
+// The server's own load (server/uptime/server_stats.py, every minute), with a meter per resource.
+const BUSY_PCT = 90;
+const fmtPct = (n) => (n == null ? "–" : `${Math.round(n)}%`);
+const fmtMbit = (n) => (n == null ? "–" : `${n < 10 ? n.toFixed(1) : Math.round(n)} Mbit/s`);
+const fmtGB = (n) => (n >= 1000 ? `${(n / 1000).toFixed(2)} TB` : `${n} GB`);
+
+function meter(label, value, pct) {
+	const item = document.createElement("div");
+	item.className = "meter";
+	const head = document.createElement("div");
+	head.className = "meter-head";
+	const name = document.createElement("span");
+	name.textContent = label;
+	const val = document.createElement("span");
+	val.className = "meter-value";
+	val.textContent = value;
+	head.append(name, val);
+	item.append(head);
+	if (pct != null) {
+		const track = document.createElement("div");
+		track.className = "meter-track";
+		const fill = document.createElement("div");
+		fill.className = "meter-fill";
+		fill.dataset.level = pct >= BUSY_PCT ? "down" : pct >= 70 ? "warn" : "ok";
+		fill.style.width = `${Math.max(2, Math.min(100, pct))}%`;
+		track.append(fill);
+		track.setAttribute("role", "img");
+		track.setAttribute("aria-label", `${label}: ${value}`);
+		item.append(track);
+	}
+	return item;
+}
+
+function showMeters(data) {
+	const row = document.querySelector('[data-check="server"]');
+	row.querySelector(".meters")?.remove();
+	if (!data) return;
+	const box = document.createElement("div");
+	box.className = "meters";
+	box.append(
+		meter("CPU", fmtPct(data.cpuPct), data.cpuPct),
+		meter("Memory", fmtPct(data.memoryPct), data.memoryPct),
+		meter("Disk", `${fmtPct(data.diskPct)} · ${data.diskFreeGB} GB free`, data.diskPct),
+		meter("Upload now", fmtMbit(data.outMbit), null),
+		meter(`Sent in ${monthName(data.month)}`, fmtGB(data.monthOutGB), null),
+		meter(`Received in ${monthName(data.month)}`, fmtGB(data.monthInGB), null),
+	);
+	row.append(box);
+}
+
+function monthName(month) {
+	const [y, m] = String(month).split("-").map(Number);
+	if (!y || !m) return "this month";
+	return new Date(Date.UTC(y, m - 1, 1)).toLocaleString("en", { month: "long", timeZone: "UTC" });
+}
+
+async function checkServer() {
+	let data;
+	try {
+		const response = await fetchWithTimeout(`${API}/status/server.json`);
+		if (!response.ok) {
+			showMeters(null);
+			return { state: "unknown", detail: "No report from it yet." };
+		}
+		data = await response.json();
+	} catch {
+		showMeters(null);
+		return { state: "unknown", detail: "Couldn't read its report right now." };
+	}
+	showMeters(data);
+	const age = now() - Number(data.checkedAt);
+	if (!(age <= 5 * 60)) return { state: "unknown", detail: `Last report ${ago(age)}` };
+	const busy = [["CPU", data.cpuPct], ["Memory", data.memoryPct], ["Disk", data.diskPct]].filter(([, v]) => v >= BUSY_PCT);
+	if (busy.length) return { state: "delayed", detail: `${busy.map(([n]) => n).join(" and ")} nearly full` };
+	return { state: "running", detail: `Plenty of room · checked ${ago(age)}` };
+}
+
 function checkLinks() {
 	// The short links run on the same server and Caddy as this page, so this page loading means
 	// that server is up. Each link isn't opened one by one.
@@ -149,6 +226,7 @@ const CHECKS = {
 	alerts: () => checkHealth("/alerts/health", judgeAlerts),
 	gamedata: () => checkHealth("/gamedata/health", judgeGamedata),
 	broadcast: checkBroadcast,
+	server: checkServer,
 	links: checkLinks,
 };
 

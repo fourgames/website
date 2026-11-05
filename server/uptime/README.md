@@ -42,3 +42,11 @@ uses them. A changed unit file is copied again, then `sudo systemctl daemon-relo
 
 Logs: `journalctl -u uptime-check` (a line only for minutes when something isn't up).
 Tests: `python -m pytest -q server/uptime/tests`.
+
+## The Server row
+
+`server_stats.py` runs right after `check.py` (same timer) and writes `/srv/fourgames/status/server.json`:
+CPU and network as the change since the last run, memory, disk, and the traffic sent and received
+this month (added up in `/srv/fourgames/uptime/server-stats-state.json`, since the kernel's counters
+start over at every reboot). The status page shows it as meters in the *Server* row. One Steam
+broadcast is about 4.7 Mbit/s and 1.5 TB a month of *Sent*.

@@ -89,12 +89,7 @@ export function getPressGame(slug, i18n = defaultI18n) {
 				: game.price.final
 			: null;
 
-	// Only what appdetails gives us. Library art (600×900 capsule, hero, logo) isn't in it.
-	const art = [
-		game.image && { key: "header", url: game.image, size: "460×215" },
-		live.capsuleImage && { key: "capsule", url: live.capsuleImage, size: "231×87" },
-		live.backgroundImage && { key: "background", url: live.backgroundImage, size: null },
-	].filter(Boolean);
+	const { artLanguages, artByLanguage } = pressArt(live, game);
 
 	return {
 		...game,
@@ -110,6 +105,66 @@ export function getPressGame(slug, i18n = defaultI18n) {
 		// The rest of "About this game", after the short description (game.description).
 		about,
 		movies: (live.movies ?? []).filter((m) => m.thumbnail || m.mp4 || m.webm || m.hls),
-		art,
+		artLanguages,
+		artByLanguage,
+		artDefault: artLanguages.find((l) => l.steam === STEAM_LANGUAGE[code])?.steam ?? "english",
 	};
+}
+
+// Steam's language names → BCP 47, for each language's own name in the art picker.
+const STEAM_TAGS = {
+	english: "en", schinese: "zh-Hans", tchinese: "zh-Hant", japanese: "ja", koreana: "ko", thai: "th",
+	bulgarian: "bg", czech: "cs", danish: "da", german: "de", spanish: "es-ES", latam: "es-419", greek: "el",
+	french: "fr", italian: "it", indonesian: "id", hungarian: "hu", dutch: "nl", norwegian: "nb", polish: "pl",
+	portuguese: "pt-PT", brazilian: "pt-BR", romanian: "ro", russian: "ru", finnish: "fi", swedish: "sv",
+	turkish: "tr", vietnamese: "vi", ukrainian: "uk", arabic: "ar",
+};
+// The site's languages → Steam's, so a page opens the art picker on its own language.
+const STEAM_LANGUAGE = { en: "english", ja: "japanese", ko: "koreana", "zh-cn": "schinese", "zh-tw": "tchinese" };
+
+// The order and size (of the 2x file we link) of each piece of store art. Sizes are Steam's spec;
+// the logo and background vary per game, so they have none.
+const ART = [
+	["logo", null],
+	["header", "920×430"],
+	["capsule", "1232×706"],
+	["smallCapsule", "462×174"],
+	["heroCapsule", "748×896"],
+	["libraryCapsule", "600×900"],
+	["libraryHero", "3840×1240"],
+	["background", null],
+];
+
+function nativeName(steam) {
+	const tag = STEAM_TAGS[steam] ?? "en";
+	try {
+		const name = new Intl.DisplayNames([tag], { type: "language" }).of(tag);
+		return name.charAt(0).toLocaleUpperCase(tag) + name.slice(1);
+	} catch {
+		return steam;
+	}
+}
+
+// Logos and key art per language, like SteamDB's assets tab. scripts/fetch-data.mjs stores English
+// whole and only each language's own files, so a language here is English with its own files on
+// top, and an item marks whether it is that language's own (`own`). Older data without `art` falls
+// back to what appdetails had: the header and small capsule.
+function pressArt(live, game) {
+	const english = live.art?.english ?? {
+		header: game.image,
+		smallCapsule: live.capsuleImage,
+		background: live.backgroundImage,
+	};
+	const languages = ["english", ...Object.keys(live.art ?? {}).filter((l) => l !== "english")];
+	const artByLanguage = {};
+	for (const language of languages) {
+		const own = language === "english" ? {} : live.art[language];
+		artByLanguage[language] = ART.map(([key, size]) => {
+			const url = own[key] ?? english[key];
+			return url && { key, url, size, own: Boolean(own[key]) };
+		}).filter(Boolean);
+	}
+	// English first, then the rest in Steam's order.
+	const artLanguages = languages.map((steam) => ({ steam, label: nativeName(steam) }));
+	return { artLanguages, artByLanguage };
 }

@@ -10,21 +10,23 @@ import { SITE, SOCIALS } from "@/data/site.js";
 import { useI18n } from "@/i18n/index.js";
 import { getPressGames } from "@/lib/press.js";
 
-// The studio press kit, in presskit()'s order: factsheet and about, games, logos, keys and contact.
+// The studio press kit, in presskit()'s order: about and games beside the factsheet, logos, keys and contact.
 const i18n = useI18n();
 const { t } = i18n;
 const games = getPressGames(i18n);
 
-const contact = SITE.press?.email
-	? { label: SITE.press.email, href: `mailto:${SITE.press.email}` }
-	: { label: "Discord", href: SITE.links.discord };
+// Discord first: it's where we answer fastest. The form below (#contact) is for everything else.
+const contact = [
+	{ label: "Discord", href: SITE.links.discord },
+	{ label: t("press.facts.contactForm"), href: "#contact" },
+];
 
 const facts = [
 	{ label: t("press.facts.studio"), value: SITE.name },
 	{ label: t("press.facts.basedIn"), value: t("press.sweden") },
 	{ label: t("press.facts.founded"), value: "2023" },
 	{ label: t("press.facts.website"), links: [{ label: SITE.url.replace(/^https:\/\//, ""), href: SITE.url }] },
-	{ label: t("press.facts.contact"), links: [contact] },
+	{ label: t("press.facts.contact"), links: contact },
 	{ label: t("press.facts.social"), links: SOCIALS.map((s) => ({ label: s.label, href: s.href })) },
 ];
 
@@ -34,23 +36,32 @@ const logos = [
 	{ href: "/logo-512.png", file: "fourgames-logo-512.png", label: t("press.logos.png") },
 ];
 
-// Alternate the bands, whichever sections have something to show.
-const sections = ["factsheet", games.length && "games", "logos", "key"].filter(Boolean);
+// Alternate the bands.
+const sections = ["factsheet", "logos", "key"];
 const tone = (id) => (sections.indexOf(id) % 2 ? "surface" : "bg");
 </script>
 
 <template>
 	<PageHeader :title="t('press.title')" :description="t('press.description')">
 		<div class="flex flex-wrap gap-3">
-			<Button to="/press#key" variant="blue" icon="key">{{ t("press.getKey") }}</Button>
+			<Button to="/press#key" variant="blue" icon="steam">{{ t("press.getKey") }}</Button>
 			<Button :href="SITE.links.discord" icon="discord">{{ t("discord.join") }}</Button>
 		</div>
 	</PageHeader>
 
 	<Section id="factsheet" :tone="tone('factsheet')" :title="t('press.about')">
 		<div class="grid gap-8 lg:grid-cols-[minmax(0,1fr)_324px]">
-			<div class="max-w-3xl">
-				<p>{{ t("head.home.description") }}</p>
+			<!-- The games sit beside the factsheet, the way a Steam page fills the space next to its
+			     details box, instead of leaving the factsheet beside a single paragraph. -->
+			<div class="min-w-0">
+				<p class="max-w-3xl">{{ t("head.home.description") }}</p>
+				<template v-if="games.length">
+					<h3 id="games" class="mt-10 text-xl">{{ t("press.games.title") }}</h3>
+					<p class="mt-2 max-w-3xl text-base text-date">{{ t("press.games.description") }}</p>
+					<ul class="mt-5 grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
+						<li v-for="game in games" :key="game.appId"><GameCard :game="game" :to="`/press/${game.slug}`" /></li>
+					</ul>
+				</template>
 			</div>
 			<PressFacts :title="t('press.factsheet')" :rows="facts">
 				<template #media>
@@ -60,12 +71,6 @@ const tone = (id) => (sections.indexOf(id) % 2 ? "surface" : "bg");
 				</template>
 			</PressFacts>
 		</div>
-	</Section>
-
-	<Section v-if="games.length" id="games" :tone="tone('games')" :title="t('press.games.title')" :description="t('press.games.description')">
-		<ul class="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(250px,1fr))]">
-			<li v-for="game in games" :key="game.appId"><GameCard :game="game" :to="`/press/${game.slug}`" /></li>
-		</ul>
 	</Section>
 
 	<Section id="logos" :tone="tone('logos')" :title="t('press.logos.title')" :description="t('press.logos.description')">

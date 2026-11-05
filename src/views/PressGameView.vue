@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, ref, useId, watch } from "vue";
 import { useRoute } from "vue-router";
 import Button from "@/components/ui/Button.vue";
 import Icon from "@/components/ui/Icon.vue";
@@ -44,7 +44,6 @@ const kit = computed(() => {
 		...game.screenshots.map((s, i) => ({ kind: "shot", thumb: s.thumb || s.full, big: s.full, href: s.full, label: i + 1 })),
 	].filter((m) => m.thumb);
 
-	const art = game.art.map((a) => ({ ...a, label: t(`press.game.art.${a.key}`) }));
 
 	// Alternate the bands below the viewer, whichever sections have something to show.
 	const sections = [
@@ -52,12 +51,12 @@ const kit = computed(() => {
 		game.features.length && "features",
 		game.movies.length && "trailers",
 		game.screenshots.length && "screenshots",
-		art.length && "art",
+		game.artLanguages.length && "art",
 		"monetization",
 		"key",
 	].filter(Boolean);
 
-	return { game, facts, media, art, sections };
+	return { game, facts, media, sections };
 });
 
 // Steam opens on the trailer, but its poster is only 600px wide, so the viewer opens on the first
@@ -66,6 +65,16 @@ const firstShot = () => Math.max(0, kit.value?.media.findIndex((m) => m.kind ===
 const active = ref(firstShot());
 watch(() => route.params.game, () => (active.value = firstShot()));
 const shown = computed(() => kit.value?.media[active.value]);
+// The art section's language: the page's own when Steam has art in it, English otherwise.
+const artLanguage = ref(kit.value?.game.artDefault ?? "english");
+watch(() => route.params.game, () => (artLanguage.value = kit.value?.game.artDefault ?? "english"));
+const art = computed(() =>
+	(kit.value?.game.artByLanguage[artLanguage.value] ?? kit.value?.game.artByLanguage.english ?? []).map((a) => ({
+		...a,
+		label: t(`press.game.art.${a.key}`),
+	})),
+);
+const artSelectId = useId();
 const tone = (id) => (kit.value.sections.indexOf(id) % 2 ? "surface" : "bg");
 </script>
 
@@ -214,22 +223,35 @@ const tone = (id) => (kit.value.sections.indexOf(id) % 2 ? "surface" : "bg");
 		</Section>
 
 		<Section
-			v-if="kit.art.length"
+			v-if="art.length"
 			id="art"
 			:tone="tone('art')"
 			:title="t('press.game.art.title')"
 			:description="t('press.game.art.description', { name: kit.game.name })"
 		>
+			<div v-if="kit.game.artLanguages.length > 1" class="mb-6 flex flex-wrap items-center gap-3">
+				<label :for="artSelectId" class="text-sm font-semibold">{{ t("press.game.art.language") }}</label>
+				<select
+					:id="artSelectId"
+					v-model="artLanguage"
+					class="h-10 rounded-btn border border-line bg-bg px-3 text-base text-fg focus:border-primary focus:outline-none focus-visible:outline-2 focus-visible:outline-primary/40"
+				>
+					<option v-for="language in kit.game.artLanguages" :key="language.steam" :value="language.steam">{{ language.label }}</option>
+				</select>
+				<span class="text-sm text-date">{{ t("press.game.art.languageCount", { n: kit.game.artLanguages.length }) }}</span>
+			</div>
 			<ul class="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(220px,1fr))]">
-				<li v-for="item in kit.art" :key="item.key">
+				<li v-for="item in art" :key="item.key">
 					<a :href="item.url" target="_blank" rel="noopener noreferrer" class="group block h-full">
 						<article class="card card-hover flex h-full flex-col overflow-hidden">
-							<span class="grid aspect-capsule place-items-center bg-dark">
-								<img :src="item.url" alt="" loading="lazy" decoding="async" class="max-h-full max-w-full object-contain" />
+							<span class="block aspect-capsule overflow-hidden bg-dark p-2">
+								<img :src="item.url" alt="" loading="lazy" decoding="async" class="size-full object-contain" />
 							</span>
 							<span class="flex flex-col gap-0.5 p-4 text-sm">
 								<span class="font-semibold">{{ item.label }}</span>
-								<span v-if="item.size" class="text-date">{{ item.size }}</span>
+								<span class="text-date">
+									{{ [item.size, item.own && artLanguage !== "english" ? t("press.game.art.localized") : null].filter(Boolean).join(" · ") || t("press.game.fullSize") }}
+								</span>
 							</span>
 						</article>
 						<span class="sr-only">{{ t("a11y.newTab") }}</span>

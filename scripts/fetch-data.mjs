@@ -42,6 +42,22 @@ const PLAYLIST_PAGES = 20; // 50 uploads per page — 1000 videos before we star
 // Steam's own store translations, fetched per site language (src/i18n/locales.js codes → Steam's
 // `l=` names). Name, capsule, screenshots, blurb, genres and release date; prices stay USD.
 const STEAM_LANGUAGES = { ja: "japanese", ko: "koreana", "zh-cn": "schinese", "zh-tw": "tchinese" };
+// Every language Steam has, for the press kit's art: a store asset can be localized into any of them.
+const STEAM_ART_LANGUAGES = [
+	"english", "schinese", "tchinese", "japanese", "koreana", "thai", "bulgarian", "czech", "danish", "german",
+	"spanish", "latam", "greek", "french", "italian", "indonesian", "hungarian", "dutch", "norwegian", "polish",
+	"portuguese", "brazilian", "romanian", "russian", "finnish", "swedish", "turkish", "vietnamese", "ukrainian", "arabic",
+];
+// The store assets the press kit offers, by IStoreBrowseService's key, at their largest (2x) size.
+const STEAM_ART_KEYS = {
+	header: "header_2x",
+	capsule: "main_capsule_2x",
+	smallCapsule: "small_capsule_2x",
+	heroCapsule: "hero_capsule_2x",
+	libraryCapsule: "library_capsule_2x",
+	libraryHero: "library_hero_2x",
+	background: "raw_page_background",
+};
 
 try {
 	process.loadEnvFile(path.join(ROOT, ".env.local"));
@@ -313,8 +329,81 @@ async function fetchSteam(previous) {
 	const kept = appIds.filter((id) => manual.includes(id) || !apps[id]?.type || apps[id].type === "game");
 	for (const id of appIds) if (!kept.includes(id)) delete apps[id];
 
+	await fetchSteamArt(kept, apps, previous);
 	await mirrorHeroShots(apps);
 	return { appIds: kept, apps };
+}
+
+// The press kit's logos and key art in every language, like SteamDB's assets tab. appdetails only
+// has the header and small capsule, so this asks IStoreBrowseService (public, no key) once per
+// language for all apps at once. English is stored whole; another language only keeps the assets
+// that are its own file, so { english: {...}, japanese: { header } } means just a Japanese header.
+// The library logo isn't in that API, so it comes from Steam's PICS data (see below).
+async function fetchSteamArt(appIds, apps, previous) {
+	const ids = appIds.filter((id) => apps[id]?.status === "released" || apps[id]?.status === "upcoming");
+	if (!ids.length) return;
+	const art = Object.fromEntries(ids.map((id) => [id, {}]));
+	for (const [index, language] of STEAM_ART_LANGUAGES.entries()) {
+		if (index > 0) await sleep(300);
+		const input = {
+			ids: ids.map((appid) => ({ appid })),
+			context: { language, country_code: "US" },
+			data_request: { include_assets: true },
+		};
+		try {
+			const json = await fetchJson(
+				`https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json=${encodeURIComponent(JSON.stringify(input))}`,
+			);
+			for (const item of json?.response?.store_items ?? []) {
+				const assets = item.assets;
+				if (!assets?.asset_url_format || !art[item.id]) continue;
+				const urls = {};
+				for (const [key, field] of Object.entries(STEAM_ART_KEYS)) {
+					if (assets[field]) {
+						urls[key] = `https://shared.akamai.steamstatic.com/store_item_assets/${assets.asset_url_format.replace("${FILENAME}", assets[field])}`;
+					}
+				}
+				art[item.id][language] = urls;
+			}
+		} catch (error) {
+			warn("steam", `art (${language}): ${error.message}`);
+		}
+	}
+
+	for (const id of ids) {
+		const english = art[id].english;
+		if (!english) {
+			// The English call failed: keep the last build's art rather than none.
+			if (previous?.apps?.[id]?.art) apps[id].art = previous.apps[id].art;
+			continue;
+		}
+		const localized = {};
+		for (const language of STEAM_ART_LANGUAGES.slice(1)) {
+			const own = Object.fromEntries(
+				Object.entries(art[id][language] ?? {}).filter(([key, url]) => url.split("?")[0] !== english[key]?.split("?")[0]),
+			);
+			if (Object.keys(own).length) localized[language] = own;
+		}
+		// The library logo per language, from Steam's PICS data (steamcmd.net mirrors it, no key).
+		try {
+			const info = await fetchJson(`https://api.steamcmd.net/v1/info/${id}`);
+			const logo = info?.data?.[id]?.common?.library_assets_full?.library_logo;
+			for (const [language, file] of Object.entries(logo?.image2x ?? logo?.image ?? {})) {
+				const url = `https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/${id}/${file}`;
+				if (language === "english") english.logo = url;
+				else if (STEAM_ART_LANGUAGES.includes(language)) (localized[language] ??= {}).logo = url;
+			}
+		} catch (error) {
+			warn("steam", `app ${id} logo: ${error.message}`);
+			const old = previous?.apps?.[id]?.art ?? {};
+			for (const [language, urls] of Object.entries(old)) {
+				if (!urls.logo) continue;
+				if (language === "english") english.logo = urls.logo;
+				else (localized[language] ??= {}).logo = urls.logo;
+			}
+		}
+		apps[id].art = { english: { ...(english.logo && { logo: english.logo }), ...english }, ...localized };
+	}
 }
 
 // The store page in each of the site's other languages. Steam falls back to English for anything a

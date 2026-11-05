@@ -5,6 +5,13 @@ import Icon from "@/components/ui/Icon.vue";
 import { SITE } from "@/data/site.js";
 import { useI18n } from "@/i18n/index.js";
 
+// Reused by the press kit, which passes its own subtitle, placeholder and subject tag.
+const props = defineProps({
+	subtitle: { type: String, default: null },
+	placeholder: { type: String, default: null },
+	topic: { type: String, default: null },
+});
+
 // Posts to our own backend (server/contact), which mails the message to support@. It needs JS: the
 // script adds _elapsed (ms since the form appeared), which the backend checks against bots.
 const { t, code } = useI18n();
@@ -90,9 +97,9 @@ const fieldClass =
 <template>
 	<form :action="SITE.contact" method="POST" class="card flex h-full flex-col p-6 sm:p-8" @submit.prevent="submit">
 		<h3 class="text-xl">{{ t("form.title") }}</h3>
-		<p class="mt-1 text-sm text-date">{{ t("form.subtitle") }}</p>
+		<p class="mt-1 text-sm text-date">{{ props.subtitle ?? t("form.subtitle") }}</p>
 
-		<input type="hidden" name="_subject" :value="`New message from fourgames.se (${code})`" />
+		<input type="hidden" name="_subject" :value="`New ${props.topic ? `${props.topic} ` : ''}message from fourgames.se (${code})`" />
 		<input type="hidden" name="_elapsed" value="" />
 		<!-- Honeypot for bots: hidden from people and assistive tech. -->
 		<div class="hidden" aria-hidden="true">
@@ -123,7 +130,7 @@ const fieldClass =
 					name="message"
 					rows="5"
 					required
-					:placeholder="t('form.messagePlaceholder')"
+					:placeholder="props.placeholder ?? t('form.messagePlaceholder')"
 					:disabled="isSubmitting"
 					:class="[fieldClass, 'min-h-36 resize-y py-3']"
 				></textarea>

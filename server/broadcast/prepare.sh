@@ -19,7 +19,9 @@ done
 
 # Scale to fit 1920x1080 (black bars when it isn't 16:9), 30 fps, and the banner in the top left.
 vf="scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,fps=30"
-if ffmpeg -hide_banner -filters 2>/dev/null | grep -q drawtext; then
+# (Read into a variable first: with pipefail, grep -q closing the pipe early would count as a failure.)
+filters=$(ffmpeg -hide_banner -filters 2>/dev/null)
+if [[ $filters == *drawtext* ]]; then
   text=${banner//:/\\:}
   vf+=",drawtext=${font:+fontfile='$font':}text='${text//\'/}':fontsize=34:fontcolor=white:box=1:boxcolor=black@0.55:boxborderw=14:x=36:y=36"
 else
@@ -27,7 +29,7 @@ else
 fi
 
 # A video without sound gets silence: Steam expects an audio track.
-if ffprobe -v error -select_streams a -show_entries stream=index -of csv=p=0 "$in" | grep -q .; then
+if [ -n "$(ffprobe -v error -select_streams a -show_entries stream=index -of csv=p=0 "$in")" ]; then
   audio=(-map 0:v:0 -map 0:a:0)
 else
   audio=(-f lavfi -i anullsrc=r=48000:cl=stereo -map 0:v:0 -map 1:a:0 -shortest)

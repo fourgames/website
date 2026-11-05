@@ -516,7 +516,7 @@ function godotView() {
   const list = all.filter((g) => (f.status === "all" || (f.status === "released") === !g.comingSoon) && (!f.self || g.selfPublished)
     && (!q || g.name.toLowerCase().includes(q) || g.developers.some((d) => d.toLowerCase().includes(q)) || g.tags.some((t) => tagName(t).toLowerCase() === q)))
     .sort((a, b) => b.s.score - a.s.score || b.reviews - a.reviews);
-  const sources = { pcgamingwiki: "PCGamingWiki", store_legal: "store legal notice", store_text: "store description", manual: "added by hand" };
+  const sources = { pcgamingwiki: "PCGamingWiki", store_legal: "store legal notice", store_text: "store description", manual: "added by hand", steamdb: "SteamDB" };
   const detail = (g) => h("div.mk-detail-box",
     g.about ? h("p", g.about) : null,
     h("p", h("b", "Why it scores "), `${g.s.score}: quality ${Math.round(g.s.quality)}/40, upside ${Math.round(g.s.upside)}/30, things to improve ${Math.round(g.s.fix)}/30.`),

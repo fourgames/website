@@ -142,6 +142,29 @@ source, a strength (2 = stated, 1 = only mentioned) and the evidence:
   s = Store('/srv/fourgames/steamdata/steam.db'); s.add_manual_signal(1942280, 'godot', 'the developer said so', time.time()); s.close()"
   ```
 
+- **steamdb**: SteamDB's Godot list, copied by hand from your own browser (2). SteamDB knows
+  the engine from each game's file list (Godot games ship a `.pck`), so it has far more than the
+  sources above. Nothing here visits SteamDB: you open the page, and a bookmarklet copies the app
+  ids of the games on it. For the internal dashboard only; don't publish numbers built on it.
+
+  1. Once: make a bookmark in your browser with this as its address:
+
+     ```
+     javascript:(()=>{const s=new Set();document.querySelectorAll('tr[data-appid]').forEach(r=>s.add(r.dataset.appid));document.querySelectorAll('table a[href*="/app/"]').forEach(a=>{const m=a.getAttribute('href').match(/\/app\/(\d+)/);if(m)s.add(m[1])});const t=[...s].join('\n');navigator.clipboard.writeText(t).then(()=>alert(s.size+' app ids copied'),()=>prompt('Copy these:',t))})()
+     ```
+
+  2. Open [steamdb.info/tech/Engine/Godot](https://steamdb.info/tech/Engine/Godot/), show all
+     rows (or sort by release date for just the recent ones), and click the bookmark.
+  3. On the Mac, with the ids on the clipboard:
+
+     ```bash
+     pbpaste | ssh fourgames-server 'cd /srv/fourgames/own/server && /srv/fourgames/steamdata-venv/bin/python -m steamdata.importids godot steamdb'
+     ```
+
+  It only adds (a shorter list later doesn't remove anyone), games we didn't know become stub
+  apps the snapshot fills in, and the dashboard shows "SteamDB" as the evidence. Again every month
+  or so, with the newest games.
+
 A game with any strength-2 Godot signal is in the **Godot set** (`apps.godot = 1`) and gets player
 counts most often. A new source only has to write `engine_signals` rows and call
 `Store.refresh_godot()`.
@@ -273,6 +296,6 @@ journalctl -u steamdata -f                            # "app list (full): ... ap
 | Tests | `cd server && python -m pytest steamdata/tests` (with pytest; no network) |
 
 The code: `collector.py` (the lanes and the loop), `steam.py` (Steam's endpoints and replies),
-`pcgw.py` (PCGamingWiki), `engine.py` (engine hints), `market.py` (the Market numbers), `cadence.py` (how often), `db.py` (the
+`pcgw.py` (PCGamingWiki), `engine.py` (engine hints), `market.py` (the Market numbers), `cadence.py` (how often), `importids.py` (hand-copied engine lists), `db.py` (the
 schema and writes), `limiter.py`, `net.py` (HTTP), `stats.py`, `config.py`. Settings are in
 `steamdata.env.example`.

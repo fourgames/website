@@ -575,6 +575,23 @@ class Store:
             self._upsert_signal(appid, Signal(engine, "manual", STRONG, evidence), int(now))
         self.refresh_godot([appid], now)
 
+    def import_signals(self, appids: Iterable[int], engine: str, source: str, evidence: str,
+                       now: float) -> dict[str, int]:
+        """A list of games copied by hand from elsewhere (python -m steamdata.importids). Only
+        adds: a game missing from a later list keeps its signal, since a list may be one page.
+        Games we don't know yet become stub apps the snapshot fills in."""
+        appids = sorted(set(appids))
+        now = int(now)
+        with self.transaction() as db:
+            had = {r[0] for r in db.execute(
+                "SELECT appid FROM engine_signals WHERE engine = ? AND source = ?", (engine, source))}
+            for appid in appids:
+                self._upsert_signal(appid, Signal(engine, source, STRONG, evidence), now)
+        new_apps = self.add_stub_apps(appids, now)
+        changed = self.refresh_godot(appids, now) if engine == "godot" else 0
+        return {"games": len(appids), "new_signals": len(set(appids) - had), "new_apps": new_apps,
+                "godot_changed": changed}
+
     def refresh_godot(self, appids: list[int] | None, now: float) -> int:
         """Sets apps.godot from engine_signals. A game that just joined the Godot set gets its next
         player sample within the hour. Returns how many apps changed."""

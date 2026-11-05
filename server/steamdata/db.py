@@ -384,6 +384,16 @@ class Store:
                     db.execute("UPDATE apps SET visible = 0, snapshot_at = ?, snapshot_due = ? WHERE appid = ?",
                                (now, now + cadence.HIDDEN_RETRY, appid))
                     continue
+                if snap.appid != appid:
+                    # The store answered with another app: an old id that now points to a newer one
+                    # (201270 → 34330, Total War: SHOGUN 2). This id has nothing of its own, so it
+                    # leaves collection; the app it points to is collected under its own id.
+                    if prev["type"] != "redirect":
+                        self._change(appid, now, "type", prev["type"], "redirect")
+                    db.execute("""UPDATE apps SET type = 'redirect', parent_appid = ?, snapshot_at = ?,
+                                  snapshot_due = NULL, players_due = NULL, details_due = NULL
+                                  WHERE appid = ?""", (snap.appid, now, appid))
+                    continue
                 if snap.type != "game":
                     if prev["type"] not in (None, snap.type):
                         self._change(appid, now, "type", prev["type"], snap.type)

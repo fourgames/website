@@ -86,6 +86,17 @@ def test_snapshot_writes_the_day_and_schedules(store, rng):
     assert changes(store, 10) == []  # the first fill isn't a change
 
 
+def test_an_old_id_answered_by_another_app_leaves_collection(store, rng):
+    add(store, 201270, 34330)
+    store.save_snapshot({201270: snap(34330, "Total War: SHOGUN 2", reviews=5000)}, NOW, rng)
+    old = app(store, 201270)
+    assert old["type"] == "redirect" and old["parent_appid"] == 34330
+    assert (old["snapshot_due"], old["players_due"], old["details_due"]) == (None, None, None)
+    assert changes(store, 201270) == [("type", "game", "redirect")]
+    assert app(store, 34330)["snapshot_at"] is None  # untouched: it gets its own snapshot
+    assert store.due("snapshot", NOW + 60, 10) == [34330]
+
+
 def test_first_player_sample_waits_by_reviews(store, rng):
     add(store, 1, 2, 3)
     store.save_snapshot({1: snap(1, reviews=150), 2: snap(2, reviews=3), 3: snap(3, reviews=0)}, NOW, rng)

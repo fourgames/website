@@ -137,6 +137,10 @@ class SnapshotLane(Lane):
     def run(self, appids, now):
         results = steam.get_items(self.c.http, appids, self.c.cfg.country)
         self.counts["rows"] += self.store.save_snapshot(results, now, self.c.rng)
+        # A guard: whatever the reply was, nothing in this batch is asked for again within the hour.
+        # (Only moves dues forward, so the ones just scheduled for tomorrow keep that.) Without it,
+        # one app the reply didn't account for was asked for 60 times a minute, all day.
+        self.store.delay("snapshot", appids, now + cadence.RETRY_LATER)
 
     def give_up(self, appids, now):
         self.store.delay("snapshot", appids, now + cadence.RETRY_LATER)

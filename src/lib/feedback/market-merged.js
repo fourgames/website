@@ -1,8 +1,9 @@
 // The dashboard's Market section, final merged design: the Briefing layout (a "Today" summary in
 // sentences, then three big question tabs) with the best parts of the other designs:
-//   1. What should I make next?  every tag as a dot (crowding vs hit rate; click one to jump to its
-//      card), niche cards in sentences with "how sure" as a word plus a ± range, and the tag-pair gap
-//      finder as cards or a table with a gap score.
+//   1. What should I make next?  one small-team filter for the whole tab; "Rising now" (tags whose
+//      share of releases jumped lately, with sparklines and a stage); the top 25 by opportunity score
+//      as bars; every tag as a small uniform dot (rivals vs hit chance); a ranked niche table whose
+//      rows open a line in plain words; and the gap finder from market-gaps.js.
 //   2. Who should I sign?        market-sign.js (its own state and CSS).
 //   3. How is Steam doing?       games released vs Steam's peak players (this year as a dashed pace),
 //      what's doing well right now (releases by hit index), and all of today's alerts, folded.
@@ -10,15 +11,13 @@
 // redraws itself. The data files come from server/steamdata/market.py.
 
 import { signView } from "./market-sign.js";
+import { gapView } from "./market-gaps.js";
 
 const DAY = 86400;
 const PREFIX = "mkv-merged-";
 const INDIE = 492;
 const PRIOR = 30;          // shrinkage: as if each niche also had 30 games at the base rate
-const MIN_PAIR = 15;       // a niche needs this many games to be listed at all
-const MIN_SINGLE = 20;
-const SALES_PER_REVIEW = 30;
-const NET_SHARE = 0.5;     // what's left of a sale after Steam's 30%, VAT, refunds and discounts
+const MIN_SINGLE = 20;     // a niche needs this many games to be listed at all
 const HUGE = ["Massively Multiplayer", "MMORPG", "Open World", "Open World Survival Craft", "Realistic", "Photorealistic"];
 const BIG = ["Multiplayer", "Online Co-Op", "PvP", "Online PvP", "Co-op", "Third-Person Shooter", "Souls-like", "Sandbox", "Story Rich", "3D", "First-Person"];
 const ADULT = ["Nudity", "Sexual Content", "NSFW", "Hentai", "Mature"];
@@ -253,82 +252,55 @@ export function unpackGames(file) {
   });
 }
 
-// Niches (single tags or pairs of a game's strongest tags), each with two chances side by side:
-// hit = top 10% of their release fortnight (games out 2 weeks to 6 months); earn = made about
-// `target` dollars (paid games out 2 months to 2 years). Both are pulled toward their average.
-export function gapFinder(list, tagNames, { today, target = 50000, pairs = true, small = true, must = null } = {}) {
-  const s = tagSets(tagNames);
-  const okH = (g) => g.hit != null && g.day >= today - 180 && g.day <= today - 14;
-  const okE = (g) => g.price > 0 && g.day >= today - 730 && g.day <= today - 60;
-  const wonE = (g) => g.reviews * SALES_PER_REVIEW * (g.price / 100) * NET_SHARE >= target;
-  const keysOf = (g) => {
-    const own = g.top.filter((t) => t !== INDIE && !s.meta.has(t) && t !== must);
-    if (!pairs) return own.map(String);
-    const out = [];
-    for (let i = 0; i < own.length; i++) for (let j = i + 1; j < own.length; j++) out.push(own[i] < own[j] ? `${own[i]}+${own[j]}` : `${own[j]}+${own[i]}`);
-    return out;
-  };
-  const skip = (g) => g.top.some((t) => s.adult.has(t)) || (small && g.top.some((t) => s.big.has(t))) || (must != null && !g.top.includes(must));
-  const niches = new Map(), recent = new Map(), ago = new Map();
-  let nH = 0, wH = 0, nE = 0, wE = 0, recentAll = 0, agoAll = 0;
-  for (const g of list) {
-    if (skip(g)) continue;
-    const isRecent = g.day > today - 90, isAgo = g.day > today - 455 && g.day <= today - 365;
-    const inH = okH(g), inE = okE(g);
-    if (!inH && !inE && !isRecent && !isAgo) continue;
-    const keys = keysOf(g);
-    if (isRecent) { recentAll++; for (const k of keys) recent.set(k, (recent.get(k) || 0) + 1); }
-    if (isAgo) { agoAll++; for (const k of keys) ago.set(k, (ago.get(k) || 0) + 1); }
-    if (!inH && !inE) continue;
-    const hitW = inH && g.hit >= 90, earnW = inE && wonE(g);
-    if (inH) { nH++; if (hitW) wH++; }
-    if (inE) { nE++; if (earnW) wE++; }
-    for (const k of keys) {
-      let e = niches.get(k);
-      if (!e) niches.set(k, e = { k, n: 0, nH: 0, wH: 0, nE: 0, wE: 0, reviews: [], best: null });
-      e.n++;
-      if (inH) { e.nH++; if (hitW) e.wH++; }
-      if (inE) { e.nE++; if (earnW) e.wE++; }
-      e.reviews.push(g.reviews);
-      if (!e.best || g.reviews > e.best.reviews) e.best = g;
-    }
+// --- 1c. Rising now: trends to get into early, from growth.json's monthly counts -----------
+
+// Each tag's share of Steam's releases in the last 3 full months against the 12 before (`mult`), from
+// a small base (under 1.5% of releases a year before), kept only when its games still become hits at
+// least as often as Steam's (trends.hitRate, already pulled toward the base rate). Pseudo-counts keep a
+// jump from 1 game to 6 from reading as ×6. `revRatio`: reviews per release of its last 3 months'
+// games against all of Steam's from the same months (so their young age doesn't count against them).
+// Stage: late once it's 2%+ of releases; getting crowded at 0.8%+ or when it was already rising the
+// year before (×2 against the 12 months before that); early otherwise.
+export const RISE_MIN_GAMES = 12;
+export function risingNow(growth, trends, tagNames, { small = true, limit = 8 } = {}) {
+  if (!growth?.tags || !growth.total?.m || !trends?.tags) return [];
+  const T = growth.total.m, TR = growth.total.mr || [], n = T.length;
+  const full = growth.monthDone > 0 && growth.monthDone < 1 ? n - 1 : n; // months before `full` are complete
+  const sum = (a, i, j) => { let s = 0; for (let k = Math.max(0, i); k < j; k++) s += a[k] || 0; return s; };
+  const now = [full - 3, full], before = [full - 15, full - 3], prior = [full - 27, full - 15];
+  const tNow = sum(T, ...now), tBefore = sum(T, ...before), tPrior = sum(T, ...prior);
+  if (!tNow || !tBefore) return [];
+  const revAll = sum(TR, ...now) / tNow;
+  const s = tagSets(tagNames), base = trends.baseHitRate, tm = new Map(trends.tags.map((r) => [r.tag, r]));
+  const K = 4;
+  const months = (growth.months || []).slice(Math.max(0, full - 24), full);
+  const out = [];
+  for (const [id, g] of Object.entries(growth.tags)) {
+    const tag = Number(id), tr = tm.get(tag);
+    if (!tr || tr.hitRate == null || tr.hitRate < base || tag === INDIE || s.meta.has(tag) || s.adult.has(tag) || (small && s.big.has(tag))) continue;
+    const m = g.m || [], mr = g.mr || [];
+    const cNow = sum(m, ...now), cBefore = sum(m, ...before), cPrior = sum(m, ...prior);
+    if (cNow < RISE_MIN_GAMES) continue;
+    const shareNow = cNow / tNow, shareBefore = cBefore / tBefore, sharePrior = tPrior ? cPrior / tPrior : 0;
+    if (shareBefore >= 0.015) continue;
+    const mult = (cNow + K) / (shareBefore * tNow + K);
+    if (mult < 1.5) continue;
+    const started = (cBefore + K) / (sharePrior * tBefore + K);
+    // Pulled toward Steam's average as if it also had K average games: one big game can't make ×30.
+    const revRatio = revAll > 0 ? ((sum(mr, ...now) + K * revAll) / (cNow + K)) / revAll : null;
+    const stage = shareNow >= 0.02 ? "late" : shareNow >= 0.008 || started >= 2 ? "crowded" : "early";
+    const lift = tr.hitRate / base;
+    const score = Math.min(4, Math.log2(mult)) * Math.min(3, lift) * Math.pow(clamp(revRatio ?? 1, 0.3, 3), 0.3)
+      * { early: 1, crowded: 0.75, late: 0.45 }[stage] * clamp(cNow / 40, 0.4, 1);
+    const spark = [];
+    for (let i = Math.max(0, full - 24); i < full; i++) spark.push(T[i] ? (m[i] || 0) / T[i] : 0);
+    const x = mult >= 10 ? String(Math.round(mult)) : mult.toFixed(1).replace(/\.0$/, "");
+    const rev = revRatio == null ? "" : revRatio >= 3 ? ", and they get far more reviews than an average new game" : revRatio >= 1.2 ? `, and they get ${times(revRatio)} the reviews of an average new game` : revRatio < 0.8 ? ", though they get fewer reviews than an average new game" : "";
+    const hitWords = `${oneIn(tr.hitRate)} still become hits`;
+    const words = `${x}× its share of releases a year before, ${hitWords}, ${num(tr.releases)} new in ${trends.supplyWindow || 90} days${rev}.`;
+    out.push({ tag, name: tr.name || g.name, cNow, cBefore, shareNow, shareBefore, mult, started, revRatio, stage, hitRate: tr.hitRate, lift, releases: tr.releases, hitGames: tr.hitGames, score, spark, months, words });
   }
-  const baseHit = nH ? wH / nH : 0, baseEarn = nE ? wE / nE : 0;
-  const min = pairs ? MIN_PAIR : MIN_SINGLE;
-  const rows = [...niches.values()].filter((e) => e.n >= min && baseHit > 0 && baseEarn > 0).map((e) => {
-    const hit = (e.wH + PRIOR * baseHit) / (e.nH + PRIOR), earn = (e.wE + PRIOR * baseEarn) / (e.nE + PRIOR);
-    const r = recent.get(e.k) || 0, a = ago.get(e.k) || 0;
-    const lift = (hit / baseHit + earn / baseEarn) / 2;
-    const nMin = Math.min(e.nH, e.nE);
-    return {
-      k: e.k, name: e.k.split("+").map((id) => tagNames[id] || `Tag ${id}`).join(" + "), n: e.n,
-      nH: e.nH, wH: e.wH, nE: e.nE, wE: e.wE, hit, earn, hitLift: hit / baseHit, earnLift: earn / baseEarn, lift,
-      // How sure: by the smaller of the two pools (usually the hit pool: 6 months against 2 years).
-      conf: confidence(nMin), sure: sureLabel(hit, nMin), medianReviews: median(e.reviews), best: e.best,
-      recent: r, growth: agoAll && recentAll ? ((r + 1) / recentAll) / ((a + 1) / agoAll) : null,
-    };
-  }).sort((x, y) => y.lift - x.lift);
-  return { baseHit, baseEarn, poolHit: nH, poolEarn: nE, winsHit: wH, winsEarn: wE, rows };
-}
-
-// The table's extra columns. gap: the two chances against their averages (averaged) per unit of
-// crowding (log of the releases in the last 90 days); bonus: the pair against the better of its two
-// tags alone, on the same measure (null for single tags).
-export function withGapScores(res, singles) {
-  const single = new Map((singles?.rows || []).map((r) => [r.k, r.lift]));
-  return res.rows.map((r) => {
-    const parts = r.k.includes("+") ? r.k.split("+").map((k) => single.get(k) ?? 1) : null;
-    return { ...r, gap: r.lift / Math.log10(10 + r.recent), bonus: parts ? r.lift / Math.max(...parts) : null };
-  });
-}
-
-// The minimum filters above the gap table (percentages as whole numbers; null = no limit). By default
-// a niche needs 40 games, so a pair of rare tags with a handful of lucky games stays out until asked for.
-export const GAP_FILTERS = { minHit: null, minEarn: null, minGames: 40, maxCrowd: null, minGap: null };
-const NO_FILTERS = { minHit: null, minEarn: null, minGames: null, maxCrowd: null, minGap: null };
-export function filterGaps(rows, f) {
-  return rows.filter((r) => (f.minHit == null || r.hit * 100 >= f.minHit) && (f.minEarn == null || r.earn * 100 >= f.minEarn)
-    && (f.minGames == null || r.n >= f.minGames) && (f.maxCrowd == null || r.recent <= f.maxCrowd) && (f.minGap == null || r.gap >= f.minGap));
+  return out.sort((a, b) => b.score - a.score).slice(0, limit);
 }
 
 // --- Leads for the Today box (the full "who to sign" view lives in market-sign.js) ----------
@@ -459,11 +431,16 @@ export function rankAlerts(trends, godotGames) {
 
 // --- Today: the few things worth knowing ------------------------------------------
 
-export function todayItems({ trends, tagNames, upcoming, godot }) {
+export function todayItems({ trends, tagNames, upcoming, godot, growth }) {
   const out = [];
   if (trends) {
     const n = rankNiches(trends, tagNames, { small: true }).find((r) => r.conf !== "thin data");
     if (n) out.push({ kind: "Niche", text: `Best niche right now: ${n.name} (score ${n.score}). ${num(n.hits)} of its ${num(n.hitGames)} recent games became hits, about ${oneIn(n.hitRate)} even after allowing for chance (Steam average: ${oneIn(trends.baseHitRate)}; ${n.sure}). New ones are ${growthWords(n.supply)}.`, tab: "make", tag: n.tag });
+  }
+  if (trends && growth) {
+    // The fastest riser that isn't already the best niche above.
+    const r = risingNow(growth, trends, tagNames, { small: true, limit: 3 }).find((x) => x.tag !== out[0]?.tag);
+    if (r) out.push({ kind: "Rising", text: `Rising fast: ${r.name} (${STAGE[r.stage].toLowerCase()}). ${r.words.charAt(0).toUpperCase()}${r.words.slice(1)}`, tab: "make", tag: r.tag });
   }
   if (upcoming) {
     const l = upcoming.find((g) => g.deal !== "published");
@@ -486,11 +463,10 @@ export function todayItems({ trends, tagNames, upcoming, godot }) {
 let C;
 const st = {
   files: {}, loading: {}, errors: {}, root: null, cache: {}, open: {},
-  tab: "make", small: true, sort: "best", shown: 6, q: "", sel: null, qMin: 10,
-  target: 50000, pairs: true, gapShown: 8, must: "", gapView: "table", gapSort: "gap", gapDir: -1, gapF: { ...GAP_FILTERS },
+  tab: "make", small: true, sort: "best", shown: 15, q: "", sel: null, qMin: 10,
   rel: { days: 30, indie: true, self: false, godot: false, adult: false }, relShown: 25,
 };
-const NEEDS = { make: ["trends", "games"], sign: ["trends", "upcoming", "godot"], steam: ["growth", "trends", "games", "godot"] };
+const NEEDS = { make: ["trends", "games", "growth"], sign: ["trends", "upcoming", "godot"], steam: ["growth", "trends", "games", "godot"] };
 const today = () => st.files.overview?.today ?? Math.floor(Date.now() / 1000 / DAY);
 const tagNames = () => st.files.overview?.tags || {};
 const storeUrl = (appid) => `https://store.steampowered.com/app/${appid}/`;
@@ -499,15 +475,9 @@ const save = (k, v) => { try { C.store.set(PREFIX + k, typeof v === "string" ? v
 function restore() {
   const get = (k) => { try { const v = C.store.get(PREFIX + k); return v == null ? null : v; } catch { return null; } };
   const tab = get("tab"); if (TABS.some(([id]) => id === tab)) st.tab = tab;
-  for (const k of ["small", "pairs"]) { const v = get(k); if (v === "true" || v === "false") st[k] = v === "true"; }
+  const small = get("small"); if (small === "true" || small === "false") st.small = small === "true";
   const sort = get("sort"); if (["best", "quiet"].includes(sort)) st.sort = sort;
-  const target = Number(get("target")); if (target > 0) st.target = target;
   const qMin = Number(get("qMin")); if (REVIEW_STEPS.includes(qMin)) st.qMin = qMin;
-  // A new key, so the table (the owner's pick) is the default even for those who chose cards before.
-  const gv = get("gapView2"); if (gv === "cards" || gv === "table") st.gapView = gv;
-  const gs = get("gapSort"); if (["name", "hit", "earn", "bonus", "n", "medianReviews", "recent", "gap"].includes(gs)) st.gapSort = gs;
-  const gd = Number(get("gapDir")); if (gd === 1 || gd === -1) st.gapDir = gd;
-  try { const f = JSON.parse(get("gapF") || "null"); if (f && typeof f === "object") for (const k of Object.keys(GAP_FILTERS)) st.gapF[k] = Number.isFinite(f[k]) ? f[k] : null; } catch {}
   try { const r = JSON.parse(get("rel") || "null"); if (r && typeof r === "object") Object.assign(st.rel, r); } catch {}
   if (![7, 30, 90].includes(st.rel.days)) st.rel.days = 30;
 }
@@ -520,6 +490,7 @@ const upcomingList = () => memo("upcoming", () => unpackUpcoming(st.files.upcomi
 const upLeads = () => memo("up", () => upcomingLeads(upcomingList(), st.files.trends, today(), { godotOnly: true, tagNames: tagNames() }));
 const relLeads = () => memo("rel", () => releasedLeads(st.files.godot.games, today(), tagNames()));
 const growthNow = () => memo(`growth:${st.qMin}`, () => steamGrowth(st.files.growth, st.qMin));
+const risingRows = () => memo(`rising:${st.small}`, () => risingNow(st.files.growth, st.files.trends, tagNames(), { small: st.small }));
 const nichesNow = () => memo(`niches:${st.small}:${st.sort}`, () => rankNiches(st.files.trends, tagNames(), { small: st.small, sort: st.sort }));
 const adultIds = () => memo("adult", () => tagSets(tagNames()).adult);
 
@@ -604,7 +575,7 @@ function redrawKeeping(e) {
   if (el) { el.focus(); try { el.setSelectionRange(pos, pos); } catch {} }
 }
 
-// Jump to a niche's card (from a dot on the chart, or a "Rising niche" alert) and highlight it.
+// Jump to a niche's table row (from the Today box, a rising trend or an alert), pick it and open its line.
 function pickTag(tag, { toggle = true } = {}) {
   if (toggle && st.sel === tag && st.tab === "make") { st.sel = null; draw(); return; }
   st.sel = tag;
@@ -613,9 +584,9 @@ function pickTag(tag, { toggle = true } = {}) {
   const q = st.q.trim().toLowerCase();
   if (q && !rows.some((r) => r.tag === tag && r.name.toLowerCase().includes(q))) st.q = "";
   const i = rows.findIndex((r) => r.tag === tag);
-  if (i >= st.shown) st.shown = Math.ceil((i + 1) / 6) * 6;
+  if (i >= st.shown) st.shown = Math.ceil((i + 1) / 15) * 15;
   if (st.tab !== "make") goTab("make"); else draw();
-  requestAnimationFrame(() => st.root?.querySelector(`.mm-card[data-tag="${tag}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" }));
+  requestAnimationFrame(() => st.root?.querySelector(`.mm-nrow[data-tag="${tag}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" }));
 }
 
 // --- small UI pieces -----------------------------------------------------------------
@@ -641,21 +612,12 @@ function fold(key, summary, ...kids) {
 // A bar inside a table cell: value 0..1 of the column's max, the number beside it.
 const barCell = (frac, text, color = "var(--sw-1)") => C.h("td.mm-num", C.h("div.mm-barcell", C.h("span.mm-cbar", C.h("i", { style: `width:${clamp(frac) * 100}%;background:${color}` })), C.h("span", text)));
 // A table with sortable headers. cols: [{key, label, tip, num}].
-function sortTable(cols, rows, sort, onSort) {
+function sortTable(cols, rows, sort, onSort, cls = null) {
   const h = C.h;
-  return h("div.mm-scroll", h("table.mm-table",
+  return h("div.mm-scroll", h("table.mm-table", { class: cls },
     h("thead", h("tr", ...cols.map((c) => h("th", { title: c.tip || null, class: c.num ? "mm-num" : null, "aria-sort": sort && c.key === sort.key ? (sort.dir > 0 ? "ascending" : "descending") : null },
       c.key && onSort ? h("button", { type: "button", onclick: () => onSort(c.key) }, c.label, sort?.key === c.key ? (sort.dir > 0 ? " ↑" : " ↓") : "") : c.label)))),
     h("tbody", ...rows)));
-}
-
-// A bar of the niche's hit chance, with Steam's average as a marker.
-function oddsBar(rate, base, max) {
-  const h = C.h, w = (x) => `${(clamp(x / max) * 100).toFixed(1)}%`;
-  return h("div.mm-oddsrow",
-    h("div.mm-bar", { role: "img", "aria-label": `${pct(rate)} against Steam's ${pct(base)}` },
-      h("i", { style: `width:${w(rate)}` }), h("b", { style: `left:${w(base)}`, title: `Steam average ${pct(base)}` })),
-    h("span.mm-barlabel", h("strong", pct(rate)), ` hit chance · Steam ${pct(base)}`));
 }
 
 // A tooltip living inside a positioned box.
@@ -682,6 +644,7 @@ function todayView() {
     trends: st.files.trends, tagNames: tagNames(),
     upcoming: st.files.upcoming ? upLeads() : null,
     godot: st.files.godot ? relLeads() : null,
+    growth: st.files.growth,
   });
   return h("section.mm-today",
     h("div.mm-today-head", h("h2", "Today"), h("span.mm-sub", st.files.overview ? dayDate(today()) : "")),
@@ -705,225 +668,308 @@ function detectionNote() {
 function makeView() {
   const h = C.h, t = st.files.trends;
   const all = nichesNow();
-  const q = st.q.trim().toLowerCase();
-  const rows = q ? all.filter((r) => r.name.toLowerCase().includes(q)) : all;
-  const win = t.supplyWindow || 90;
-  const arrow = (r) => r.dir > 0 ? h("span.mm-up", { title: growthWords(r.supply) }, " ↑") : r.dir < 0 ? h("span.mm-down", { title: growthWords(r.supply) }, " ↓") : h("span.mm-dim", { title: growthWords(r.supply) }, " →");
-  const stat = (label, value, sub, tip) => h("div.mm-stat", { title: tip || null }, h("span.mm-stat-l", label), h("span.mm-stat-v", ...[value].flat()), h("span.mm-stat-s", sub));
-  const card = (r) => {
-    const gl = glossary(r.name);
-    return h("article.mm-card", { "data-tag": String(r.tag), class: r.tag === st.sel ? "is-sel" : null },
-      h("div.mm-card-head", h("span.mm-rank", `#${all.indexOf(r) + 1}`), h("h3", r.name),
-        h("span.mm-score", { title: SCORE_TEXT, class: r.score >= 70 ? "is-hi" : r.score >= 50 ? "is-mid" : null }, h("b", String(r.score)), h("small", "/100"))),
-      gl ? h("p.mm-gloss", gl) : null,
-      h("div.mm-stats",
-        stat("Hit chance", pct(r.hitRate), `Steam ${pct(t.baseHitRate)}`, `${num(r.hits)} of ${num(r.hitGames)} recent games were in the top 10% of their fortnight; pulled toward Steam's rate for fairness.`),
-        stat("Typical game", fmtK(r.medianReviews), `reviews · Steam ${fmtK(t.baseMedianReviews)}`, "Median reviews of its recent games: what an ordinary one gets."),
-        stat("Top 10%", fmtK(r.topReviews), "reviews", "What a game in its best 10% gets."),
-        stat(`New in ${win} days`, [fmtK(r.releases), arrow(r)], `${fmtK(r.releasesYearAgo)} a year ago`, `How crowded: games released with this tag in the last ${win} days. Arrow: ${growthWords(r.supply)}.`)),
-      h("div.mm-card-foot", h("p.mm-why", r.why), confPill(r.conf, r.sure)));
-  };
   return h("div",
-    section("Niches where games often become hits",
-      `A hit is a game in the top 10% by reviews among the games released the same fortnight (on Steam, ${oneIn(t.baseHitRate)}). Hit chances are pulled toward Steam's when a tag has few games, so a lucky handful can't top the list.`,
-      h("div.mm-controls",
-        toggle("Small-team niches only", st.small, () => { st.small = !st.small; save("small", st.small); }),
-        st.small ? h("span.mm-small.mm-inline-note", { title: [...HUGE, ...BIG].join(", ") }, "leaves out big-build tags like MMO, open world, multiplayer") : null),
-      scatterCard(all, t.baseHitRate),
-      h("p.mm-explain", h("b", "Opportunity score. "), SCORE_TEXT),
-      h("div.mm-controls",
-        seg([["best", "Best overall"], ["quiet", "Least crowded"]], st.sort, (v) => { st.sort = v; st.shown = 6; save("sort", v); }, "Sort niches"),
-        h("input.mm-input", { type: "search", "data-key": "niche-q", value: st.q, placeholder: "Find a tag to compare", "aria-label": "Find a tag", oninput: (e) => { st.q = e.target.value; redrawKeeping(e); } }),
-        st.sort === "quiet" ? h("span.mm-small.mm-inline-note", `fewest new games first, among tags with at least ${times(1.5)} Steam's hit chance`) : null),
-      rows.length ? h("div.mm-cards", ...rows.slice(0, q ? Math.max(12, st.shown) : st.shown).map(card)) : h("p.mm-note", "No tag matches."),
-      q ? null : more(st.shown, rows.length, () => { st.shown += 6; }),
-      compareTable(all, t)),
-    gapSection());
+    filterBar(),
+    risingSection(),
+    section("The 25 best niches right now",
+      `Ranked by the opportunity score (0–100). A hit is a game in the top 10% by reviews among the games released the same fortnight (on Steam, ${oneIn(t.baseHitRate)}).`,
+      scoreBars(all)),
+    section("Every niche: rivals against hit chance", "Up and to the left is where you want to be: few new games to compete with, and many of them become hits. Click a dot to pick a tag.",
+      scatterCard(all, t.baseHitRate)),
+    nicheTable(all, t),
+    gapBlock());
 }
 
-// Every tag as a dot: crowding (x, log) against hit rate (y). Click a dot to jump to its card.
+// One switch for the whole tab, saying what it changes.
+function filterBar() {
+  const h = C.h;
+  return h("div.mm-filterbar",
+    toggle("Small-team niches only", st.small, () => { st.small = !st.small; save("small", st.small); }),
+    h("span.mm-filterbar-t",
+      st.small ? h("span", { title: [...HUGE, ...BIG].join(", ") }, "Leaves out big-build tags (MMO, open world, multiplayer, 3D…). ") : "Every tag, big builds included. ",
+      h("b", "Applies to everything on this tab:"), " rising trends, the score bars, the chart, the niche table and the gap finder."));
+}
+
+// Select a tag everywhere on the tab (dot, bar and table row) without scrolling away.
+function selectTag(tag) { st.sel = st.sel === tag ? null : tag; draw(); }
+
+const DIR_COLOR = (r) => r.dir > 0 ? "var(--sw-3)" : r.dir < 0 ? "var(--sw-2)" : "var(--fb-muted)";
+const DIR_WORDS = [
+  ["var(--sw-3)", "More new games than a year ago (more competition coming)"],
+  ["var(--fb-muted)", "About the same"],
+  ["var(--sw-2)", "Fewer new games (less competition)"],
+];
+const DIR_TIP = "Its share of all Steam releases in the last 90 days, against the same 90 days a year ago.";
+
+function tagTip(r) {
+  const h = C.h, gl = glossary(r.name);
+  return [h("div.mm-tip-t", r.name), gl ? h("div.mm-tip-raw", gl) : null, h("div", "Opportunity score ", h("b", String(r.score)), "/100"),
+    h("div", h("b", pct(r.hitRate)), ` become hits (${times(r.lift)} Steam's)`),
+    h("div", `${fmtK(r.releases)} new games in 90 days · ${growthWords(r.supply)}`),
+    h("div", `Typical game ${fmtK(r.medianReviews)} reviews, top 10% ${fmtK(r.topReviews)}`),
+    h("div.mm-tip-raw", `How sure: ${r.sure} (${num(r.hitGames)} games)`)];
+}
+
+// --- Rising now ---
+
+const STAGE = { early: "Early", crowded: "Getting crowded", late: "Late" };
+const STAGE_TIP = {
+  early: "Still a small share of releases and the rise is recent: room to get in.",
+  crowded: "Already a sizable share of releases, or it was rising the year before too: move fast or find an angle.",
+  late: "Already 2% or more of all releases: the rush has arrived.",
+};
+
+function sparkline(vals, label) {
+  const svgEl = C.svgEl, W = 120, H = 30, n = vals.length, max = Math.max(...vals, 1e-9);
+  const x = (i) => 1.5 + (i * (W - 5)) / Math.max(1, n - 1), y = (v) => H - 2 - (v / max) * (H - 6);
+  const d = vals.map((v, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(v).toFixed(1)}`).join("");
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "mm-spark", role: "img", "aria-label": label });
+  svg.append(svgEl("rect", { x: x(n - 3) - 2, y: 0, width: x(n - 1) - x(n - 3) + 4, height: H, class: "mm-spark-now" }),
+    svgEl("path", { d: `${d}L${x(n - 1).toFixed(1)},${H - 1}L${x(0).toFixed(1)},${H - 1}Z`, class: "mm-spark-area" }),
+    svgEl("path", { d, class: "mm-spark-line" }),
+    svgEl("circle", { cx: x(n - 1), cy: y(vals[n - 1]), r: 2.6, class: "mm-spark-dot" }));
+  const tt = svgEl("title"); tt.textContent = label; svg.append(tt);
+  return svg;
+}
+
+function risingSection() {
+  const h = C.h, title = "Rising now: jump in early";
+  if (st.errors.growth) return section(title, null, h("p.mm-note", st.errors.growth, " ", btn("Try again", () => load(["growth"]))));
+  if (!st.files.growth) return section(title, null, h("p.mm-note", "Loading the monthly release counts…"));
+  const rows = risingRows();
+  const g = st.files.growth;
+  const sub = "Tags whose share of new releases jumped in the last 3 full months against the 12 months before, starting from a small base, and whose games still become hits at least as often as Steam's. Ranked by how fast they rise, how well their games do and how much room is left.";
+  if (!rows.length) return section(title, sub, h("p.mm-note", "Nothing is rising fast right now with these settings."));
+  const [from, to] = [rows[0].months[0], rows[0].months.at(-1)];
+  return section(title, sub,
+    h("ol.mm-rise", ...rows.map((r) => h("li.mm-rise-row", { class: r.tag === st.sel ? "is-sel" : null },
+      h("span.mm-stage", { class: `is-${r.stage}`, title: STAGE_TIP[r.stage] }, STAGE[r.stage]),
+      h("div.mm-rise-main",
+        h("button.mm-linkbtn", { type: "button", title: glossary(r.name) ? `${r.name}: ${glossary(r.name)}` : "Show it in the niche table", onclick: () => pickTag(r.tag, { toggle: false }) }, r.name),
+        glossary(r.name) ? h("span.mm-dim", { title: glossary(r.name) }, " ⓘ") : null,
+        h("p.mm-rise-words", r.words)),
+      sparkline(r.spark, `${r.name}: ${pct(r.spark[0], 2)} of Steam's releases in ${monthName(from)}, ${pct(r.spark.at(-1), 2)} in ${monthName(to)}`)))),
+    h("p.mm-small", `Lines: each tag's share of all Steam releases per month, ${monthName(from)} to ${monthName(to)} (its own scale; the shaded end is the last 3 months). ${g.monthDone > 0 && g.monthDone < 1 ? "This month is still going, so it's left out. " : ""}Stages: `,
+      ...Object.keys(STAGE).flatMap((k, i) => [i ? "; " : "", h("b", STAGE[k]), ` ${STAGE_TIP[k].charAt(0).toLowerCase()}${STAGE_TIP[k].slice(1, -1)}`]), "."));
+}
+const monthName = (ym) => { const [y, m] = String(ym).split("-"); return `${MONTHS[Number(m) - 1]} ${y}`; };
+
+// --- Score bars (top 25) ---
+
+function scoreBars(rows) {
+  const h = C.h, svgEl = C.svgEl;
+  const top = [...rows].sort((a, b) => b.score - a.score).slice(0, 25);
+  if (!top.length) return h("p.mm-note", "No niche to show.");
+  const W = 760, H = 300, M = { top: 8, right: 6, bottom: 104, left: 30 };
+  const base = H - M.bottom, ymax = 100;
+  const bw = (W - M.left - M.right) / top.length;
+  const y = (v) => base - (v / ymax) * (base - M.top);
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "mm-svg mm-bars-svg", role: "img", "aria-label": "The 25 best niches by opportunity score" });
+  const text = (attrs, s, parent = svg) => { const el = svgEl("text", attrs); el.textContent = s; parent.append(el); return el; };
+  for (const v of [0, 25, 50, 75, 100]) {
+    svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: y(v), y2: y(v), class: v ? "mm-grid" : "mm-base" }));
+    text({ x: M.left - 5, y: y(v) + 4, "text-anchor": "end", class: "mm-axis" }, String(v));
+  }
+  top.forEach((r, i) => {
+    const on = r.tag === st.sel, cx = M.left + (i + 0.5) * bw, w = bw * 0.74, top_ = y(r.score);
+    const g = svgEl("g", { class: `mm-barg${on ? " is-sel" : ""}`, "data-tag": r.tag, tabindex: "0", role: "button", "aria-label": `${r.name}: score ${r.score}. Pick it.` });
+    g.append(svgEl("rect", { x: cx - w / 2, y: top_, width: w, height: base - top_, rx: 3, fill: on ? "var(--fb-accent)" : DIR_COLOR(r), class: "mm-bar-rect" }));
+    if (base - top_ >= 20) text({ x: cx, y: top_ + 15, "text-anchor": "middle", class: "mm-barval" }, String(r.score), g);
+    else text({ x: cx, y: top_ - 4, "text-anchor": "middle", class: "mm-barval-out" }, String(r.score), g);
+    const name = r.name.length > 17 ? `${r.name.slice(0, 16)}…` : r.name;
+    text({ x: cx + 4, y: base + 10, "text-anchor": "end", transform: `rotate(-55 ${cx + 4} ${base + 10})`, class: `mm-barname${on ? " is-sel" : ""}` }, name, g);
+    g.append(svgEl("rect", { x: cx - bw / 2, y: M.top, width: bw, height: H - M.top, fill: "transparent" }));
+    g.__row = r;
+    svg.append(g);
+  });
+  const box = h("div.mm-chart",
+    h("div.mm-legend", ...DIR_WORDS.map(([c, w]) => h("span", { title: DIR_TIP }, h("i.mm-key", { style: `background:${c}` }), w)),
+      h("span", h("i.mm-key", { style: "background:var(--fb-accent)" }), "Picked")),
+    h("div.mm-hscroll", svg),
+    h("p.mm-small.mm-tight", h("b", "Opportunity score. "), SCORE_TEXT, " Click a bar to pick that tag."));
+  wireChart(svg, box, ".mm-barg");
+  return box;
+}
+
+// Hover tooltips and click-to-pick for the bars and the dots.
+function wireChart(svg, box, sel) {
+  const tip = tipFor(box);
+  const find = (ev) => ev.target.closest?.(sel)?.__row || ev.target.closest?.(".mm-dl")?.__row;
+  svg.addEventListener("pointermove", (ev) => { const r = find(ev); if (!r) return tip.hide(); tip.show(tagTip(r), ev); });
+  svg.addEventListener("pointerleave", () => tip.hide());
+  svg.addEventListener("click", (ev) => { const r = find(ev); if (r) selectTag(r.tag); });
+  svg.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { const r = find(ev); if (r) { ev.preventDefault(); selectTag(r.tag); } } });
+}
+
+// --- The scatter: every tag as a small uniform dot ---
+
 function scatterCard(rows, base) {
   const h = C.h, svgEl = C.svgEl, sel = rows.find((r) => r.tag === st.sel) || null;
   if (!rows.length) return null;
-  const W = 760, H = 380, M = { top: 14, right: 14, bottom: 40, left: 48 };
+  const W = 760, H = 420, M = { top: 12, right: 64, bottom: 52, left: 58 };
   const xs = rows.map((r) => Math.max(1, r.releases));
   const lx0 = Math.log10(Math.max(1, Math.min(...xs) * 0.85)), lx1 = Math.log10(Math.max(...xs) * 1.15);
-  const ymax = niceMax(Math.max(...rows.map((r) => r.hitRate), base * 2));
+  const ymax = niceMax(Math.max(...rows.map((r) => r.hitRate), base * 2) * 1.04);
   const x = (v) => M.left + ((Math.log10(Math.max(1, v)) - lx0) / (lx1 - lx0)) * (W - M.left - M.right);
   const y = (v) => H - M.bottom - (v / ymax) * (H - M.top - M.bottom);
-  const rad = (m) => 3 + 1.25 * Math.log2(1 + (m ?? 0));
+  const R = 4;
   const xSplit = median(xs), ySplit = base * 1.5;
-  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "mm-svg", role: "img", "aria-label": "Every tag: crowding against hit rate" });
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "mm-svg", role: "img", "aria-label": "Every tag: new games in 90 days against hit chance" });
   const text = (attrs, s) => { const el = svgEl("text", attrs); el.textContent = s; svg.append(el); return el; };
+  // The most attractive corner: few rivals, high hit chance. Named in the legend, never written on.
   svg.append(svgEl("rect", { x: M.left, y: M.top, width: x(xSplit) - M.left, height: y(ySplit) - M.top, class: "mm-gapzone" }));
+  const yStep = ymax / 5;
   for (let k = 0; k <= 5; k++) {
-    const v = (ymax / 5) * k;
+    const v = yStep * k;
     svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: y(v), y2: y(v), class: k ? "mm-grid" : "mm-base" }));
-    text({ x: M.left - 6, y: y(v) + 4, "text-anchor": "end", class: "mm-axis" }, pct(v));
+    text({ x: M.left - 7, y: y(v) + 4, "text-anchor": "end", class: "mm-axis" }, pct(v));
   }
   for (const v of [10, 20, 50, 100, 200, 500, 1000, 2000, 5000]) {
     if (Math.log10(v) < lx0 || Math.log10(v) > lx1) continue;
     svg.append(svgEl("line", { x1: x(v), x2: x(v), y1: M.top, y2: H - M.bottom, class: "mm-grid" }));
-    text({ x: x(v), y: H - M.bottom + 15, "text-anchor": "middle", class: "mm-axis" }, fmtK(v));
+    text({ x: x(v), y: H - M.bottom + 16, "text-anchor": "middle", class: "mm-axis" }, fmtK(v));
   }
-  text({ x: (M.left + W - M.right) / 2, y: H - 6, "text-anchor": "middle", class: "mm-axis mm-axis-title" }, "Crowding: games released with the tag in the last 90 days (log scale) →");
-  text({ x: M.left, y: 10, class: "mm-axis mm-axis-title" }, "↑ Hit chance (allowing for chance)");
+  // Axis titles, and the quadrant hints as axis-end notes outside the plot.
+  text({ x: (M.left + W - M.right) / 2, y: H - 8, "text-anchor": "middle", class: "mm-axis mm-axis-title" }, "New games with the tag in the last 90 days (log scale)");
+  text({ x: M.left, y: H - 8, class: "mm-axis mm-axis-end" }, "← fewer rivals");
+  text({ x: W - M.right, y: H - 8, "text-anchor": "end", class: "mm-axis mm-axis-end" }, "more rivals →");
+  const yt = (M.top + H - M.bottom) / 2;
+  text({ x: 14, y: yt, "text-anchor": "middle", transform: `rotate(-90 14 ${yt})`, class: "mm-axis mm-axis-title" }, "Hit chance (share of games that become hits)");
   svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: y(base), y2: y(base), class: "mm-ref" }));
-  text({ x: W - M.right - 4, y: y(base) - 4, "text-anchor": "end", class: "mm-axis" }, `Steam average ${pct(base)}`);
-  svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: y(ySplit), y2: y(ySplit), class: "mm-split" }));
-  svg.append(svgEl("line", { x1: x(xSplit), x2: x(xSplit), y1: M.top, y2: H - M.bottom, class: "mm-split" }));
-  const quadBoxes = []; // the corner labels: tag labels keep clear of them
-  const quad = (tx, ty, anchor, title, sub) => { const w = Math.max(title.length * 6.6, sub.length * 5.6); quadBoxes.push(anchor === "end" ? [tx - w, ty - 11, tx, ty + 16] : [tx, ty - 11, tx + w, ty + 16]); text({ x: tx, y: ty, "text-anchor": anchor, class: "mm-quad" }, title); text({ x: tx, y: ty + 13, "text-anchor": anchor, class: "mm-axis" }, sub); };
-  quad(M.left + 8, M.top + 16, "start", "Quiet and rewarding = gaps", "few games, many hits");
-  quad(W - M.right - 8, M.top + 16, "end", "Crowded but rewarding", "big demand, big competition");
-  quad(W - M.right - 8, H - M.bottom - 24, "end", "Crowded and hard", "lots of games, few hits");
-  quad(M.left + 8, H - M.bottom - 24, "start", "Quiet and hard", "few games, few hits");
-  const color = (r) => r.dir > 0 ? "var(--sw-3)" : r.dir < 0 ? "var(--sw-2)" : "var(--fb-muted)";
+  text({ x: W - M.right + 6, y: y(base) - 2, class: "mm-axis" }, "Steam");
+  text({ x: W - M.right + 6, y: y(base) + 11, class: "mm-axis" }, pct(base));
+  // Dots: uniform, the picked one on top with a filled accent ring.
+  const pos = new Map(rows.map((r) => [r, [x(r.releases), y(r.hitRate)]]));
   const dots = svgEl("g");
-  for (const r of [...rows].sort((a, b) => (b.medianReviews ?? 0) - (a.medianReviews ?? 0))) { // big ones under small ones
-    const cx = x(r.releases), cy = y(r.hitRate), rr = rad(r.medianReviews), on = r === sel;
-    const g = svgEl("g", { class: "mm-dot", "data-tag": r.tag, tabindex: "0", role: "button", "aria-label": `${r.name}: hit chance ${pct(r.hitRate)}, ${r.releases} releases. Show its card.` });
-    g.append(svgEl("circle", { cx, cy, r: rr, fill: color(r), "fill-opacity": on ? 1 : 0.62, stroke: on ? "var(--fb-ink)" : "var(--fb-card)", "stroke-width": on ? 2.5 : 1.5 }));
-    g.append(svgEl("circle", { cx, cy, r: Math.max(rr + 4, 9), fill: "transparent" }));
+  for (const r of [...rows.filter((r) => r !== sel), ...(sel ? [sel] : [])]) {
+    const [cx, cy] = pos.get(r), on = r === sel;
+    const g = svgEl("g", { class: `mm-dot${on ? " is-sel" : ""}`, "data-tag": r.tag, tabindex: "0", role: "button", "aria-label": `${r.name}: hit chance ${pct(r.hitRate)}, ${r.releases} new games in 90 days. Pick it.` });
+    if (on) g.append(svgEl("circle", { cx, cy, r: R + 6, class: "mm-sel-ring" }));
+    g.append(svgEl("circle", { cx, cy, r: on ? R + 1 : R, fill: on ? "var(--fb-accent)" : DIR_COLOR(r), class: "mm-dot-c" }));
+    g.append(svgEl("circle", { cx, cy, r: 9, fill: "transparent" }));
     g.__row = r;
     dots.append(g);
   }
   svg.append(dots);
-  // Direct labels: the best by hit chance, the most crowded, and the picked one; skipped where they'd overlap.
-  const placed = [...quadBoxes];
-  const want = [...new Set([sel, ...[...rows].sort((a, b) => b.hitRate - a.hitRate).slice(0, 12), ...[...rows].sort((a, b) => b.releases - a.releases).slice(0, 4)].filter(Boolean))];
-  for (const r of want) {
-    const w = r.name.length * 6.3 + 4, cx = x(r.releases) + rad(r.medianReviews) + 3, cy = y(r.hitRate) + 4;
-    const left = cx + w > W - M.right ? cx - w - 2 * rad(r.medianReviews) - 6 : cx;
-    const b = [left, cy - 11, left + w, cy + 2];
-    if (r !== sel && placed.some((p) => b[0] < p[2] && b[2] > p[0] && b[1] < p[3] && b[3] > p[1])) continue;
-    placed.push(b);
-    const label = text({ x: left, y: cy, class: `mm-dl${r === sel ? " mm-dl-sel" : ""}` }, r.name);
+  // Labels: as many as fit, small text right of the dot (left near the right edge), skipped where it
+  // would cover a dot or another label. The picked tag first, then by score.
+  const CH = 5.9, LH = 11;
+  const dotBoxes = rows.map((r) => { const [cx, cy] = pos.get(r); return [cx - R - 1, cy - R - 1, cx + R + 1, cy + R + 1, r]; });
+  const hits = (b, boxes, own) => boxes.some((p) => p[4] !== own && b[0] < p[2] && b[2] > p[0] && b[1] < p[3] && b[3] > p[1]);
+  const placed = [];
+  const order = [...(sel ? [sel] : []), ...[...rows].filter((r) => r !== sel).sort((a, b) => b.score - a.score)];
+  for (const r of order) {
+    const [cx, cy] = pos.get(r), on = r === sel;
+    const w = r.name.length * (on ? CH * 1.15 : CH) + 2;
+    const tries = [cx + R + 3, cx - R - 3 - w];
+    let box = null;
+    for (const left of tries) {
+      const b = [left, cy - LH / 2 - 1, left + w, cy + LH / 2, r];
+      if (b[0] < M.left + 1 || b[2] > W - M.right - 1 || b[1] < M.top || b[3] > H - M.bottom) continue;
+      if (!on && (hits(b, dotBoxes, r) || hits(b, placed, null))) continue;
+      box = b; break;
+    }
+    if (!box) continue;
+    placed.push(box);
+    const label = text({ x: box[0], y: cy + 3.8, class: `mm-dl${on ? " mm-dl-sel" : ""}` }, r.name);
     label.__row = r;
     const gl = glossary(r.name);
-    if (gl) { const tt = svgEl("title"); tt.textContent = `${r.name}: ${gl}`; label.append(tt); label.classList.add("mm-dl-gloss"); }
+    if (gl) { const tt = svgEl("title"); tt.textContent = `${r.name}: ${gl}`; label.append(tt); }
   }
   const box = h("div.mm-chart",
     h("div.mm-legend",
-      h("span", h("i.mm-key", { style: "background:var(--sw-3)" }), "Growing share of releases"),
-      h("span", h("i.mm-key", { style: "background:var(--fb-muted)" }), "Steady"),
-      h("span", h("i.mm-key", { style: "background:var(--sw-2)" }), "Shrinking"),
-      h("span", h("i.mm-key.mm-key-ring"), "Bigger dot = more reviews for a typical game"),
-      h("span", h("i.mm-key.mm-key-zone"), `Gap corner: below-median crowding, ${times(1.5)} Steam's hit chance or better`)),
-    svg,
-    h("p.mm-small.mm-tight", `Each dot is a tag (${rows.length} shown). Click one to jump to its card below.`));
-  const tip = tipFor(box);
-  const find = (ev) => ev.target.closest?.(".mm-dot")?.__row || ev.target.closest?.(".mm-dl")?.__row;
-  svg.addEventListener("pointermove", (ev) => {
-    const r = find(ev);
-    if (!r) return tip.hide();
-    const gl = glossary(r.name);
-    tip.show([h("div.mm-tip-t", r.name), gl ? h("div.mm-tip-raw", gl) : null, h("div", "Opportunity score ", h("b", String(r.score)), "/100"),
-      h("div", h("b", pct(r.hitRate)), ` become hits (${times(r.lift)} Steam's)`),
-      h("div", `${fmtK(r.releases)} released in 90 days · ${growthWords(r.supply)}`),
-      h("div", `Typical game ${fmtK(r.medianReviews)} reviews, top 10% ${fmtK(r.topReviews)}`),
-      h("div.mm-tip-raw", `How sure: ${r.sure} (${num(r.hitGames)} games)`)], ev);
-  });
-  svg.addEventListener("pointerleave", () => tip.hide());
-  svg.addEventListener("click", (ev) => { const r = find(ev); if (r) pickTag(r.tag); });
-  svg.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { const r = find(ev); if (r) { ev.preventDefault(); pickTag(r.tag); } } });
+      h("span", h("i.mm-key.mm-key-zone"), h("b", "Most attractive corner"), `: fewer new games than half the tags, and ${times(1.5)} Steam's hit chance or better`)),
+    h("div.mm-legend",
+      ...DIR_WORDS.map(([c, w]) => h("span", { title: DIR_TIP }, h("i.mm-key", { style: `background:${c}` }), w)),
+      h("span", h("i.mm-key.mm-key-sel"), "Picked")),
+    h("div.mm-hscroll", svg),
+    h("p.mm-small.mm-tight", `Each dot is a tag (${rows.length} shown); every dot is the same size. Labels show where they fit; hover any dot for its numbers.`),
+    sel ? h("div.mm-picked", h("span", "Picked: ", h("b", sel.name), ` · score ${sel.score} · ${pct(sel.hitRate)} become hits · ${fmtK(sel.releases)} new in 90 days`),
+      btn("Show in the table ↓", () => pickTag(sel.tag, { toggle: false })), btn("Clear", () => selectTag(sel.tag)))
+      : h("p.mm-small.mm-tight", "Nothing picked: click a dot, a bar or a table row."));
+  wireChart(svg, box, ".mm-dot");
   return box;
 }
 
-function compareTable(rows, t) {
-  const h = C.h;
-  return fold("compare", `Compare all ${rows.length} niches in one table`,
-    h("div.mm-scroll", h("table.mm-table",
-      h("thead", h("tr", ...["Niche", "Score", "Hit chance", "How sure", "Games counted", "Typical game", "Top 10%", `New (${t.supplyWindow} days)`, "Vs Steam"].map((x) => h("th", x === "Score" ? { title: SCORE_TEXT } : {}, x)))),
-      h("tbody", ...rows.map((r) => h("tr", { title: glossary(r.name) ? `${r.name}: ${glossary(r.name)}` : null }, h("td", r.name, glossary(r.name) ? h("span.mm-dim", " ⓘ") : null), h("td.mm-num", h("b", String(r.score))), h("td", `${pct(r.hitRate)} (${oneIn(r.hitRate)})`), h("td", r.sure), h("td", num(r.hitGames)),
-        h("td", `${num(r.medianReviews)} reviews`), h("td", `${num(r.topReviews)} reviews`), h("td", num(r.releases)), h("td", growthWords(r.supply))))))));
+// --- The ranked niche table (a row click opens a line in plain words) ---
+
+function nicheTable(all, t) {
+  const h = C.h, win = t.supplyWindow || 90;
+  const q = st.q.trim().toLowerCase();
+  const rows = q ? all.filter((r) => r.name.toLowerCase().includes(q)) : all;
+  const shown = rows.slice(0, q ? Math.max(40, st.shown) : st.shown);
+  const maxHit = Math.max(t.baseHitRate * 2, ...all.slice(0, 200).map((r) => r.hitRate));
+  const best = st.files.games ? bestRecent() : null;
+  const arrow = (r) => r.dir > 0 ? h("span.mm-up", " ↑") : r.dir < 0 ? h("span.mm-down", " ↓") : h("span.mm-dim", " →");
+  const COLS = 8;
+  const body = [];
+  for (const r of shown) {
+    const on = r.tag === st.sel, gl = glossary(r.name);
+    body.push(h("tr.mm-nrow", { "data-tag": String(r.tag), class: on ? "is-sel" : null, tabindex: "0", "aria-expanded": String(on),
+      onclick: () => selectTag(r.tag), onkeydown: (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectTag(r.tag); } } },
+      h("td.mm-num.mm-dim", String(all.indexOf(r) + 1)),
+      h("td", { title: gl ? `${r.name}: ${gl}` : null }, h("b", r.name), gl ? h("span.mm-dim", " ⓘ") : null),
+      h("td.mm-num", { title: SCORE_TEXT }, h("div.mm-barcell", h("span.mm-cbar.mm-cbar-w", h("i", { style: `width:${clamp(r.score / 100) * 100}%;background:var(--sw-1)` })), h("b", String(r.score)))),
+      h("td.mm-num", { title: `${num(r.hits)} of ${num(r.hitGames)} recent games became hits; pulled toward Steam's rate for fairness.` },
+        h("div.mm-barcell", h("span.mm-cbar.mm-vs", h("i", { style: `width:${clamp(r.hitRate / maxHit) * 100}%;background:${r.lift >= 1.5 ? "var(--sw-3)" : "var(--sw-1)"}` }), h("b", { style: `left:${clamp(t.baseHitRate / maxHit) * 100}%` })),
+          h("span", h("b", pct(r.hitRate)), h("span.mm-dim", ` ${times(r.lift)}`)))),
+      h("td.mm-num", fmtK(r.medianReviews)),
+      h("td.mm-num", fmtK(r.topReviews)),
+      h("td.mm-num", { title: `${fmtK(r.releasesYearAgo)} in the same ${win} days a year ago: ${growthWords(r.supply)}.` }, fmtK(r.releases), arrow(r)),
+      h("td", confPill(r.conf, r.sure))));
+    if (on) {
+      const games = best?.get(r.tag) || [];
+      body.push(h("tr.mm-ndetail", h("td", { colspan: COLS },
+        gl ? h("p.mm-gloss", gl) : null,
+        h("p", `${num(r.hits)} of its ${num(r.hitGames)} recent games became hits: about ${oneIn(r.hitRate)}, against ${oneIn(t.baseHitRate)} on Steam. A typical one gets ${plural(r.medianReviews, "review")}; one in its best 10% gets ${num(r.topReviews)}. ${num(r.releases)} came out in the last ${win} days (${num(r.releasesYearAgo)} a year ago): ${growthWords(r.supply)}. ${r.why}`),
+        games.length ? h("p.mm-line", "Best recent games: ", ...games.flatMap((g, i) => [i ? ", " : "", link(storeUrl(g.appid), g.name), h("span.mm-dim", ` (${fmtK(g.reviews)} reviews, ${dayShort(g.day)} ${new Date(g.day * DAY * 1000).getUTCFullYear()})`)]), ".")
+          : st.files.games ? null : h("p.mm-small.mm-tight", "Loading its best recent games…"),
+        h("div.mm-controls", btn("Unpick", () => selectTag(r.tag))))));
+    }
+  }
+  const cols = [
+    { label: "#" }, { label: "Niche", tip: "Hover a name with ⓘ for what it means." },
+    { label: "Score", num: true, tip: SCORE_TEXT },
+    { label: "Hit chance", num: true, tip: `Share of its recent games in the top 10% of their release fortnight, against Steam's ${pct(t.baseHitRate)} (the black tick). ×: how many times Steam's.` },
+    { label: "Typical game", num: true, tip: "Median reviews of its recent games: what an ordinary one gets." },
+    { label: "Top 10%", num: true, tip: "Reviews of a game in its best 10%." },
+    { label: `New in ${win} days`, num: true, tip: `Games released with the tag in the last ${win} days. Arrow: more (↑) or fewer (↓) than a year ago, as a share of Steam's releases.` },
+    { label: "How sure", tip: "By how many games the hit chance stands on: solid 100+, likely 40+, thin data fewer. ± is a rough 90% range." },
+  ];
+  return section("Every niche, ranked",
+    "Click a row for what its numbers mean and its best recent games.",
+    h("div.mm-controls",
+      seg([["best", "Best overall"], ["quiet", "Least crowded"]], st.sort, (v) => { st.sort = v; st.shown = 15; save("sort", v); }, "Sort niches"),
+      h("input.mm-input", { type: "search", "data-key": "niche-q", value: st.q, placeholder: "Find a tag", "aria-label": "Find a tag", oninput: (e) => { st.q = e.target.value; redrawKeeping(e); } }),
+      h("span.mm-small.mm-inline-note", st.sort === "quiet" ? `Fewest new games first, among tags with at least ${times(1.5)} Steam's hit chance.` : "Highest opportunity score first.")),
+    rows.length ? sortTable(cols, body, null, null, "mm-ntable") : h("p.mm-note", "No tag matches."),
+    q ? null : more(st.shown, rows.length, () => { st.shown += 15; }));
 }
 
-function gapSection() {
+// The best recent games per tag (released in the last year, by reviews), for the table's detail lines.
+function bestRecent() {
+  return memo("bestRecent", () => {
+    const d = today(), adult = adultIds(), out = new Map();
+    for (const g of gamesList()) {
+      if (d - g.day > 365 || d - g.day < 0 || isJoke(g.name) || g.top.some((t) => adult.has(t))) continue;
+      for (const t of g.top) {
+        let l = out.get(t);
+        if (!l) out.set(t, l = []);
+        if (l.length < 3 || g.reviews > l[2].reviews) { l.push(g); l.sort((a, b) => b.reviews - a.reviews); if (l.length > 3) l.pop(); }
+      }
+    }
+    return out;
+  });
+}
+
+// --- The gap finder lives in market-gaps.js ---
+
+function gapBlock() {
   const h = C.h, title = "Tag pairs: the gap finder";
   if (st.errors.games) return section(title, null, h("p.mm-note", st.errors.games, " ", btn("Try again", () => load(["games"]))));
   if (!st.files.games) return section(title, null, h("p.mm-note", "Loading three years of releases (a few MB, once)…"));
-  const names = tagNames();
-  const mustId = st.must ? tagSets(names).byName.get(st.must.trim().toLowerCase()) ?? null : null;
-  const opts = { today: today(), target: st.target, small: st.small, must: mustId };
-  const key = `gap:${st.target}:${st.small}:${mustId}`;
-  const res = memo(`${key}:${st.pairs}`, () => gapFinder(gamesList(), names, { ...opts, pairs: st.pairs }));
-  const singles = st.pairs ? memo(`${key}:false`, () => gapFinder(gamesList(), names, { ...opts, pairs: false })) : null;
-  const scored = memo(`${key}:${st.pairs}:scored`, () => withGapScores(res, singles));
-  const f = st.gapF;
-  const filtered = filterGaps(scored, f);
-  const sk = st.gapSort, dir = st.gapDir;
-  const val = { name: (r) => r.name }[sk] || ((r) => r[sk] ?? -Infinity);
-  const sorted = [...filtered].sort((a, b) => { const x = val(a), y = val(b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * dir; });
-  const earnWord = `earned about ${usd(st.target)}`;
-  const hitTip = `Hit chance: the share of its games (released 2 weeks to 6 months ago) that reached the top 10% by reviews among games released the same fortnight. Pulled toward the average (${pct(res.baseHit)}) as if it also had ${PRIOR} ordinary games.`;
-  const earnTip = `Earn chance: the share of its paid games (released 2 months to 2 years ago) that ${earnWord}, estimated as reviews × ${SALES_PER_REVIEW} sales a review × price × ${NET_SHARE} (kept after Steam's cut, VAT and refunds). Pulled toward the average (${pct(res.baseEarn)}).`;
-  const onSort = (k) => {
-    if (st.gapSort === k) st.gapDir = -st.gapDir; else { st.gapSort = k; st.gapDir = k === "name" || k === "recent" ? 1 : -1; }
-    save("gapSort", st.gapSort); save("gapDir", String(st.gapDir)); draw();
-  };
-  let list;
-  if (st.gapView === "table") {
-    const mxh = Math.max(...sorted.map((r) => r.hit), 0.01), mxe = Math.max(...sorted.map((r) => r.earn), 0.01), mxc = Math.log1p(Math.max(...sorted.map((r) => r.recent), 1));
-    const cols = [
-      { key: "name", label: st.pairs ? "Pair of tags" : "Tag", tip: "Tags among a game's 5 strongest (Indie, adult and how-it's-sold tags left out)." },
-      { key: "hit", label: "Hit chance", num: true, tip: hitTip },
-      { key: "earn", label: "Earn chance", num: true, tip: earnTip },
-      st.pairs ? { key: "bonus", label: "vs its tags", num: true, tip: "The pair against the better of its two tags alone (both chances averaged). Above ×1: the combination does better than either part." } : null,
-      { key: "n", label: "Games", num: true, tip: "Games behind the numbers (in either pool). Fewer games = the chances lean more on the average." },
-      { key: null, label: "How sure", tip: "By the smaller of the two pools: solid 100+ games, likely 40+, thin data fewer. ± is a rough 90% range for the hit chance." },
-      { key: "medianReviews", label: "Typical game", num: true, tip: "Median reviews of its games." },
-      { key: "recent", label: "Crowding", num: true, tip: "Games released with it in the last 90 days." },
-      { key: "gap", label: "Gap score", num: true, tip: "Both chances against their averages (averaged), divided by crowding (log): high = often does well and few are made." },
-    ].filter(Boolean);
-    const body = sorted.slice(0, st.gapShown * 3).map((r) => {
-      const gl = r.k.split("+").map((id) => names[id]).filter((n) => glossary(n)).map((n) => `${n.trim()}: ${glossary(n)}`).join("\n");
-      return h("tr", { title: gl || null },
-        h("td", h("b", r.name), gl ? h("span.mm-dim", " ⓘ") : null),
-        barCell(r.hit / mxh, pct(r.hit), r.hitLift >= 1.5 ? "var(--sw-3)" : "var(--sw-1)"),
-        barCell(r.earn / mxe, pct(r.earn), r.earnLift >= 1.5 ? "var(--sw-3)" : "var(--sw-1)"),
-        st.pairs ? h("td.mm-num", { class: r.bonus >= 1.1 ? "mm-up" : r.bonus < 0.9 ? "mm-down" : null }, times(r.bonus)) : null,
-        h("td.mm-num", { title: `${num(r.wH)} of ${num(r.nH)} became hits; ${num(r.wE)} of ${num(r.nE)} paid games ${earnWord}` }, num(r.n)), h("td", r.sure),
-        h("td.mm-num", fmtK(r.medianReviews)), barCell(Math.log1p(r.recent) / mxc, fmtK(r.recent), "var(--fb-muted)"), h("td.mm-num", h("b", r.gap.toFixed(2))));
-    });
-    list = h("div", sortTable(cols, body, { key: sk, dir }, onSort), more(st.gapShown * 3, sorted.length, () => { st.gapShown += 8; }));
-  } else {
-    const max = Math.max(0.3, ...sorted.slice(0, 30).map((r) => r.hit));
-    const card = (r) => h("article.mm-gap",
-      h("div.mm-card-head", h("h3", r.name), confPill(r.conf, r.sure)),
-      h("p.mm-line.mm-strong", `Hit chance ${pct(r.hit)} (${num(r.wH)} of ${num(r.nH)}; average ${pct(res.baseHit)}). Earn chance ${pct(r.earn)} (${num(r.wE)} of ${num(r.nE)} paid games ${earnWord}; average ${pct(res.baseEarn)}).`),
-      oddsBar(r.hit, res.baseHit, max),
-      h("p.mm-line", `Gap score ${r.gap.toFixed(2)}. Typical game: ${plural(r.medianReviews, "review")}. ${num(r.recent)} new ones in the last 90 days${r.growth != null ? `, ${growthWords(r.growth)}` : ""}. Biggest: `, link(storeUrl(r.best.appid), r.best.name), ` (${num(r.best.reviews)} reviews).`));
-    list = h("div", sorted.length ? h("div.mm-gaps", ...sorted.slice(0, st.gapShown).map(card)) : null, more(st.gapShown, sorted.length, () => { st.gapShown += 8; }));
-  }
-  // The minimum filters: blank = no limit. Saved in the store.
-  const fin = (k, label, unit, tip, step = 1) => h("label.mm-field.mm-filter", { title: tip },
-    h("span", label), h("input.mm-input.mm-filter-in", { type: "number", min: 0, step, value: f[k] ?? "", placeholder: "any", "data-key": `gapf-${k}`, "aria-label": label,
-      onchange: (e) => { const v = e.target.value.trim() === "" ? null : Number(e.target.value); st.gapF[k] = Number.isFinite(v) ? v : null; st.gapShown = 8; save("gapF", st.gapF); redrawKeeping(e); } }),
-    unit ? h("span.mm-dim", unit) : null);
-  const anyFilter = Object.values(f).some((v) => v != null);
-  return section(title,
-    `Combinations of a game's strongest tags, with two chances side by side. A pair needs ${MIN_PAIR}+ games to show, and every chance is pulled toward the average as if it also had ${PRIOR} ordinary games, so "dwarves + fishing" with 3 lucky games isn't called a gap.`,
-    h("p.mm-explain", h("b", "Hit chance"), ` = how often its games land in the top 10% by reviews of their release fortnight (popularity, games out 2 weeks to 6 months). `,
-      h("b", "Earn chance"), ` = how often its paid games ${earnWord} (money, games out 2 months to 2 years; reviews × ${SALES_PER_REVIEW} × price × ${NET_SHARE}). A cheap game can be a hit and earn little; a pricey niche game can earn well without being a hit.`),
-    h("div.mm-controls",
-      h("label.mm-field", h("span", "Earn target $"), h("input.mm-input.mm-num-in", { type: "number", min: 1000, step: 5000, value: st.target, "data-key": "gap-target", "aria-label": "Target revenue in dollars",
-        onchange: (e) => { const v = Number(e.target.value); if (v > 0) { st.target = v; save("target", String(v)); redrawKeeping(e); } } })),
-      seg([[true, "Tag pairs"], [false, "Single tags"]], st.pairs, (v) => { st.pairs = v; st.gapShown = 8; save("pairs", v); }, "Niche size"),
-      h("input.mm-input", { list: "mm-tags", "data-key": "gap-must", value: st.must, placeholder: "Must include a tag…", "aria-label": "Must include a tag",
-        onchange: (e) => { st.must = e.target.value; st.gapShown = 8; redrawKeeping(e); } }),
-      h("datalist", { id: "mm-tags" }, ...Object.values(names).sort().map((n) => h("option", { value: n.trim() }))),
-      seg([["table", "Table"], ["cards", "Cards"]], st.gapView, (v) => { st.gapView = v; save("gapView2", v); }, "Show as")),
-    h("div.mm-controls.mm-filters",
-      h("span.mm-filters-t", "Only show:"),
-      fin("minHit", "Hit chance ≥", "%", "Keep niches whose hit chance is at least this many percent."),
-      fin("minEarn", "Earn chance ≥", "%", "Keep niches whose earn chance is at least this many percent."),
-      fin("minGames", "Games ≥", null, "Keep niches with at least this many games behind them."),
-      fin("maxCrowd", "Crowding ≤", null, "Keep niches with at most this many games released in the last 90 days."),
-      fin("minGap", "Gap score ≥", null, "Keep niches with at least this gap score.", 0.1),
-      anyFilter ? btn("Clear", () => { st.gapF = { ...NO_FILTERS }; save("gapF", st.gapF); draw(); }) : null),
-    h("p.mm-small", `Averages: ${pct(res.baseHit, 1)} of ${num(res.poolHit)} recent games became hits; ${pct(res.baseEarn, 1)} of ${num(res.poolEarn)} paid games ${earnWord}${mustId != null ? ` (games with ${names[mustId]})` : ""}. ${num(filtered.length)} of ${num(scored.length)} niches pass the filters. Click a column to sort.`),
-    sorted.length ? list : h("p.mm-note", scored.length ? "No niche passes these filters: loosen one." : "Not enough games for these settings: take a tag away, switch to single tags or lower the target."));
+  try { return gapView(C, { overview: st.files.overview, trends: st.files.trends, games: st.files.games }, { small: st.small }, draw); }
+  catch (e) { console.error(e); return section(title, null, h("p.mm-note", `The gap finder couldn't draw: ${e.message}`)); }
 }
 
 // --- 3. How is Steam doing? ------------------------------------------------------------
@@ -1124,6 +1170,7 @@ const CSS = `
 .mkv-merged .mm-today-sub a { margin-left: 0; white-space: normal; font-weight: 600; }
 .mkv-merged .mm-kind { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fb-muted); padding-top: 3px; }
 .mkv-merged .mm-kind.k-niche { color: var(--sw-1); }
+.mkv-merged .mm-kind.k-rising { color: var(--sw-3); }
 .mkv-merged .mm-kind.k-lead { color: var(--fb-good-text); }
 .mkv-merged .mm-kind.k-breakout { color: var(--fb-warning); }
 .mkv-merged .mm-today-text a { margin-left: 4px; white-space: nowrap; }
@@ -1155,42 +1202,62 @@ const CSS = `
 .mkv-merged .mm-num-in { width: 110px; }
 .mkv-merged .mm-field { display: inline-flex; align-items: center; gap: 6px; color: var(--fb-ink-2); font-size: 0.9rem; }
 
-.mkv-merged .mm-cards, .mkv-merged .mm-gaps { display: grid; gap: 10px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 400px), 1fr)); }
-.mkv-merged .mm-card, .mkv-merged .mm-gap { background: var(--fb-card); border: 1px solid var(--fb-line); border-radius: 12px; padding: 12px 14px; min-width: 0; scroll-margin: 80px; }
-.mkv-merged .mm-card.is-sel { border-color: var(--fb-accent); box-shadow: 0 0 0 2px var(--fb-accent); }
-.mkv-merged .mm-card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-.mkv-merged .mm-card-head h3 { flex: 1 1 auto; min-width: 0; }
-.mkv-merged .mm-rank { color: var(--fb-muted); font-weight: 700; font-size: 0.9rem; }
 .mkv-merged .mm-conf { font-size: 0.76rem; font-weight: 650; border-radius: 999px; padding: 1px 8px; border: 1px solid currentColor; white-space: nowrap; }
 .mkv-merged .mm-conf.is-solid { color: var(--fb-good-text); }
 .mkv-merged .mm-conf.is-likely { color: var(--fb-ink-2); }
 .mkv-merged .mm-conf.is-thin { color: var(--fb-warning); }
-.mkv-merged .mm-score { display: inline-flex; align-items: baseline; gap: 1px; padding: 1px 9px; border-radius: 999px; background: var(--fb-card-2); color: var(--fb-ink-2); cursor: help; white-space: nowrap; }
-.mkv-merged .mm-score b { font-size: 1.15rem; line-height: 1.2; color: var(--fb-title); }
-.mkv-merged .mm-score small { font-size: 0.72rem; color: var(--fb-muted); }
-.mkv-merged .mm-score.is-hi { background: var(--fb-accent); }
-.mkv-merged .mm-score.is-hi b, .mkv-merged .mm-score.is-hi small { color: var(--fb-card); }
-.mkv-merged .mm-score.is-mid { box-shadow: inset 0 0 0 1.5px var(--fb-accent); }
 .mkv-merged .mm-gloss { color: var(--fb-muted); font-size: 0.84rem; font-style: italic; margin-top: 2px; line-height: 1.35; }
-.mkv-merged .mm-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 10px 0 8px; }
-.mkv-merged .mm-stat { display: flex; flex-direction: column; min-width: 0; padding: 6px 8px; border-radius: 9px; background: var(--fb-card-2); cursor: help; }
-.mkv-merged .mm-stat-l { font-size: 0.72rem; font-weight: 650; letter-spacing: 0.03em; text-transform: uppercase; color: var(--fb-muted); line-height: 1.25; }
-.mkv-merged .mm-stat-v { font-size: 1.35rem; font-weight: 750; color: var(--fb-title); line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; }
-.mkv-merged .mm-stat-s { font-size: 0.76rem; color: var(--fb-muted); line-height: 1.25; }
-.mkv-merged .mm-card-foot { display: flex; align-items: center; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
-.mkv-merged .mm-why { color: var(--fb-ink-2); font-size: 0.9rem; flex: 1 1 200px; }
+.mkv-merged .mm-filterbar { position: sticky; top: 0; z-index: 4; display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; padding: 8px 12px; margin: 0 0 14px; background: var(--fb-card); border: 1px solid var(--fb-line); border-radius: 12px; }
+.mkv-merged .mm-filterbar-t { color: var(--fb-ink-2); font-size: 0.86rem; flex: 1 1 260px; }
+.mkv-merged .mm-filterbar-t b { color: var(--fb-title); font-weight: 650; }
+
+.mkv-merged .mm-rise { list-style: none; margin: 4px 0 0; padding: 0; border: 1px solid var(--fb-line); border-radius: 12px; background: var(--fb-card); overflow: hidden; }
+.mkv-merged .mm-rise-row { display: grid; grid-template-columns: 112px minmax(0, 1fr) 124px; gap: 4px 12px; align-items: center; padding: 7px 12px; border-top: 1px solid var(--fb-line); }
+.mkv-merged .mm-rise-row:first-child { border-top: 0; }
+.mkv-merged .mm-rise-row.is-sel { background: var(--fb-hover); box-shadow: inset 3px 0 0 var(--fb-accent); }
+.mkv-merged .mm-rise-main { min-width: 0; }
+.mkv-merged .mm-rise-words { color: var(--fb-ink-2); font-size: 0.88rem; line-height: 1.35; }
+.mkv-merged .mm-stage { justify-self: start; font-size: 0.74rem; font-weight: 700; border-radius: 999px; padding: 1px 9px; border: 1px solid currentColor; white-space: nowrap; cursor: help; }
+.mkv-merged .mm-stage.is-early { color: var(--fb-good-text); }
+.mkv-merged .mm-stage.is-crowded { color: var(--fb-warning); }
+.mkv-merged .mm-stage.is-late { color: var(--fb-negative); }
+.mkv-merged .mm-spark { width: 120px; height: 30px; display: block; }
+.mkv-merged .mm-spark-line { fill: none; stroke: var(--sw-3); stroke-width: 1.8; stroke-linejoin: round; }
+.mkv-merged .mm-spark-area { fill: var(--sw-3); opacity: .12; }
+.mkv-merged .mm-spark-now { fill: var(--fb-ink); opacity: .06; }
+.mkv-merged .mm-spark-dot { fill: var(--sw-3); }
+
+.mkv-merged .mm-hscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.mkv-merged .mm-hscroll > .mm-svg { min-width: 620px; }
+.mkv-merged .mm-barg { cursor: pointer; outline: none; }
+.mkv-merged .mm-barg:hover .mm-bar-rect, .mkv-merged .mm-barg:focus .mm-bar-rect { filter: brightness(1.12); }
+.mkv-merged .mm-barval { fill: #fff; font-size: 11.5px; font-weight: 700; pointer-events: none; }
+.mkv-merged .mm-barval-out { fill: var(--fb-ink); font-size: 11.5px; font-weight: 700; }
+.mkv-merged .mm-barname { fill: var(--fb-ink-2); font-size: 11.5px; }
+.mkv-merged .mm-barname.is-sel { fill: var(--fb-title); font-weight: 700; }
+
+.mkv-merged .mm-dot { cursor: pointer; outline: none; }
+.mkv-merged .mm-dot-c { stroke: var(--fb-card); stroke-width: 1; fill-opacity: .9; }
+.mkv-merged .mm-dot:hover .mm-dot-c, .mkv-merged .mm-dot:focus .mm-dot-c { stroke: var(--fb-ink); stroke-width: 1.5; fill-opacity: 1; }
+.mkv-merged .mm-sel-ring { fill: var(--fb-accent); fill-opacity: .22; stroke: var(--fb-accent); stroke-width: 2; }
+.mkv-merged .mm-axis-end { fill: var(--fb-muted); font-style: italic; }
+.mkv-merged .mm-key-sel { background: var(--fb-accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--fb-accent) 30%, transparent); }
+.mkv-merged .mm-picked { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; margin-top: 6px; padding: 6px 10px; border-radius: 9px; background: var(--fb-card-2); font-size: 0.88rem; color: var(--fb-ink-2); }
+.mkv-merged .mm-picked b { color: var(--fb-title); }
+
+.mkv-merged .mm-ntable .mm-nrow { cursor: pointer; scroll-margin: 90px; }
+.mkv-merged .mm-ntable .mm-nrow:hover td { background: var(--fb-hover); }
+.mkv-merged .mm-ntable .mm-nrow:focus-visible { outline: 2px solid var(--fb-accent); outline-offset: -2px; }
+.mkv-merged .mm-ntable .mm-nrow.is-sel td { background: var(--fb-hover); border-bottom-color: transparent; }
+.mkv-merged .mm-ntable .mm-nrow.is-sel td:first-child { box-shadow: inset 3px 0 0 var(--fb-accent); }
+.mkv-merged .mm-ntable .mm-ndetail td { white-space: normal; background: var(--fb-hover); padding: 2px 12px 10px; box-shadow: inset 3px 0 0 var(--fb-accent); }
+.mkv-merged .mm-ntable .mm-ndetail p { max-width: 90ch; font-size: 0.9rem; color: var(--fb-ink); margin-top: 4px; }
+.mkv-merged .mm-ntable .mm-ndetail .mm-line { color: var(--fb-ink-2); }
+.mkv-merged .mm-cbar-w { width: 64px; }
+.mkv-merged .mm-vs { position: relative; overflow: visible; width: 64px; }
+.mkv-merged .mm-vs > b { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--fb-ink); }
 .mkv-merged .mm-explain { color: var(--fb-ink-2); font-size: 0.9rem; max-width: 86ch; margin: 6px 0; padding: 7px 10px; border-left: 3px solid var(--fb-accent); background: var(--fb-card); border-radius: 0 8px 8px 0; }
 .mkv-merged .mm-explain b { color: var(--fb-title); }
-.mkv-merged .mm-filters { background: var(--fb-card); border: 1px solid var(--fb-line); border-radius: 10px; padding: 6px 10px; }
-.mkv-merged .mm-filters-t { font-size: 0.85rem; font-weight: 650; color: var(--fb-ink-2); }
-.mkv-merged .mm-filter { font-size: 0.85rem; gap: 4px; }
-.mkv-merged .mm-filter-in { width: 72px; padding: 3px 6px; }
-.mkv-merged .mm-oddsrow { display: grid; gap: 3px; margin: 4px 0; }
-.mkv-merged .mm-bar { position: relative; height: 8px; border-radius: 4px; background: var(--fb-card-2); }
-.mkv-merged .mm-bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--sw-1); }
-.mkv-merged .mm-bar > b { position: absolute; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; border-radius: 1px; background: var(--fb-ink); }
-.mkv-merged .mm-barlabel { font-size: 0.84rem; color: var(--fb-muted); }
-.mkv-merged .mm-barlabel strong { color: var(--fb-ink); }
 
 .mkv-merged .mm-details { margin-top: 8px; }
 .mkv-merged .mm-details > summary { cursor: pointer; color: var(--fb-link); font-size: 0.92rem; padding: 3px 0; }
@@ -1228,22 +1295,17 @@ const CSS = `
 .mkv-merged .mm-base { stroke: var(--fb-muted); stroke-width: 1; }
 .mkv-merged .mm-cross { stroke: var(--fb-muted); stroke-width: 1; stroke-dasharray: 3 3; }
 .mkv-merged .mm-ref { stroke: var(--fb-muted); stroke-width: 1; stroke-dasharray: 4 3; }
-.mkv-merged .mm-split { stroke: var(--fb-ink-2); stroke-width: 1; stroke-dasharray: 2 4; opacity: .7; }
-.mkv-merged .mm-gapzone { fill: var(--sw-3); opacity: .08; }
+.mkv-merged .mm-gapzone { fill: var(--sw-3); opacity: .11; }
 .mkv-merged .mm-axis { fill: var(--fb-muted); font-size: 12px; }
 .mkv-merged .mm-axis-title { fill: var(--fb-ink-2); font-weight: 600; }
-.mkv-merged .mm-quad { fill: var(--fb-ink-2); font-size: 12px; font-weight: 700; }
-.mkv-merged .mm-dl { fill: var(--fb-ink); font-size: 11.5px; font-weight: 600; paint-order: stroke; stroke: var(--fb-card); stroke-width: 3px; stroke-linejoin: round; cursor: pointer; }
-.mkv-merged .mm-dl-gloss { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
-.mkv-merged .mm-dl-sel { fill: var(--fb-title); font-size: 13px; }
+.mkv-merged .mm-dl { fill: var(--fb-ink-2); font-size: 10.5px; font-weight: 500; cursor: pointer; }
+.mkv-merged .mm-dl-sel { fill: var(--fb-title); font-size: 12px; font-weight: 750; paint-order: stroke; stroke: var(--fb-card); stroke-width: 3px; stroke-linejoin: round; }
 .mkv-merged .mm-dot { cursor: pointer; outline: none; }
-.mkv-merged .mm-dot:hover circle:first-child, .mkv-merged .mm-dot:focus circle:first-child { fill-opacity: 1; stroke: var(--fb-ink); }
 .mkv-merged .mm-endlabel { fill: var(--fb-ink); font-size: 14px; font-weight: 700; }
 .mkv-merged .mm-endname { fill: var(--fb-ink-2); font-size: 12px; }
 .mkv-merged .mm-legend { display: flex; flex-wrap: wrap; gap: 3px 14px; font-size: 0.84rem; color: var(--fb-ink-2); margin-bottom: 4px; }
 .mkv-merged .mm-key { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 5px; vertical-align: -1px; }
-.mkv-merged .mm-key-ring { background: none; border: 2px solid var(--fb-muted); width: 13px; height: 13px; vertical-align: -3px; }
-.mkv-merged .mm-key-zone { background: var(--sw-3); opacity: .35; border-radius: 2px; }
+.mkv-merged .mm-key-zone { background: var(--sw-3); opacity: .3; border-radius: 2px; width: 12px; height: 12px; }
 .mkv-merged .mm-line-key { display: inline-block; width: 12px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
 .mkv-merged .mm-dash-key { background: repeating-linear-gradient(90deg, var(--fb-ink-2) 0 4px, transparent 4px 7px); }
 .mkv-merged .mm-tip { display: none; position: absolute; pointer-events: none; z-index: 5; background: var(--fb-card); color: var(--fb-ink); border: 1px solid var(--fb-line); border-radius: 8px; padding: 6px 10px; font-size: 0.84rem; line-height: 1.45; box-shadow: 0 6px 20px rgba(0,0,0,0.18); max-width: 300px; }
@@ -1255,14 +1317,15 @@ const CSS = `
   .mkv-merged .mm-tab { padding: 8px 12px; }
   .mkv-merged .mm-today { padding: 10px 12px 4px; }
   .mkv-merged .mm-today-list > li { grid-template-columns: 1fr; gap: 0; }
-  .mkv-merged .mm-card, .mkv-merged .mm-gap { padding: 10px 12px; }
   .mkv-merged .mm-input { width: 100%; }
-  .mkv-merged .mm-filter-in { width: 72px; }
-  .mkv-merged .mm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mkv-merged .mm-chart { padding: 8px 6px 6px; }
   .mkv-merged .mm-alert { grid-template-columns: minmax(0, 1fr); gap: 2px; }
-  .mkv-merged .mm-axis, .mkv-merged .mm-quad { font-size: 15px; }
-  .mkv-merged .mm-dl { font-size: 14px; }
+  .mkv-merged .mm-axis { font-size: 15px; }
+  .mkv-merged .mm-hscroll .mm-axis { font-size: 12px; }
+  .mkv-merged .mm-rise-row { grid-template-columns: minmax(0, 1fr) auto; padding: 7px 10px; }
+  .mkv-merged .mm-rise-row .mm-stage { grid-column: 1 / -1; }
+  .mkv-merged .mm-spark { width: 90px; }
+  .mkv-merged .mm-filterbar { position: static; }
 }
 `;
 
@@ -1274,4 +1337,4 @@ function injectStyle() {
   document.head.append(el);
 }
 
-export const _test = { opportunityScores, filterGaps, glossary, oneIn, confidence, spread, sureLabel, isJoke, rankNiches, unpackGames, gapFinder, withGapScores, unpackUpcoming, upcomingLeads, releasedLeads, steamGrowth, releasesList, rankAlerts, todayItems, releaseText };
+export const _test = { opportunityScores, risingNow, glossary, oneIn, confidence, spread, sureLabel, isJoke, rankNiches, unpackGames, unpackUpcoming, upcomingLeads, releasedLeads, steamGrowth, releasesList, rankAlerts, todayItems, releaseText };

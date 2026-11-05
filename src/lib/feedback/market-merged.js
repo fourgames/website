@@ -33,6 +33,102 @@ const TABS = [
   ["steam", "How is Steam doing?", "Games vs players, what's working now"],
 ];
 const F = { linux: 1, mac: 2, deckOk: 4, godot: 64, demo: 128, self: 256 };
+const REVIEW_STEPS = [10, 50, 100];
+
+// Plain words for jargon tags, keyed by the tag's lowercase name. Shown on a niche's card and as a
+// hover title on chart labels and table rows.
+const GLOSSARY = {
+  "fmv": "Full-motion video: games built from filmed live-action footage.",
+  "roguelite": "Runs that end on death, but some progress (unlocks, upgrades) carries over to the next run.",
+  "roguelike": "Each run is new (random levels) and death sends you back to the start.",
+  "action roguelike": "Fast real-time combat in short, randomly built runs that end on death.",
+  "traditional roguelike": "Turn-based dungeon crawling on a grid with permanent death, like the original Rogue.",
+  "roguelike deckbuilder": "Build a card deck during a run, fight with it, start over on death (like Slay the Spire).",
+  "metroidvania": "A big connected map that opens up as you gain abilities (like Metroid or Castlevania).",
+  "souls-like": "Hard, deliberate combat with stamina, checkpoints and losing your currency on death (like Dark Souls).",
+  "immersive sim": "Systems-driven worlds where problems have many solutions (like Deus Ex or Prey).",
+  "bullet heaven": "You auto-attack while hordes swarm you and you pick upgrades (like Vampire Survivors).",
+  "extraction shooter": "Drop into a map, grab loot and get out alive; die and you lose what you carried (like Tarkov).",
+  "cozy": "Low-stress, comforting games: no fail states, soft art, gentle goals.",
+  "wholesome": "Kind, feel-good themes with nothing dark or violent.",
+  "wuxia": "Chinese martial-arts heroes and chivalry in a historical setting.",
+  "xianxia": "Chinese fantasy of cultivating immortal powers, with Taoist magic and sects.",
+  "hobby sim": "Simulates a hobby (gardening, model building, fishing) for relaxed play.",
+  "job simulator": "You do a job's tasks for fun (store clerk, mechanic, cleaner).",
+  "boomer shooter": "Fast first-person shooters in the style of 90s games like Doom and Quake.",
+  "collectathon": "3D platformers about collecting lots of items across levels (like Banjo-Kazooie).",
+  "idler": "Progress keeps going while you wait or are away; mostly about upgrades.",
+  "incremental": "Numbers go up: repeat actions to unlock bigger multipliers and new layers.",
+  "clicker": "You click to earn, then buy upgrades that earn for you.",
+  "4x": "Strategy about explore, expand, exploit, exterminate (like Civilization).",
+  "grand strategy": "Run a whole nation over decades: economy, diplomacy and war (like Europa Universalis).",
+  "visual novel": "Story told through text and character art, with choices.",
+  "otome": "A story game aimed at women, about a heroine romancing male characters.",
+  "dating sim": "Build relationships and romance characters.",
+  "bullet hell": "Shooters where the screen fills with dense patterns of enemy bullets to dodge.",
+  "shoot 'em up": "Scrolling shooters: fly and shoot waves of enemies (shmups).",
+  "precision platformer": "Hard platformers that demand exact jumps and timing (like Celeste).",
+  "deckbuilding": "You build a deck of cards during play and win with it.",
+  "card battler": "Battles fought by playing cards.",
+  "auto battler": "Set up a team, then fights play out on their own.",
+  "colony sim": "Manage a group of settlers' needs, jobs and building (like RimWorld).",
+  "city builder": "Plan and grow a city: zones, roads, services.",
+  "base building": "Build and defend your own base.",
+  "automation": "Build machines and production lines that run themselves (like Factorio).",
+  "walking simulator": "Explore and take in a story with little or no challenge.",
+  "lovecraftian": "Cosmic horror in the style of H.P. Lovecraft: unknowable gods and madness.",
+  "solarpunk": "Hopeful futures with green technology and community.",
+  "cyberpunk": "High-tech, low-life futures: megacorps, hackers and neon cities.",
+  "gacha": "Pay or grind for random draws of characters or items.",
+  "mahjong": "The Chinese tile-matching game, or solitaire versions of it.",
+  "sokoban": "Box-pushing puzzles on a grid.",
+  "match 3": "Swap tiles to line up three of a kind (like Candy Crush).",
+  "hidden object": "Find listed items hidden in busy pictures.",
+  "point & click": "Adventure games played by clicking on things to explore and solve puzzles.",
+  "interactive fiction": "Text-driven stories you steer with choices or typed commands.",
+  "crpg": "Classic computer RPGs: party, stats, dialogue, often isometric (like Baldur's Gate).",
+  "jrpg": "Japanese-style RPGs: story-led, party-based, often turn-based combat.",
+  "tactical rpg": "RPG battles on a grid where positioning matters (like Fire Emblem).",
+  "mystery dungeon": "Turn-based, grid-based dungeon runs (like Pokémon Mystery Dungeon).",
+  "musou": "One hero mowing down huge crowds of enemies (like Dynasty Warriors).",
+  "spectacle fighter": "Stylish combo-driven action combat (like Devil May Cry).",
+  "character action game": "Stylish combo-driven action combat (like Devil May Cry).",
+  "hack and slash": "Melee combat against many enemies.",
+  "beat 'em up": "Walk forward and punch your way through waves of enemies.",
+  "twin stick shooter": "Move with one stick, aim with the other.",
+  "tower defense": "Place towers along a path to stop waves of enemies.",
+  "creature collector": "Catch, raise and battle creatures (like Pokémon).",
+  "life sim": "Live a day-to-day life: work, friends, home (like The Sims or Stardew Valley).",
+  "farming sim": "Grow crops and raise animals on your own farm.",
+  "shop keeper": "Run a shop: stock, price and sell.",
+  "time management": "Juggle tasks under time pressure (like Diner Dash).",
+  "social deduction": "Find the traitor among the players (like Among Us).",
+  "asymmetric vr": "One player in VR, the others on a screen, with different roles.",
+  "6dof": "Six degrees of freedom: move and turn freely in every direction (like Descent).",
+  "outbreak sim": "Spread or stop a disease across the world (like Plague Inc.).",
+  "god game": "You play a god shaping a world and its people.",
+  "real-time with pause": "Real-time combat you can pause to give orders.",
+  "litrpg": "Stories where life works like an RPG: levels, stats and skills.",
+  "trading card game": "Collect cards and build decks to play against others.",
+  "tabletop": "Board or tabletop games played on screen.",
+  "on-rails shooter": "The game moves you along a set path while you aim and shoot.",
+  "rail shooter": "The game moves you along a set path while you aim and shoot.",
+  "score attack": "Play for the highest score.",
+  "perma death": "When a character dies, they're gone for good.",
+  "voxel": "Worlds built out of small cubes (like Minecraft).",
+  "intentionally awkward controls": "Clumsy controls on purpose, for comedy (like Octodad).",
+  "desktop companion": "Sits on your desktop while you do other things.",
+  "falling blocks": "Pieces fall and you fit them together (like Tetris).",
+  "organizing": "Calm games about sorting and tidying things into place (like Unpacking).",
+  "boss rush": "A run of boss fights with little in between.",
+  "arena shooter": "Fast multiplayer shooters in small arenas (like Quake III).",
+  "hero shooter": "Team shooters with characters who each have special powers (like Overwatch).",
+  "looter shooter": "Shoot enemies to collect ever-better guns and gear (like Borderlands).",
+  "dungeon crawler": "Explore dungeons, fight monsters, collect loot.",
+  "cleaning": "Calm games about washing and tidying (like PowerWash Simulator).",
+  "rhythm": "Press buttons in time with music.",
+};
+export const glossary = (name) => GLOSSARY[String(name || "").trim().toLowerCase()] || null;
 
 // ---------------------------------------------------------------------------
 // Plain helpers (no DOM): also used by the smoke test
@@ -96,18 +192,50 @@ const tagSets = (tagNames) => {
 
 // Every tag with a hit rate, best first. trends.hitRate is already pulled toward Steam's rate (as if
 // the tag also had `priorGames` average games), so a tag with a handful of games can't top the list.
-export function rankNiches(trends, tagNames, { small = true, sort = "odds" } = {}) {
+// The opportunity score: each signal as a percentile among the listed tags (0 = worst, 1 = best),
+// mixed by these weights, then cut by up to 30% for a tag that stands on fewer than 100 games.
+export const SCORE_WEIGHTS = { hit: 0.4, typical: 0.25, quiet: 0.2, growth: 0.15 };
+export const SCORE_TEXT = "Score 0–100: how a tag ranks against the others on hit chance (40%), reviews for a typical game (25%), how few new games it gets (20%) and growth (15%), cut by up to 30% when it rests on fewer than 100 games.";
+const SIGNAL_WORDS = { hit: "hit chance", typical: "reviews per game", quiet: "few rivals", growth: "growth" };
+const SIGNAL_WEAK = { hit: "a low hit chance", typical: "few reviews per game", quiet: "crowding", growth: "slow growth" };
+
+function percentiler(values) {
+  const s = values.filter((v) => v != null && Number.isFinite(v)).sort((a, b) => a - b);
+  return (v) => {
+    if (v == null || !Number.isFinite(v) || !s.length) return 0.5;
+    let lo = 0, hi = 0;
+    for (const x of s) { if (x < v) lo++; else if (x === v) hi++; }
+    return s.length === 1 ? 0.5 : (lo + (hi - 1) / 2) / (s.length - 1);
+  };
+}
+
+export function opportunityScores(rows) {
+  const pHit = percentiler(rows.map((r) => r.hitRate)), pTyp = percentiler(rows.map((r) => r.medianReviews));
+  const pCrowd = percentiler(rows.map((r) => r.releases)), pGrow = percentiler(rows.map((r) => r.supply));
+  return rows.map((r) => {
+    const parts = { hit: pHit(r.hitRate), typical: pTyp(r.medianReviews), quiet: 1 - pCrowd(r.releases), growth: pGrow(r.supply) };
+    const sure = 0.7 + 0.3 * clamp(r.hitGames / 100);
+    const raw = Object.entries(SCORE_WEIGHTS).reduce((s, [k, w]) => s + w * parts[k], 0);
+    const strong = Object.keys(parts).filter((k) => parts[k] >= 0.75).sort((a, b) => parts[b] - parts[a]);
+    const weak = Object.keys(parts).filter((k) => parts[k] <= 0.25).sort((a, b) => parts[a] - parts[b]);
+    const list = (ks, words) => ks.map((k) => words[k]).join(ks.length > 2 ? ", " : " and ").replace(/, ([^,]*)$/, " and $1");
+    const why = strong.length
+      ? `Strong on ${list(strong.slice(0, 3), SIGNAL_WORDS)}${weak.length ? `; held back by ${list(weak.slice(0, 2), SIGNAL_WEAK)}` : ""}${sure < 0.85 ? "; few games to judge by" : ""}.`
+      : weak.length ? `Middling; held back by ${list(weak.slice(0, 2), SIGNAL_WEAK)}.` : "Middling on every count.";
+    return { ...r, parts, score: Math.round(100 * raw * sure), why };
+  });
+}
+
+export function rankNiches(trends, tagNames, { small = true, sort = "best" } = {}) {
   const s = tagSets(tagNames);
-  const rows = (trends.tags || []).filter((r) => r.hitRate != null && r.hitGames >= MIN_SINGLE && !s.meta.has(r.tag) && !s.adult.has(r.tag) && (!small || !s.big.has(r.tag)))
-    .map((r) => ({ ...r, conf: confidence(r.hitGames), sure: sureLabel(r.hitRate, r.hitGames), range: spread(r.hitRate, r.hitGames), lift: r.hitLift ?? r.hitRate / trends.baseHitRate, dir: growthDir(r.supply) }));
+  const rows = opportunityScores((trends.tags || []).filter((r) => r.hitRate != null && r.hitGames >= MIN_SINGLE && !s.meta.has(r.tag) && !s.adult.has(r.tag) && (!small || !s.big.has(r.tag)))
+    .map((r) => ({ ...r, conf: confidence(r.hitGames), sure: sureLabel(r.hitRate, r.hitGames), range: spread(r.hitRate, r.hitGames), lift: r.hitLift ?? r.hitRate / trends.baseHitRate, dir: growthDir(r.supply) })));
   const thinLast = (a, b) => (a.conf === "thin data") - (b.conf === "thin data");
   const by = {
-    odds: (a, b) => b.hitRate - a.hitRate,
-    typical: (a, b) => thinLast(a, b) || (b.medianReviews ?? 0) - (a.medianReviews ?? 0),
-    // Growth and quiet only among niches that beat Steam's hit rate: a fast-growing tag nobody plays isn't news.
-    growing: (a, b) => (b.lift >= 1.3) - (a.lift >= 1.3) || (b.supply ?? 0) - (a.supply ?? 0),
+    best: (a, b) => b.score - a.score || b.hitRate - a.hitRate,
+    // Quiet only among niches that beat Steam's hit rate by half: a quiet tag nobody plays isn't news.
     quiet: (a, b) => (b.lift >= 1.5) - (a.lift >= 1.5) || thinLast(a, b) || a.releases - b.releases,
-  }[sort] || ((a, b) => b.hitRate - a.hitRate);
+  }[sort] || ((a, b) => b.score - a.score);
   return rows.sort(by);
 }
 
@@ -125,15 +253,14 @@ export function unpackGames(file) {
   });
 }
 
-// Niches (single tags or pairs of a game's strongest tags) where games like that reached the goal
-// more often than Steam's average. goal "hit": top 10% of their release fortnight (games out 2 weeks
-// to 6 months); goal "money": earned about `target` dollars (paid games out 2 months to 2 years).
-export function gapFinder(list, tagNames, { today, goal = "hit", target = 50000, pairs = true, small = true, must = null } = {}) {
+// Niches (single tags or pairs of a game's strongest tags), each with two chances side by side:
+// hit = top 10% of their release fortnight (games out 2 weeks to 6 months); earn = made about
+// `target` dollars (paid games out 2 months to 2 years). Both are pulled toward their average.
+export function gapFinder(list, tagNames, { today, target = 50000, pairs = true, small = true, must = null } = {}) {
   const s = tagSets(tagNames);
-  const ok = goal === "hit"
-    ? (g) => g.hit != null && g.day >= today - 180 && g.day <= today - 14
-    : (g) => g.price > 0 && g.day >= today - 730 && g.day <= today - 60;
-  const won = goal === "hit" ? (g) => g.hit >= 90 : (g) => g.reviews * SALES_PER_REVIEW * (g.price / 100) * NET_SHARE >= target;
+  const okH = (g) => g.hit != null && g.day >= today - 180 && g.day <= today - 14;
+  const okE = (g) => g.price > 0 && g.day >= today - 730 && g.day <= today - 60;
+  const wonE = (g) => g.reviews * SALES_PER_REVIEW * (g.price / 100) * NET_SHARE >= target;
   const keysOf = (g) => {
     const own = g.top.filter((t) => t !== INDIE && !s.meta.has(t) && t !== must);
     if (!pairs) return own.map(String);
@@ -143,49 +270,65 @@ export function gapFinder(list, tagNames, { today, goal = "hit", target = 50000,
   };
   const skip = (g) => g.top.some((t) => s.adult.has(t)) || (small && g.top.some((t) => s.big.has(t))) || (must != null && !g.top.includes(must));
   const niches = new Map(), recent = new Map(), ago = new Map();
-  let n = 0, wins = 0, recentAll = 0, agoAll = 0;
+  let nH = 0, wH = 0, nE = 0, wE = 0, recentAll = 0, agoAll = 0;
   for (const g of list) {
     if (skip(g)) continue;
     const isRecent = g.day > today - 90, isAgo = g.day > today - 455 && g.day <= today - 365;
-    const inPool = ok(g);
-    if (!inPool && !isRecent && !isAgo) continue;
+    const inH = okH(g), inE = okE(g);
+    if (!inH && !inE && !isRecent && !isAgo) continue;
     const keys = keysOf(g);
     if (isRecent) { recentAll++; for (const k of keys) recent.set(k, (recent.get(k) || 0) + 1); }
     if (isAgo) { agoAll++; for (const k of keys) ago.set(k, (ago.get(k) || 0) + 1); }
-    if (!inPool) continue;
-    const w = won(g);
-    n++; if (w) wins++;
+    if (!inH && !inE) continue;
+    const hitW = inH && g.hit >= 90, earnW = inE && wonE(g);
+    if (inH) { nH++; if (hitW) wH++; }
+    if (inE) { nE++; if (earnW) wE++; }
     for (const k of keys) {
       let e = niches.get(k);
-      if (!e) niches.set(k, e = { k, n: 0, wins: 0, reviews: [], best: null });
-      e.n++; if (w) e.wins++;
+      if (!e) niches.set(k, e = { k, n: 0, nH: 0, wH: 0, nE: 0, wE: 0, reviews: [], best: null });
+      e.n++;
+      if (inH) { e.nH++; if (hitW) e.wH++; }
+      if (inE) { e.nE++; if (earnW) e.wE++; }
       e.reviews.push(g.reviews);
       if (!e.best || g.reviews > e.best.reviews) e.best = g;
     }
   }
-  const base = n ? wins / n : 0;
+  const baseHit = nH ? wH / nH : 0, baseEarn = nE ? wE / nE : 0;
   const min = pairs ? MIN_PAIR : MIN_SINGLE;
-  const rows = [...niches.values()].filter((e) => e.n >= min && base > 0).map((e) => {
-    const adj = (e.wins + PRIOR * base) / (e.n + PRIOR);
+  const rows = [...niches.values()].filter((e) => e.n >= min && baseHit > 0 && baseEarn > 0).map((e) => {
+    const hit = (e.wH + PRIOR * baseHit) / (e.nH + PRIOR), earn = (e.wE + PRIOR * baseEarn) / (e.nE + PRIOR);
     const r = recent.get(e.k) || 0, a = ago.get(e.k) || 0;
+    const lift = (hit / baseHit + earn / baseEarn) / 2;
+    const nMin = Math.min(e.nH, e.nE);
     return {
-      k: e.k, name: e.k.split("+").map((id) => tagNames[id] || `Tag ${id}`).join(" + "), n: e.n, wins: e.wins,
-      raw: e.wins / e.n, adj, lift: adj / base, conf: confidence(e.n), sure: sureLabel(adj, e.n), medianReviews: median(e.reviews), best: e.best,
+      k: e.k, name: e.k.split("+").map((id) => tagNames[id] || `Tag ${id}`).join(" + "), n: e.n,
+      nH: e.nH, wH: e.wH, nE: e.nE, wE: e.wE, hit, earn, hitLift: hit / baseHit, earnLift: earn / baseEarn, lift,
+      // How sure: by the smaller of the two pools (usually the hit pool: 6 months against 2 years).
+      conf: confidence(nMin), sure: sureLabel(hit, nMin), medianReviews: median(e.reviews), best: e.best,
       recent: r, growth: agoAll && recentAll ? ((r + 1) / recentAll) / ((a + 1) / agoAll) : null,
     };
   }).sort((x, y) => y.lift - x.lift);
-  return { base, pool: n, wins, rows };
+  return { baseHit, baseEarn, poolHit: nH, poolEarn: nE, winsHit: wH, winsEarn: wE, rows };
 }
 
-// The table's extra columns. gap: how much better than average per unit of crowding (log of the
-// releases in the last 90 days), as in the Analyst design; bonus: the pair against the better of its
-// two tags alone, judged on the same games and goal (null for single tags).
+// The table's extra columns. gap: the two chances against their averages (averaged) per unit of
+// crowding (log of the releases in the last 90 days); bonus: the pair against the better of its two
+// tags alone, on the same measure (null for single tags).
 export function withGapScores(res, singles) {
-  const single = new Map((singles?.rows || []).map((r) => [r.k, r.adj]));
+  const single = new Map((singles?.rows || []).map((r) => [r.k, r.lift]));
   return res.rows.map((r) => {
-    const parts = r.k.includes("+") ? r.k.split("+").map((k) => single.get(k) ?? res.base) : null;
-    return { ...r, gap: r.lift / Math.log10(10 + r.recent), bonus: parts ? r.adj / Math.max(...parts) : null };
+    const parts = r.k.includes("+") ? r.k.split("+").map((k) => single.get(k) ?? 1) : null;
+    return { ...r, gap: r.lift / Math.log10(10 + r.recent), bonus: parts ? r.lift / Math.max(...parts) : null };
   });
+}
+
+// The minimum filters above the gap table (percentages as whole numbers; null = no limit). By default
+// a niche needs 40 games, so a pair of rare tags with a handful of lucky games stays out until asked for.
+export const GAP_FILTERS = { minHit: null, minEarn: null, minGames: 40, maxCrowd: null, minGap: null };
+const NO_FILTERS = { minHit: null, minEarn: null, minGames: null, maxCrowd: null, minGap: null };
+export function filterGaps(rows, f) {
+  return rows.filter((r) => (f.minHit == null || r.hit * 100 >= f.minHit) && (f.minEarn == null || r.earn * 100 >= f.minEarn)
+    && (f.minGames == null || r.n >= f.minGames) && (f.maxCrowd == null || r.recent <= f.maxCrowd) && (f.minGap == null || r.gap >= f.minGap));
 }
 
 // --- Leads for the Today box (the full "who to sign" view lives in market-sign.js) ----------
@@ -260,13 +403,17 @@ export function releasedLeads(godot, today, tagNames = {}) {
 
 // --- 3. Steam's growth, releases and alerts ------------------------------------------
 
-export function steamGrowth(g) {
+export function steamGrowth(g, minReviews = 10) {
   if (!g?.users?.y) return null;
   const first = Math.max(g.years.indexOf(2018), g.users.y.findIndex((v) => v != null));
   if (first < 0) return null;
   const last = g.years.length - 1;
   const partial = g.yearDone > 0 && g.yearDone < 1;
-  const rel = g.total.y.map((n, i) => i === last && partial ? n / g.yearDone : n).slice(first);
+  const paced = (xs) => xs.map((n, i) => n == null ? null : i === last && partial ? n / g.yearDone : n).slice(first);
+  const rel = paced(g.total.y);
+  // Games that reached `minReviews` reviews (growth.json total.q; missing in older files).
+  const qRaw = g.total.q?.[String(minReviews)];
+  const q = Array.isArray(qRaw) && qRaw.length === g.years.length && qRaw[first] ? paced(qRaw) : null;
   const users = g.users.y.slice(first);
   const years = g.years.slice(first);
   const idx = (xs) => xs.map((v) => v == null ? null : (v / xs[0]) * 100);
@@ -275,7 +422,8 @@ export function steamGrowth(g) {
   const sentence = `Since ${years[0]}, the number of games released a year has grown ${times(gr)} (${num(rel[0])} to about ${num(rel.at(-1))} at this year's pace), while Steam's peak players grew ${times(ur)} (${short(users[0])} to ${short(lastUsers)}). `
     + (per < 0.95 ? `Games are arriving faster than players: each new game now shares the crowd with about ${pct(1 - per)} fewer players than in ${years[0]}.`
       : per > 1.05 ? `Players are arriving faster than games: about ${pct(per - 1)} more players per new game than in ${years[0]}.` : `Players and games have grown about as fast as each other.`);
-  return { years, rel, users, relIdx: idx(rel), usersIdx: idx(users), gr, ur, per, sentence, partial, sofar: g.total.y.at(-1) };
+  return { years, rel, users, relIdx: idx(rel), usersIdx: idx(users), gr, ur, per, sentence, partial, sofar: g.total.y.at(-1),
+    q, qIdx: q ? idx(q) : null, qMin: minReviews, qSofar: q ? qRaw.at(-1) : null };
 }
 
 // Recent releases ranked by the hit index (review-count percentile among games out within ±7 days).
@@ -311,11 +459,11 @@ export function rankAlerts(trends, godotGames) {
 
 // --- Today: the few things worth knowing ------------------------------------------
 
-export function todayItems({ trends, tagNames, upcoming, godot, growth }) {
+export function todayItems({ trends, tagNames, upcoming, godot }) {
   const out = [];
   if (trends) {
     const n = rankNiches(trends, tagNames, { small: true }).find((r) => r.conf !== "thin data");
-    if (n) out.push({ kind: "Niche", text: `Best niche right now: ${n.name}. ${num(n.hits)} of its ${num(n.hitGames)} recent games became hits, about ${oneIn(n.hitRate)} even after allowing for chance (Steam average: ${oneIn(trends.baseHitRate)}; ${n.sure}). New ones are ${growthWords(n.supply)}.`, tab: "make", tag: n.tag });
+    if (n) out.push({ kind: "Niche", text: `Best niche right now: ${n.name} (score ${n.score}). ${num(n.hits)} of its ${num(n.hitGames)} recent games became hits, about ${oneIn(n.hitRate)} even after allowing for chance (Steam average: ${oneIn(trends.baseHitRate)}; ${n.sure}). New ones are ${growthWords(n.supply)}.`, tab: "make", tag: n.tag });
   }
   if (upcoming) {
     const l = upcoming.find((g) => g.deal !== "published");
@@ -325,10 +473,10 @@ export function todayItems({ trends, tagNames, upcoming, godot, growth }) {
     const r = godot[0];
     if (r) out.push({ kind: "Lead", text: `Released and worth a look: ${r.name} by ${r.developers.join(", ") || "?"}. ${r.reason}`, appid: r.appid, tab: "sign" });
   }
-  const b = (trends?.alerts || []).find((a) => a.kind === "breakout" && !isJoke(a.title));
-  if (b) out.push({ kind: "Breakout", text: `${b.title.replace(/^Breakout: /, "")} is breaking out: ${b.detail.replace(/;?\s*hit index \d+\.?/, "").replace(/\.$/, "")}.`, appid: b.appid });
-  if (growth) out.push({ kind: "Steam", text: growth.sentence.split(". ").slice(-1)[0], tab: "steam" });
-  return out.slice(0, 5);
+  const breakouts = (trends?.alerts || []).filter((a) => a.kind === "breakout" && !isJoke(a.title)).slice(0, 5)
+    .map((a) => ({ appid: a.appid, name: a.title.replace(/^Breakout:\s*/, ""), text: a.detail.replace(/;?\s*hit index \d+\.?/, "").replace(/\.$/, "") }));
+  if (breakouts.length) out.push({ kind: "Breakout", text: `Breaking out right now (top 1% of their launch fortnight; worth studying, rarely signable):`, list: breakouts });
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -338,8 +486,8 @@ export function todayItems({ trends, tagNames, upcoming, godot, growth }) {
 let C;
 const st = {
   files: {}, loading: {}, errors: {}, root: null, cache: {}, open: {},
-  tab: "make", small: true, sort: "odds", shown: 6, q: "", sel: null,
-  goal: "hit", target: 50000, pairs: true, gapShown: 8, must: "", gapView: "cards", gapSort: "lift", gapDir: -1,
+  tab: "make", small: true, sort: "best", shown: 6, q: "", sel: null, qMin: 10,
+  target: 50000, pairs: true, gapShown: 8, must: "", gapView: "table", gapSort: "gap", gapDir: -1, gapF: { ...GAP_FILTERS },
   rel: { days: 30, indie: true, self: false, godot: false, adult: false }, relShown: 25,
 };
 const NEEDS = { make: ["trends", "games"], sign: ["trends", "upcoming", "godot"], steam: ["growth", "trends", "games", "godot"] };
@@ -352,10 +500,14 @@ function restore() {
   const get = (k) => { try { const v = C.store.get(PREFIX + k); return v == null ? null : v; } catch { return null; } };
   const tab = get("tab"); if (TABS.some(([id]) => id === tab)) st.tab = tab;
   for (const k of ["small", "pairs"]) { const v = get(k); if (v === "true" || v === "false") st[k] = v === "true"; }
-  const sort = get("sort"); if (["odds", "typical", "growing", "quiet"].includes(sort)) st.sort = sort;
-  const goal = get("goal"); if (goal === "hit" || goal === "money") st.goal = goal;
+  const sort = get("sort"); if (["best", "quiet"].includes(sort)) st.sort = sort;
   const target = Number(get("target")); if (target > 0) st.target = target;
-  const gv = get("gapView"); if (gv === "cards" || gv === "table") st.gapView = gv;
+  const qMin = Number(get("qMin")); if (REVIEW_STEPS.includes(qMin)) st.qMin = qMin;
+  // A new key, so the table (the owner's pick) is the default even for those who chose cards before.
+  const gv = get("gapView2"); if (gv === "cards" || gv === "table") st.gapView = gv;
+  const gs = get("gapSort"); if (["name", "hit", "earn", "bonus", "n", "medianReviews", "recent", "gap"].includes(gs)) st.gapSort = gs;
+  const gd = Number(get("gapDir")); if (gd === 1 || gd === -1) st.gapDir = gd;
+  try { const f = JSON.parse(get("gapF") || "null"); if (f && typeof f === "object") for (const k of Object.keys(GAP_FILTERS)) st.gapF[k] = Number.isFinite(f[k]) ? f[k] : null; } catch {}
   try { const r = JSON.parse(get("rel") || "null"); if (r && typeof r === "object") Object.assign(st.rel, r); } catch {}
   if (![7, 30, 90].includes(st.rel.days)) st.rel.days = 30;
 }
@@ -367,7 +519,7 @@ const gamesList = () => memo("games", () => unpackGames(st.files.games));
 const upcomingList = () => memo("upcoming", () => unpackUpcoming(st.files.upcoming));
 const upLeads = () => memo("up", () => upcomingLeads(upcomingList(), st.files.trends, today(), { godotOnly: true, tagNames: tagNames() }));
 const relLeads = () => memo("rel", () => releasedLeads(st.files.godot.games, today(), tagNames()));
-const growthNow = () => memo("growth", () => steamGrowth(st.files.growth));
+const growthNow = () => memo(`growth:${st.qMin}`, () => steamGrowth(st.files.growth, st.qMin));
 const nichesNow = () => memo(`niches:${st.small}:${st.sort}`, () => rankNiches(st.files.trends, tagNames(), { small: st.small, sort: st.sort }));
 const adultIds = () => memo("adult", () => tagSets(tagNames()).adult);
 
@@ -512,7 +664,7 @@ function tipFor(box) {
   if (!tip) { tip = C.h("div.mm-tip", { role: "status" }); box.append(tip); }
   return {
     show(nodes, ev) {
-      tip.replaceChildren(...nodes);
+      tip.replaceChildren(...nodes.filter(Boolean));
       tip.style.display = "block";
       const b = box.getBoundingClientRect();
       let left = ev.clientX - b.left + 14, top = ev.clientY - b.top + 14;
@@ -530,16 +682,16 @@ function todayView() {
     trends: st.files.trends, tagNames: tagNames(),
     upcoming: st.files.upcoming ? upLeads() : null,
     godot: st.files.godot ? relLeads() : null,
-    growth: st.files.growth ? growthNow() : null,
   });
   return h("section.mm-today",
     h("div.mm-today-head", h("h2", "Today"), h("span.mm-sub", st.files.overview ? dayDate(today()) : "")),
     h("ul.mm-today-list", ...items.map((it) => h("li",
-      h("span.mm-kind", { class: `k-${it.kind.toLowerCase()}` }, it.kind),
-      h("span.mm-today-text", it.text, " ",
+      h("span.mm-kind", { class: `k-${it.kind.toLowerCase()}` }, it.list ? `${it.kind}s` : it.kind),
+      h("div.mm-today-text", it.text, " ",
         it.appid ? link(storeUrl(it.appid), "Store page ↗") : null,
         it.tag != null ? btn("Show", () => pickTag(it.tag, { toggle: false }), { class: "mm-inline" })
-          : it.tab && it.tab !== st.tab ? btn("More", () => goTab(it.tab), { class: "mm-inline" }) : null)))));
+          : it.tab && it.tab !== st.tab ? btn("More", () => goTab(it.tab), { class: "mm-inline" }) : null,
+        it.list ? h("ol.mm-today-sub", ...it.list.map((b) => h("li", link(storeUrl(b.appid), b.name), h("span.mm-dim", ` · ${b.text}`)))) : null)))));
 }
 
 function detectionNote() {
@@ -555,25 +707,34 @@ function makeView() {
   const all = nichesNow();
   const q = st.q.trim().toLowerCase();
   const rows = q ? all.filter((r) => r.name.toLowerCase().includes(q)) : all;
-  const max = Math.max(0.3, ...all.map((r) => r.hitRate));
-  const [w0, w1] = t.hitRateWindow || [14, 180];
-  const card = (r) => h("article.mm-card", { "data-tag": String(r.tag), class: r.tag === st.sel ? "is-sel" : null },
-    h("div.mm-card-head", h("span.mm-rank", `#${all.indexOf(r) + 1}`), h("h3", r.name), confPill(r.conf, r.sure)),
-    h("p.mm-big", `${num(r.hits)} of the ${num(r.hitGames)} ${r.name} games released ${w0} days to ${Math.round(w1 / 30)} months ago became hits. Allowing for chance, that's about ${oneIn(r.hitRate)} (Steam average: ${oneIn(t.baseHitRate)}).`),
-    oddsBar(r.hitRate, t.baseHitRate, max),
-    h("p.mm-line", `A typical one has ${plural(r.medianReviews, "review")}; a top-10% one has ${plural(r.topReviews, "review")}.`,
-      r.medianReviews != null && t.baseMedianReviews ? ` (A typical Steam game: ${plural(t.baseMedianReviews, "review")}.)` : ""),
-    h("p.mm-line", `${num(r.releases)} new ones in the last ${t.supplyWindow} days (${num(r.releasesYearAgo)} a year ago): ${growthWords(r.supply)}.`));
+  const win = t.supplyWindow || 90;
+  const arrow = (r) => r.dir > 0 ? h("span.mm-up", { title: growthWords(r.supply) }, " ↑") : r.dir < 0 ? h("span.mm-down", { title: growthWords(r.supply) }, " ↓") : h("span.mm-dim", { title: growthWords(r.supply) }, " →");
+  const stat = (label, value, sub, tip) => h("div.mm-stat", { title: tip || null }, h("span.mm-stat-l", label), h("span.mm-stat-v", ...[value].flat()), h("span.mm-stat-s", sub));
+  const card = (r) => {
+    const gl = glossary(r.name);
+    return h("article.mm-card", { "data-tag": String(r.tag), class: r.tag === st.sel ? "is-sel" : null },
+      h("div.mm-card-head", h("span.mm-rank", `#${all.indexOf(r) + 1}`), h("h3", r.name),
+        h("span.mm-score", { title: SCORE_TEXT, class: r.score >= 70 ? "is-hi" : r.score >= 50 ? "is-mid" : null }, h("b", String(r.score)), h("small", "/100"))),
+      gl ? h("p.mm-gloss", gl) : null,
+      h("div.mm-stats",
+        stat("Hit chance", pct(r.hitRate), `Steam ${pct(t.baseHitRate)}`, `${num(r.hits)} of ${num(r.hitGames)} recent games were in the top 10% of their fortnight; pulled toward Steam's rate for fairness.`),
+        stat("Typical game", fmtK(r.medianReviews), `reviews · Steam ${fmtK(t.baseMedianReviews)}`, "Median reviews of its recent games: what an ordinary one gets."),
+        stat("Top 10%", fmtK(r.topReviews), "reviews", "What a game in its best 10% gets."),
+        stat(`New in ${win} days`, [fmtK(r.releases), arrow(r)], `${fmtK(r.releasesYearAgo)} a year ago`, `How crowded: games released with this tag in the last ${win} days. Arrow: ${growthWords(r.supply)}.`)),
+      h("div.mm-card-foot", h("p.mm-why", r.why), confPill(r.conf, r.sure)));
+  };
   return h("div",
     section("Niches where games often become hits",
-      `A hit is a game in the top 10% by reviews among the games released the same fortnight; on Steam as a whole, ${oneIn(t.baseHitRate)} new games become one. A niche is a user tag among a game's five strongest. Hit chances are pulled toward Steam's average when a tag has few games (as if it also had ${t.priorGames || PRIOR} ordinary games), so a lucky handful can't top the list. How sure: "solid" = 100+ games, "likely" = 40+, "thin data" = fewer; ± is a rough 90% range.`,
+      `A hit is a game in the top 10% by reviews among the games released the same fortnight (on Steam, ${oneIn(t.baseHitRate)}). Hit chances are pulled toward Steam's when a tag has few games, so a lucky handful can't top the list.`,
       h("div.mm-controls",
         toggle("Small-team niches only", st.small, () => { st.small = !st.small; save("small", st.small); }),
         st.small ? h("span.mm-small.mm-inline-note", { title: [...HUGE, ...BIG].join(", ") }, "leaves out big-build tags like MMO, open world, multiplayer") : null),
       scatterCard(all, t.baseHitRate),
+      h("p.mm-explain", h("b", "Opportunity score. "), SCORE_TEXT),
       h("div.mm-controls",
-        seg([["odds", "Best hit chance"], ["typical", "Most reviews for a typical game"], ["growing", "Good odds, growing fastest"], ["quiet", "Good odds, least crowded"]], st.sort, (v) => { st.sort = v; st.shown = 6; save("sort", v); }, "Sort niches"),
-        h("input.mm-input", { type: "search", "data-key": "niche-q", value: st.q, placeholder: "Find a tag to compare", "aria-label": "Find a tag", oninput: (e) => { st.q = e.target.value; redrawKeeping(e); } })),
+        seg([["best", "Best overall"], ["quiet", "Least crowded"]], st.sort, (v) => { st.sort = v; st.shown = 6; save("sort", v); }, "Sort niches"),
+        h("input.mm-input", { type: "search", "data-key": "niche-q", value: st.q, placeholder: "Find a tag to compare", "aria-label": "Find a tag", oninput: (e) => { st.q = e.target.value; redrawKeeping(e); } }),
+        st.sort === "quiet" ? h("span.mm-small.mm-inline-note", `fewest new games first, among tags with at least ${times(1.5)} Steam's hit chance`) : null),
       rows.length ? h("div.mm-cards", ...rows.slice(0, q ? Math.max(12, st.shown) : st.shown).map(card)) : h("p.mm-note", "No tag matches."),
       q ? null : more(st.shown, rows.length, () => { st.shown += 6; }),
       compareTable(all, t)),
@@ -637,7 +798,10 @@ function scatterCard(rows, base) {
     const b = [left, cy - 11, left + w, cy + 2];
     if (r !== sel && placed.some((p) => b[0] < p[2] && b[2] > p[0] && b[1] < p[3] && b[3] > p[1])) continue;
     placed.push(b);
-    text({ x: left, y: cy, class: `mm-dl${r === sel ? " mm-dl-sel" : ""}` }, r.name);
+    const label = text({ x: left, y: cy, class: `mm-dl${r === sel ? " mm-dl-sel" : ""}` }, r.name);
+    label.__row = r;
+    const gl = glossary(r.name);
+    if (gl) { const tt = svgEl("title"); tt.textContent = `${r.name}: ${gl}`; label.append(tt); label.classList.add("mm-dl-gloss"); }
   }
   const box = h("div.mm-chart",
     h("div.mm-legend",
@@ -649,11 +813,12 @@ function scatterCard(rows, base) {
     svg,
     h("p.mm-small.mm-tight", `Each dot is a tag (${rows.length} shown). Click one to jump to its card below.`));
   const tip = tipFor(box);
-  const find = (ev) => ev.target.closest?.(".mm-dot")?.__row;
+  const find = (ev) => ev.target.closest?.(".mm-dot")?.__row || ev.target.closest?.(".mm-dl")?.__row;
   svg.addEventListener("pointermove", (ev) => {
     const r = find(ev);
     if (!r) return tip.hide();
-    tip.show([h("div.mm-tip-t", r.name),
+    const gl = glossary(r.name);
+    tip.show([h("div.mm-tip-t", r.name), gl ? h("div.mm-tip-raw", gl) : null, h("div", "Opportunity score ", h("b", String(r.score)), "/100"),
       h("div", h("b", pct(r.hitRate)), ` become hits (${times(r.lift)} Steam's)`),
       h("div", `${fmtK(r.releases)} released in 90 days · ${growthWords(r.supply)}`),
       h("div", `Typical game ${fmtK(r.medianReviews)} reviews, top 10% ${fmtK(r.topReviews)}`),
@@ -669,8 +834,8 @@ function compareTable(rows, t) {
   const h = C.h;
   return fold("compare", `Compare all ${rows.length} niches in one table`,
     h("div.mm-scroll", h("table.mm-table",
-      h("thead", h("tr", ...["Niche", "Hit chance", "How sure", "Games counted", "Typical game", "Top 10%", `New (${t.supplyWindow} days)`, "Vs Steam"].map((x) => h("th", x)))),
-      h("tbody", ...rows.map((r) => h("tr", h("td", r.name), h("td", `${pct(r.hitRate)} (${oneIn(r.hitRate)})`), h("td", r.sure), h("td", num(r.hitGames)),
+      h("thead", h("tr", ...["Niche", "Score", "Hit chance", "How sure", "Games counted", "Typical game", "Top 10%", `New (${t.supplyWindow} days)`, "Vs Steam"].map((x) => h("th", x === "Score" ? { title: SCORE_TEXT } : {}, x)))),
+      h("tbody", ...rows.map((r) => h("tr", { title: glossary(r.name) ? `${r.name}: ${glossary(r.name)}` : null }, h("td", r.name, glossary(r.name) ? h("span.mm-dim", " ⓘ") : null), h("td.mm-num", h("b", String(r.score))), h("td", `${pct(r.hitRate)} (${oneIn(r.hitRate)})`), h("td", r.sure), h("td", num(r.hitGames)),
         h("td", `${num(r.medianReviews)} reviews`), h("td", `${num(r.topReviews)} reviews`), h("td", num(r.releases)), h("td", growthWords(r.supply))))))));
 }
 
@@ -680,58 +845,85 @@ function gapSection() {
   if (!st.files.games) return section(title, null, h("p.mm-note", "Loading three years of releases (a few MB, once)…"));
   const names = tagNames();
   const mustId = st.must ? tagSets(names).byName.get(st.must.trim().toLowerCase()) ?? null : null;
-  const opts = { today: today(), goal: st.goal, target: st.target, small: st.small, must: mustId };
-  const key = `gap:${st.goal}:${st.target}:${st.small}:${mustId}`;
+  const opts = { today: today(), target: st.target, small: st.small, must: mustId };
+  const key = `gap:${st.target}:${st.small}:${mustId}`;
   const res = memo(`${key}:${st.pairs}`, () => gapFinder(gamesList(), names, { ...opts, pairs: st.pairs }));
-  const goalWord = st.goal === "hit" ? "became a hit" : `earned about ${usd(st.target)}`;
-  const rateWord = st.goal === "hit" ? "Hit chance" : "Earn chance";
-  const max = Math.max(0.3, ...res.rows.slice(0, 30).map((r) => r.adj));
-  const card = (r) => h("article.mm-gap",
-    h("div.mm-card-head", h("h3", r.name), confPill(r.conf, r.sure)),
-    h("p.mm-line.mm-strong", `${num(r.wins)} of ${num(r.n)} ${goalWord}: about ${oneIn(r.adj)} allowing for chance, ${times(r.lift)} the average (${oneIn(res.base)}).`),
-    oddsBar(r.adj, res.base, max),
-    h("p.mm-line", `Typical game: ${plural(r.medianReviews, "review")}. ${num(r.recent)} new ones in the last 90 days${r.growth != null ? `, ${growthWords(r.growth)}` : ""}. Biggest: `, link(storeUrl(r.best.appid), r.best.name), ` (${num(r.best.reviews)} reviews).`));
+  const singles = st.pairs ? memo(`${key}:false`, () => gapFinder(gamesList(), names, { ...opts, pairs: false })) : null;
+  const scored = memo(`${key}:${st.pairs}:scored`, () => withGapScores(res, singles));
+  const f = st.gapF;
+  const filtered = filterGaps(scored, f);
+  const sk = st.gapSort, dir = st.gapDir;
+  const val = { name: (r) => r.name }[sk] || ((r) => r[sk] ?? -Infinity);
+  const sorted = [...filtered].sort((a, b) => { const x = val(a), y = val(b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * dir; });
+  const earnWord = `earned about ${usd(st.target)}`;
+  const hitTip = `Hit chance: the share of its games (released 2 weeks to 6 months ago) that reached the top 10% by reviews among games released the same fortnight. Pulled toward the average (${pct(res.baseHit)}) as if it also had ${PRIOR} ordinary games.`;
+  const earnTip = `Earn chance: the share of its paid games (released 2 months to 2 years ago) that ${earnWord}, estimated as reviews × ${SALES_PER_REVIEW} sales a review × price × ${NET_SHARE} (kept after Steam's cut, VAT and refunds). Pulled toward the average (${pct(res.baseEarn)}).`;
+  const onSort = (k) => {
+    if (st.gapSort === k) st.gapDir = -st.gapDir; else { st.gapSort = k; st.gapDir = k === "name" || k === "recent" ? 1 : -1; }
+    save("gapSort", st.gapSort); save("gapDir", String(st.gapDir)); draw();
+  };
   let list;
   if (st.gapView === "table") {
-    const singles = st.pairs ? memo(`${key}:false`, () => gapFinder(gamesList(), names, { ...opts, pairs: false })) : null;
-    const scored = memo(`${key}:${st.pairs}:scored`, () => withGapScores(res, singles));
-    const sk = st.gapSort, dir = st.gapDir;
-    const val = { name: (r) => r.name, conf: (r) => r.n }[sk] || ((r) => r[sk] ?? -Infinity);
-    const sorted = [...scored].sort((a, b) => { const x = val(a), y = val(b); return (typeof x === "string" ? x.localeCompare(y) : x - y) * dir; });
-    const mxr = Math.max(...sorted.map((r) => r.adj), 0.01), mxc = Math.log1p(Math.max(...sorted.map((r) => r.recent), 1));
+    const mxh = Math.max(...sorted.map((r) => r.hit), 0.01), mxe = Math.max(...sorted.map((r) => r.earn), 0.01), mxc = Math.log1p(Math.max(...sorted.map((r) => r.recent), 1));
     const cols = [
       { key: "name", label: st.pairs ? "Pair of tags" : "Tag", tip: "Tags among a game's 5 strongest (Indie, adult and how-it's-sold tags left out)." },
-      { key: "adj", label: rateWord, num: true, tip: `Share of its games that ${goalWord}, with ${PRIOR} average games mixed in so small niches are pulled toward the average (${pct(res.base)}).` },
-      st.pairs ? { key: "bonus", label: "vs its tags", num: true, tip: "The pair's chance against the better of its two tags alone. Above ×1: the combination does better than either part." } : null,
-      { key: "n", label: "Games judged", num: true, tip: "Games the chance is based on. Fewer games = the number leans more on the average." },
-      { key: "conf", label: "How sure", tip: "Solid: 100+ games; likely: 40+; thin data: fewer. ± is a rough 90% range." },
+      { key: "hit", label: "Hit chance", num: true, tip: hitTip },
+      { key: "earn", label: "Earn chance", num: true, tip: earnTip },
+      st.pairs ? { key: "bonus", label: "vs its tags", num: true, tip: "The pair against the better of its two tags alone (both chances averaged). Above ×1: the combination does better than either part." } : null,
+      { key: "n", label: "Games", num: true, tip: "Games behind the numbers (in either pool). Fewer games = the chances lean more on the average." },
+      { key: null, label: "How sure", tip: "By the smaller of the two pools: solid 100+ games, likely 40+, thin data fewer. ± is a rough 90% range for the hit chance." },
       { key: "medianReviews", label: "Typical game", num: true, tip: "Median reviews of its games." },
       { key: "recent", label: "Crowding", num: true, tip: "Games released with it in the last 90 days." },
-      { key: "gap", label: "Gap score", num: true, tip: "Chance vs the average, divided by crowding (log): high = often wins and few made." },
+      { key: "gap", label: "Gap score", num: true, tip: "Both chances against their averages (averaged), divided by crowding (log): high = often does well and few are made." },
     ].filter(Boolean);
-    const body = sorted.slice(0, st.gapShown * 3).map((r) => h("tr",
-      h("td", h("b", r.name)), barCell(r.adj / mxr, pct(r.adj), r.lift >= 1.5 ? "var(--sw-3)" : "var(--sw-1)"),
-      st.pairs ? h("td.mm-num", { class: r.bonus >= 1.1 ? "mm-up" : r.bonus < 0.9 ? "mm-down" : null }, times(r.bonus)) : null,
-      h("td.mm-num", num(r.n), h("span.mm-dim", ` (${r.wins})`)), h("td", r.sure),
-      h("td.mm-num", fmtK(r.medianReviews)), barCell(Math.log1p(r.recent) / mxc, fmtK(r.recent), "var(--fb-muted)"), h("td.mm-num", h("b", r.gap.toFixed(2)))));
-    list = h("div", sortTable(cols, body, { key: sk, dir }, (k) => { if (st.gapSort === k) st.gapDir = -st.gapDir; else { st.gapSort = k; st.gapDir = k === "name" ? 1 : -1; } draw(); }),
-      more(st.gapShown * 3, sorted.length, () => { st.gapShown += 8; }));
+    const body = sorted.slice(0, st.gapShown * 3).map((r) => {
+      const gl = r.k.split("+").map((id) => names[id]).filter((n) => glossary(n)).map((n) => `${n.trim()}: ${glossary(n)}`).join("\n");
+      return h("tr", { title: gl || null },
+        h("td", h("b", r.name), gl ? h("span.mm-dim", " ⓘ") : null),
+        barCell(r.hit / mxh, pct(r.hit), r.hitLift >= 1.5 ? "var(--sw-3)" : "var(--sw-1)"),
+        barCell(r.earn / mxe, pct(r.earn), r.earnLift >= 1.5 ? "var(--sw-3)" : "var(--sw-1)"),
+        st.pairs ? h("td.mm-num", { class: r.bonus >= 1.1 ? "mm-up" : r.bonus < 0.9 ? "mm-down" : null }, times(r.bonus)) : null,
+        h("td.mm-num", { title: `${num(r.wH)} of ${num(r.nH)} became hits; ${num(r.wE)} of ${num(r.nE)} paid games ${earnWord}` }, num(r.n)), h("td", r.sure),
+        h("td.mm-num", fmtK(r.medianReviews)), barCell(Math.log1p(r.recent) / mxc, fmtK(r.recent), "var(--fb-muted)"), h("td.mm-num", h("b", r.gap.toFixed(2))));
+    });
+    list = h("div", sortTable(cols, body, { key: sk, dir }, onSort), more(st.gapShown * 3, sorted.length, () => { st.gapShown += 8; }));
   } else {
-    list = h("div", res.rows.length ? h("div.mm-gaps", ...res.rows.slice(0, st.gapShown).map(card)) : null, more(st.gapShown, res.rows.length, () => { st.gapShown += 8; }));
+    const max = Math.max(0.3, ...sorted.slice(0, 30).map((r) => r.hit));
+    const card = (r) => h("article.mm-gap",
+      h("div.mm-card-head", h("h3", r.name), confPill(r.conf, r.sure)),
+      h("p.mm-line.mm-strong", `Hit chance ${pct(r.hit)} (${num(r.wH)} of ${num(r.nH)}; average ${pct(res.baseHit)}). Earn chance ${pct(r.earn)} (${num(r.wE)} of ${num(r.nE)} paid games ${earnWord}; average ${pct(res.baseEarn)}).`),
+      oddsBar(r.hit, res.baseHit, max),
+      h("p.mm-line", `Gap score ${r.gap.toFixed(2)}. Typical game: ${plural(r.medianReviews, "review")}. ${num(r.recent)} new ones in the last 90 days${r.growth != null ? `, ${growthWords(r.growth)}` : ""}. Biggest: `, link(storeUrl(r.best.appid), r.best.name), ` (${num(r.best.reviews)} reviews).`));
+    list = h("div", sorted.length ? h("div.mm-gaps", ...sorted.slice(0, st.gapShown).map(card)) : null, more(st.gapShown, sorted.length, () => { st.gapShown += 8; }));
   }
+  // The minimum filters: blank = no limit. Saved in the store.
+  const fin = (k, label, unit, tip, step = 1) => h("label.mm-field.mm-filter", { title: tip },
+    h("span", label), h("input.mm-input.mm-filter-in", { type: "number", min: 0, step, value: f[k] ?? "", placeholder: "any", "data-key": `gapf-${k}`, "aria-label": label,
+      onchange: (e) => { const v = e.target.value.trim() === "" ? null : Number(e.target.value); st.gapF[k] = Number.isFinite(v) ? v : null; st.gapShown = 8; save("gapF", st.gapF); redrawKeeping(e); } }),
+    unit ? h("span.mm-dim", unit) : null);
+  const anyFilter = Object.values(f).some((v) => v != null);
   return section(title,
-    `Combinations of a game's strongest tags, with how often games like that ${st.goal === "hit" ? "became hits (released 2 weeks to 6 months ago)" : `earned the goal (paid games released 2 months to 2 years ago; earned = reviews × ${SALES_PER_REVIEW} sales a review × price × ${NET_SHARE} kept after Steam's cut, VAT and refunds)`}. A pair needs ${MIN_PAIR}+ games to show, and every rate is pulled toward the average as if it also had ${PRIOR} ordinary games, so "dwarves + fishing" with 3 lucky games isn't called a gap.`,
+    `Combinations of a game's strongest tags, with two chances side by side. A pair needs ${MIN_PAIR}+ games to show, and every chance is pulled toward the average as if it also had ${PRIOR} ordinary games, so "dwarves + fishing" with 3 lucky games isn't called a gap.`,
+    h("p.mm-explain", h("b", "Hit chance"), ` = how often its games land in the top 10% by reviews of their release fortnight (popularity, games out 2 weeks to 6 months). `,
+      h("b", "Earn chance"), ` = how often its paid games ${earnWord} (money, games out 2 months to 2 years; reviews × ${SALES_PER_REVIEW} × price × ${NET_SHARE}). A cheap game can be a hit and earn little; a pricey niche game can earn well without being a hit.`),
     h("div.mm-controls",
-      seg([["hit", "Goal: become a hit"], ["money", "Goal: earn"]], st.goal, (v) => { st.goal = v; st.gapShown = 8; save("goal", v); }, "Goal"),
-      st.goal === "money" ? h("label.mm-field", h("span", "at least $"), h("input.mm-input.mm-num-in", { type: "number", min: 1000, step: 5000, value: st.target, "data-key": "gap-target", "aria-label": "Target revenue in dollars",
-        onchange: (e) => { const v = Number(e.target.value); if (v > 0) { st.target = v; save("target", String(v)); redrawKeeping(e); } } })) : null,
+      h("label.mm-field", h("span", "Earn target $"), h("input.mm-input.mm-num-in", { type: "number", min: 1000, step: 5000, value: st.target, "data-key": "gap-target", "aria-label": "Target revenue in dollars",
+        onchange: (e) => { const v = Number(e.target.value); if (v > 0) { st.target = v; save("target", String(v)); redrawKeeping(e); } } })),
       seg([[true, "Tag pairs"], [false, "Single tags"]], st.pairs, (v) => { st.pairs = v; st.gapShown = 8; save("pairs", v); }, "Niche size"),
       h("input.mm-input", { list: "mm-tags", "data-key": "gap-must", value: st.must, placeholder: "Must include a tag…", "aria-label": "Must include a tag",
         onchange: (e) => { st.must = e.target.value; st.gapShown = 8; redrawKeeping(e); } }),
       h("datalist", { id: "mm-tags" }, ...Object.values(names).sort().map((n) => h("option", { value: n.trim() }))),
-      seg([["cards", "Cards"], ["table", "Table"]], st.gapView, (v) => { st.gapView = v; save("gapView", v); }, "Show as")),
-    h("p.mm-small", `${num(res.pool)} comparable games${mustId != null ? ` with ${names[mustId]}` : ""}; ${num(res.wins)} of them ${goalWord} (${pct(res.base, 1)}). ${num(res.rows.length)} niches have enough games to judge.`),
-    res.rows.length ? list : h("p.mm-note", "Not enough games for these settings: take a tag away, switch to single tags or lower the goal."));
+      seg([["table", "Table"], ["cards", "Cards"]], st.gapView, (v) => { st.gapView = v; save("gapView2", v); }, "Show as")),
+    h("div.mm-controls.mm-filters",
+      h("span.mm-filters-t", "Only show:"),
+      fin("minHit", "Hit chance ≥", "%", "Keep niches whose hit chance is at least this many percent."),
+      fin("minEarn", "Earn chance ≥", "%", "Keep niches whose earn chance is at least this many percent."),
+      fin("minGames", "Games ≥", null, "Keep niches with at least this many games behind them."),
+      fin("maxCrowd", "Crowding ≤", null, "Keep niches with at most this many games released in the last 90 days."),
+      fin("minGap", "Gap score ≥", null, "Keep niches with at least this gap score.", 0.1),
+      anyFilter ? btn("Clear", () => { st.gapF = { ...NO_FILTERS }; save("gapF", st.gapF); draw(); }) : null),
+    h("p.mm-small", `Averages: ${pct(res.baseHit, 1)} of ${num(res.poolHit)} recent games became hits; ${pct(res.baseEarn, 1)} of ${num(res.poolEarn)} paid games ${earnWord}${mustId != null ? ` (games with ${names[mustId]})` : ""}. ${num(filtered.length)} of ${num(scored.length)} niches pass the filters. Click a column to sort.`),
+    sorted.length ? list : h("p.mm-note", scored.length ? "No niche passes these filters: loosen one." : "Not enough games for these settings: take a tag away, switch to single tags or lower the target."));
 }
 
 // --- 3. How is Steam doing? ------------------------------------------------------------
@@ -746,11 +938,17 @@ function steamView() {
       series: [
         { name: "Games released", color: "var(--sw-1)", values: s.relIdx, raw: s.rel, rawFmt: (v) => `${num(v)} games`, pace: s.partial },
         { name: "Steam's peak players", color: "var(--sw-3)", values: s.usersIdx, raw: s.users, rawFmt: (v) => `${short(v)} players` },
-      ],
-      note: s.partial ? `${s.years.at(-1)} is still going: its games line is dashed, this year's pace for a whole year (${num(s.sofar)} out so far).` : null,
+        s.q ? { name: `Games with ${s.qMin}+ reviews`, color: "var(--sw-2)", values: s.qIdx, raw: s.q, rawFmt: (v) => `${num(v)} games`, pace: s.partial } : null,
+      ].filter(Boolean),
+      note: [
+        s.partial ? `${s.years.at(-1)} is still going: its games lines are dashed, this year's pace for a whole year (${num(s.sofar)} out so far${s.q ? `, ${num(s.qSofar)} with ${s.qMin}+ reviews` : ""}).` : null,
+        s.q ? `"Games with ${s.qMin}+ reviews" counts the real competition, not every low-effort release. Recent games have had less time to collect reviews, so the last year or two undercount.` : null,
+      ].filter(Boolean).join(" ") || null,
     });
     out.push(section("More games, or more players?", null,
       h("p.mm-big", s.sentence),
+      s.q || st.files.growth?.total?.q ? h("div.mm-controls", h("span.mm-small.mm-inline-note", "Third line: games with at least"),
+        seg(REVIEW_STEPS.map((v) => [v, `${v} reviews`]), st.qMin, (v) => { st.qMin = v; save("qMin", String(v)); }, "Reviews needed")) : null,
       chartCard(chart),
       fold("sources", "Where the player numbers come from",
         h("p.mm-line", "Steam's all-time record of users online at once as of each year's end, as Valve reported it at the time (quoted in the press). From November 2026 the server keeps each day's peak from Steam's own stats feed."),
@@ -919,8 +1117,11 @@ const CSS = `
 .mkv-merged .mm-today-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .mkv-merged .mm-today-head .mm-sub { margin: 0; }
 .mkv-merged .mm-today-list { list-style: none; margin: 0; padding: 0; }
-.mkv-merged .mm-today-list li { display: grid; grid-template-columns: 82px 1fr; gap: 10px; padding: 7px 0; border-top: 1px solid var(--fb-line); line-height: 1.45; }
-.mkv-merged .mm-today-list li:first-child { border-top: 0; }
+.mkv-merged .mm-today-list > li { display: grid; grid-template-columns: 82px 1fr; gap: 10px; padding: 7px 0; border-top: 1px solid var(--fb-line); line-height: 1.45; }
+.mkv-merged .mm-today-list > li:first-child { border-top: 0; }
+.mkv-merged .mm-today-sub { margin: 3px 0 2px; padding-left: 20px; font-size: 0.93rem; }
+.mkv-merged .mm-today-sub li { padding: 1px 0; }
+.mkv-merged .mm-today-sub a { margin-left: 0; white-space: normal; font-weight: 600; }
 .mkv-merged .mm-kind { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--fb-muted); padding-top: 3px; }
 .mkv-merged .mm-kind.k-niche { color: var(--sw-1); }
 .mkv-merged .mm-kind.k-lead { color: var(--fb-good-text); }
@@ -964,6 +1165,26 @@ const CSS = `
 .mkv-merged .mm-conf.is-solid { color: var(--fb-good-text); }
 .mkv-merged .mm-conf.is-likely { color: var(--fb-ink-2); }
 .mkv-merged .mm-conf.is-thin { color: var(--fb-warning); }
+.mkv-merged .mm-score { display: inline-flex; align-items: baseline; gap: 1px; padding: 1px 9px; border-radius: 999px; background: var(--fb-card-2); color: var(--fb-ink-2); cursor: help; white-space: nowrap; }
+.mkv-merged .mm-score b { font-size: 1.15rem; line-height: 1.2; color: var(--fb-title); }
+.mkv-merged .mm-score small { font-size: 0.72rem; color: var(--fb-muted); }
+.mkv-merged .mm-score.is-hi { background: var(--fb-accent); }
+.mkv-merged .mm-score.is-hi b, .mkv-merged .mm-score.is-hi small { color: var(--fb-card); }
+.mkv-merged .mm-score.is-mid { box-shadow: inset 0 0 0 1.5px var(--fb-accent); }
+.mkv-merged .mm-gloss { color: var(--fb-muted); font-size: 0.84rem; font-style: italic; margin-top: 2px; line-height: 1.35; }
+.mkv-merged .mm-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin: 10px 0 8px; }
+.mkv-merged .mm-stat { display: flex; flex-direction: column; min-width: 0; padding: 6px 8px; border-radius: 9px; background: var(--fb-card-2); cursor: help; }
+.mkv-merged .mm-stat-l { font-size: 0.72rem; font-weight: 650; letter-spacing: 0.03em; text-transform: uppercase; color: var(--fb-muted); line-height: 1.25; }
+.mkv-merged .mm-stat-v { font-size: 1.35rem; font-weight: 750; color: var(--fb-title); line-height: 1.25; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.mkv-merged .mm-stat-s { font-size: 0.76rem; color: var(--fb-muted); line-height: 1.25; }
+.mkv-merged .mm-card-foot { display: flex; align-items: center; gap: 8px; justify-content: space-between; flex-wrap: wrap; }
+.mkv-merged .mm-why { color: var(--fb-ink-2); font-size: 0.9rem; flex: 1 1 200px; }
+.mkv-merged .mm-explain { color: var(--fb-ink-2); font-size: 0.9rem; max-width: 86ch; margin: 6px 0; padding: 7px 10px; border-left: 3px solid var(--fb-accent); background: var(--fb-card); border-radius: 0 8px 8px 0; }
+.mkv-merged .mm-explain b { color: var(--fb-title); }
+.mkv-merged .mm-filters { background: var(--fb-card); border: 1px solid var(--fb-line); border-radius: 10px; padding: 6px 10px; }
+.mkv-merged .mm-filters-t { font-size: 0.85rem; font-weight: 650; color: var(--fb-ink-2); }
+.mkv-merged .mm-filter { font-size: 0.85rem; gap: 4px; }
+.mkv-merged .mm-filter-in { width: 72px; padding: 3px 6px; }
 .mkv-merged .mm-oddsrow { display: grid; gap: 3px; margin: 4px 0; }
 .mkv-merged .mm-bar { position: relative; height: 8px; border-radius: 4px; background: var(--fb-card-2); }
 .mkv-merged .mm-bar > i { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 4px; background: var(--sw-1); }
@@ -1012,7 +1233,8 @@ const CSS = `
 .mkv-merged .mm-axis { fill: var(--fb-muted); font-size: 12px; }
 .mkv-merged .mm-axis-title { fill: var(--fb-ink-2); font-weight: 600; }
 .mkv-merged .mm-quad { fill: var(--fb-ink-2); font-size: 12px; font-weight: 700; }
-.mkv-merged .mm-dl { fill: var(--fb-ink); font-size: 11.5px; font-weight: 600; paint-order: stroke; stroke: var(--fb-card); stroke-width: 3px; stroke-linejoin: round; pointer-events: none; }
+.mkv-merged .mm-dl { fill: var(--fb-ink); font-size: 11.5px; font-weight: 600; paint-order: stroke; stroke: var(--fb-card); stroke-width: 3px; stroke-linejoin: round; cursor: pointer; }
+.mkv-merged .mm-dl-gloss { text-decoration: underline dotted; text-underline-offset: 2px; cursor: help; }
 .mkv-merged .mm-dl-sel { fill: var(--fb-title); font-size: 13px; }
 .mkv-merged .mm-dot { cursor: pointer; outline: none; }
 .mkv-merged .mm-dot:hover circle:first-child, .mkv-merged .mm-dot:focus circle:first-child { fill-opacity: 1; stroke: var(--fb-ink); }
@@ -1032,9 +1254,11 @@ const CSS = `
   .mkv-merged .mm-tabs { grid-template-columns: 1fr; gap: 6px; }
   .mkv-merged .mm-tab { padding: 8px 12px; }
   .mkv-merged .mm-today { padding: 10px 12px 4px; }
-  .mkv-merged .mm-today-list li { grid-template-columns: 1fr; gap: 0; }
+  .mkv-merged .mm-today-list > li { grid-template-columns: 1fr; gap: 0; }
   .mkv-merged .mm-card, .mkv-merged .mm-gap { padding: 10px 12px; }
   .mkv-merged .mm-input { width: 100%; }
+  .mkv-merged .mm-filter-in { width: 72px; }
+  .mkv-merged .mm-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .mkv-merged .mm-chart { padding: 8px 6px 6px; }
   .mkv-merged .mm-alert { grid-template-columns: minmax(0, 1fr); gap: 2px; }
   .mkv-merged .mm-axis, .mkv-merged .mm-quad { font-size: 15px; }
@@ -1050,4 +1274,4 @@ function injectStyle() {
   document.head.append(el);
 }
 
-export const _test = { oneIn, confidence, spread, sureLabel, isJoke, rankNiches, unpackGames, gapFinder, withGapScores, unpackUpcoming, upcomingLeads, releasedLeads, steamGrowth, releasesList, rankAlerts, todayItems, releaseText };
+export const _test = { opportunityScores, filterGaps, glossary, oneIn, confidence, spread, sureLabel, isJoke, rankNiches, unpackGames, gapFinder, withGapScores, unpackUpcoming, upcomingLeads, releasedLeads, steamGrowth, releasesList, rankAlerts, todayItems, releaseText };

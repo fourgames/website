@@ -1,23 +1,23 @@
 # The key bot
 
-Hands out Steam keys in the Four Games Discord, in place of the third-party KeyBot. It runs on the
-server as `keybot.service`: one Python process with the Discord bot and a small web server for
-creator verification on `localhost:8100`, behind Caddy at `https://api.fourgames.se/keybot/`.
+Hands out Steam keys in the Four Games Discord. It runs on the server as `keybot.service`: one
+Python process with the Discord bot and a small web server for creator verification on
+`localhost:8100`, behind Caddy at `https://api.fourgames.se/keybot/`.
 
 There are three commands: `/claim` and `/request` for everyone, `/keys …` for the team.
 
 | Who | Command | What happens |
 | --- | --- | --- |
 | YouTube members (the **YouTube Member** role from Discord's YouTube integration, or a game's own roles) | `/claim game:` | The key shows up in the reply, which only they can see, with a Steam link that fills it in (`store.steampowered.com/account/registerkey?key=…`). A copy goes by DM as a receipt; if their DMs are closed they still get the key, and the reply says so. One key per game per person by default, for good: lapsing and rejoining doesn't give another. Non-members get a link to [join](https://www.youtube.com/@FourGamesAB/join). |
-| Everyone | `/claim` (no game) | Only to them: the public games with keys left (keys per person, keys left, which roles can claim them), then their own keys with a Steam link each and the games they claimed with the old KeyBot. Pages of 10 lines, and a menu of the games they can claim right now. |
+| Everyone | `/claim` (no game) | Only to them: the public games with keys left (keys per person, keys left, which roles can claim them), then their own keys with a Steam link each. Pages of 10 lines, and a menu of the games they can claim right now. |
 | Content creators | `/request game: type:creator` | A one-time **Verify your channel** link (15 minutes). They sign in with Discord, which shows us their *verified* YouTube and Twitch connections. A YouTube channel with 1,000+ subscribers and an upload in the last 60 days, or a Twitch channel with 500+ followers, gets the key by DM at once; anything else goes to the admin channel. |
 | Press | `/request game: type:press` | Opens a short form (outlet and work email, both required), then goes to the admin channel. The email isn't checked yet; once the company mail exists, the bot could send a confirmation link first. |
-| The team (Manage Server, or the `ADMIN_ROLE_ID` role) | `/keys status [game:] [count:]` | Per game: keys left, given out by reason (member, creator, press, manual), old KeyBot claims, open requests, settings and Steam app id; then the latest handouts (10 by default, up to 25 with `count:`): who, which game, why, and the key's id (never the key). With `game:`, only that game. |
+| The team (Manage Server, or the `ADMIN_ROLE_ID` role) | `/keys status [game:] [count:]` | Per game: keys left, given out by reason (member, creator, press, manual), open requests, settings and Steam app id; then the latest handouts (10 by default, up to 25 with `count:`): who, which game, why, and the key's id (never the key). With `game:`, only that game. |
 | | `/keys add file: game:` / `/keys add file: name: [steam_app_id:]` | Adds keys from a .txt (one per line) or .csv (finds the key column itself, e.g. a Steamworks download) to a game the bot has (`game:`), or adds a new game with them (`name:`, and its Steam app id if you have it). Skips keys it already has and says how many it added. |
 | | `/keys grant game: user:` | One key to that person by DM (also from private games). Keeps to the game's per-person limit and refuses banned people. If their DMs are closed, no key is used and you're told. |
 | | `/keys grant game: role:` | One key by DM to everyone with the role, after a confirmation that shows how many people have it, how many can get one and how many keys are left. Skips the banned and those at the limit, and says how many got one. Give `user:` or `role:`, not both. `role:` is refused unless `GRANTROLE_ENABLED=1` (see below). |
 | | `/keys game game: [public:] [per_user_limit:] [add_role:] [remove_role:] [clear_roles:] [steam_app_id:] [export:]` | Shows a game's settings, or changes them (see below). `export:True` also sends that game's unclaimed keys as a .txt, one per line, only to you; the keys stay in the bot. |
-| | `/keys find user:` / `key:` | Every key someone got (ids, games, and the keys themselves, only to you), their old KeyBot claims and bans; or who has a key (by the key or `#id`). |
+| | `/keys find user:` / `key:` | Every key someone got (ids, games, and the keys themselves, only to you) and their bans; or who has a key (by the key or `#id`). |
 | | `/keys ban action:ban user: [game:]` / `action:unban user: [game:]` | Stops (or lets again) someone getting keys for one game, or every game without `game:`: no `/claim`, `/request`, `/keys grant` or approval. Keys they already have stay theirs. |
 | | `/keys ban action:list [game:]` | Every ban, or the ones that apply to a game (its own and the every-game ones). |
 
@@ -38,8 +38,7 @@ Steam app id, which `steam_app_id:` sets):
 - **Public / private** (`public:`, default public). Private games aren't in `/claim`; the team hands them
   out with `/keys grant` (to a user or a role) or by approving a request. `/keys status` lists them.
 - **Keys per person** (`per_user_limit:`, 0 to 300, default 1; 0 means no limit). It counts every key of
-  that game the person has, whatever the reason, plus claims recorded from the old KeyBot. Lowering it
-  doesn't take keys back.
+  that game the person has, whatever the reason. Lowering it doesn't take keys back.
 - **Roles that can claim it** (`add_role:`, `remove_role:`, `clear_roles:`). Any one of the roles is
   enough. With none set, the `MEMBER_ROLE` setting decides, as before.
 
@@ -60,11 +59,11 @@ The admin channel also hears when a game drops below 5 keys (`LOW_STOCK`), when 
 all the keys imported for it, and when it runs out: each once, until the game gets more keys.
 
 Everything is in one SQLite file, `/srv/fourgames/keybot/keys.db`: games, keys (with who got each,
-when and why), requests, verify links, bans and the claims recorded from the old KeyBot. A handout
-is one write transaction that checks bans and the per-person limit and takes the key under the same
-lock, so two claims at the same moment can't get the same key or go over the limit. The logs show
-key ids, never keys. A database from an older version is updated in place when the bot starts (new
-settings get their defaults; nothing is lost).
+when and why), requests, verify links and bans. A handout is one write transaction that checks bans
+and the per-person limit and takes the key under the same lock, so two claims at the same moment
+can't get the same key or go over the limit. The logs show key ids, never keys. A database from an
+older version is updated in place when the bot starts (new settings get their defaults; nothing is
+lost).
 
 The code: `bot.py` (commands, buttons, handouts), `web.py` (the verify login), `db.py`,
 `admin.py` (the command line for the server), `lookups.py` (YouTube and Twitch), `eligibility.py`
@@ -154,56 +153,19 @@ On the server, as the bot's user, from the checkout (it uses `DB_PATH`, by defau
 cd /srv/fourgames/own/server
 /srv/fourgames/keybot-venv/bin/python -m keybot.admin list
 /srv/fourgames/keybot-venv/bin/python -m keybot.admin import-keys --game "Game Name" [--steam-app-id 1234560] FILE...
-/srv/fourgames/keybot-venv/bin/python -m keybot.admin mark-claimed --game "Game Name" --user DISCORD_ID [--note TEXT]
 ```
 
 `import-keys` adds the game if it's new, reads .txt or .csv files like `/keys add`, and skips keys
-it has. `mark-claimed` records that someone already got a key of that game elsewhere (the old
-KeyBot), without the key, so it counts towards the per-person limit. Each run records one claim.
+it has.
 
 ## 4. The Active Developer badge
 
 Running one of the bot's slash commands (any, e.g. `/claim` or `/keys status`) makes you, as the
 application's owner, eligible for Discord's **Active Developer** badge. It counts commands of an app
-you own, so the commands of the old KeyBot (someone else's app) never did. Discord can take up to a
-day to notice; then claim it at
+you own. Discord can take up to a day to notice; then claim it at
 [discord.com/developers/active-developer](https://discord.com/developers/active-developer). It asks
 for a Community server you manage, for developer news. The badge stays while the app has had a
 command used in the last 30 days, which the members' claims take care of.
-
-## 5. Switching from the old KeyBot
-
-1. Set this bot up and try `/claim` with a member account and `/request type:creator` with a creator account
-   (yours) before telling anyone. Both bots have a `/claim` until step 6, so use this one's from the
-   command list (it shows the bot's name).
-2. **Export the keys KeyBot still has**: [keybot.hep.gg](https://keybot.hep.gg) → the dashboard → the
-   server → **Keys** → *Export*, once per pool. Each export is a .txt of that pool's unclaimed keys.
-3. **Import them on the server**, one pool at a time, keeping the files private and deleting them after:
-
-   ```bash
-   scp reforge-front.txt fourgames-server:/tmp/   # or however you copy files there
-   ssh fourgames-server
-   cd /srv/fourgames/own/server
-   /srv/fourgames/keybot-venv/bin/python -m keybot.admin import-keys --game "Reforge Front" /tmp/reforge-front.txt
-   shred -u /tmp/reforge-front.txt
-   ```
-
-   Add `--steam-app-id` with the game's app id if the game isn't in the bot yet, so the DMs link
-   its store page. Then set each game like its pool was (`/keys game`: private, keys per person, roles).
-4. **Record who already claimed what** in KeyBot (its dashboard, or `/lookup` there), so they can't
-   claim the same game again here. One line per claim, e.g. the Reforge Front key already claimed:
-
-   ```bash
-   /srv/fourgames/keybot-venv/bin/python -m keybot.admin mark-claimed --game "Reforge Front" --user 364076254812438538 --note "KeyBot"
-   /srv/fourgames/keybot-venv/bin/python -m keybot.admin list   # counts per game, to check
-   ```
-
-5. Tell the server the commands are now `/claim` (with `game:` to get a key, without it to see the
-   games and your keys) and `/request` (`type:creator` or `type:press`), and update any pinned
-   messages or channel topics that mention the old ones.
-6. **Remove KeyBot**, so members don't see two `/claim` commands: *Server Settings → Integrations →
-   KeyBot → Remove Integration* (or kick it from the member list), then delete its leftover role
-   under *Roles*, if any.
 
 ## Day to day
 
@@ -215,4 +177,4 @@ command used in the last 30 days, which the members' claims take care of.
 | New dependency | `uv pip install --python /srv/fourgames/keybot-venv/bin/python -r /srv/fourgames/own/server/keybot/requirements.txt` |
 | Backup | one file; while it runs, copy it safely with `sqlite3 /srv/fourgames/keybot/keys.db ".backup /path/keys-backup.db"` |
 | Tests | `cd server && python -m pytest keybot/tests` (with pytest and the requirements installed; no network) |
-| Keys and claims from the shell | `python -m keybot.admin list` (see *The command line*) |
+| Keys from the shell | `python -m keybot.admin list` (see *The command line*) |

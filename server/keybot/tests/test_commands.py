@@ -107,8 +107,6 @@ def test_claim_without_game_shows_games_and_own_keys(bot):
     store.update_game_settings(secret["id"], public=False)
     store.add_game("Empty")
     given = store.give_key(secret["id"], 1, "manual")
-    old, _ = store.add_game("Old Game")
-    store.record_prior_claim(old["id"], 1)
 
     interaction = fake_interaction(bot, FakeMember(1, [MEMBER]))
     asyncio.run(claim.callback(interaction))
@@ -116,11 +114,10 @@ def test_claim_without_game_shows_games_and_own_keys(bot):
     assert kwargs["ephemeral"] and kwargs["suppress_embeds"]
     # Public games with keys left, with keys per person, stock and roles; not private or empty ones.
     assert "**Hidden Ones** · 1 per person · 3 keys left · for **YouTube Member**" in text
-    assert "**Secret** ·" not in text and "Empty" not in text and "**Old Game** ·" not in text
-    # Their own keys, with the Steam link that fills each in, and the old KeyBot claims.
+    assert "**Secret** ·" not in text and "Empty" not in text
+    # Their own keys, with the Steam link that fills each in.
     assert (f"**Secret**: `{given.value}` · [Redeem on Steam]"
             f"(https://store.steampowered.com/account/registerkey?key={given.value})") in text
-    assert "**Old Game**: claimed with the old KeyBot" in text
     # A menu of what they can claim; one page, so no page buttons.
     view = kwargs["view"]
     assert len(view.children) == 1 and isinstance(view.children[0], ClaimSelect)
@@ -348,14 +345,13 @@ def test_status_shows_games_then_the_latest_handouts(admin):
     other, _ = store.add_game("Other")
     store.add_keys(other["id"], ["OTH00-AAAAA-BBBBB", "OTH00-AAAAA-CCCCC"])
     store.update_game_settings(other["id"], public=False, per_user_limit=0)
-    store.record_prior_claim(game["id"], 7)
     first = store.give_key(game["id"], 8, "member")
     second = store.give_key(other["id"], 9, "manual")
     store.create_request("press", game["id"], 5)
 
     text, _ = ask(admin, "status")
     lines = text.split("\n")
-    assert lines[0] == ("**Hidden Ones**: 2 left · given 1 member, 1 with the old KeyBot · **1 open request** · "
+    assert lines[0] == ("**Hidden Ones**: 2 left · given 1 member · **1 open request** · "
                         "public, 1 per person · Steam app 123")
     assert lines[1].startswith("**Other**: 1 left · given 1 manual · ")
     assert lines[1].endswith("private, no limit per person · no Steam app id")

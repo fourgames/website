@@ -87,8 +87,6 @@ def test_old_database_is_migrated_in_place(tmp_path):
         assert store.give_key(1, 77, "member").status == "given"
         store.ban(88, 1)
         assert store.give_key(1, 88, "press").status == "banned"
-        store.record_prior_claim(1, 99)
-        assert store.at_limit(1, 99) is False  # limit 2 now
     finally:
         store.close()
     # Opening it again changes nothing.
@@ -105,5 +103,35 @@ def test_new_database_needs_no_migration(tmp_path):
     try:
         assert not store._needs_migration()
         assert store.db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
+    finally:
+        store.close()
+
+
+def test_prior_claims_table_is_dropped(tmp_path):
+    """Version 2 had a prior_claims table (claims recorded from a previous bot, without keys) that
+    counted towards the limit. It goes on open, and the keys stay."""
+    path = str(tmp_path / "v2.db")
+    store = Store(path)
+    game, _ = store.add_game("Reforge Front")
+    store.add_keys(game["id"], ["RFG00-AAAAA-BBBBB", "RFG01-AAAAA-BBBBB"])
+    store.give_key(game["id"], 77, "member")
+    store.db.executescript("""
+        CREATE TABLE prior_claims (id INTEGER PRIMARY KEY, game_id INTEGER NOT NULL REFERENCES games(id),
+                                   user_id TEXT NOT NULL, note TEXT, recorded_at TEXT NOT NULL);
+        CREATE INDEX prior_claims_by_user ON prior_claims(game_id, user_id);
+        INSERT INTO prior_claims (game_id, user_id, note, recorded_at) VALUES (1, '364', 'KeyBot', '2026-11-01');
+        PRAGMA user_version = 2;
+    """)
+    store.close()
+    store = Store(path)
+    try:
+        names = {r[0] for r in store.db.execute("SELECT name FROM sqlite_master")}
+        assert "prior_claims" not in names and "prior_claims_by_user" not in names
+        assert store.db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
+        assert not store._needs_migration()
+        assert store.user_key(game["id"], 77)["value"] == "RFG00-AAAAA-BBBBB"
+        # Their recorded claim no longer counts: they can claim it here.
+        assert [g["name"] for g in store.claimable_games(364)] == ["Reforge Front"]
+        assert store.give_key(game["id"], 364, "member").status == "given"
     finally:
         store.close()

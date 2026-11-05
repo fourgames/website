@@ -513,14 +513,12 @@ def pool_line(game: sqlite3.Row, config: Config, guild: discord.Guild | None) ->
 
 
 def own_key_lines(store: Store, user_id: int) -> list[str]:
-    """Their keys with a Steam link that fills each one in, and their old KeyBot claims."""
+    """Their keys with a Steam link that fills each one in."""
     keys = store.user_keys(user_id)
-    prior = store.prior_claims(user_id)
     lines = [f"**{escape_markdown(k['game'])}**: `{k['value']}` · [Redeem on Steam]({redeem_url(k['value'])})"
              for k in keys]
     if keys:
         lines.append("-# Or in Steam: Games → Activate a Product on Steam")
-    lines += [f"**{escape_markdown(p['game'])}**: claimed with the old KeyBot (it sent you that key)" for p in prior]
     return lines or ["You haven't been given any keys yet."]
 
 
@@ -826,10 +824,8 @@ async def decide(interaction: discord.Interaction, request_id: int, approve: boo
                 finished = True
                 if outcome.status == "given":
                     note = f"key #{outcome.key_id}"
-                elif outcome.key_id:
-                    note = f"key #{outcome.key_id} (they were at the limit already)"
                 else:
-                    note = "no new key (they were at the limit already, from the old KeyBot)"
+                    note = f"key #{outcome.key_id} (they were at the limit already)"
                 await mark_card(interaction, f"Approved by {interaction.user.mention}, {note}")
                 await interaction.followup.send(f"Done: {user.mention}, {name}: {note}.", ephemeral=True)
             elif outcome.status == "banned":
@@ -914,10 +910,9 @@ async def optional_game(interaction: discord.Interaction, name: str | None) -> t
 
 
 def status_line(row: sqlite3.Row) -> str:
-    prior = f", {row['prior']} with the old KeyBot" if row["prior"] else ""
     app = f"Steam app {row['steam_app_id']}" if row["steam_app_id"] else "no Steam app id"
     given = ", ".join(f"{row[r]} {r}" for r in ("member", "creator", "press", "manual") if row[r])
-    given = f"given {given}{prior}" if given else f"none given yet{prior}"
+    given = f"given {given}" if given else "none given yet"
     waiting = f" · **{plural(row['open_requests'], 'open request')}**" if row["open_requests"] else ""
     return (f"**{escape_markdown(row['name'])}**: {row['available'] or 0} left · {given}{waiting} · "
             f"{'public' if row['public'] else 'private'}, {limit_text(row['per_user_limit'])} · {app}")
@@ -1285,9 +1280,6 @@ def lookup_user_lines(store: Store, user_id: int) -> list[str]:
         when = discord.utils.format_dt(discord.utils.parse_time(k["given_at"]), "d")
         extra = f", request #{k['request_id']}" if k["request_id"] else ""
         lines.append(f"**{escape_markdown(k['game'])}**: key #{k['id']} `{k['value']}` ({k['reason']}{extra}, {when})")
-    for p in store.prior_claims(user_id):
-        note = f": {escape_markdown(p['note'])}" if p["note"] else ""
-        lines.append(f"**{escape_markdown(p['game'])}**: claimed with the old KeyBot{note}")
     for b in store.user_bans(user_id):
         lines.append(f"Banned from {escape_markdown(b['game']) if b['game'] else 'every game'}")
     return lines

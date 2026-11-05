@@ -277,7 +277,7 @@ def test_request_and_creator_respect_bans_and_limits(bot):
     bot.store.ban(5, game["id"])
     assert asyncio.run(bot.creator_verified(5, game["id"], [big]))[0] == "Not available"
     bot.store.unban(5, game["id"])
-    bot.store.record_prior_claim(game["id"], 5)
+    bot.store.give_key(game["id"], 5, "member")
     assert asyncio.run(bot.creator_verified(5, game["id"], [big]))[0] == "You already have a key"
     bot.store.update_game_settings(game["id"], per_user_limit=2)
     assert asyncio.run(bot.creator_verified(5, game["id"], [big]))[0] == "Verified — check your DMs"
@@ -308,9 +308,9 @@ def test_grant_needs_the_dm_and_respects_limit_and_bans(bot):
 
 def test_grant_to_members_counts(bot):
     from keybot.bot import grantrole_prompt
-    game = stock(bot, keys=3)
+    game = stock(bot, keys=4)
     bot.store.ban(2, game["id"])
-    bot.store.record_prior_claim(game["id"], 3)
+    bot.store.give_key(game["id"], 3, "member")  # at the limit
     members = [FakeMember(1), FakeMember(2), FakeMember(3), FakeMember(4, dms_open=False),
                FakeMember(5), FakeMember(6), FakeMember(7), FakeMember(99, bot=True)]
     prompt = grantrole_prompt([m for m in members if not m.bot], bot.store, game, "<@&700>")
@@ -385,11 +385,10 @@ def test_lookup_and_export_helpers(bot):
     game = stock(bot)
     store = bot.store
     given = store.give_key(game["id"], 9, "press")
-    store.record_prior_claim(game["id"], 9, "KeyBot")
     store.ban(9)
     lines = lookup_user_lines(store, 9)
     assert f"key #{given.key_id} `{given.value}` (press" in lines[0]
-    assert "old KeyBot: KeyBot" in lines[1] and lines[2] == "Banned from every game"
+    assert lines[1:] == ["Banned from every game"]
     assert "given to <@9>" in lookup_key_text(store.key_by_value(given.value))
     assert "not given out yet" in lookup_key_text(store.key_by_value("AAAAA-BBBBB-00001"))
     assert export_filename(game) == "hidden-ones-unclaimed-keys.txt"

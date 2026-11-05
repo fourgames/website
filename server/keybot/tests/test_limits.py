@@ -1,4 +1,4 @@
-"""Per-game settings, bans, prior KeyBot claims, stock warnings and export, at the database level."""
+"""Per-game settings, bans, stock warnings and export, at the database level."""
 
 import threading
 from collections import Counter
@@ -73,26 +73,6 @@ def test_roles_setting_round_trip(store):
     # Leaving a setting out keeps it.
     game = store.update_game_settings(game["id"], public=False)
     assert game["public"] == 0 and game["per_user_limit"] == 1
-
-
-def test_prior_claims_count_towards_the_limit(store):
-    game = make_game(store, per_user_limit=2)
-    user = 364076254812438538
-    assert store.record_prior_claim(game["id"], user, "KeyBot") == 1
-    assert [g["name"] for g in store.claimable_games(user)] == ["Reforge Front"]
-    assert store.give_key(game["id"], user, "member").status == "given"
-    assert store.at_limit(game["id"], user)
-    assert store.claimable_games(user) == []
-    assert store.give_key(game["id"], user, "member").status == "already"
-    assert [p["note"] for p in store.prior_claims(user)] == ["KeyBot"]
-
-
-def test_prior_claim_alone_at_limit_one(store):
-    game = make_game(store)
-    store.record_prior_claim(game["id"], 7)
-    given = store.give_key(game["id"], 7, "member")
-    assert given.status == "already" and given.key_id is None
-    assert store.available_count(game["id"]) == 5
 
 
 def test_private_games_are_not_claimable_but_can_be_given(store):

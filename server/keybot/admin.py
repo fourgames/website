@@ -1,7 +1,6 @@
 """The key bot's command line, for the server (no Discord needed): python -m keybot.admin … (from server/).
 
-  import-keys --game "Name" [--steam-app-id N] FILE...   keys from .txt/.csv files (e.g. KeyBot's export)
-  mark-claimed --game "Name" --user DISCORD_ID [--note TEXT]   a claim made with the old KeyBot
+  import-keys --game "Name" [--steam-app-id N] FILE...   keys from .txt/.csv files (e.g. a Steamworks download)
   list                                                   the games and their counts
 
 The database is DB_PATH from the environment (default /srv/fourgames/keybot/keys.db). It's safe to
@@ -47,22 +46,6 @@ def import_keys(store: Store, game_name: str, steam_app_id: int | None, files: l
     return 0
 
 
-def mark_claimed(store: Store, game_name: str, user: str, note: str | None) -> int:
-    if not user.isdigit():
-        print(f"--user must be a Discord user id (digits), not {user!r}", file=sys.stderr)
-        return 2
-    game = store.game_by_name(game_name)
-    if game is None:
-        print(f"No game named {game_name!r}. Add it first (import-keys, or /keys add name: in Discord).",
-              file=sys.stderr)
-        return 1
-    count = store.record_prior_claim(game["id"], int(user), note)
-    limit = game["per_user_limit"]
-    print(f"Recorded a KeyBot claim of {game['name']!r} for {user}. They have {count} for it now "
-          f"(limit {limit or 'none'}).")
-    return 0
-
-
 def list_games(store: Store) -> int:
     rows = store.status_summary()
     if not rows:
@@ -73,7 +56,7 @@ def list_games(store: Store) -> int:
         game = by_id[r["id"]]
         given = sum((r[reason] or 0) for reason in ("member", "creator", "press", "manual"))
         roles = ",".join(str(i) for i in role_ids(game)) or "member role"
-        print(f"{r['name']}: {r['available'] or 0} available, {given} given, {r['prior']} KeyBot claim(s), "
+        print(f"{r['name']}: {r['available'] or 0} available, {given} given, "
               f"{r['open_requests']} open request(s) | {'public' if r['public'] else 'private'}, "
               f"limit {r['per_user_limit'] or 'none'}, roles {roles}, Steam app {r['steam_app_id'] or '?'}")
     return 0
@@ -88,11 +71,6 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--steam-app-id", type=int, help="its Steam app id")
     p.add_argument("files", nargs="+", metavar="FILE", help=".txt (one key per line) or .csv")
 
-    p = commands.add_parser("mark-claimed", help="record a claim made with the old KeyBot (counts for the limit)")
-    p.add_argument("--game", required=True)
-    p.add_argument("--user", required=True, help="their Discord user id")
-    p.add_argument("--note", help="e.g. where it came from")
-
     commands.add_parser("list", help="the games and their counts")
 
     args = parser.parse_args(argv)
@@ -100,8 +78,6 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.command == "import-keys":
             return import_keys(store, args.game, args.steam_app_id, args.files)
-        if args.command == "mark-claimed":
-            return mark_claimed(store, args.game, args.user, args.note)
         return list_games(store)
     finally:
         store.close()

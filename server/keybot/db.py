@@ -24,8 +24,7 @@ CREATE TABLE IF NOT EXISTS games (
     -- JSON list of Discord role ids (as strings); any one of them lets a person /claim. Empty: the
     -- MEMBER_ROLE setting decides.
     required_role_ids TEXT NOT NULL DEFAULT '[]',
-    -- Keys one person can have of this game, counting every reason and earlier KeyBot claims.
-    -- 0 means no limit.
+    -- Keys one person can have of this game, counting every reason. 0 means no limit.
     per_user_limit    INTEGER NOT NULL DEFAULT 1,
     -- 0: private, only handed out by the team (/keys grant to a user or a role, approved requests).
     public            INTEGER NOT NULL DEFAULT 1,
@@ -69,17 +68,6 @@ CREATE TABLE IF NOT EXISTS requests (
 );
 CREATE INDEX IF NOT EXISTS requests_by_user ON requests(user_id, status);
 
--- Claims made with the old KeyBot, recorded without the key (python -m keybot.admin mark-claimed),
--- so they count towards the per-user limit.
-CREATE TABLE IF NOT EXISTS prior_claims (
-    id          INTEGER PRIMARY KEY,
-    game_id     INTEGER NOT NULL REFERENCES games(id),
-    user_id     TEXT NOT NULL,
-    note        TEXT,
-    recorded_at TEXT NOT NULL
-);
-CREATE INDEX IF NOT EXISTS prior_claims_by_user ON prior_claims(game_id, user_id);
-
 -- Who can't claim, request or be granted keys: for one game, or every game (game_id NULL).
 CREATE TABLE IF NOT EXISTS bans (
     id         INTEGER PRIMARY KEY,
@@ -108,7 +96,7 @@ GAME_COLUMNS = {
     "public": "INTEGER NOT NULL DEFAULT 1",
     "stock_warning": "INTEGER NOT NULL DEFAULT 0",
 }
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 MAX_PER_USER_LIMIT = 300
 
 # Stock warning levels (games.stock_warning).
@@ -176,6 +164,9 @@ class Store:
                     db.execute(f"ALTER TABLE games ADD COLUMN {name} {definition}")
             # One key per game per person was a unique index; it's the per_user_limit now.
             db.execute("DROP INDEX IF EXISTS keys_one_per_user")
+            # Claims recorded from a previous bot, without keys; they don't count any more.
+            db.execute("DROP INDEX IF EXISTS prior_claims_by_user")
+            db.execute("DROP TABLE IF EXISTS prior_claims")
             db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
 
     def _needs_migration(self) -> bool:
@@ -184,6 +175,8 @@ class Store:
             return True
         if self.db.execute("SELECT 1 FROM sqlite_master WHERE type = 'index' AND name = 'keys_one_per_user'"
                            ).fetchone():
+            return True
+        if self.db.execute("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'prior_claims'").fetchone():
             return True
         return self.db.execute("PRAGMA user_version").fetchone()[0] < SCHEMA_VERSION
 
@@ -314,10 +307,9 @@ class Store:
                                  AND (b.game_id IS NULL OR b.game_id = g.id))
                  AND (g.per_user_limit = 0 OR
                       (SELECT COUNT(*) FROM keys mine WHERE mine.game_id = g.id AND mine.given_to = ?)
-                      + (SELECT COUNT(*) FROM prior_claims p WHERE p.game_id = g.id AND p.user_id = ?)
                       < g.per_user_limit)
                GROUP BY g.id ORDER BY g.name""",
-            (user, user, user),
+            (user, user),
         ).fetchall()
 
     def user_key(self, game_id: int, user_id: int) -> sqlite3.Row | None:
@@ -336,7 +328,7 @@ class Store:
         ).fetchall()
 
     def user_count(self, game_id: int, user_id: int) -> int:
-        """Keys of this game they have, plus claims recorded from the old KeyBot."""
+        """Keys of this game they have, whatever the reason."""
         return _user_count(self.db, game_id, str(user_id))
 
     def at_limit(self, game_id: int, user_id: int) -> bool:
@@ -418,8 +410,7 @@ class Store:
                       SUM(k.reason = 'press') AS press,
                       SUM(k.reason = 'manual') AS manual,
                       (SELECT COUNT(*) FROM requests r WHERE r.game_id = g.id
-                          AND r.status IN ('open', 'processing')) AS open_requests,
-                      (SELECT COUNT(*) FROM prior_claims p WHERE p.game_id = g.id) AS prior
+                          AND r.status IN ('open', 'processing')) AS open_requests
                FROM games g LEFT JOIN keys k ON k.game_id = g.id
                GROUP BY g.id ORDER BY g.name"""
         ).fetchall()
@@ -432,23 +423,6 @@ class Store:
                WHERE k.status = 'given' AND (? IS NULL OR k.game_id = ?)
                ORDER BY k.given_at DESC, k.id DESC LIMIT ?""",
             (game_id, game_id, limit),
-        ).fetchall()
-
-    # Claims from the old KeyBot
-
-    def record_prior_claim(self, game_id: int, user_id: int, note: str | None = None) -> int:
-        """Records one claim made with the old KeyBot (no key value). Their count for the game after."""
-        user = str(user_id)
-        with self.transaction() as db:
-            db.execute("INSERT INTO prior_claims (game_id, user_id, note, recorded_at) VALUES (?, ?, ?, ?)",
-                       (game_id, user, note, now_iso()))
-            return _user_count(db, game_id, user)
-
-    def prior_claims(self, user_id: int) -> list[sqlite3.Row]:
-        return self.db.execute(
-            """SELECT p.*, g.name AS game FROM prior_claims p JOIN games g ON g.id = p.game_id
-               WHERE p.user_id = ? ORDER BY p.id""",
-            (str(user_id),),
         ).fetchall()
 
     # Bans
@@ -584,11 +558,7 @@ class Store:
 
 
 def _user_count(db: sqlite3.Connection, game_id: int, user: str) -> int:
-    return db.execute(
-        """SELECT (SELECT COUNT(*) FROM keys WHERE game_id = ? AND given_to = ?)
-                + (SELECT COUNT(*) FROM prior_claims WHERE game_id = ? AND user_id = ?)""",
-        (game_id, user, game_id, user),
-    ).fetchone()[0]
+    return db.execute("SELECT COUNT(*) FROM keys WHERE game_id = ? AND given_to = ?", (game_id, user)).fetchone()[0]
 
 
 def _banned(db: sqlite3.Connection, user: str, game_id: int | None) -> bool:

@@ -1,4 +1,4 @@
-"""python -m keybot.admin: importing KeyBot's exports, recording its claims, listing (temp database)."""
+"""python -m keybot.admin: importing keys and listing games (temp database)."""
 
 import os
 import subprocess
@@ -52,38 +52,16 @@ def test_import_missing_file(db, tmp_path, capsys):
     assert "couldn't read it" in capsys.readouterr().err
 
 
-def test_mark_claimed_counts_for_the_limit(db, tmp_path, capsys):
-    txt = tmp_path / "pool.txt"
-    txt.write_text("\n".join(KEYS) + "\n")
-    admin.main(["import-keys", "--game", "Reforge Front", str(txt)])
-    user = "364076254812438538"
-    assert admin.main(["mark-claimed", "--game", "Reforge Front", "--user", user, "--note", "KeyBot"]) == 0
-    assert "They have 1 for it now (limit 1)" in capsys.readouterr().out
-    store = Store(db)
-    game = store.game_by_name("Reforge Front")
-    assert store.give_key(game["id"], int(user), "member").status == "already"
-    assert store.claimable_games(int(user)) == []
-    assert store.available_count(game["id"]) == 5
-    store.close()
-
-
-def test_mark_claimed_errors(db, capsys):
-    assert admin.main(["mark-claimed", "--game", "Nope", "--user", "1"]) == 1
-    assert "No game named 'Nope'" in capsys.readouterr().err
-    assert admin.main(["mark-claimed", "--game", "Nope", "--user", "@bob"]) == 2
-
-
 def test_list(db, tmp_path, capsys):
     assert admin.main(["list"]) == 0
     assert "No games yet." in capsys.readouterr().out
     txt = tmp_path / "pool.txt"
     txt.write_text("\n".join(KEYS) + "\n")
     admin.main(["import-keys", "--game", "Reforge Front", str(txt)])
-    admin.main(["mark-claimed", "--game", "Reforge Front", "--user", "5"])
     capsys.readouterr()
     assert admin.main(["list"]) == 0
     out = capsys.readouterr().out
-    assert "Reforge Front: 5 available, 0 given, 1 KeyBot claim(s)" in out and "public, limit 1" in out
+    assert "Reforge Front: 5 available, 0 given, 0 open request(s)" in out and "public, limit 1" in out
 
 
 def test_runs_as_a_module(db):

@@ -1215,7 +1215,7 @@ function renderStats() {
       : null,
     wishlists: wishlistDays().length ? wishlistTile(tile) : null,
     revenue: salesDays().length ? tile("Gross all time", usd(grossAll), `${usd(revenue.slice(-7).reduce((a, b) => a + b, 0))} in the last 7 days`, revenue, "var(--fb-positive)",
-      () => { state.tab = "sales"; render(); window.scrollTo({ top: 0 }); }) : null,
+      () => { state.tab = "sales"; render(); }) : null,
     bugs: tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent", openBugsPerDay, "var(--type-bug)"),
     posts: tile("New posts", fresh.length, "last 24 h", postsPerDay),
   };
@@ -2870,7 +2870,6 @@ function renderHomeTop() {
   const money = (label, value, sub, trend, color) => h("button.kpi.kpi-open", { type: "button", "aria-expanded": String(!!state.homeSales), title: state.homeSales ? "Back to all posts" : "Sales, every game together", onclick: () => {
     state.homeSales = !state.homeSales;
     render();
-    window.scrollTo({ top: 0 });
   } }, h("div.label", label, h("span.kpi-more", state.homeSales ? "Close ▴" : "Sales →")), h("div.value", value), h("div.sub", sub), trend ? spark(trend, color) : null);
   document.getElementById("fb-stats").replaceChildren(...[
     sales.length ? money("Gross all time", usd(sum("gross")), `${usd(sum("net"))} net · every game`) : null,

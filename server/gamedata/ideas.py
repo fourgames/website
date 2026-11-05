@@ -412,10 +412,9 @@ def user_prompt(idea: dict[str, Any], history: list[dict[str, Any]], m: Market |
         parts.append(proof)
     if idea.get("notes"):
         parts.append(f"The owner's notes:\n{idea['notes']}")
-    if history:
-        last = history[-1]
-        parts.append(f"Scored before: {last['score']} on {last['day']} (market data of that day). Say in the verdict "
-                     "whether the market has moved for this idea since then.")
+    # No earlier score here: told its last number, the model anchors on it ("the 52 stands") instead of
+    # judging the evidence afresh. The dashboard shows the score history itself.
+    parts.append("Score it from scratch on the evidence here.")
     parts.append("Give 2-4 pivots, 2-3 alternatives and 2-5 risks.")
     return "\n\n".join(parts)
 

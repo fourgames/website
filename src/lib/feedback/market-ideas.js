@@ -307,13 +307,14 @@ export function ideasView(ctx, files, redraw) {
   }
   const v = { mode, ctx, files, redraw, api: ctx.dataOverride ? fakeApi(files) : serverApi(ctx),
     ideas: null, error: null, loading: false, claude: null, market: null,
-    submitting: null, submitError: null, busy: new Map(), editing: new Set(), noteDrafts: new Map(), focusNotes: null, showArchived: false, flash: null };
+    submitting: null, submitError: null, open: new Set(), busy: new Map(), editing: new Set(), noteDrafts: new Map(), focusNotes: null, showArchived: false, flash: null };
   kept = v;
   const { h } = ctx;
   v.root = h("section.mkv-ideas", { "aria-label": "My game ideas" });
   v.box = h("textarea.mki-text", { rows: 5, maxlength: MAX_BOX, placeholder: "Describe the game: what you do, the hook, the look, the scope. E.g. \"A cozy organizing game in a dwarf mine: sort ore carts against a timer, 2 hours of content, made in 3 months.\"\nSeveral ideas? Paste them as a numbered list (1. … 2. …) or with a blank line between them.",
     "aria-label": "Your game idea", oninput: () => { store(v, "draft", v.box.value); paintComposer(v); } });
   v.box.value = load(v, "draft") || "";
+  try { v.open = new Set(JSON.parse(load(v, "open") || "[]")); } catch {}
   v.box.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { if (splitIdeas(v.box.value).length) submitAll(v); else submit(v); } });
   v.composer = h("div.mki-composer");
   v.list = h("div.mki-list");
@@ -498,8 +499,10 @@ function paintList(v) {
         title: "Asks Claude again, one idea after another, with today's market data. If the page is closed midway, this button continues with the ones left.",
         onclick: () => rescoreAll(v) }, label);
     })() : null);
-  if (!all.length) { v.list.replaceChildren(head, h("p.mki-muted", "Your scored ideas show up here, newest first.")); return; }
-  v.list.replaceChildren(head, ...shown.map((idea) => card(v, idea)));
+  if (!all.length) { v.list.replaceChildren(head, h("p.mki-muted", "Your scored ideas show up here, best score first.")); return; }
+  // Best first: Claude's score, then the newest.
+  const ranked = [...shown].sort((x, y) => (y.analysis?.score ?? -1) - (x.analysis?.score ?? -1) || y.created - x.created);
+  v.list.replaceChildren(head, ...ranked.map((idea) => card(v, idea)));
   if (v.flash) {
     const el = v.list.querySelector(`[data-idea="${v.flash}"]`);
     v.flash = null;
@@ -561,7 +564,21 @@ function card(v, idea) {
     h("button.btn", { type: "button", onclick: () => act(v, idea, () => v.api.update(idea.id, { archived: !idea.archived })) }, idea.archived ? "Unarchive" : "Archive"),
     h("button.btn.mki-danger", { type: "button", onclick: () => remove(v, idea) }, "Delete"));
 
+  // Folded by default: one line with the score, the title, the timing and the tags; a click opens it.
+  const open = v.open.has(idea.id);
+  const toggle = () => { if (v.open.has(idea.id)) v.open.delete(idea.id); else v.open.add(idea.id); store(v, "open", JSON.stringify([...v.open])); paintList(v); };
+  const summary = h("button.mki-summary", { type: "button", "aria-expanded": String(open), onclick: toggle },
+    h("span.mki-s-score", { class: `mki-${cls}` }, a?.score ?? "–"),
+    h("span.mki-s-main",
+      h("b.mki-s-title", ideaTitle(idea.text)),
+      h("span.mki-s-sub", [a?.timing?.advice ? { now: "Make now", soon: "Soon", wait: "Wait" }[a.timing.advice] || a.timing.advice : null, last ? `market ${last.score}` : null,
+        ...(a?.tags || []).slice(0, 3).map((t) => t.name)].filter(Boolean).join(" · "))),
+    busy?.started ? h("span.mki-s-busy", "scoring…") : null,
+    h("span.mki-s-chev", { "aria-hidden": "true" }, open ? "▾" : "▸"));
+  if (!open) return h("article.mki-card.mki-folded", { "data-idea": idea.id, class: idea.archived ? "mki-archived" : null }, summary,
+    busy?.error ? h("p.mki-error", { role: "alert" }, busy.error) : null);
   return h("article.mki-card", { "data-idea": idea.id, class: idea.archived ? "mki-archived" : null },
+    summary,
     h("div.mki-top", scoreBox, marketBox),
     h("p.mki-idea", idea.text),
     idea.archived ? h("p.mki-muted", "Archived: no new market points.") : null,
@@ -570,6 +587,13 @@ function card(v, idea) {
     busy?.error ? h("p.mki-error", { role: "alert" }, busy.error) : null,
     actions,
     h("p.mki-muted.mki-meta", `Added ${new Date(idea.created * 1000).toLocaleDateString()}${a ? ` · ${a.model}` : ""}`));
+}
+
+// "Working title: (crab fishing)" → "crab fishing"; otherwise the first line, cut short.
+function ideaTitle(text) {
+  const m = /^\s*working title\s*:\s*(.+)$/im.exec(text || "");
+  const t = (m ? m[1] : (text || "").split("\n")[0]).replace(/^\((.*)\)$/, "$1").trim();
+  return t.length > 70 ? t.slice(0, 67) + "…" : t || "Untitled idea";
 }
 
 function delta(h, points) {
@@ -734,6 +758,17 @@ const CSS = `
 .mkv-ideas .mki-progress-t { display: block; margin-top: 4px; font-size: 0.84rem; color: var(--fb-ink-2); }
 .mkv-ideas .mki-error { color: var(--fb-negative); font-size: 0.88rem; margin: 8px 0 0; }
 .mkv-ideas .mki-warn { color: var(--fb-ink-2); font-size: 0.85rem; margin: 8px 0 0; border-left: 3px solid var(--fb-warning); padding-left: 8px; }
+.mkv-ideas .mki-folded { padding-top: 0; padding-bottom: 0; }
+.mkv-ideas .mki-summary { display: flex; width: 100%; align-items: center; gap: 12px; padding: 10px 2px; background: none; border: 0; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.mkv-ideas .mki-summary:hover .mki-s-title { text-decoration: underline; }
+.mkv-ideas .mki-s-score { flex: 0 0 auto; min-width: 2.4em; font-size: 1.35rem; font-weight: 700; text-align: center; }
+.mkv-ideas .mki-s-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.mkv-ideas .mki-s-title { color: var(--fb-title); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mkv-ideas .mki-s-sub { color: var(--fb-muted); font-size: 0.8125rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mkv-ideas .mki-s-score.mki-good { color: var(--fb-good-text); }
+.mkv-ideas .mki-s-score.mki-weak { color: var(--fb-negative); }
+.mkv-ideas .mki-s-busy { color: var(--fb-muted); font-size: 0.8125rem; }
+.mkv-ideas .mki-s-chev { color: var(--fb-muted); }
 .mkv-ideas .mki-listhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; margin-bottom: 8px; }
 .mkv-ideas .mki-listhead h3 { margin: 0; font-size: 1rem; color: var(--fb-title); }
 .mkv-ideas .mki-all { margin-left: auto; }

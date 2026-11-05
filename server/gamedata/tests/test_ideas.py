@@ -193,7 +193,7 @@ def test_scoring_saving_and_the_history(tmp_path, market):
         assert again["tags"] == [3] and again["analysis"]["score"] == 55
         assert len(again["points"]) == 1, "one point a day, worked out again from the new tags"
         assert again["points"][0]["score"] == ideas.market_score([3], ideas.Market.load())["score"]
-        assert "Scored before: 72 on 2026-11-05" in fake.calls[1]["messages"][0]["content"]
+        assert "Scored before" not in fake.calls[1]["messages"][0]["content"], "no anchoring on the old score"
 
         # The list, newest first; a new market day adds a point.
         fake.reply()

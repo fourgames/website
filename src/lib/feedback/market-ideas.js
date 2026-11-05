@@ -10,6 +10,29 @@
 // in memory and answers with a canned analysis built from the real files (tags found by keyword).
 
 const PREFIX = "mkv-ideas-";
+const MAX_IDEA = 2000; // the server's limit for one idea
+const MAX_BOX = 20000; // several ideas pasted at once
+
+// Several ideas in one paste: a numbered or bulleted list ("1. …", "2) …", "- …", "• …" at a line
+// start), or else chunks separated by a blank line. Returns the ideas (2+), or [] when it's one idea.
+export function splitIdeas(text) {
+  const t = String(text || "").replace(/\r\n?/g, "\n").trim();
+  if (!t) return [];
+  const MARK = /^[ \t]*(?:\d{1,3}[.)]|[-*•])[ \t]+/;
+  const lines = t.split("\n");
+  const marked = lines.filter((l) => MARK.test(l)).length;
+  let parts = [];
+  if (marked >= 2 && MARK.test(lines[0])) {
+    for (const l of lines) {
+      if (MARK.test(l)) parts.push(l.replace(MARK, ""));
+      else if (parts.length) parts[parts.length - 1] += `\n${l}`;
+    }
+  } else parts = t.split(/\n[ \t]*\n+/);
+  parts = parts.map((p) => p.trim()).filter(Boolean);
+  return parts.length >= 2 ? parts : [];
+}
+// The ideas still to send, back in the box as a numbered list.
+const joinIdeas = (list) => list.length === 1 ? list[0] : list.map((x, i) => `${i + 1}. ${x}`).join("\n\n");
 const FAKE_MODEL = "test mode (no Claude)";
 const SUBSCORES = [
   ["demand", "Demand", "Do players want this now? Share of new reviews going to these tags, and what a typical game gets."],
@@ -259,17 +282,17 @@ export function ideasView(ctx, files, redraw) {
   kept = v;
   const { h } = ctx;
   v.root = h("section.mkv-ideas", { "aria-label": "My game ideas" });
-  v.box = h("textarea.mki-text", { rows: 5, maxlength: 2000, placeholder: "Describe the game: what you do, the hook, the look, the scope. E.g. \"A cozy organizing game in a dwarf mine: sort ore carts against a timer, 2 hours of content, made in 3 months.\"",
+  v.box = h("textarea.mki-text", { rows: 5, maxlength: MAX_BOX, placeholder: "Describe the game: what you do, the hook, the look, the scope. E.g. \"A cozy organizing game in a dwarf mine: sort ore carts against a timer, 2 hours of content, made in 3 months.\"\nSeveral ideas? Paste them as a numbered list (1. … 2. …) or with a blank line between them.",
     "aria-label": "Your game idea", oninput: () => { store(v, "draft", v.box.value); paintComposer(v); } });
   v.box.value = load(v, "draft") || "";
-  v.box.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) submit(v); });
+  v.box.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { if (splitIdeas(v.box.value).length) submitAll(v); else submit(v); } });
   v.composer = h("div.mki-composer");
   v.list = h("div.mki-list");
   v.root.append(
     h("div.mki-head",
       h("h2.mki-title", "My game ideas"),
       h("p.mki-sub", "Type a game idea and Claude scores it against today's Steam data: which tags it is, how many games in them become hits, how crowded they are and whether they're growing. It suggests pivots and other ideas. Ideas are kept and get a fresh market score every day, because timing matters: the same idea can flop early and hit a year later."),
-      v.mode === "test" ? h("p.mki-test", h("b", "Test mode: not saved, not Claude."), " Ideas live in this tab only, the analysis is canned from the real market files (tags found by keyword), the earlier days of the sparkline are made up. Put \"fail\" in an idea to try the error.") : null),
+      v.mode === "test" ? h("p.mki-test", h("b", "Test mode: not saved, not Claude."), " Ideas live in this tab only, the analysis is canned from the real market files (tags found by keyword), the earlier days of the sparkline are made up. Put \"fail\" in an idea to try the error (in a list of ideas, it stops there and keeps the unsent ones in the box).") : null),
     v.composer, v.list);
   paintComposer(v);
   refresh(v);
@@ -326,19 +349,54 @@ async function submit(v) {
   paintList(v);
 }
 
+// Several ideas, one after another (each takes the server 30-60 s). The box always holds exactly the
+// ideas not yet scored, so a failure (or closing the page) loses nothing.
+async function submitAll(v) {
+  const list = splitIdeas(v.box.value);
+  if (list.length < 2 || v.submitting || list.some((x) => x.length > MAX_IDEA)) return;
+  const n = list.length, left = [...list];
+  v.submitError = null;
+  let done = 0;
+  try {
+    while (left.length) {
+      v.submitting = { started: Date.now(), i: done + 1, n };
+      paintComposer(v);
+      const timer = setInterval(() => tick(v.status), 1000);
+      try {
+        const idea = await v.api.create(left[0]);
+        v.ideas = [idea, ...(v.ideas || []).filter((i) => i.id !== idea.id)];
+        v.flash = idea.id;
+        left.shift();
+        done++;
+        v.box.value = joinIdeas(left);
+        store(v, "draft", v.box.value);
+        paintList(v);
+      } finally {
+        clearInterval(timer);
+      }
+    }
+  } catch (e) {
+    if (!e.signedOut) v.submitError = `Idea ${done + 1} of ${n} not scored: ${errorText(e).replace(/([^.!?])$/, "$1.")} ${done ? `${done} scored; the` : "The"} ${left.length === 1 ? "unsent idea is" : `${left.length} unsent ideas are`} still in the box.`;
+  } finally {
+    v.submitting = null;
+  }
+  paintComposer(v);
+  paintList(v);
+}
+
 const STAGES = [[0, "Sending the idea and today's market data…"], [4, "Claude is mapping it to Steam tags…"], [15, "Claude is weighing demand, competition and hit odds…"], [35, "Writing pivots, alternatives and timing…"], [70, "Taking longer than usual, still waiting…"]];
 const stage = (s) => STAGES.filter(([at]) => s >= at).pop()[1];
 
 // A progress bar that eases toward 95% (the real call has no progress to report) and names a stage.
 // tick() repaints every .mki-progress inside a root in place, so nothing else is redrawn.
-function progress(h, started, expected = 45) {
+function progress(h, started, expected = 45, prefix = "") {
   const bar = h("span");
   const label = h("span.mki-progress-t");
   const el = h("div.mki-progress", { role: "status", "data-started": started }, h("div.mki-bar", bar), label);
   el._update = () => {
     const s = Math.floor((Date.now() - started) / 1000);
     bar.style.width = `${(Math.min(0.95, 1 - Math.exp(-s / expected)) * 100).toFixed(1)}%`;
-    label.textContent = `${stage(s)} ${s} s (usually 30-60 s)`;
+    label.textContent = `${prefix}${stage(s)} ${s} s (usually 30-60 s)`;
   };
   el._update();
   return el;
@@ -351,21 +409,29 @@ function paintComposer(v) {
   const { h } = v.ctx;
   if (!v.button) {
     v.box.id = "mki-text";
+    v.allButton = h("button.btn.primary", { type: "button", onclick: () => submitAll(v) });
     v.button = h("button.btn.primary", { type: "button", onclick: () => submit(v) });
     v.hint = h("span.mki-hint");
     v.status = h("div.mki-status");
-    v.composer.append(h("label.mki-label", { for: "mki-text" }, "Your idea"), v.box, h("div.mki-actions", v.button, v.hint), v.status);
+    v.composer.append(h("label.mki-label", { for: "mki-text" }, "Your idea (or several)"), v.box, h("div.mki-actions", v.allButton, v.button, v.hint), v.status);
   }
   const busy = !!v.submitting;
-  const n = v.box.value.trim().length;
+  const n = v.box.value.trim().length, many = splitIdeas(v.box.value), tooLong = many.filter((x) => x.length > MAX_IDEA).length;
   v.box.disabled = busy;
-  v.button.disabled = busy || !n;
-  v.button.textContent = busy ? "Scoring…" : "Score this idea";
-  v.hint.textContent = `${n}/2000 · Ctrl+Enter to score`;
+  v.allButton.style.display = many.length ? "" : "none";
+  v.allButton.disabled = busy || !!tooLong;
+  v.allButton.textContent = busy && v.submitting.n ? `Scoring ${v.submitting.i} of ${v.submitting.n}…` : `Score all ${many.length} ideas`;
+  // With several ideas found, "as one" stays there (a long idea with paragraphs), as the second choice.
+  v.button.className = many.length ? "btn" : "btn primary";
+  v.button.disabled = busy || !n || n > MAX_IDEA;
+  v.button.textContent = busy && !v.submitting.n ? "Scoring…" : many.length ? "Score it as one idea" : "Score this idea";
+  v.hint.textContent = many.length
+    ? `${many.length} ideas found (a list, or blank lines between them)${tooLong ? ` · ${tooLong} ${tooLong === 1 ? "is" : "are"} over ${MAX_IDEA} characters: shorten ${tooLong === 1 ? "it" : "them"}` : ""} · Ctrl+Enter scores all`
+    : `${n}/${MAX_IDEA}${n > MAX_IDEA ? " · too long for one idea" : ""} · Ctrl+Enter to score`;
   const notice = v.claude === false && v.mode !== "test" ? h("p.mki-warn", "The server has no ANTHROPIC_API_KEY yet: scoring will fail until it's set in /etc/fourgames/gamedata.env (then restart gamedata).") : null;
   v.status.replaceChildren(
-    ...[busy ? progress(h, v.submitting.started) : null,
-      v.submitError ? h("p.mki-error", { role: "alert" }, `Not scored: ${v.submitError} Your text is still in the box.`) : null,
+    ...[busy ? progress(h, v.submitting.started, 45, v.submitting.n ? `${v.submitting.i} of ${v.submitting.n}: ` : "") : null,
+      v.submitError ? h("p.mki-error", { role: "alert" }, /^Idea \d+ of/.test(v.submitError) ? v.submitError : `Not scored: ${v.submitError} Your text is still in the box.`) : null,
       notice].filter(Boolean));
 }
 
@@ -656,4 +722,4 @@ function injectCss() {
   document.head.append(el);
 }
 
-export const _test = { marketScore, mapTags, cannedAnalysis, fakeApi, tagScore, marketOf, words };
+export const _test = { splitIdeas, joinIdeas, submitAll, marketScore, mapTags, cannedAnalysis, fakeApi, tagScore, marketOf, words };

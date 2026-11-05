@@ -279,15 +279,32 @@ export function tagReviewPace(list, today, { from = 14, to = 90 } = {}) {
 }
 // The ring around a dot: 0 = no ring (slower than Steam's typical new game) up to 3 (2.5× or faster).
 export const paceLevel = (ratio) => ratio == null ? 0 : ratio >= 2.5 ? 3 : ratio >= 1.5 ? 2 : ratio >= 0.9 ? 1 : 0;
-const PACE_RING = [null, { w: 1.2, o: 0.45 }, { w: 2.2, o: 0.75 }, { w: 3.2, o: 1 }];
-const PACE_WORDS = ["slower than a typical new Steam game", "about Steam's pace", "1.5× Steam's pace or faster", "2.5× or faster"];
+// Ring widths by level: a yellow ring outside the dot with a small gap, on a thin dark casing so it reads
+// on light and dark cards and over other dots (rings are drawn above every dot).
+const PACE_RING = [null, { w: 1.5 }, { w: 2.5 }, { w: 3.5 }];
+const PACE_WORDS = [
+  "No ring: reviews come in slower than for a typical new Steam game",
+  "Thin ring: about as fast as a typical new Steam game",
+  "Medium ring: 1.5 to 2.5 times as fast",
+  "Thick ring: 2.5 times as fast or faster",
+];
+// Draws the review-pace ring of level `lv` around a dot of radius R into `parent` (nothing for level 0).
+function paceRing(svgEl, parent, cx, cy, R, lv) {
+  const ring = PACE_RING[lv];
+  if (!ring) return;
+  const rr = R + 2 + ring.w / 2;
+  const g = svgEl("g", { class: "mm-pace-ring" });
+  g.append(svgEl("circle", { cx, cy, r: rr, fill: "none", class: "mm-pace-case", "stroke-width": ring.w + 2 }),
+    svgEl("circle", { cx, cy, r: rr, fill: "none", class: "mm-pace-band", "stroke-width": ring.w }));
+  parent.append(g);
+}
 
 // --- 1c. Rising now: trends to get into early, from growth.json's monthly counts -----------
 
 // Each tag's share of Steam's releases in the last 3 full months against the 12 before (`mult`), from
 // a small base (under 1.5% of releases a year before), kept only when its games still become hits at
 // least as often as Steam's (trends.hitRate, already pulled toward the base rate). Pseudo-counts keep a
-// jump from 1 game to 6 from reading as ×6. Ranked by `mult` alone: higher in the list = rising faster.
+// jump from 1 game to 6 from reading as ×6. Ordered by stage (Early first, Late last), then by `mult`.
 // `revRatio`: reviews per release of its last 3 months' games against all of Steam's from the same
 // months. `top2`: the share of those reviews that its two biggest new games hold (from games.json,
 // when given): at 70%+ one or two big releases make the tag look good, and it's left out.
@@ -340,8 +357,12 @@ export function risingNow(growth, trends, tagNames, { small = true, limit = 8, g
     const words = `${x}× its share of releases a year before (${pct(shareNow, 1)} of all new games now), ${oneIn(tr.hitRate)} still become hits, ${num(tr.releases)} new in ${trends.supplyWindow || 90} days${rev}.`;
     out.push({ tag, name: tr.name || g.name, cNow, cBefore, shareNow, shareBefore, mult, started, revRatio, top2, big, stage, hitRate: tr.hitRate, lift: tr.hitRate / base, releases: tr.releases, hitGames: tr.hitGames, spark, months, words });
   }
-  return out.sort((a, b) => b.mult - a.mult || b.hitRate - a.hitRate).slice(0, limit);
+  // Best chances first: Early, then Getting crowded, then Late, each by rise speed. `limit` caps the
+  // Early + crowded rows and, separately, the Late ones (shown folded away).
+  out.sort((a, b) => STAGE_ORDER[a.stage] - STAGE_ORDER[b.stage] || b.mult - a.mult || b.hitRate - a.hitRate);
+  return [...out.filter((r) => r.stage !== "late").slice(0, limit), ...out.filter((r) => r.stage === "late").slice(0, limit)];
 }
+export const STAGE_ORDER = { early: 0, crowded: 1, late: 2 };
 
 // Per tag: the reviews of games released in the 3 full months risingNow looks at, and its biggest two.
 function newGameReviews(games, growth, full) {
@@ -803,11 +824,12 @@ function selectTag(tag) { st.sel = st.sel === tag ? null : tag; draw(); }
 
 const DIR_COLOR = (r) => r.dir > 0 ? "var(--sw-3)" : r.dir < 0 ? "var(--sw-2)" : "var(--fb-muted)";
 const DIR_WORDS = [
-  ["var(--sw-3)", "More new games than a year ago (more competition coming)"],
-  ["var(--fb-muted)", "About the same"],
-  ["var(--sw-2)", "Fewer new games (less competition)"],
+  ["var(--sw-3)", "Getting more crowded: its share of new Steam games is up 10% or more on a year ago (more rivals coming)"],
+  ["var(--fb-muted)", "Same crowding as a year ago: its share of new Steam games is within 10% of a year ago"],
+  ["var(--sw-2)", "Getting less crowded: its share of new Steam games is down 10% or more on a year ago (fewer rivals)"],
 ];
 const DIR_TIP = "Its share of all Steam releases in the last 90 days, against the same 90 days a year ago.";
+const dirLegend = (what) => [C.h("b", `${what} color:`), ...DIR_WORDS.map(([c, w]) => C.h("span", { title: DIR_TIP }, C.h("i.mm-key", { style: `background:${c}` }), w))];
 
 // "New games collect about 3.1 reviews a month (×1.8 Steam's pace)", for the tooltip.
 function paceLine(r) {
@@ -855,26 +877,31 @@ function risingSection() {
   if (!st.files.growth) return section(title, null, h("p.mm-note", "Loading the monthly release counts…"));
   const rows = risingRows();
   const g = st.files.growth;
-  const sub = h("p.mm-sub", h("b", "How it's ranked: "), "by how fast each tag's share of new Steam releases is climbing (the last 3 full months against the 12 before). ",
-    h("b", "Higher in the list = rising faster."), " Only tags whose games still become hits at least as often as Steam's are listed; a rise carried by one or two big releases is left out.",
+  const sub = h("p.mm-sub", h("b", "How it's ranked: "), "best chances first. ", h("b", "Early"), " rises come first, then ", h("b", "Getting crowded"),
+    ", and ", h("b", "Late"), " ones are folded away at the end. Within each stage, the tag whose share of new Steam releases is climbing fastest (the last 3 full months against the 12 before) comes first.",
+    " Only tags whose games still become hits at least as often as Steam's are listed; a rise carried by one or two big releases is left out.",
     st.small ? "" : " Big-build tags (MMO, open world, multiplayer…) are in, marked \u201cbig build\u201d.");
   if (!rows.length) return h("section.mm-section", h("h2", title), sub, h("p.mm-note", "Nothing is rising fast right now with these settings."));
   const [from, to] = [rows[0].months[0], rows[0].months.at(-1)];
+  const active = rows.filter((r) => r.stage !== "late"), late = rows.filter((r) => r.stage === "late");
+  const row = (r, i) => {
+    const act = riseAction(r, r.stage === "crowded" && st.files.games ? anglePair(r.tag) : null);
+    return h("li.mm-rise-row", { class: r.tag === st.sel ? "is-sel" : null },
+      h("div.mm-rise-side", h("span.mm-rise-n", `${i + 1}`),
+        h("span.mm-stage", { class: `is-${r.stage}`, title: STAGE_TIP[r.stage] }, STAGE[r.stage]),
+        r.big ? h("span.mm-stage.is-big", { title: "A big-build tag (in the MMO / open world / multiplayer / 3D lists): hard for a small team, whatever its stage." }, "big build") : null),
+      h("div.mm-rise-main",
+        h("button.mm-linkbtn", { type: "button", title: glossary(r.name) ? `${r.name}: ${glossary(r.name)}` : "Show it in the niche table", onclick: () => pickTag(r.tag, { toggle: false }) }, r.name),
+        glossary(r.name) ? h("span.mm-dim", { title: glossary(r.name) }, " ⓘ") : null,
+        h("p.mm-rise-words", r.words),
+        h("p.mm-rise-act", { class: `is-${r.stage}` }, h("b", act.lead), " ", act.rest,
+          act.pair ? h("span.mm-dim", ` (${pct(act.pair.hit)} hit chance, ${plural(act.pair.n, "game")}, ${act.pair.recent} new in 90 days)`) : null)),
+      sparkline(r.spark, `${r.name}: ${pct(r.spark[0], 2)} of Steam's releases in ${monthName(from)}, ${pct(r.spark.at(-1), 2)} in ${monthName(to)}`));
+  };
   return h("section.mm-section", h("h2", title), sub,
-    h("ol.mm-rise", ...rows.map((r, i) => {
-      const act = riseAction(r, r.stage === "crowded" && st.files.games ? anglePair(r.tag) : null);
-      return h("li.mm-rise-row", { class: r.tag === st.sel ? "is-sel" : null },
-        h("div.mm-rise-side", h("span.mm-rise-n", `${i + 1}`),
-          h("span.mm-stage", { class: `is-${r.stage}`, title: STAGE_TIP[r.stage] }, STAGE[r.stage]),
-          r.big ? h("span.mm-stage.is-big", { title: "A big-build tag (in the MMO / open world / multiplayer / 3D lists): hard for a small team, whatever its stage." }, "big build") : null),
-        h("div.mm-rise-main",
-          h("button.mm-linkbtn", { type: "button", title: glossary(r.name) ? `${r.name}: ${glossary(r.name)}` : "Show it in the niche table", onclick: () => pickTag(r.tag, { toggle: false }) }, r.name),
-          glossary(r.name) ? h("span.mm-dim", { title: glossary(r.name) }, " ⓘ") : null,
-          h("p.mm-rise-words", r.words),
-          h("p.mm-rise-act", { class: `is-${r.stage}` }, h("b", act.lead), " ", act.rest,
-            act.pair ? h("span.mm-dim", ` (${pct(act.pair.hit)} hit chance, ${plural(act.pair.n, "game")}, ${act.pair.recent} new in 90 days)`) : null)),
-        sparkline(r.spark, `${r.name}: ${pct(r.spark[0], 2)} of Steam's releases in ${monthName(from)}, ${pct(r.spark.at(-1), 2)} in ${monthName(to)}`));
-    })),
+    active.length ? h("ol.mm-rise", ...active.map(row)) : h("p.mm-note", "No early or getting-crowded rise right now: only late ones."),
+    late.length ? fold("rise-late", h("span", h("b", `Already late (${late.length})`), h("span.mm-late-arrow", " ▸"), h("span.mm-dim", ` the rush has arrived: ${pct(RISE_RULES.lateShare, 1)}+ of all new releases`)),
+      h("ol.mm-rise", ...late.map((r, i) => row(r, active.length + i)))) : null,
     h("p.mm-small", `Lines: each tag's share of all Steam releases per month, ${monthName(from)} to ${monthName(to)} (its own scale; the shaded end is the last 3 months). ${g.monthDone > 0 && g.monthDone < 1 ? "This month is still going, so it's left out. " : ""}Stages: `,
       ...Object.keys(STAGE).flatMap((k, i) => [i ? "; " : "", h("b", STAGE[k]), ` ${STAGE_TIP[k].charAt(0).toLowerCase()}${STAGE_TIP[k].slice(1, -1)}`]),
       ". The angle is the best-scoring tag pair with it in the gap finder below."));
@@ -910,8 +937,8 @@ function scoreBars(rows) {
     svg.append(g);
   });
   const box = h("div.mm-chart",
-    h("div.mm-legend", ...DIR_WORDS.map(([c, w]) => h("span", { title: DIR_TIP }, h("i.mm-key", { style: `background:${c}` }), w)),
-      h("span", h("i.mm-key", { style: "background:var(--fb-accent)" }), "Picked")),
+    h("div.mm-legend", ...dirLegend("Bar"),
+      h("span", h("i.mm-key", { style: "background:var(--fb-accent)" }), "The tag you picked (click a bar, dot or row to pick one)")),
     h("div.mm-hscroll", svg),
     h("p.mm-small.mm-tight", h("b", "Opportunity score. "), SCORE_TEXT, " Click a bar to pick that tag."));
   wireChart(svg, box, ".mm-barg");
@@ -967,23 +994,23 @@ function scatterCard(rows, base) {
   const yt = (M.top + H - M.bottom) / 2;
   text({ x: 14, y: yt, "text-anchor": "middle", transform: `rotate(-90 14 ${yt})`, class: "mm-axis mm-axis-title" }, "Hit chance (share of games that become hits)");
   svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: y(base), y2: y(base), class: "mm-ref" }));
-  text({ x: W - M.right + 6, y: y(base) - 2, class: "mm-axis" }, "Steam");
+  text({ x: W - M.right + 6, y: y(base) - 2, class: "mm-axis" }, "All Steam");
   text({ x: W - M.right + 6, y: y(base) + 11, class: "mm-axis" }, pct(base));
   // Dots: big ones first so small ones stay on top and clickable; the picked one last.
   const geo = new Map(rows.map((r) => [r, { cx: x(r.releases), cy: y(r.hitRate), r: dotR(r.medianReviews, vmax), lv: paceLevel(pace?.tags.get(r.tag)?.ratio) }]));
-  const dots = svgEl("g");
+  const dots = svgEl("g"), rings = svgEl("g", { class: "mm-pace-rings" });
   const order0 = [...rows].sort((a, b) => geo.get(b).r - geo.get(a).r);
   for (const r of [...order0.filter((r) => r !== sel), ...(sel ? [sel] : [])]) {
-    const { cx, cy, r: R, lv } = geo.get(r), on = r === sel, ring = PACE_RING[lv];
+    const { cx, cy, r: R, lv } = geo.get(r), on = r === sel;
     const g = svgEl("g", { class: `mm-dot${on ? " is-sel" : ""}`, "data-tag": r.tag, tabindex: "0", role: "button", "aria-label": `${r.name}: hit chance ${pct(r.hitRate)}, ${r.releases} new games in 90 days, typical game ${fmtK(r.medianReviews)} reviews. Pick it.` });
     if (on) g.append(svgEl("circle", { cx, cy, r: R + 7, class: "mm-sel-ring" }));
     g.append(svgEl("circle", { cx, cy, r: R, fill: on ? "var(--fb-accent)" : DIR_COLOR(r), class: "mm-dot-c" }));
-    if (ring) g.append(svgEl("circle", { cx, cy, r: R + 1 + ring.w / 2, fill: "none", stroke: "var(--fb-ink)", "stroke-width": ring.w, "stroke-opacity": ring.o, class: "mm-pace-ring" }));
+    paceRing(svgEl, rings, cx, cy, R, lv);
     g.append(svgEl("circle", { cx, cy, r: Math.max(R + 3, 9), fill: "transparent" }));
     g.__row = r;
     dots.append(g);
   }
-  svg.append(dots);
+  svg.append(dots, rings);
   // Labels: as many as fit, right of the dot (left near the edge), skipped where they'd cover a dot or
   // another label. The picked tag first, then by score.
   const CH = 5.9, LH = 11;
@@ -1015,21 +1042,20 @@ function scatterCard(rows, base) {
     return k;
   };
   const sizes = [...new Set([5, 20, Math.max(40, Math.round(vmax / 10) * 10)].filter((v) => v <= vmax * 1.2))];
-  const sizeKey = h("span.mm-keygroup", h("b", "Size"), ": reviews for a typical game in the tag",
+  const sizeKey = h("span.mm-keygroup", h("span", h("b", "Dot size"), ": reviews a typical (median) game in the tag gets"),
     ...sizes.map((v) => h("span.mm-keyitem", keySvg([(k, cx, cy) => k.append(svgEl("circle", { cx, cy, r: dotR(v, vmax), class: "mm-key-dot" }))]), fmtK(v))));
-  const ringKey = pace ? h("span.mm-keygroup", h("b", "Ring"), `: how fast its newest games (out 2 weeks to 3 months) are collecting reviews. Thicker, darker ring = reviews coming in faster (Steam's typical new game: ${pace.base.toFixed(1)} a month)`,
+  const ringKey = pace ? h("span.mm-keygroup", h("span", h("b", "Yellow ring"), `: how fast the tag's newest games (out 2 weeks to 3 months) are collecting reviews, against a typical new Steam game (${pace.base.toFixed(1)} reviews a month). Thicker ring = reviews coming in faster.`),
     ...[0, 1, 2, 3].map((lv) => h("span.mm-keyitem", keySvg([(k, cx, cy) => {
       k.append(svgEl("circle", { cx, cy, r: 7, class: "mm-key-dot" }));
-      const ring = PACE_RING[lv];
-      if (ring) k.append(svgEl("circle", { cx, cy, r: 8 + ring.w / 2, fill: "none", stroke: "var(--fb-ink)", "stroke-width": ring.w, "stroke-opacity": ring.o }));
+      paceRing(svgEl, k, cx, cy, 7, lv);
     }]), PACE_WORDS[lv])))
     : h("span.mm-keygroup.mm-dim", "Rings (review pace) appear once the release list has loaded.");
   const box = h("div.mm-chart",
     h("div.mm-legend",
       h("span", h("i.mm-key.mm-key-zone"), h("b", "Most attractive corner"), `: fewer new games than half the tags, and ${times(1.5)} Steam's hit chance or better`)),
     h("div.mm-legend",
-      ...DIR_WORDS.map(([c, w]) => h("span", { title: DIR_TIP }, h("i.mm-key", { style: `background:${c}` }), w)),
-      h("span", h("i.mm-key.mm-key-sel"), "Picked")),
+      ...dirLegend("Dot"),
+      h("span", h("i.mm-key.mm-key-sel"), "The tag you picked (click a dot, bar or row to pick one)")),
     h("div.mm-legend.mm-legend-keys", sizeKey, ringKey),
     h("div.mm-hscroll", svg),
     h("p.mm-small.mm-tight", `Each dot is a tag (${rows.length} shown). Labels show where they fit; hover any dot for its numbers.`),
@@ -1375,6 +1401,12 @@ const CSS = `
 .mkv-merged .mm-rise-act.is-crowded b { color: var(--fb-warning); }
 .mkv-merged .mm-rise-act.is-late b { color: var(--fb-negative); }
 .mkv-merged .mm-rise-row:first-child { border-top: 0; }
+.mkv-merged details.mm-details:has(.mm-late-arrow) { margin-top: 8px; }
+.mkv-merged details.mm-details:has(.mm-late-arrow) > summary { list-style: none; cursor: pointer; padding: 6px 2px; color: var(--fb-negative); }
+.mkv-merged details.mm-details:has(.mm-late-arrow) > summary::-webkit-details-marker { display: none; }
+.mkv-merged details.mm-details:has(.mm-late-arrow) > summary .mm-dim { color: var(--fb-muted); font-size: 0.86rem; }
+.mkv-merged .mm-late-arrow { display: inline-block; transition: transform .15s; }
+.mkv-merged details[open] > summary .mm-late-arrow { transform: rotate(90deg); }
 .mkv-merged .mm-rise-row.is-sel { background: var(--fb-hover); box-shadow: inset 3px 0 0 var(--fb-accent); }
 .mkv-merged .mm-rise-main { min-width: 0; }
 .mkv-merged .mm-rise-words { color: var(--fb-ink-2); font-size: 0.88rem; line-height: 1.35; }
@@ -1399,7 +1431,9 @@ const CSS = `
 .mkv-merged .mm-barname.is-sel { fill: var(--fb-title); font-weight: 700; }
 
 .mkv-merged .mm-dot { cursor: pointer; outline: none; }
-.mkv-merged .mm-dot-c { stroke: var(--fb-card); stroke-width: 1; fill-opacity: .82; }
+.mkv-merged .mm-dot-c { stroke: var(--fb-card); stroke-width: 1; fill-opacity: .72; }
+.mkv-merged .mm-pace-case { stroke: var(--fb-ink); stroke-opacity: .55; }
+.mkv-merged .mm-pace-band { stroke: var(--fb-warning); }
 .mkv-merged .mm-pace-ring { pointer-events: none; }
 .mkv-merged .mm-dot:hover .mm-dot-c, .mkv-merged .mm-dot:focus .mm-dot-c { stroke: var(--fb-ink); stroke-width: 1.5; fill-opacity: 1; }
 .mkv-merged .mm-sel-ring { fill: var(--fb-accent); fill-opacity: .22; stroke: var(--fb-accent); stroke-width: 2; }

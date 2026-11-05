@@ -403,3 +403,54 @@ def test_grantrole_is_opt_in(tmp_path):
         assert not off.intents.message_content and not on.intents.presences
     finally:
         store.close()
+
+
+class FakeMessage:
+    def __init__(self, embed):
+        self.embeds = [embed]
+        self.edits = []
+
+    async def edit(self, **kwargs):
+        self.edits.append(kwargs)
+
+
+def test_unanswered_request_closes_with_a_dm_and_a_note_on_its_card(bot):
+    game = stock(bot)
+    bot.users_by_id[5] = user = FakeUser(5)
+    small = Channel("twitch", "9", "small", "https://www.twitch.tv/small", audience=12)
+    asyncio.run(bot.creator_verified(5, game["id"], [small]))
+    request_id = bot.store.open_request_for(5, game["id"])["id"]
+    card = FakeMessage(discord.Embed(title="card"))
+    fetched = []
+
+    async def fetch_message(message_id):
+        fetched.append(message_id)
+        return card
+
+    bot.channel.fetch_message = fetch_message
+    now = datetime.now(timezone.utc)
+    assert asyncio.run(bot.expire_requests(now + timedelta(days=13))) == 0
+    assert asyncio.run(bot.expire_requests(now + timedelta(days=15))) == 1
+    request = bot.store.request(request_id)
+    assert request["status"] == "denied" and request["decided_by"] == "expired"
+    assert len(user.sent) == 1 and "Hidden Ones" in user.sent[0] and "12" not in user.sent[0]
+    assert fetched == [int(request["admin_message_id"])]
+    (edit,) = card.edits
+    assert edit["view"] is None and "Closed automatically after 14 days" in edit["embed"].fields[-1].value
+    # Nothing left to close, and a closed request no longer blocks asking again.
+    assert asyncio.run(bot.expire_requests(now + timedelta(days=30))) == 0
+    assert bot.store.open_request_count(5) == 0
+
+
+def test_expiry_off_with_zero(tmp_path):
+    store = Store(str(tmp_path / "k.db"))
+    try:
+        off = KeyBot(Config.from_env({**ENV, "REQUEST_EXPIRE_DAYS": "0"}), store)
+        game, _ = store.add_game("Hidden Ones")
+        store.create_request("creator", game["id"], 5)
+        later = datetime.now(timezone.utc) + timedelta(days=400)
+        assert asyncio.run(off.expire_requests(later)) == 0
+        assert store.open_request_count(5) == 1
+        assert Config.from_env(ENV).request_expire_days == 14
+    finally:
+        store.close()

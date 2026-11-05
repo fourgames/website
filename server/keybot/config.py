@@ -37,6 +37,8 @@ class Config:
     # /keys grant role: needs the guild's member list, so the privileged Server Members intent. Off unless
     # GRANTROLE_ENABLED=1 (and the intent is switched on in the Developer Portal).
     grantrole_enabled: bool = False
+    # Requests nobody answered are closed (with a polite DM) after this many days. 0: never.
+    request_expire_days: int = 14
 
     @property
     def redirect_uri(self) -> str:
@@ -94,4 +96,5 @@ class Config:
             host=get("HOST", "127.0.0.1") or "127.0.0.1",
             port=integer("PORT", "8100"),
             grantrole_enabled=get("GRANTROLE_ENABLED").lower() in ("1", "true", "yes", "on"),
+            request_expire_days=integer("REQUEST_EXPIRE_DAYS", "14"),
         )

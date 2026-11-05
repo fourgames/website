@@ -60,7 +60,7 @@ CREATE TABLE IF NOT EXISTS requests (
     status           TEXT NOT NULL CHECK (status IN ('open', 'processing', 'approved', 'denied')),
     created_at       TEXT NOT NULL,
     decided_at       TEXT,
-    decided_by       TEXT,     -- admin's Discord user id, or 'auto'
+    decided_by       TEXT,     -- admin's Discord user id, 'auto', or 'expired' (nobody answered in time)
     channel_url      TEXT,
     details          TEXT,     -- JSON: channel stats, outlet, email, why it needs a look
     admin_message_id TEXT,
@@ -517,6 +517,21 @@ class Store:
                 "UPDATE requests SET status = ?, decided_at = ?, decided_by = ?, key_id = ? WHERE id = ?",
                 (status, now_iso(), decided_by, key_id, request_id),
             )
+
+    def expire_requests(self, before: str) -> list[sqlite3.Row]:
+        """Closes open requests made before `before` (an ISO time, like now_iso()) as denied by
+        'expired', and returns them for the DMs and the cards. One that an admin is approving right
+        now (processing) is left alone; an admin's click and this can't both decide a request."""
+        with self.transaction() as db:
+            rows = db.execute(
+                "SELECT * FROM requests WHERE status = 'open' AND created_at < ? ORDER BY id", (before,)
+            ).fetchall()
+            db.executemany(
+                "UPDATE requests SET status = 'denied', decided_at = ?, decided_by = 'expired' "
+                "WHERE id = ? AND status = 'open'",
+                [(now_iso(), row["id"]) for row in rows],
+            )
+            return rows
 
     def set_admin_message(self, request_id: int, message_id: int) -> None:
         with self.transaction() as db:

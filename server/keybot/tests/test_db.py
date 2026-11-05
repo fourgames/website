@@ -213,3 +213,22 @@ def test_old_states_are_pruned(store):
     store.save_state("old", 1, 2, expires_at=1000, now=1000)
     store.save_state("new", 1, 2, expires_at=200000, now=100000)
     assert store.db.execute("SELECT nonce FROM oauth_states").fetchall()[0][0] == "new"
+
+
+def test_old_open_requests_expire(store):
+    game = make_game(store)
+    old = store.create_request("creator", game["id"], 5)
+    busy = store.create_request("press", game["id"], 6)
+    store.start_decision(busy)  # an admin is approving it right now
+    done = store.create_request("creator", game["id"], 7, status="approved", decided_by="auto")
+    fresh = store.create_request("creator", game["id"], 8)
+    store.db.execute("UPDATE requests SET created_at = '2026-01-01T00:00:00+00:00' WHERE id != ?", (fresh,))
+    expired = store.expire_requests("2026-02-01T00:00:00+00:00")
+    assert [row["id"] for row in expired] == [old]
+    request = store.request(old)
+    assert request["status"] == "denied" and request["decided_by"] == "expired" and request["decided_at"]
+    assert store.request(busy)["status"] == "processing"
+    assert store.request(done)["status"] == "approved"
+    assert store.request(fresh)["status"] == "open"
+    assert store.open_request_count(5) == 0  # the slot is free again
+    assert store.expire_requests("2026-02-01T00:00:00+00:00") == []

@@ -55,6 +55,9 @@ Requests in the admin channel are cards with the person, their channels and numb
 approved by itself, and **Approve** / **Deny** buttons that keep working after a restart. Approve
 DMs the key (the DM is the only way it reaches them there, so if their DMs are closed no key is used
 and the request stays open); Deny DMs a polite no. Each person can have 3 requests waiting at a time.
+A request nobody answers closes by itself after 14 days (`REQUEST_EXPIRE_DAYS`, 0 = never): the
+person gets a polite DM without a reason, the card says it closed and loses its buttons, and the
+slot is free again. The bot checks once an hour.
 The admin channel also hears when a game drops below 5 keys (`LOW_STOCK`), when it's down to 10% of
 all the keys imported for it, and when it runs out: each once, until the game gets more keys.
 

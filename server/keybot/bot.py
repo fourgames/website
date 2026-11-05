@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import io
 import json
 import logging
@@ -9,6 +10,7 @@ import re
 import sqlite3
 import time
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
 import aiohttp
@@ -31,6 +33,11 @@ MAX_OPEN_REQUESTS = 3
 MAX_KEY_FILE_BYTES = 1_000_000
 EMAIL_PATTERN = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 POOLS_PER_PAGE = 10
+# How often the bot looks for requests nobody answered (REQUEST_EXPIRE_DAYS).
+EXPIRE_CHECK_SECONDS = 3600
+# The DM when a request closes by itself. No reason on purpose: it's the same for everyone.
+EXPIRED_TEXT = ("Thanks for asking about a key for **{name}**. We couldn't get to your request this time, "
+                "so it's been closed. You're welcome to try /request again in the future!")
 BANNED_TEXT = "You can't get keys{where} here. If you think that's a mistake, ask the Four Games team."
 
 
@@ -87,6 +94,7 @@ class KeyBot(discord.Client):
         self.http_session: aiohttp.ClientSession | None = None
         self.twitch = TwitchAuth(config.twitch_client_id, config.twitch_client_secret)
         self.web_runner = None
+        self.expire_task: asyncio.Task | None = None
 
     async def setup_hook(self) -> None:
         from .web import start_web  # here, so the web module can import this one
@@ -109,6 +117,8 @@ class KeyBot(discord.Client):
         # The sync replaces the guild's whole command list, so old commands (/mykeys, /pools, …) go.
         await self.tree.sync(guild=guild)
         self.web_runner = await start_web(self)
+        if self.config.request_expire_days > 0:
+            self.expire_task = asyncio.create_task(self.expire_loop())
         log.info("commands synced to guild %s; web on %s:%s", self.config.guild_id, self.config.host,
                  self.config.port)
 
@@ -118,6 +128,8 @@ class KeyBot(discord.Client):
             self.tree.add_command(command)
 
     async def close(self) -> None:
+        if self.expire_task:
+            self.expire_task.cancel()
         if self.web_runner:
             await self.web_runner.cleanup()
         if self.http_session:
@@ -133,6 +145,53 @@ class KeyBot(discord.Client):
     async def admin_channel(self) -> discord.abc.Messageable:
         channel = self.get_channel(self.config.admin_channel_id)
         return channel or await self.fetch_channel(self.config.admin_channel_id)
+
+    # Requests nobody answered
+
+    async def expire_loop(self) -> None:
+        await self.wait_until_ready()
+        while not self.is_closed():
+            try:
+                await self.expire_requests()
+            except Exception:
+                log.exception("closing old requests failed")
+            await asyncio.sleep(EXPIRE_CHECK_SECONDS)
+
+    async def expire_requests(self, now: datetime | None = None) -> int:
+        """Closes the requests older than REQUEST_EXPIRE_DAYS: a polite DM to each person and a note
+        on its card (buttons off). Returns how many."""
+        days = self.config.request_expire_days
+        if days <= 0:
+            return 0
+        now = now or datetime.now(timezone.utc)
+        cutoff = (now - timedelta(days=days)).isoformat(timespec="seconds")
+        expired = self.store.expire_requests(cutoff)
+        for request in expired:
+            game = self.store.game(request["game_id"])
+            name = escape_markdown(game["name"]) if game else "our game"
+            try:
+                user = await self.user_by_id(int(request["user_id"]))
+                await user.send(EXPIRED_TEXT.format(name=name))
+                told = "told them"
+            except discord.HTTPException:
+                told = "couldn't DM them"
+            await self.note_on_card(request, f"Closed automatically after {plural(days, 'day')} "
+                                             f"without an answer; {told}")
+            log.info("request #%s closed after %s days without an answer (%s)", request["id"], days, told)
+        return len(expired)
+
+    async def note_on_card(self, request: sqlite3.Row, note: str) -> None:
+        """Like mark_card, for a request decided outside a button click."""
+        if not request["admin_message_id"]:
+            return
+        try:
+            channel = await self.admin_channel()
+            message = await channel.fetch_message(int(request["admin_message_id"]))
+            embed = message.embeds[0] if message.embeds else discord.Embed()
+            embed.add_field(name="Decision", value=note, inline=False)
+            await message.edit(embed=embed, view=None)
+        except discord.HTTPException:
+            log.exception("couldn't update the card for request #%s", request["id"])
 
     # Handing out
 

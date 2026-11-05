@@ -1075,12 +1075,13 @@ function pickUptime() {
 // loaded the first time it opens. Several designs are on trial: the picker in the header switches
 // between them (remembered in market-design).
 const MARKET_DESIGNS = {
+  merged: ["Final draft", () => import("./market-merged.js")],
   brief: ["Briefing", () => import("./market-brief.js")],
   analyst: ["Analyst", () => import("./market-analyst.js")],
   scout: ["Scout board", () => import("./market-scout.js")],
   classic: ["First version", () => import("./market.js")],
 };
-const marketDesign = () => MARKET_DESIGNS[store.get("market-design")] ? store.get("market-design") : "brief";
+const marketDesign = () => MARKET_DESIGNS[store.get("market-design")] ? store.get("market-design") : "merged";
 let marketModule = null;
 let marketModuleDesign = null;
 async function loadMarketModule() {

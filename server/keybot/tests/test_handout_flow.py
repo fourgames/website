@@ -172,8 +172,23 @@ class FakeFollowup:
         self.sent.append((content, kwargs))
 
 
+class FakeResponse:
+    def __init__(self):
+        self.sent = []
+        self.deferred = False
+
+    async def send_message(self, content=None, **kwargs):
+        self.sent.append((content, kwargs))
+
+    async def defer(self, **kwargs):
+        self.deferred = True
+
+    def is_done(self):
+        return self.deferred or bool(self.sent)
+
+
 def fake_interaction(bot, user):
-    return SimpleNamespace(client=bot, user=user, followup=FakeFollowup(), guild=None)
+    return SimpleNamespace(client=bot, user=user, followup=FakeFollowup(), response=FakeResponse(), guild=None)
 
 
 def test_claim_shows_key_ephemerally_and_dms_a_copy(bot):
@@ -265,7 +280,7 @@ def test_request_and_creator_respect_bans_and_limits(bot):
     assert len(user.sent) == 1
 
 
-# /grant and /grantrole
+# /keys grant and /keys grant-role
 
 
 def test_grant_needs_the_dm_and_respects_limit_and_bans(bot):
@@ -335,16 +350,16 @@ def test_outcome_never_shows_the_key(bot):
 # Lists and files
 
 
-def test_pools_lines_and_pages(bot):
+def test_pool_lines_and_pages(bot):
     from keybot.bot import pool_line, pool_pages
     game = stock(bot)
     store = bot.store
     row = store.games()[0]
     line = pool_line(row, bot.config, None)
-    assert "**Hidden Ones** · public · 1 per person · 3 key(s) left · for **YouTube Member**" == line
-    store.update_game_settings(game["id"], public=False, per_user_limit=0)
-    assert "private" in pool_line(store.games()[0], bot.config, None)
-    store.update_game_settings(game["id"], public=True, required_role_ids=[600, 601])
+    assert "**Hidden Ones** · 1 per person · 3 key(s) left · for **YouTube Member**" == line
+    store.update_game_settings(game["id"], per_user_limit=0)
+    assert "no limit per person" in pool_line(store.games()[0], bot.config, None)
+    store.update_game_settings(game["id"], required_role_ids=[600, 601])
     assert "for <@&600> or <@&601>" in pool_line(store.games()[0], bot.config, None)
     pages = pool_pages([f"line {i}" for i in range(23)])
     assert len(pages) == 3 and pages[0].endswith("Page 1 of 3") and "line 22" in pages[2]

@@ -48,7 +48,7 @@ class Outcome:
 
 @dataclass
 class GrantReport:
-    """What /grantrole did, in counts."""
+    """What /keys grant-role did, in counts."""
 
     given: int = 0
     at_limit: int = 0
@@ -72,8 +72,8 @@ class GrantReport:
 class KeyBot(discord.Client):
     def __init__(self, config: Config, store: Store):
         # No privileged intents: roles and permissions come with each interaction. The guilds
-        # intent (not privileged) keeps the server's roles and channels cached. /grantrole needs the
-        # member list (the privileged Server Members intent), so only when it's turned on.
+        # intent (not privileged) keeps the server's roles and channels cached. /keys grant-role needs
+        # the member list (the privileged Server Members intent), so only when it's turned on.
         intents = discord.Intents.none()
         intents.guilds = True
         if config.grantrole_enabled:
@@ -97,17 +97,28 @@ class KeyBot(discord.Client):
         self.http_session = aiohttp.ClientSession(timeout=aiohttp.ClientTimeout(total=20))
         # Approve/Deny buttons keep working after a restart: their custom_id carries the request id.
         self.add_dynamic_items(ApproveButton, DenyButton)
-        for command in (claim, mykeys, pools, request_key, request_press, grant, keys_group):
-            self.tree.add_command(command)
-        if self.config.grantrole_enabled:
-            self.tree.add_command(grantrole)
+        self.register_commands()
         # Guild commands show up at once (global ones can take an hour), and the bot is for one server.
         guild = discord.Object(id=self.config.guild_id)
         self.tree.copy_global_to(guild=guild)
+        # Only guild commands: if an older version ever registered global ones, they'd show up twice.
+        self.tree.clear_commands(guild=None)
+        if await self.tree.fetch_commands():
+            await self.tree.sync()
+            log.info("removed the global commands")
+        # The sync replaces the guild's whole command list, so old commands (/mykeys, /pools, …) go.
         await self.tree.sync(guild=guild)
         self.web_runner = await start_web(self)
         log.info("commands synced to guild %s; web on %s:%s", self.config.guild_id, self.config.host,
                  self.config.port)
+
+    def register_commands(self) -> None:
+        """The three commands: /claim, /request and /keys (with /keys grant-role only when it's on)."""
+        keys_group.remove_command("grant-role")
+        if self.config.grantrole_enabled:
+            keys_group.add_command(keys_grant_role)
+        for command in (claim, request_key, keys_group):
+            self.tree.add_command(command)
 
     async def close(self) -> None:
         if self.web_runner:
@@ -132,7 +143,7 @@ class KeyBot(discord.Client):
                        request_id: int | None = None, *, dm_required: bool = True) -> Outcome:
         """Takes a key and DMs it.
 
-        dm_required (admin approvals, /grant, /grantrole, creator auto-approval: the DM is the only
+        dm_required (admin approvals, /keys grant and grant-role, creator auto-approval: the DM is the only
         way the key reaches them): if the DM doesn't arrive, the key goes back. Without it (/claim,
         which shows the key in its reply), the DM is a receipt and a failed one changes nothing.
         """
@@ -179,7 +190,7 @@ class KeyBot(discord.Client):
             log.exception("couldn't post the low-stock alert")
 
     async def grant_to_members(self, members: list[discord.abc.User], game: sqlite3.Row) -> GrantReport:
-        """/grantrole: one key by DM to each of them (bots left out), skipping the banned and those
+        """/keys grant-role: one key by DM to each of them (bots left out), skipping the banned and those
         at the limit. Stops handing out once the keys run out."""
         report = GrantReport()
         for member in members:
@@ -199,7 +210,7 @@ class KeyBot(discord.Client):
                 report.dm_failed += 1
             else:
                 report.out_of_keys += 1
-        log.info("grantrole for %s: %d given, %d at limit, %d banned, %d DMs closed, %d out of keys",
+        log.info("grant-role for %s: %d given, %d at limit, %d banned, %d DMs closed, %d out of keys",
                  game["name"], report.given, report.at_limit, report.banned, report.dm_failed, report.out_of_keys)
         return report
 
@@ -224,7 +235,7 @@ class KeyBot(discord.Client):
         if store.is_banned(user_id, game_id):
             return "Not available", "You can't get keys for this game. If you think that's a mistake, ask the team."
         if store.at_limit(game_id, user_id):
-            return "You already have a key", "Run /mykeys in the Four Games Discord to see it again."
+            return "You already have a key", "Run /claim in the Four Games Discord to see it again."
         if store.open_request_for(user_id, game_id):
             return "Already waiting for review", "Your request for this game is with the team already."
         if store.open_request_count(user_id) >= MAX_OPEN_REQUESTS:
@@ -247,7 +258,7 @@ class KeyBot(discord.Client):
                 return "Verified — check your DMs", f"Your key for {game['name']} is in your Discord DMs."
             store.delete_request(request_id)
             if outcome.status == "already":
-                return "You already have a key", "Run /mykeys in the Four Games Discord to see it again."
+                return "You already have a key", "Run /claim in the Four Games Discord to see it again."
             if outcome.status == "banned":
                 return "Not available", "You can't get keys for this game. If you think that's a mistake, ask the team."
             if outcome.status == "dm_failed":
@@ -279,7 +290,7 @@ def key_message(game: sqlite3.Row, value: str) -> str:
              f"Redeem it: {redeem_url(value)}", "(or in Steam: Games → Activate a Product on Steam)"]
     if game["steam_app_id"]:
         lines.append(f"https://store.steampowered.com/app/{game['steam_app_id']}")
-    lines.append("You can see your keys again any time with /mykeys.")
+    lines.append("You can see your keys again any time with /claim.")
     return "\n".join(lines)
 
 
@@ -288,10 +299,10 @@ def claim_message(game: sqlite3.Row, value: str, dm_sent: bool) -> str:
     lines = [f"Here's your Steam key for **{escape_markdown(game['name'])}**:", f"`{value}`",
              f"Redeem it: {redeem_url(value)}", "(or in Steam: Games → Activate a Product on Steam)"]
     if dm_sent:
-        lines.append("A copy is in your DMs, and /mykeys shows it again any time.")
+        lines.append("A copy is in your DMs, and /claim shows it again any time.")
     else:
         lines.append("I couldn't DM you a copy (your DMs are closed), but the key is yours: "
-                     "/mykeys shows it again any time.")
+                     "/claim shows it again any time.")
     return "\n".join(lines)
 
 
@@ -303,8 +314,8 @@ def already_text(game: sqlite3.Row) -> str:
     name = escape_markdown(game["name"])
     limit = game["per_user_limit"]
     if limit == 1:
-        return f"You've already had a key for **{name}**. /mykeys shows it again."
-    return f"You've had {limit} keys for **{name}**, the most one person can get. /mykeys shows them again."
+        return f"You've already had a key for **{name}**. /claim shows it again."
+    return f"You've had {limit} keys for **{name}**, the most one person can get. /claim shows them again."
 
 
 def request_embed(request: sqlite3.Row, game: sqlite3.Row, user: discord.abc.User | None) -> discord.Embed:
@@ -445,7 +456,7 @@ async def on_command_error(interaction: discord.Interaction, error: app_commands
         pass
 
 
-# Members: /claim and /mykeys
+# Everyone: /claim
 
 
 def not_member_text(config: Config) -> str:
@@ -460,22 +471,18 @@ async def claimable_autocomplete(interaction: discord.Interaction, current: str)
     return choices(claim_menu_games(interaction.client, interaction.user), current)
 
 
-@app_commands.command(name="claim", description="Get a Steam key for one of our games (YouTube members)")
-@app_commands.describe(game="Which game (leave out to pick from a list)")
+@app_commands.command(name="claim", description="Get a Steam key for one of our games, or see the games and your keys")
+@app_commands.describe(game="Which game (leave out to see the games and your keys)")
 @app_commands.autocomplete(game=claimable_autocomplete)
 @app_commands.guild_only()
 async def claim(interaction: discord.Interaction, game: str | None = None) -> None:
     bot: KeyBot = interaction.client
     user = interaction.user
+    if game is None:
+        await show_overview(interaction)
+        return
     if bot.store.is_banned(user.id):
         await interaction.response.send_message(BANNED_TEXT.format(where=""), ephemeral=True)
-        return
-    if game is None:
-        games = claim_menu_games(bot, user)
-        if not games:
-            await interaction.response.send_message(nothing_to_claim_text(bot, user), ephemeral=True)
-            return
-        await interaction.response.send_message("Which game?", view=ClaimView(games), ephemeral=True)
         return
     row = resolve_game(bot.store, game)
     if row is None:
@@ -494,7 +501,99 @@ def nothing_to_claim_text(bot: "KeyBot", user: discord.abc.User) -> str:
     if public and not any(has_claim_role(user, g, bot.config) for g in public):
         # They have none of the roles any game asks for: tell them how to become a member.
         return not_member_text(bot.config)
-    return "There's nothing new to claim right now. /mykeys shows the keys you already have."
+    return "There's nothing new to claim right now."
+
+
+def pool_line(game: sqlite3.Row, config: Config, guild: discord.Guild | None) -> str:
+    """A public game in the /claim overview: keys per person, keys left, who can claim it."""
+    return (f"**{escape_markdown(game['name'])}** · {limit_text(game['per_user_limit'])} · "
+            f"{game['available']} key(s) left · for {roles_text(game, config, guild)}")
+
+
+def own_key_lines(store: Store, user_id: int) -> list[str]:
+    """Their keys with a Steam link that fills each one in, and their old KeyBot claims."""
+    keys = store.user_keys(user_id)
+    prior = store.prior_claims(user_id)
+    lines = [f"**{escape_markdown(k['game'])}**: `{k['value']}` · [Redeem on Steam]({redeem_url(k['value'])})"
+             for k in keys]
+    lines += [f"**{escape_markdown(p['game'])}**: claimed with the old KeyBot (it sent you that key)" for p in prior]
+    if keys:
+        lines.append("(or in Steam: Games → Activate a Product on Steam)")
+    return lines or ["You haven't been given any keys yet."]
+
+
+def overview_lines(bot: "KeyBot", user: discord.abc.User, guild: discord.Guild | None,
+                   menu: list[sqlite3.Row]) -> list[str]:
+    """/claim without a game: the public games with keys left, their own keys, and what to do next."""
+    games = [g for g in bot.store.games() if g["public"] and g["available"]]
+    lines = ["**Games with keys to claim**"]
+    lines += [pool_line(g, bot.config, guild) for g in games] or ["No games have keys to claim right now."]
+    lines.append("**Your keys**")
+    lines += own_key_lines(bot.store, user.id)
+    if bot.store.is_banned(user.id):
+        lines.append(BANNED_TEXT.format(where=""))
+    elif menu:
+        lines.append("Pick a game below to claim it (or run /claim game:…).")
+    else:
+        lines.append(nothing_to_claim_text(bot, user))
+    return lines
+
+
+async def show_overview(interaction: discord.Interaction) -> None:
+    bot: KeyBot = interaction.client
+    # claimable_games leaves out the banned, so a ban means no menu.
+    menu = claim_menu_games(bot, interaction.user)
+    pages = pool_pages(overview_lines(bot, interaction.user, interaction.guild, menu))
+    view = OverviewView(pages, menu)
+    # Ephemeral: only they see their keys, and it works with DMs closed too. No link previews.
+    if view.children:
+        await interaction.response.send_message(pages[0], view=view, ephemeral=True, suppress_embeds=True)
+    else:
+        await interaction.response.send_message(pages[0], ephemeral=True, suppress_embeds=True)
+
+
+def pool_pages(lines: list[str], per_page: int = POOLS_PER_PAGE) -> list[str]:
+    chunks = [lines[i:i + per_page] for i in range(0, len(lines), per_page)] or [[]]
+    if len(chunks) == 1:
+        return [fit(chunks[0])]
+    return [fit(chunk + [f"Page {n} of {len(chunks)}"]) for n, chunk in enumerate(chunks, 1)]
+
+
+class PagesView(discord.ui.View):
+    def __init__(self, pages: list[str]):
+        super().__init__(timeout=300)
+        self.pages = pages
+        self.page = 0
+        self.update_buttons()
+
+    def update_buttons(self) -> None:
+        self.previous_page.disabled = self.page == 0
+        self.next_page.disabled = self.page == len(self.pages) - 1
+
+    async def turn(self, interaction: discord.Interaction, step: int) -> None:
+        self.page = max(0, min(len(self.pages) - 1, self.page + step))
+        self.update_buttons()
+        await interaction.response.edit_message(content=self.pages[self.page], view=self)
+
+    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary)
+    async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        await self.turn(interaction, -1)
+
+    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary)
+    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
+        await self.turn(interaction, 1)
+
+
+class OverviewView(PagesView):
+    """The /claim overview: page buttons when it's long, and a menu of the games they can claim."""
+
+    def __init__(self, pages: list[str], games: list[sqlite3.Row]):
+        super().__init__(pages)
+        if len(pages) == 1:
+            self.remove_item(self.previous_page)
+            self.remove_item(self.next_page)
+        if games:
+            self.add_item(ClaimSelect(games))
 
 
 async def claim_game(interaction: discord.Interaction, game: sqlite3.Row) -> None:
@@ -518,14 +617,14 @@ async def claim_game(interaction: discord.Interaction, game: sqlite3.Row) -> Non
     except discord.HTTPException as error:
         if outcome.status != "given":
             raise
-        # The key is theirs either way: /mykeys shows it (and the DM may have gone out).
+        # The key is theirs either way: /claim shows it (and the DM may have gone out).
         log.warning("couldn't show key #%s to %s in the reply (%s)", outcome.key_id, interaction.user.id,
                     type(error).__name__)
 
 
 class ClaimSelect(discord.ui.Select):
     def __init__(self, games: list[sqlite3.Row]):
-        super().__init__(placeholder="Choose a game", options=[
+        super().__init__(placeholder="Choose a game to claim", options=[
             discord.SelectOption(label=g["name"][:100], value=str(g["id"])) for g in games[:25]
         ])
 
@@ -545,29 +644,7 @@ class ClaimSelect(discord.ui.Select):
         await claim_game(interaction, game)
 
 
-class ClaimView(discord.ui.View):
-    def __init__(self, games: list[sqlite3.Row]):
-        super().__init__(timeout=300)
-        self.add_item(ClaimSelect(games))
-
-
-@app_commands.command(name="mykeys", description="See the keys you've been given")
-@app_commands.guild_only()
-async def mykeys(interaction: discord.Interaction) -> None:
-    store: Store = interaction.client.store
-    keys = store.user_keys(interaction.user.id)
-    prior = store.prior_claims(interaction.user.id)
-    if not keys and not prior:
-        await interaction.response.send_message("You haven't been given any keys yet.", ephemeral=True)
-        return
-    lines = [f"**{escape_markdown(k['game'])}**: `{k['value']}`" for k in keys]
-    lines += [f"**{escape_markdown(p['game'])}**: claimed with the old KeyBot (it sent you that key)" for p in prior]
-    lines.append(f"Redeem in Steam (Games → Activate a Product on Steam) or at {REDEEM_URL}")
-    # Ephemeral: only they see it, and it works with DMs closed too.
-    await interaction.response.send_message("\n".join(lines)[:2000], ephemeral=True)
-
-
-# Creators and press: /request and /request-press
+# Creators and press: /request
 
 
 async def stocked_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
@@ -575,7 +652,7 @@ async def stocked_autocomplete(interaction: discord.Interaction, current: str) -
 
 
 async def request_precheck(interaction: discord.Interaction, game_name: str) -> sqlite3.Row | None:
-    """The checks /request and /request-press share. The game, or None after answering."""
+    """The checks creator and press requests share. The game, or None after answering."""
     bot: KeyBot = interaction.client
     store, user_id = bot.store, interaction.user.id
     game = resolve_game(store, game_name)
@@ -597,11 +674,29 @@ async def request_precheck(interaction: discord.Interaction, game_name: str) -> 
     return None
 
 
-@app_commands.command(name="request", description="Content creators: ask for a key for one of our games")
-@app_commands.describe(game="Which game")
+REQUEST_TYPES = [app_commands.Choice(name="creator", value="creator"), app_commands.Choice(name="press", value="press")]
+
+
+@app_commands.command(name="request", description="Content creators and press: ask for a key for one of our games")
+@app_commands.describe(game="Which game",
+                       kind="creator: YouTube or Twitch, checked on the web; press: reviewed by the team",
+                       outlet="Press: the publication or site you write for",
+                       email="Press: your work email, so we can reach you")
+@app_commands.rename(kind="type")
+@app_commands.choices(kind=REQUEST_TYPES)
 @app_commands.autocomplete(game=stocked_autocomplete)
 @app_commands.guild_only()
-async def request_key(interaction: discord.Interaction, game: str) -> None:
+async def request_key(interaction: discord.Interaction, game: str, kind: app_commands.Choice[str],
+                      outlet: app_commands.Range[str, 1, 100] | None = None,
+                      email: app_commands.Range[str, 3, 254] | None = None) -> None:
+    if kind.value == "press":
+        await request_press(interaction, game, outlet, email)
+    else:
+        await request_creator(interaction, game)
+
+
+async def request_creator(interaction: discord.Interaction, game: str) -> None:
+    """/request type:creator: a one-time link to verify their channel on the web."""
     bot: KeyBot = interaction.client
     row = await request_precheck(interaction, game)
     if row is None:
@@ -619,15 +714,17 @@ async def request_key(interaction: discord.Interaction, game: str) -> None:
         view=view, ephemeral=True)
 
 
-@app_commands.command(name="request-press", description="Press: ask for a review key for one of our games")
-@app_commands.describe(game="Which game", outlet="The publication or site you write for",
-                       email="Your work email, so we can reach you")
-@app_commands.autocomplete(game=stocked_autocomplete)
-@app_commands.guild_only()
-async def request_press(interaction: discord.Interaction, game: str,
-                        outlet: app_commands.Range[str, 1, 100], email: app_commands.Range[str, 3, 254]) -> None:
+async def request_press(interaction: discord.Interaction, game: str, outlet: str | None, email: str | None) -> None:
+    """/request type:press: always reviewed by the team."""
     bot: KeyBot = interaction.client
-    if not EMAIL_PATTERN.match(email.strip()):
+    outlet, email = (outlet or "").strip(), (email or "").strip()
+    if not outlet or not email:
+        missing = " and ".join(name for name, value in (("`outlet:`", outlet), ("`email:`", email)) if not value)
+        await interaction.response.send_message(
+            f"Press requests need {missing}: run /request again with type:press, the publication or site "
+            "you write for (outlet:) and your work email (email:).", ephemeral=True)
+        return
+    if not EMAIL_PATTERN.match(email):
         await interaction.response.send_message("That email address doesn't look right.", ephemeral=True)
         return
     row = await request_precheck(interaction, game)
@@ -635,7 +732,7 @@ async def request_press(interaction: discord.Interaction, game: str,
         return
     # Always reviewed by hand. Once the company mail exists, the email could be verified first.
     request_id = bot.store.create_request("press", row["id"], interaction.user.id,
-                                          details={"outlet": outlet.strip(), "email": email.strip()})
+                                          details={"outlet": outlet, "email": email})
     await interaction.response.defer(ephemeral=True, thinking=True)
     try:
         await bot.post_request_card(request_id)
@@ -758,7 +855,10 @@ async def mark_card(interaction: discord.Interaction, note: str) -> None:
 
 # Admins: /keys …
 
-keys_group = app_commands.Group(name="keys", description="Manage game keys (Four Games team)", guild_only=True)
+# Discord shows /keys only to people with Manage Server (the server's Integrations settings can let
+# a team role see it too); every command still checks require_admin, so ADMIN_ROLE_ID keeps working.
+keys_group = app_commands.Group(name="keys", description="Manage game keys (Four Games team)", guild_only=True,
+                                default_permissions=discord.Permissions(manage_guild=True))
 
 
 async def all_games_autocomplete(interaction: discord.Interaction, current: str) -> list[app_commands.Choice[str]]:
@@ -856,7 +956,7 @@ async def keys_log(interaction: discord.Interaction, count: app_commands.Range[i
     await interaction.response.send_message("\n".join(lines)[:2000], ephemeral=True)
 
 
-@keys_group.command(name="game-settings",
+@keys_group.command(name="settings",
                     description="See or change who can claim a game, how many keys each, public or private")
 @app_commands.describe(game="Which game",
                        public="Public: members can /claim it. Private: only the team hands it out",
@@ -866,7 +966,7 @@ async def keys_log(interaction: discord.Interaction, count: app_commands.Range[i
                        remove_role="Take a role off the list",
                        clear_roles="Empty the list, so the member role (MEMBER_ROLE) decides again")
 @app_commands.autocomplete(game=all_games_autocomplete)
-async def keys_game_settings(interaction: discord.Interaction, game: str, public: bool | None = None,
+async def keys_settings(interaction: discord.Interaction, game: str, public: bool | None = None,
                              per_user_limit: app_commands.Range[int, 0, MAX_PER_USER_LIMIT] | None = None,
                              add_role: discord.Role | None = None, remove_role: discord.Role | None = None,
                              clear_roles: bool = False) -> None:
@@ -902,66 +1002,7 @@ def settings_text(game: sqlite3.Row, config: Config, guild: discord.Guild | None
             f"Who can /claim it: {who}")
 
 
-# Everyone: /pools
-
-
-def pool_line(game: sqlite3.Row, config: Config, guild: discord.Guild | None) -> str:
-    name = escape_markdown(game["name"])
-    stock = f"{game['available']} key(s) left"
-    if not game["public"]:
-        return f"**{name}** · private (handed out by the team) · {limit_text(game['per_user_limit'])} · {stock}"
-    return (f"**{name}** · public · {limit_text(game['per_user_limit'])} · {stock} · "
-            f"for {roles_text(game, config, guild)}")
-
-
-def pool_pages(lines: list[str], per_page: int = POOLS_PER_PAGE) -> list[str]:
-    chunks = [lines[i:i + per_page] for i in range(0, len(lines), per_page)] or [[]]
-    if len(chunks) == 1:
-        return [fit(chunks[0])]
-    return [fit(chunk + [f"Page {n} of {len(chunks)}"]) for n, chunk in enumerate(chunks, 1)]
-
-
-class PagesView(discord.ui.View):
-    def __init__(self, pages: list[str]):
-        super().__init__(timeout=300)
-        self.pages = pages
-        self.page = 0
-        self.update_buttons()
-
-    def update_buttons(self) -> None:
-        self.previous_page.disabled = self.page == 0
-        self.next_page.disabled = self.page == len(self.pages) - 1
-
-    async def turn(self, interaction: discord.Interaction, step: int) -> None:
-        self.page = max(0, min(len(self.pages) - 1, self.page + step))
-        self.update_buttons()
-        await interaction.response.edit_message(content=self.pages[self.page], view=self)
-
-    @discord.ui.button(label="Previous", style=discord.ButtonStyle.secondary)
-    async def previous_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        await self.turn(interaction, -1)
-
-    @discord.ui.button(label="Next", style=discord.ButtonStyle.secondary)
-    async def next_page(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
-        await self.turn(interaction, 1)
-
-
-@app_commands.command(name="pools", description="Our games with keys: who can claim them, how many, and what's left")
-@app_commands.guild_only()
-async def pools(interaction: discord.Interaction) -> None:
-    bot: KeyBot = interaction.client
-    games = bot.store.games()
-    if not games:
-        await interaction.response.send_message("No games have keys yet.", ephemeral=True)
-        return
-    pages = pool_pages([pool_line(g, bot.config, interaction.guild) for g in games])
-    if len(pages) == 1:
-        await interaction.response.send_message(pages[0], ephemeral=True)
-    else:
-        await interaction.response.send_message(pages[0], view=PagesView(pages), ephemeral=True)
-
-
-# Admins: /grant and /grantrole
+# Admins: /keys grant and /keys grant-role
 
 
 def grant_text(outcome: Outcome, user: discord.abc.User, game: sqlite3.Row) -> str:
@@ -970,7 +1011,7 @@ def grant_text(outcome: Outcome, user: discord.abc.User, game: sqlite3.Row) -> s
         return f"Sent: {user.mention} has key #{outcome.key_id} for **{name}** by DM."
     if outcome.status == "already":
         return (f"{user.mention} already has {limit_text(game['per_user_limit'])} for **{name}** "
-                "(the per-user limit), so no key was sent. Raise it with `/keys game-settings` if needed.")
+                "(the per-user limit), so no key was sent. Raise it with `/keys settings` if needed.")
     if outcome.status == "banned":
         return f"{user.mention} is banned from **{name}** (or from every game), so no key was sent."
     if outcome.status == "dm_failed":
@@ -978,11 +1019,10 @@ def grant_text(outcome: Outcome, user: discord.abc.User, game: sqlite3.Row) -> s
     return f"No keys left for **{name}**. Add some with `/keys add`."
 
 
-@app_commands.command(name="grant", description="Send someone one key by DM (Four Games team)")
+@keys_group.command(name="grant", description="Send someone one key by DM")
 @app_commands.describe(user="Who gets it", game="Which game")
 @app_commands.autocomplete(game=all_games_autocomplete)
-@app_commands.guild_only()
-async def grant(interaction: discord.Interaction, user: discord.User, game: str) -> None:
+async def keys_grant(interaction: discord.Interaction, user: discord.User, game: str) -> None:
     if not await require_admin(interaction):
         return
     bot: KeyBot = interaction.client
@@ -1036,9 +1076,9 @@ class GrantRoleView(discord.ui.View):
         except discord.HTTPException:
             # A big role can take longer than the reply stays open: the admin channel gets it instead.
             try:
-                await (await bot.admin_channel()).send(f"/grantrole by {interaction.user.mention}: {text}")
+                await (await bot.admin_channel()).send(f"/keys grant-role by {interaction.user.mention}: {text}")
             except discord.HTTPException:
-                log.exception("couldn't report the grantrole result")
+                log.exception("couldn't report the grant-role result")
 
     @discord.ui.button(label="Cancel", style=discord.ButtonStyle.secondary)
     async def cancel(self, interaction: discord.Interaction, button: discord.ui.Button) -> None:
@@ -1061,11 +1101,11 @@ def grantrole_prompt(members: list[discord.abc.User], store: Store, game: sqlite
     return "\n".join(lines)
 
 
-@app_commands.command(name="grantrole", description="Send one key by DM to everyone with a role (Four Games team)")
+# Not in the group by itself: register_commands adds it only when GRANTROLE_ENABLED is on.
+@app_commands.command(name="grant-role", description="Send one key by DM to everyone with a role")
 @app_commands.describe(role="Everyone with this role", game="Which game")
 @app_commands.autocomplete(game=all_games_autocomplete)
-@app_commands.guild_only()
-async def grantrole(interaction: discord.Interaction, role: discord.Role, game: str) -> None:
+async def keys_grant_role(interaction: discord.Interaction, role: discord.Role, game: str) -> None:
     if not await require_admin(interaction):
         return
     bot: KeyBot = interaction.client

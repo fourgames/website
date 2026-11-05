@@ -34,7 +34,7 @@ class Config:
     db_path: str
     host: str
     port: int
-    # /grantrole needs the guild's member list, so the privileged Server Members intent. Off unless
+    # /keys grant-role needs the guild's member list, so the privileged Server Members intent. Off unless
     # GRANTROLE_ENABLED=1 (and the intent is switched on in the Developer Portal).
     grantrole_enabled: bool = False
 

@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS games (
     -- Keys one person can have of this game, counting every reason and earlier KeyBot claims.
     -- 0 means no limit.
     per_user_limit    INTEGER NOT NULL DEFAULT 1,
-    -- 0: private, only handed out by the team (/grant, /grantrole, approved requests).
+    -- 0: private, only handed out by the team (/keys grant, /keys grant-role, approved requests).
     public            INTEGER NOT NULL DEFAULT 1,
     -- The stock warning already sent since the last restock: 0 none, 1 at 10%, 2 out of keys.
     stock_warning     INTEGER NOT NULL DEFAULT 0

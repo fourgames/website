@@ -12,6 +12,24 @@
 const PREFIX = "mkv-ideas-";
 const MAX_IDEA = 2000; // the server's limit for one idea
 const MAX_BOX = 20000; // several ideas pasted at once
+// What Claude needs to score an idea well. No blank lines inside, so several filled-in copies
+// separated by a blank line still count as several ideas.
+export const IDEA_TEMPLATE = [
+  "Working title:",
+  "In one sentence:",
+  "Genre (closest Steam tags):",
+  "2D or 3D, camera (top-down, side, first/third person):",
+  "Art style:",
+  "Core loop (what you do minute to minute):",
+  "Progression (upgrades, skill tree, unlocks):",
+  "Modes (story, endless, free roam, missions):",
+  "Players (solo, local co-op, online co-op, PvP; how many):",
+  "Hook (what's new or different):",
+  "Like these games:",
+  "Scope (team, months to make, hours of play):",
+  "Price:",
+  "Extras (leaderboards, Steam Deck, mods, demo):",
+].join("\n");
 
 // Several ideas in one paste: a numbered or bulleted list ("1. …", "2) …", "- …", "• …" at a line
 // start), or else chunks separated by a blank line. Returns the ideas (2+), or [] when it's one idea.
@@ -416,7 +434,17 @@ function paintComposer(v) {
     v.button = h("button.btn.primary", { type: "button", onclick: () => submit(v) });
     v.hint = h("span.mki-hint");
     v.status = h("div.mki-status");
-    v.composer.append(h("label.mki-label", { for: "mki-text" }, "Your idea (or several)"), v.box, h("div.mki-actions", v.allButton, v.button, v.hint), v.status);
+    const useTemplate = h("button.btn", { type: "button", title: "Adds the template to the box: fill in what you know, leave the rest empty", onclick: () => {
+      const cur = v.box.value.replace(/\s+$/, "");
+      v.box.value = cur ? `${cur}\n\n${IDEA_TEMPLATE}` : IDEA_TEMPLATE;
+      store(v, "draft", v.box.value); paintComposer(v); v.box.focus();
+      const first = v.box.value.indexOf(":", v.box.value.lastIndexOf("Working title:")) + 1;
+      v.box.setSelectionRange(first, first);
+    } }, "Use the template");
+    const copyTemplate = h("button.btn", { type: "button", title: "Copy the template, to fill in somewhere else first", onclick: (e) => v.ctx.copy?.(IDEA_TEMPLATE, e.currentTarget) }, "Copy template");
+    v.composer.append(h("div.mki-labelrow", h("label.mki-label", { for: "mki-text" }, "Your idea (or several)"), h("span.mki-tpl", useTemplate, copyTemplate)),
+      h("p.mki-tip", "The more Claude knows, the better the score: 2D or 3D, the camera, solo or co-op, scope and what it's like. The template asks for all of it; fill in what you know."),
+      v.box, h("div.mki-actions", v.allButton, v.button, v.hint), v.status);
   }
   const busy = !!v.submitting;
   const n = v.box.value.trim().length, many = splitIdeas(v.box.value), tooLong = many.filter((x) => x.length > MAX_IDEA).length;
@@ -642,6 +670,9 @@ const CSS = `
 .mkv-ideas .mki-test { margin: 0 0 12px; padding: 8px 12px; border: 1px dashed var(--fb-warning); border-radius: 10px; background: var(--fb-card-2); color: var(--fb-ink-2); font-size: 0.86rem; }
 .mkv-ideas .mki-test b { color: var(--fb-ink); }
 .mkv-ideas .mki-composer { background: var(--fb-card); border: 1px solid var(--fb-line); border-radius: 12px; padding: 12px; margin-bottom: 18px; }
+.mkv-ideas .mki-labelrow { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; }
+.mkv-ideas .mki-tpl { display: inline-flex; gap: 6px; }
+.mkv-ideas .mki-tip { margin: 2px 0 6px; color: var(--fb-muted); font-size: 0.8125rem; }
 .mkv-ideas .mki-label { display: block; font-weight: 650; font-size: 0.9rem; margin-bottom: 6px; color: var(--fb-ink); }
 .mkv-ideas .mki-text { display: block; box-sizing: border-box; width: 100%; font: inherit; font-size: 0.95rem; line-height: 1.45; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 8px; padding: 8px 10px; resize: vertical; }
 .mkv-ideas .mki-text:focus { outline: 2px solid var(--fb-accent); outline-offset: 0; border-color: transparent; }

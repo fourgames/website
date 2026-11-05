@@ -826,11 +826,12 @@ function filterBar() {
 // Select a tag everywhere on the tab (dot, bar and table row) without scrolling away.
 function selectTag(tag) { st.sel = st.sel === tag ? null : tag; draw(); }
 
-const DIR_COLOR = (r) => r.dir > 0 ? "var(--sw-3)" : r.dir < 0 ? "var(--sw-2)" : "var(--fb-muted)";
+// Green is good for you: fewer rivals coming. Orange: more new games joining every month.
+const DIR_COLOR = (r) => r.dir < 0 ? "var(--sw-3)" : r.dir > 0 ? "var(--sw-2)" : "var(--fb-muted)";
 const DIR_WORDS = [
-  ["var(--sw-3)", "Getting more crowded: its share of new Steam games is up 10% or more on a year ago (more rivals coming)"],
+  ["var(--sw-3)", "Fewer rivals coming: its share of new Steam games is down 10% or more on a year ago"],
   ["var(--fb-muted)", "Same crowding as a year ago: its share of new Steam games is within 10% of a year ago"],
-  ["var(--sw-2)", "Getting less crowded: its share of new Steam games is down 10% or more on a year ago (fewer rivals)"],
+  ["var(--sw-2)", "More rivals coming: its share of new Steam games is up 10% or more on a year ago"],
 ];
 const DIR_TIP = "Its share of all Steam releases in the last 90 days, against the same 90 days a year ago.";
 const dirLegend = (what) => [C.h("b", `${what} color:`), ...DIR_WORDS.map(([c, w]) => C.h("span", { title: DIR_TIP }, C.h("i.mm-key", { style: `background:${c}` }), w))];
@@ -1473,8 +1474,8 @@ const CSS = `
 .mkv-merged .mm-barcell { display: inline-flex; align-items: center; gap: 6px; justify-content: flex-end; }
 .mkv-merged .mm-cbar { display: inline-block; width: 52px; height: 6px; border-radius: 3px; background: var(--fb-card-2); overflow: hidden; }
 .mkv-merged .mm-cbar i { display: block; height: 100%; border-radius: 3px; }
-.mkv-merged .mm-up { color: var(--fb-good-text); }
-.mkv-merged .mm-down { color: var(--fb-negative); }
+.mkv-merged .mm-up { color: var(--sw-2); }
+.mkv-merged .mm-down { color: var(--fb-good-text); }
 .mkv-merged .mm-badge { display: inline-block; font-size: 0.7rem; font-weight: 600; padding: 0 6px; margin-left: 6px; border-radius: 10px; border: 1px solid var(--fb-line); color: var(--fb-ink-2); white-space: nowrap; vertical-align: 1px; }
 .mkv-merged td > .mm-badge:first-child { margin-left: 0; }
 .mkv-merged .mm-b-self { border-color: var(--fb-good-text); color: var(--fb-good-text); }

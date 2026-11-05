@@ -188,7 +188,8 @@ def _parse_labels(text: str) -> dict:
 
 def request_counters(samples: list[tuple[str, dict, float]]) -> dict | None:
     """Caddy's request counters since it started: `total`, per `hosts` (with `metrics { per_host }`),
-    and `coded` / `errors` (4xx and 5xx) when caddy_http_requests_total has a `code` label, else None.
+    and `coded` / `errors` (4xx and 5xx) from a `code` label (on caddy_http_requests_total, else on
+    caddy_http_request_duration_seconds_count), else None.
 
     Summed over every server and handler. None when Caddy has no request metrics (metrics not on).
     """
@@ -200,6 +201,10 @@ def request_counters(samples: list[tuple[str, dict, float]]) -> dict | None:
         if "host" in labels:
             hosts[labels["host"]] = hosts.get(labels["host"], 0) + v
     coded = [(l, v) for l, v in requests if "code" in l]
+    if not coded:
+        # caddy_http_requests_total has no code label; the duration histogram's _count does, and it
+        # counts the same requests.
+        coded = [(l, v) for name, l, v in samples if name == "caddy_http_request_duration_seconds_count" and "code" in l]
     return {
         "total": sum(v for _, v in requests),
         "coded": sum(v for _, v in coded) if coded else None,

@@ -30,8 +30,8 @@ def test_metrics_parsing():
     assert "go_goroutines" in names and len([n for n in names if n == "caddy_http_requests_total"]) == 3
     escaped = [l for n, l, _ in samples if l.get("handler") == "x"][0]
     assert escaped["server"] == 'a"b'
-    # requests summed over every series; no code label on requests_total: no error counts
-    assert request_counters(samples) == {"total": 155, "coded": None, "errors": None, "hosts": {}}
+    # (no code on requests_total, so the error share comes from the duration histogram's counts)
+    assert request_counters(samples) == {"total": 155, "coded": 30, "errors": 5, "hosts": {}}
     assert ss.requests_in_flight(samples) == 3
 
 
@@ -296,3 +296,13 @@ def test_webhook_url_from_env_file(monkeypatch, tmp_path):
     assert ss.webhook_url() == "https://discord.example/hook"
     monkeypatch.setattr(ss, "WEBHOOK_ENV_FILE", str(tmp_path / "missing.env"))
     assert ss.webhook_url() is None
+
+
+def test_error_share_falls_back_to_the_duration_counts():
+    from uptime.server_stats import parse_metrics, request_counters
+    text = """caddy_http_requests_total{handler="subroute",host="api.fourgames.se",server="srv0"} 10
+caddy_http_request_duration_seconds_count{code="200",handler="subroute",host="api.fourgames.se",method="GET",server="srv0"} 7
+caddy_http_request_duration_seconds_count{code="404",handler="subroute",host="api.fourgames.se",method="GET",server="srv0"} 3
+"""
+    c = request_counters(parse_metrics(text))
+    assert c["total"] == 10 and c["coded"] == 10 and c["errors"] == 3

@@ -30,6 +30,17 @@ export const IDEA_TEMPLATE = [
   "Price:",
   "Extras (leaderboards, Steam Deck, mods, demo):",
 ].join("\n");
+// A prompt to paste into Claude (claude.ai or the app): it grills the owner on an idea, one question at a
+// time, and ends with the template filled in, ready for the box.
+export const INTERVIEW_PROMPT = `I'm a small indie developer (a Godot studio) and I want to get a game idea scored against Steam market data. Before I score it, grill me on it so the idea is specific enough to judge.
+
+Ask me ONE question at a time and wait for my answer. Cover everything in the template below, but don't just read it out: dig where my answers are vague, push back when something sounds generic, too big for a small team or unclear about what's new, and ask what similar games do better. Suggest concrete options when I'm unsure (e.g. "2D side view like X, or 3D top-down like Y?"). About 8-15 questions is plenty; stop sooner if the idea is clear.
+
+When we're done, reply with ONLY the template below, filled in with my answers (short, concrete phrases; leave a line empty if we never settled it). No other text, so I can paste it straight into my dashboard.
+
+${IDEA_TEMPLATE}
+
+My idea, roughly: `;
 
 // Several ideas in one paste: a numbered or bulleted list ("1. …", "2) …", "- …", "• …" at a line
 // start), or else chunks separated by a blank line. Returns the ideas (2+), or [] when it's one idea.
@@ -442,8 +453,9 @@ function paintComposer(v) {
       v.box.setSelectionRange(first, first);
     } }, "Use the template");
     const copyTemplate = h("button.btn", { type: "button", title: "Copy the template, to fill in somewhere else first", onclick: (e) => v.ctx.copy?.(IDEA_TEMPLATE, e.currentTarget) }, "Copy template");
-    v.composer.append(h("div.mki-labelrow", h("label.mki-label", { for: "mki-text" }, "Your idea (or several)"), h("span.mki-tpl", useTemplate, copyTemplate)),
-      h("p.mki-tip", "The more Claude knows, the better the score: 2D or 3D, the camera, solo or co-op, scope and what it's like. The template asks for all of it; fill in what you know."),
+    const copyInterview = h("button.btn", { type: "button", title: "A prompt for Claude (claude.ai or the app): it asks you about the idea one question at a time, then gives you the filled-in template to paste here", onclick: (e) => v.ctx.copy?.(INTERVIEW_PROMPT, e.currentTarget) }, "Copy interview prompt");
+    v.composer.append(h("div.mki-labelrow", h("label.mki-label", { for: "mki-text" }, "Your idea (or several)"), h("span.mki-tpl", useTemplate, copyTemplate, copyInterview)),
+      h("p.mki-tip", "The more Claude knows, the better the score: 2D or 3D, the camera, solo or co-op, scope and what it's like. The template asks for all of it; fill in what you know. Not sure yet? \"Copy interview prompt\", paste it into Claude with your rough idea, answer its questions, and paste the template it gives back here."),
       v.box, h("div.mki-actions", v.allButton, v.button, v.hint), v.status);
   }
   const busy = !!v.submitting;
@@ -671,7 +683,7 @@ const CSS = `
 .mkv-ideas .mki-test b { color: var(--fb-ink); }
 .mkv-ideas .mki-composer { background: var(--fb-card); border: 1px solid var(--fb-line); border-radius: 12px; padding: 12px; margin-bottom: 18px; }
 .mkv-ideas .mki-labelrow { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; }
-.mkv-ideas .mki-tpl { display: inline-flex; gap: 6px; }
+.mkv-ideas .mki-tpl { display: inline-flex; flex-wrap: wrap; gap: 6px; }
 .mkv-ideas .mki-tip { margin: 2px 0 6px; color: var(--fb-muted); font-size: 0.8125rem; }
 .mkv-ideas .mki-label { display: block; font-weight: 650; font-size: 0.9rem; margin-bottom: 6px; color: var(--fb-ink); }
 .mkv-ideas .mki-text { display: block; box-sizing: border-box; width: 100%; font: inherit; font-size: 0.95rem; line-height: 1.45; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 8px; padding: 8px 10px; resize: vertical; }

@@ -75,7 +75,7 @@ export default {
 		community: "Community",
 		privacy: "Privacy",
 		steam: "Follow on Steam",
-		youtube: "Subscribe on YouTube",
+		youtube: "Follow on YouTube",
 		github: "GitHub",
 		issue: "Report a website issue",
 		discord: "Discord",

@@ -71,7 +71,7 @@ export default {
 		community: "社区",
 		privacy: "隐私",
 		steam: "在 Steam 上关注",
-		youtube: "在 YouTube 上订阅",
+		youtube: "在 YouTube 上关注",
 		github: "GitHub",
 		issue: "报告网站问题",
 		discord: "Discord",

@@ -72,7 +72,7 @@ export default {
 		community: "社群",
 		privacy: "隱私",
 		steam: "在 Steam 上追蹤",
-		youtube: "在 YouTube 上訂閱",
+		youtube: "在 YouTube 上追蹤",
 		github: "GitHub",
 		issue: "回報網站問題",
 		discord: "Discord",

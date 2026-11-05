@@ -796,6 +796,10 @@ function detectionNote() {
 
 function makeView() {
   const h = C.h, t = st.files.trends;
+  // Files built by an older market.py lack hitGames, topReviews and the rest the niches need.
+  if (t && t.priorGames == null) return h("div", h("p.mm-note.mm-stale",
+    h("b", "The server's market files are from an older version."), " They're rebuilt every night at 04:00 Swedish time with the current code; to see this tab now, rebuild them on the server: ",
+    h("code", "sudo systemctl start steamdata-market")));
   const all = nichesNow();
   return h("div",
     filterBar(),

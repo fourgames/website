@@ -7,6 +7,8 @@
 // indented under their link. The footer has its own columns in footer.js.
 // Labels are message keys (src/i18n/messages); `to` is the English path, localised by NavLink,
 // `href` is an external link (opens in a new tab).
+// About is the one exception to the dropdown rule: it groups two pages (Principles, Work with us).
+// Privacy lives in the footer only, as on most company sites.
 import { SITE } from "./site.js";
 
 export const NAV_LEFT = [
@@ -53,27 +55,13 @@ export const NAV_LEFT = [
 
 export const NAV_RIGHT = [
 	{
-		label: "nav.principles",
+		label: "nav.about",
 		to: "/principles",
 		children: [
+			{ label: "nav.principles", to: "/principles" },
 			{ label: "nav.fairPublishing", to: "/principles#publishing" },
+			{ label: "nav.jobs", to: "/jobs" },
 			{ label: "nav.contact", to: "/jobs#contact" },
-		],
-	},
-	{
-		label: "nav.jobs",
-		to: "/jobs",
-		children: [
-			{ label: "nav.collaborations", to: "/jobs#collaborations" },
-			{ label: "nav.contact", to: "/jobs#contact" },
-		],
-	},
-	{
-		label: "nav.privacy",
-		to: "/privacy",
-		children: [
-			{ label: "nav.policy", to: "/privacy#policy" },
-			{ label: "nav.yourData", to: "/privacy#your-data" },
 		],
 	},
 ];

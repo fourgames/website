@@ -1,6 +1,6 @@
 # The scheduled task on your Mac
 
-What the collector can't read from GitHub's servers: Steamworks' refund notes and report pages (they need your Steamworks login, so they're read in your Chrome with Claude in Chrome) and YouTube captions (YouTube blocks GitHub's servers, not a home connection). Start it with `/feedback-mac` in Claude Code (the skill in `~/.claude/skills/feedback-mac`, also a button under More), which follows the prompt below. A scheduled task in the Claude app (Scheduled → New task, this prompt, no schedule, **Run now**) works too. It opens Chrome itself; Chrome has to be signed in to partner.steampowered.com (sign in once and Steam keeps you signed in).
+What the collector can't read from GitHub's servers: Steamworks' refund notes and report pages (they need your Steamworks login, so they're read in your Chrome with Claude in Chrome) and YouTube captions (YouTube blocks GitHub's servers, not a home connection). Start it with `/steam-scrape` in Claude Code (the skill in `~/.claude/skills/steam-scrape`, also a button under More), which follows the prompt below. A scheduled task in the Claude app (Scheduled → New task, this prompt, no schedule, **Run now**) works too. It opens Chrome itself; Chrome has to be signed in to partner.steampowered.com (sign in once and Steam keeps you signed in).
 
 ## Prompt
 

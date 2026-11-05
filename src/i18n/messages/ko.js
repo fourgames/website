@@ -74,7 +74,7 @@ export default {
 		community: "커뮤니티",
 		privacy: "개인정보",
 		steam: "Steam에서 팔로우",
-		youtube: "YouTube 채널",
+		youtube: "YouTube에서 구독",
 		github: "GitHub",
 		issue: "웹사이트 문제 신고하기",
 		discord: "Discord",

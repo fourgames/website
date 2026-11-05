@@ -73,7 +73,7 @@ export default {
 		community: "コミュニティ",
 		privacy: "プライバシー",
 		steam: "Steamでフォロー",
-		youtube: "YouTubeチャンネル",
+		youtube: "YouTubeでチャンネル登録",
 		github: "GitHub",
 		issue: "サイトの問題を報告",
 		discord: "Discord",

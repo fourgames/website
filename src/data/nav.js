@@ -16,7 +16,7 @@ export const NAV_LEFT = [
 	{
 		label: "nav.videos",
 		to: "/videos",
-		children: [{ label: "nav.youtube", href: SITE.links.youtube }],
+		children: [{ label: "nav.youtube", href: SITE.links.youtubeSubscribe }],
 	},
 	{
 		label: "nav.code",

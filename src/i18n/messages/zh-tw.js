@@ -80,7 +80,7 @@ export default {
 			issue: "回報網站問題",
 			status: "伺服器狀態",
 		},
-		community: { heading: "社群", discord: "Discord", youtube: "YouTube" },
+		community: { heading: "社群", discord: "Discord", youtube: "YouTube", steam: "Steam" },
 		copyright: "© {year} {name}。保留所有權利。四葉草圖示作者：{author}（CC BY 3.0）。",
 	},
 	hero: {

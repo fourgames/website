@@ -39,6 +39,7 @@ export const FOOTER_COLUMNS = [
 		links: [
 			{ label: "footer.community.discord", href: SITE.links.discord },
 			{ label: "footer.community.youtube", href: SITE.links.youtube },
+			{ label: "footer.community.steam", href: SITE.links.steam },
 		],
 	},
 ];

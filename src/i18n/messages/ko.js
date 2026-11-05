@@ -82,7 +82,7 @@ export default {
 			issue: "웹사이트 문제 신고하기",
 			status: "서버 상태",
 		},
-		community: { heading: "커뮤니티", discord: "Discord", youtube: "YouTube" },
+		community: { heading: "커뮤니티", discord: "Discord", youtube: "YouTube", steam: "Steam" },
 		copyright: "© {year} {name}. All rights reserved. 클로버 아이콘 제작: {author} (CC BY 3.0).",
 	},
 	hero: {

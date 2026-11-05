@@ -83,7 +83,7 @@ export default {
 			issue: "Report a website issue",
 			status: "Server status",
 		},
-		community: { heading: "Community", discord: "Discord", youtube: "YouTube" },
+		community: { heading: "Community", discord: "Discord", youtube: "YouTube", steam: "Steam" },
 		copyright: "© {year} {name}. All rights reserved. Clover icon by {author} (CC BY 3.0).",
 	},
 	hero: {

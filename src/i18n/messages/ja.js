@@ -81,7 +81,7 @@ export default {
 			issue: "サイトの問題を報告",
 			status: "サーバーの状態",
 		},
-		community: { heading: "コミュニティ", discord: "Discord", youtube: "YouTube" },
+		community: { heading: "コミュニティ", discord: "Discord", youtube: "YouTube", steam: "Steam" },
 		copyright: "© {year} {name}. All rights reserved. クローバーアイコン：{author}（CC BY 3.0）",
 	},
 	hero: {

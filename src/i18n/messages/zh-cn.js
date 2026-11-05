@@ -79,7 +79,7 @@ export default {
 			issue: "报告网站问题",
 			status: "服务器状态",
 		},
-		community: { heading: "社区", discord: "Discord", youtube: "YouTube" },
+		community: { heading: "社区", discord: "Discord", youtube: "YouTube", steam: "Steam" },
 		copyright: "© {year} {name}。保留所有权利。四叶草图标作者：{author}（CC BY 3.0）。",
 	},
 	hero: {

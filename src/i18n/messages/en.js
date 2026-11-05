@@ -344,7 +344,7 @@ export default {
 	},
 	privacy: {
 		title: "Privacy",
-		description: "What our games and this website collect, why, and how you stay in control. In plain words, not legalese.",
+		description: "What our games and this website collect, why, and how you stay in control.",
 		seeData: "See your data",
 		updated: "Last updated {date}",
 		imy: "IMY",

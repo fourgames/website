@@ -161,7 +161,7 @@ source, a strength (2 = stated, 1 = only mentioned) and the evidence:
      pbpaste | ssh fourgames-server 'cd /srv/fourgames/own/server && /srv/fourgames/steamdata-venv/bin/python -m steamdata.importids godot steamdb'
      ```
 
-  Or run `/steamdb-godot` in Claude Code (`~/.claude/skills/steamdb-godot`), which does all three in
+  Or run `/steamdb-godot-scrape` in Claude Code (`~/.claude/skills/steamdb-godot-scrape`), which does all three in
   your Chrome. It only adds (a shorter list later doesn't remove anyone), games we didn't know become stub
   apps the snapshot fills in, and the dashboard shows "SteamDB" as the evidence. Again every month
   or so, with the newest games.

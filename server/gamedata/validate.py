@@ -294,11 +294,24 @@ def end(body: dict[str, Any]) -> End:
             raise bad("summary must be an object")
         if json_size(summary) > MAX_SUMMARY:
             raise Refused(413, "too_large", f"summary must be at most {MAX_SUMMARY // 1024} KB")
-    first = body.get("first_session")
     return End(sid, number, float(playtime) if playtime is not None else None, summary,
-               active_s=seconds(body.get("active_s")), idle_s=seconds(body.get("idle_s")),
-               first_session=first if isinstance(first, bool) else None,
-               last_scene=text(body.get("last_scene"), 128), last_screen=text(body.get("last_screen"), 128))
+               **end_fields(body, summary))
+
+
+def end_fields(body: dict[str, Any], summary: dict[str, Any] | None) -> dict[str, Any]:
+    """session/end's active_s, idle_s, first_session, last_scene and last_screen, cleaned: from the
+    body, else from its summary (where the Godot plugin sends them), each checked the same way. A
+    wrong type is left out (None)."""
+    inner = summary if isinstance(summary, dict) else {}
+
+    def pick(key: str, clean: Any) -> Any:
+        value = clean(body.get(key))
+        return value if value is not None else clean(inner.get(key))
+
+    return {"active_s": pick("active_s", seconds), "idle_s": pick("idle_s", seconds),
+            "first_session": pick("first_session", lambda v: v if isinstance(v, bool) else None),
+            "last_scene": pick("last_scene", lambda v: text(v, 128)),
+            "last_screen": pick("last_screen", lambda v: text(v, 128))}
 
 
 @dataclass(frozen=True)

@@ -3,9 +3,12 @@ extends CanvasLayer
 ## The pause menu: Esc, P or a pad's Start in a level. Three settings (volume,
 ## the FPS counter, window or fullscreen), each change told to GameData through
 ## TestGame.set_setting(), and the ways out. GameData hears screen("pause") while
-## it is up and screen("") once play goes on.
+## it is up and the level's screen (`back_to`) once play goes on.
 
 signal closed
+
+## The screen play goes back to: the level's, which sets it.
+var back_to := ""
 
 var _volume: HSlider = null
 var _dragging := false
@@ -94,7 +97,7 @@ func close() -> void:
 		return
 	visible = false
 	get_tree().paused = false
-	GameData.screen("")
+	GameData.screen(back_to)
 	closed.emit()
 
 

@@ -39,7 +39,7 @@ the ticket never arrives.
 | `GameData.progress(data)` | How far they are: `{"day": 4, "coins": 120}`. The last one is also in the session's summary. |
 | `GameData.snapshot(data)` | A small state summary; call it every ~30 s. |
 | `GameData.set_setting(key, value)` | A setting changed. Before `start()` it only fills in the session's settings. |
-| `GameData.screen(name)` | The menu or screen now up (`"main_menu"`, `"options"`). Optional; the time spent on each one is recorded. |
+| `GameData.screen(name)` | The menu or screen now up (`"main_menu"`, `"options"`). Optional; the time spent on each one is recorded. Without a name the screen is the scene's (below). |
 | `GameData.ui(event, data)` | Something done with the interface rather than the game (see the conventions below). Optional. |
 | `GameData.track_player(node)` | The player's `Node2D` or `Node3D`, for the heatmaps. Call it again after a respawn or a scene change; `null` stops it. Optional. |
 | `GameData.death(cause, data)` | The player died; the scene and where they stood are added. Optional. |
@@ -63,7 +63,7 @@ Each is an event in the `/v1/events` batches, with no call from the game:
 |---|---|---|
 | `perf` | every 30 s, at each scene change and at quit | `scene`, `screen`, `why`, `frames`, `fps_avg`, `fps_1pct_low` (fps of the 99th-percentile frame), `frame_ms_max`, `slow_frames` (over 50 ms), `static_mb` (debug builds only), `video_mb`, `focused`, `idle`. Frames are only counted while the window has focus. |
 | `load` `"scene"` | each scene change | `scene`, `from`, `ms` (the frame the change took, which holds a `change_scene_to_file()` load) |
-| `load` `"boot"` | once | `boot_kind` (`first_install`, `first_after_update`, `normal`), `boot_ms` (engine start to the first frame with a scene), `to_play_ms` (to `mark_playing()`, else the first scene change; null if neither happened), `by`, `init_ms` (engine start to this autoload) |
+| `load` `"boot"` | once | `boot_kind` (`first_install`, `first_after_update`, `normal`), `boot_ms` (engine start to the first frame with a scene; the event waits for that frame, so it is null only when the game quit before it), `to_play_ms` (to `mark_playing()`, else the first scene change, and never less than `boot_ms`; null if neither happened), `by`, `init_ms` (engine start to this autoload) |
 | `input` | at start and on every switch | `type` (`keyboard_mouse`, `controller`, `touch`), and with hardware consent `controller` (`Input.get_joy_name`), `steam_input` (Steam Input's type, when the game called `Steam.inputInit()`), `deck_mode` (`handheld`/`docked` on a Steam Deck) |
 | `idle` | focus lost, or no input for 60 s, and back | `idle`, `why` (`unfocused`, `no_input`), `after_s` (how long the state before lasted) |
 | `setting_changed` | `set_setting()` with a new value | `key`, `old`, `new` (hardware consent only) |
@@ -82,14 +82,21 @@ consent only), `dlc` (`[{app_id, owned}]` from Steam's DLC list) and `steam`
 (as the `steam` event), and `/session/end`'s `summary` carries `events`,
 `actions`, `errors`, `progress`, `last_scene`, `last_screen`, `last_position`,
 `playtime_s`, `active_s`, `idle_s`, `first_session`, `session_number` and
-`boot_kind`. Its `seq` is the number of event batches the session sent. No
+`boot_kind` (`active_s` and `idle_s` count playtime only, not a paused tree,
+and never add up to more than `playtime_s`). Its `seq` is the number of event batches the session sent. No
 screenshots are ever taken or sent.
 
 ### Naming screens and interface events
 
 - Screens are snake_case nouns for what is up, the same name every time:
   `main_menu`, `options`, `pause`, `map`, `shop`, `inventory`, `credits`. Call
-  `screen("")` when the player is back in plain gameplay with nothing over it.
+  `screen("")` when the player is back in plain gameplay with nothing over it,
+  or name that too (`screen("level_3")`).
+- No screen is ever `""`: `screen("")`, and a game that names no screen at all,
+  get the scene's file name (`res://levels/level_3.tscn` is `level_3`), and
+  until the game names one the screen follows the scene as it changes. A named
+  screen stays up over a scene change until the game names another or calls
+  `screen("")`.
 - `ui` events are snake_case, the thing first and then what happened to it, in
   the past tense: `tutorial_skipped`, `tutorial_finished`, `help_opened`,
   `hint_shown`, `hint_dismissed`, `keybind_changed`, `save_deleted`. Put the

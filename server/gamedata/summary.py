@@ -230,6 +230,11 @@ def _text(value: Any) -> str:
     return gd_str(value)
 
 
+def _ms(value: Any) -> str:
+    """summary.gd's _ms: "812 ms", or "not measured" for a time the plugin couldn't take."""
+    return "%s ms" % _text(value) if value is not None else "not measured"
+
+
 def _first(value: Any, otherwise: Any) -> Any:
     return value if value is not None else otherwise
 
@@ -370,8 +375,10 @@ def _session_part(session: dict, line: Timeline) -> list[str]:
     length = "length %s" % clock(line.duration)
     active = _first(session.get("active_s"), summary.get("active_s"))
     if active is not None:
-        length += " (active %s, idle %s)" % (clock(_num(active)),
-                                             clock(_num(_first(session.get("idle_s"), summary.get("idle_s")))))
+        # Older plugins could count paused time as active: never more than the length.
+        active_s = min(_num(active), line.duration)
+        idle_s = min(_num(_first(session.get("idle_s"), summary.get("idle_s"))), max(line.duration - active_s, 0.0))
+        length += " (active %s, idle %s)" % (clock(active_s), clock(idle_s))
     out.append("started %s, %s" % (gd_str(session.get("started", "?")), length))
     country = session.get("country")
     out.append("game %s (build %s), Godot %s, %s, locale %s%s" % (
@@ -487,8 +494,8 @@ def _perf_part(events: list) -> list[str]:
     for event in events:
         if event.get("type") == "load" and event.get("name") == "boot" and isinstance(event.get("data"), dict):
             data = event["data"]
-            out.append("boot: %s ms to the first frame, %s ms to playable (%s)" % (
-                _text(data.get("boot_ms")), _text(data.get("to_play_ms")), _text(data.get("boot_kind"))))
+            out.append("boot: %s to the first frame, %s to playable (%s)" % (
+                _ms(data.get("boot_ms")), _ms(data.get("to_play_ms")), _text(data.get("boot_kind"))))
         if event.get("type") != "perf" or not isinstance(event.get("data"), dict):
             continue
         data = event["data"]

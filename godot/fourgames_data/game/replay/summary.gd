@@ -54,8 +54,10 @@ static func _session_part(session: Dictionary, line: Timeline) -> PackedStringAr
 	var length := "length %s" % Timeline.clock(line.duration)
 	var active: Variant = _first(session.get("active_s"), summary.get("active_s"))
 	if active != null:
-		length += " (active %s, idle %s)" % [Timeline.clock(_num(active)),
-				Timeline.clock(_num(_first(session.get("idle_s"), summary.get("idle_s"))))]
+		# Older plugins could count paused time as active: never more than the length.
+		var active_s := minf(_num(active), line.duration)
+		var idle_s := minf(_num(_first(session.get("idle_s"), summary.get("idle_s"))), maxf(line.duration - active_s, 0.0))
+		length += " (active %s, idle %s)" % [Timeline.clock(active_s), Timeline.clock(idle_s)]
 	out.append("started %s, %s" % [session.get("started", "?"), length])
 	out.append("game %s (build %s), Godot %s, %s, locale %s%s" % [_text(session.get("game_version")),
 			_text(session.get("build_id")), _text(session.get("godot_version")), _text(session.get("platform")),
@@ -180,8 +182,8 @@ static func _perf_part(events: Array) -> PackedStringArray:
 	var last_key := {}
 	for event: Dictionary in events:
 		if event.get("type") == "load" and event.get("name") == "boot" and event.get("data") is Dictionary:
-			out.append("boot: %s ms to the first frame, %s ms to playable (%s)" % [_text(event.data.get("boot_ms")),
-					_text(event.data.get("to_play_ms")), _text(event.data.get("boot_kind"))])
+			out.append("boot: %s to the first frame, %s to playable (%s)" % [_ms(event.data.get("boot_ms")),
+					_ms(event.data.get("to_play_ms")), _text(event.data.get("boot_kind"))])
 		if event.get("type") != "perf" or not event.get("data") is Dictionary:
 			continue
 		var data: Dictionary = event.data
@@ -302,6 +304,11 @@ static func _first(value: Variant, otherwise: Variant) -> Variant:
 
 static func _num(value: Variant) -> float:
 	return float(value) if value is float or value is int else 0.0
+
+
+## "812 ms", or "not measured" for a time the plugin couldn't take.
+static func _ms(value: Variant) -> String:
+	return "%s ms" % _text(value) if value != null else "not measured"
 
 
 static func _text(value: Variant) -> String:

@@ -34,7 +34,7 @@ README for what it does and how to add it to a game). The games copy
 5. Quit from the title or the pause menu: the session's end goes out as the
    game closes.
 
-What it sends: `screen()` for the title, pause and viewer; the player's position
+What it sends: `screen()` for the title, each level (`level_1`, `level_2`), pause and viewer; the player's position
 every 0.5 s while moving (`track_player`, again after each respawn); `death`
 (spikes or saw); `action` `coin`, `respawn`, `level_complete`; `progress` at
 each level's start and end; `snapshot` (level, place, coins, deaths) at each

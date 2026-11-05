@@ -9,6 +9,7 @@ import secrets
 import uuid
 
 from gamedata.signing import make_pid, sign
+from gamedata.store import Store
 from gamedata.web import Limits
 
 from .harness import APP_ID, ENV, FRIEND, HARDWARE, PUBLISHER_KEY, STEAMID, TICKET, run
@@ -324,6 +325,62 @@ def test_start_and_end_extras(tmp_path):
         assert (row["input_type"], row["input_controller"], row["boot_kind"]) == (None, None, None)
         assert json.loads(row["dlc"]) == [{"app_id": 5, "owned": False}]
     run(tmp_path, steps)
+
+
+def test_end_fields_come_from_the_summary_when_not_beside_it(tmp_path):
+    # The Godot plugin sends active_s, idle_s, first_session, last_scene and last_screen only inside
+    # its summary: the columns are filled from there, cleaned the same way; a top-level one wins.
+    async def steps(w):
+        body = await w.started()
+        headers = {"Authorization": f"Bearer {body['token']}"}
+        summary = {"events": 120, "playtime_s": 25, "active_s": 22, "idle_s": -3, "first_session": False,
+                   "last_scene": "res://game/title.tscn", "last_screen": "x" * 300}
+        response = await w.client.post("/gamedata/v1/session/end", headers=headers, json={
+            "session_id": body["session_id"], "seq": 4, "playtime_s": 25, "summary": summary})
+        assert response.status == 200
+        row = w.store.rows("sessions", PID)[0]
+        assert (row["active_s"], row["idle_s"], row["first_session"], row["last_scene"], len(row["last_screen"])) == (
+            22, None, 0, "res://game/title.tscn", 128)
+
+        body = await w.started()
+        headers = {"Authorization": f"Bearer {body['token']}"}
+        response = await w.client.post("/gamedata/v1/session/end", headers=headers, json={
+            "session_id": body["session_id"], "seq": 1, "playtime_s": 30, "active_s": 29, "last_screen": "pause",
+            "summary": {"active_s": 10, "idle_s": 20, "last_screen": "title", "first_session": "yes"}})
+        assert response.status == 200
+        row = w.store.rows("sessions", PID)[1]
+        assert (row["active_s"], row["idle_s"], row["first_session"], row["last_screen"]) == (29, 20, None, "pause")
+    run(tmp_path, steps)
+
+
+def test_ended_sessions_get_their_end_fields_from_the_summary_once(tmp_path):
+    store = Store(tmp_path)
+    try:
+        old = store.start_session(PID, APP_ID, {"consent_hardware": False}, None, None)
+        named = store.start_session(PID, APP_ID, {"consent_hardware": False}, None, None)
+        store.end_session(old, 3, 25.0, {"active_s": 26, "idle_s": 0, "first_session": True,
+                                         "last_scene": "res://game/title.tscn", "last_screen": "title"})
+        store.end_session(named, 3, 25.0, {"active_s": 5, "last_screen": "title"}, last_screen="pause")
+        # As a database from before the backfill holds them: the columns empty, the summary full.
+        assert store.rows("sessions", PID)[0]["active_s"] is None
+        store.db.execute("PRAGMA user_version = 0")
+    finally:
+        store.close()
+    store = Store(tmp_path)
+    try:
+        rows = {r["session_id"]: r for r in store.rows("sessions", PID)}
+        assert (rows[old]["active_s"], rows[old]["idle_s"], rows[old]["first_session"], rows[old]["last_scene"],
+                rows[old]["last_screen"]) == (26, 0, 1, "res://game/title.tscn", "title")
+        assert (rows[named]["active_s"], rows[named]["last_screen"]) == (5, "pause"), "a column already set stays"
+        assert store.db.execute("PRAGMA user_version").fetchone()[0] == 1
+        store.db.execute("UPDATE sessions SET active_s = NULL WHERE session_id = ?", (old,))
+    finally:
+        store.close()
+    store = Store(tmp_path)
+    try:
+        assert {r["session_id"]: r["active_s"] for r in store.rows("sessions", PID)}[old] is None, "only once"
+    finally:
+        store.close()
 
 
 def test_new_event_types_and_oversized_events(tmp_path):

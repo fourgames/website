@@ -124,6 +124,41 @@ func test_mark_playing_before_start_still_counts() -> void:
 	assert_eq(boots[0].data.by, "mark_playing")
 
 
+func test_a_boot_marked_before_the_first_frame_waits_for_it() -> void:
+	# The test game's case: start() and mark_playing() inside the first frame,
+	# before this autoload's _process() has seen it.
+	var gd := _launch()
+	_stage(gd)
+	gd.transport.ticks = 700
+	_live(gd)
+	gd.mark_playing()
+	assert_eq(gd._boots.size(), 0, "not yet: the first frame's time isn't known")
+	gd.transport.ticks = 950
+	gd._process(0.0)
+	gd.advance(60.0)
+	_drain(gd)
+	var boots := _sent_of(gd, "load").filter(func(event: Dictionary) -> bool: return event.name == "boot")
+	assert_eq(boots.size(), 1)
+	assert_eq(boots[0].data.boot_ms, 950.0)
+	assert_eq(boots[0].data.to_play_ms, 950.0, "nothing is playable before the first frame")
+	assert_eq(boots[0].data.by, "mark_playing")
+
+
+func test_a_boot_waiting_for_its_frame_still_goes_at_quit() -> void:
+	var gd := _launch()
+	_stage(gd)
+	gd.transport.ticks = 700
+	_live(gd)
+	gd.mark_playing()
+	gd.shutdown()
+	var boot: Array = gd.transport.quit_requests[0].json.events.filter(
+			func(event: Dictionary) -> bool: return event.type == "load" and event.name == "boot")
+	assert_eq(boot.size(), 1)
+	assert_eq(boot[0].data.by, "mark_playing")
+	assert_eq(boot[0].data.boot_ms, null)
+	assert_eq(boot[0].data.to_play_ms, 700.0)
+
+
 func test_a_boot_never_marked_goes_at_quit() -> void:
 	var gd := _live(_launch())
 	gd.shutdown()
@@ -237,6 +272,26 @@ func test_idle_and_active_are_timed_where_they_happened() -> void:
 	var summary: Dictionary = gd.transport.to("/session/end")[0].json.summary
 	assert_eq(summary.active_s, 14.0)
 	assert_eq(summary.idle_s, 66.0)
+
+
+func test_paused_time_is_neither_active_nor_idle() -> void:
+	# The pause menu isn't playtime, so it isn't active time either: active
+	# and idle add up to the playtime.
+	var gd := _launch()
+	_stage(gd)
+	_live(gd)
+	var tree := gd.get_tree()
+	gd.advance(10.4)
+	tree.paused = true
+	gd.advance(5.0)
+	tree.paused = false
+	gd.advance(15.3)
+	gd.shutdown()
+	var summary: Dictionary = gd.transport.to("/session/end")[0].json.summary
+	assert_eq(summary.playtime_s, 25.0)
+	assert_eq(summary.active_s, 25.0)
+	assert_eq(summary.idle_s, 0.0)
+	assert_true(summary.active_s + summary.idle_s <= summary.playtime_s)
 #endregion
 
 
@@ -274,7 +329,42 @@ func test_the_end_says_where_the_session_stopped() -> void:
 			for event in request.json.events:
 				if event.type == "screen":
 					screens.append(event.data)
-	assert_eq(screens, [{"name": "main_menu", "from": ""}, {"name": "options", "from": "main_menu"}])
+	assert_eq(screens, [{"name": "menu", "from": ""}, {"name": "main_menu", "from": "menu"},
+			{"name": "options", "from": "main_menu"}], "until the game names one, the screen is the scene's")
+
+
+func test_without_a_name_the_screen_is_the_scene_s() -> void:
+	var gd := _live(_launch())
+	gd.scene_changed("res://game/title.tscn", 0.0)
+	gd.advance(2.0)
+	gd.scene_changed("res://game/level_1.tscn", 10.0)
+	gd.ui("hint_shown")
+	gd.screen("pause")
+	gd.advance(1.0)
+	gd.scene_changed("res://game/level_2.tscn", 10.0)
+	gd.screen("")
+	gd.advance(3.0)
+	gd.scene_changed("res://game/level_3.tscn", 10.0)
+	gd.shutdown()
+	var screens := []
+	var perf_screens := []
+	var hint := {}
+	for request in gd.transport.requests:
+		if request.path == "/events":
+			for event in request.json.events:
+				if event.type == "screen":
+					screens.append(event.data.name)
+				elif event.type == "perf":
+					perf_screens.append(event.data.screen)
+				elif event.type == "ui" and event.name == "hint_shown":
+					hint = event.data
+	assert_eq(screens, ["title", "level_1", "pause", "level_2", "level_3"],
+			"a named screen stays over a scene change; screen(\"\") follows the scenes again")
+	assert_eq(hint, {"screen": "level_1"})
+	assert_false("" in perf_screens, "no perf without a screen: %s" % [perf_screens])
+	assert_eq(gd.transport.to("/session/end")[0].json.summary.last_screen, "level_3")
+	assert_eq(GameDataScript.screen_of_scene("res://game/level_1.tscn"), "level_1")
+	assert_eq(GameDataScript.screen_of_scene(""), "")
 
 
 func test_a_crash_report_says_where_the_run_was() -> void:

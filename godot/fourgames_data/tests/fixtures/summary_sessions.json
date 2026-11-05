@@ -663,9 +663,23 @@
   "started": null,
   "ended": null,
   "playtime_s": 5,
+  "active_s": 120.0,
+  "idle_s": 3.0,
   "test": true,
   "summary": {},
   "events": [
+   {
+    "t": 0.0,
+    "type": "load",
+    "name": "boot",
+    "data": {
+     "boot_kind": "normal",
+     "boot_ms": null,
+     "to_play_ms": 907,
+     "by": "mark_playing",
+     "init_ms": 680
+    }
+   },
    {
     "t": 0.0,
     "type": "load",

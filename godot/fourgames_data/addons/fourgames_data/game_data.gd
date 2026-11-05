@@ -235,6 +235,9 @@ var _shut := false
 var _init_ms := 0
 var _first_frame_ms := -1
 var _play_ms := -1
+## A boot end that came before the first frame (_boot_event()), and its time.
+var _boot_due := ""
+var _boot_due_ms := -1
 ## "first_install", "first_after_update" or "normal", and which session on this
 ## install this is (prefs.cfg's count, kept on this machine only).
 var _boot_kind := ""
@@ -250,6 +253,8 @@ var _scene_id := 0
 ## The longest frame since the tree last had a current scene (watch_scene()).
 var _changing_ms := 0.0
 var _screen := ""
+## No screen named, or screen(""): the screen is the scene's (screen_of_scene()).
+var _screen_follows_scene := true
 var _focused := true
 var _last_input_at := 0.0
 var _input_kind := ""
@@ -285,6 +290,8 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	if _first_frame_ms < 0 and get_tree().current_scene != null:
 		_first_frame_ms = int(ticks_msec.call())
+		if not _boot_due.is_empty() and is_recording():
+			_send_boot(_boot_due, _boot_due_ms)
 	if is_recording():
 		var now := Time.get_ticks_usec()
 		if _last_frame_usec > 0:
@@ -487,8 +494,32 @@ func set_setting(key: String, value: Variant) -> void:
 
 ## The menu or screen now up ("main_menu", "options", "map"), when the game
 ## names them: a "screen" event, a "ui" "screen" event with the seconds the one
-## before was up, and where /session/end says the player left.
+## before was up, and where /session/end says the player left. screen("") is
+## plain gameplay, named after the scene's file ("res://level_1.tscn" is
+## "level_1"); so is every scene the game names no screen for, and while it
+## does, the screen follows the scene from one to the next.
 func screen(screen_name: String) -> void:
+	_screen_follows_scene = screen_name.is_empty()
+	_switch_screen(screen_name if not screen_name.is_empty() else _scene_screen())
+
+
+## A screen name for the scene at `path`: its file's name, "" for none.
+static func screen_of_scene(path: String) -> String:
+	return path.get_file().get_basename()
+
+
+## The screen for the scene up now: the tree's current scene when there is one
+## (a scene's _ready() comes before this autoload sees the change), else the last
+## scene seen.
+func _scene_screen() -> String:
+	if is_inside_tree() and get_tree().current_scene != null:
+		var scene := get_tree().current_scene
+		if not scene.scene_file_path.is_empty():
+			return screen_of_scene(scene.scene_file_path)
+	return screen_of_scene(_scene)
+
+
+func _switch_screen(screen_name: String) -> void:
 	if screen_name == _screen:
 		return
 	var from := _screen
@@ -668,12 +699,16 @@ func shutdown() -> void:
 		return
 	_perf("quit")
 	_leave_screen()
-	if _boots.is_empty():
+	if not _boot_due.is_empty():
+		_send_boot(_boot_due, _boot_due_ms)
+	elif _boots.is_empty():
 		_boot_event("quit")
 	var here := _player_at()
 	if not here.is_empty():
 		_last_position = here
 	_cut_batch()
+	# Whole seconds that never add up to more than the playtime.
+	var active := mini(int(_active_s), int(_t))
 	var summary := {
 		"events": _counts.values().reduce(func(sum: int, n: int) -> int: return sum + n, 0),
 		"actions": int(_counts.get("action", 0)),
@@ -683,8 +718,8 @@ func shutdown() -> void:
 		"last_screen": _screen,
 		"last_position": _last_position if not _last_position.is_empty() else null,
 		"playtime_s": int(_t),
-		"active_s": int(_active_s),
-		"idle_s": int(_idle_s),
+		"active_s": active,
+		"idle_s": mini(int(_idle_s), int(_t) - active),
 		"first_session": _session_number == 1,
 		"session_number": _session_number,
 		"boot_kind": _boot_kind,
@@ -1153,6 +1188,7 @@ func _watch_the_player() -> void:
 		if scene != null:
 			_scene_id = scene.get_instance_id()
 			_scene = scene.scene_file_path
+	_follow_scene()
 
 
 func _on_window_input(event: InputEvent) -> void:
@@ -1199,9 +1235,11 @@ func scene_changed(path: String, load_ms: float) -> void:
 	var from := _scene
 	_scene = path
 	if not is_recording() or from.is_empty():
+		_follow_scene()
 		return
 	_perf("scene_change", from)
 	_record("load", "scene", {"scene": path, "from": from, "ms": snappedf(load_ms, 0.1)})
+	_follow_scene()
 	if _boots.is_empty():
 		_boot_event("scene_change")
 	if not _hold_disk:
@@ -1230,8 +1268,12 @@ func _perf(why: String, scene := _scene) -> void:
 
 ## Out of focus, or no input for IDLE_AFTER_S. The switch is put where it
 ## happened -- the last input, the focus going or coming -- not where it was
-## seen, and the seconds between are moved to the side they belonged to.
+## seen, and the seconds between are moved to the side they belonged to. Only
+## the playtime counts: a paused tree is neither (it isn't in playtime_s
+## either), so active_s and idle_s add up to the playtime.
 func _watch_idle(delta: float) -> void:
+	if is_inside_tree() and get_tree().paused:
+		delta = 0.0
 	var idle_now := not _focused or _clock - _last_input_at > IDLE_AFTER_S
 	if idle_now == _idle:
 		if _idle:
@@ -1266,16 +1308,30 @@ func _watch_idle(delta: float) -> void:
 		_active_s += delta
 
 
+## The boot's "load" event, once the first frame's time is known: a
+## mark_playing() from the main scene's _ready() comes before the first frame,
+## so it waits for that frame (_process()). Nothing is playable before the
+## first frame, so to_play_ms is never less than boot_ms. At quit it goes with
+## what is known.
 func _boot_event(by: String) -> void:
 	if _boots.has(by) or not is_recording():
 		return
+	if _first_frame_ms < 0 and by != "quit" and is_inside_tree() and not _shut:
+		if _boot_due.is_empty():
+			_boot_due = by
+			_boot_due_ms = int(ticks_msec.call()) if by == "scene_change" else _play_ms
+		return
+	_send_boot(by, _play_ms if by == "mark_playing" else int(ticks_msec.call()) if by == "scene_change" else -1)
+
+
+func _send_boot(by: String, play_ms: int) -> void:
 	_boots[by] = true
+	_boot_due = ""
+	var boot: Variant = _first_frame_ms if _first_frame_ms >= 0 else null
 	var to_play: Variant = null
-	if by == "mark_playing":
-		to_play = _play_ms
-	elif by == "scene_change":
-		to_play = int(ticks_msec.call())
-	_record("load", "boot", {"boot_kind": _boot_kind, "boot_ms": _first_frame_ms if _first_frame_ms >= 0 else null,
+	if play_ms >= 0:
+		to_play = maxi(play_ms, _first_frame_ms)
+	_record("load", "boot", {"boot_kind": _boot_kind, "boot_ms": boot,
 			"to_play_ms": to_play, "by": by, "init_ms": _init_ms})
 
 
@@ -1374,6 +1430,12 @@ static func _last_position_in(events: PackedStringArray) -> Variant:
 
 
 ## The screen up until now, and for how long: a "ui" "screen" event.
+## A screen named after the scene, while the game names none of its own.
+func _follow_scene() -> void:
+	if _screen_follows_scene:
+		_switch_screen(screen_of_scene(_scene))
+
+
 func _leave_screen() -> void:
 	if _screen.is_empty() or not is_recording():
 		return

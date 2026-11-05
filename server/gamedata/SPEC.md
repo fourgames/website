@@ -88,7 +88,11 @@ action, named by the game), `snapshot` (state every ~30 s, for replay), `progres
 are), `rng` (seed changes), `error` (non-fatal script errors), `custom`. Max 256 KB gzipped per
 batch, 2000 events per batch.
 
-**`POST /v1/session/end`** (Bearer) `{"session_id": "...", "seq": 40, "playtime_s": 1834, "summary": {...}}`
+**`POST /v1/session/end`** (Bearer) `{"session_id": "...", "seq": 40, "playtime_s": 1834, "summary": {...}}`.
+`active_s`, `idle_s`, `first_session`, `last_scene` and `last_screen` may sit beside `summary` or, as the
+Godot plugin sends them, inside it; the session's columns take the top-level one, else the summary's, each
+cleaned the same way (a wrong type is left out). Sessions stored before that got theirs from their
+summary once, when the server first started with it.
 
 **`POST /v1/crash`** (Bearer token from the *new* session, sent at the next launch)
 ```json

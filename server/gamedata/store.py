@@ -27,6 +27,7 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from .signing import random_pid
+from .validate import end_fields
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS players (
@@ -237,6 +238,7 @@ class Store:
         self.db.execute("PRAGMA secure_delete=ON")
         self.db.executescript(SCHEMA)
         self._migrate()
+        self._backfill_end_columns()
 
     def _migrate(self) -> None:
         """Adds the columns a database made by an older version lacks. Inside one write transaction
@@ -254,6 +256,34 @@ class Store:
         with self.transaction() as db:
             for table, column, definition in missing():
                 db.execute(f"ALTER TABLE {table} ADD COLUMN {column} {definition}")
+
+    def _backfill_end_columns(self) -> None:
+        """Once per database (user_version 0 -> 1): sessions ended before session/end's top-level
+        fields were read from its summary get them from the stored summary, cleaned as
+        validate.end_fields does, and only where the column is still empty."""
+        if self.db.execute("PRAGMA user_version").fetchone()[0] >= 1:
+            return
+        with self.transaction() as db:
+            if db.execute("PRAGMA user_version").fetchone()[0] >= 1:
+                return
+            empty = " OR ".join(f"{c} IS NULL" for c in SESSION_END)
+            rows = db.execute(f"SELECT session_id, summary, {', '.join(SESSION_END)} FROM sessions "
+                              f"WHERE summary IS NOT NULL AND ({empty})").fetchall()
+            for row in rows:
+                try:
+                    summary = json.loads(row["summary"])
+                except ValueError:
+                    continue
+                if not isinstance(summary, dict):
+                    continue
+                found = end_fields({}, summary)
+                if isinstance(found["first_session"], bool):
+                    found["first_session"] = int(found["first_session"])
+                fill = {c: v for c, v in found.items() if row[c] is None and v is not None}
+                if fill:
+                    db.execute(f"UPDATE sessions SET {', '.join(f'{c} = ?' for c in fill)} WHERE session_id = ?",
+                               (*fill.values(), row["session_id"]))
+            db.execute("PRAGMA user_version = 1")
 
     def close(self) -> None:
         self.db.close()

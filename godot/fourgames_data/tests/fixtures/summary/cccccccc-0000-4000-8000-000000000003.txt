@@ -24,7 +24,7 @@ at start: B=capital, aa=msaa_4x, keys={"jump":"space"}, langs=["en","sv"], none=
 0:06 ?: 0.3 -> 12.35
 
 == Performance (per scene and screen) ==
-boot: 1234.5 ms to the first frame, ? ms to playable (first_install)
+boot: 1234.5 ms to the first frame, not measured to playable (first_install)
 forest, <null> screen: 59.2 fps avg, min (1% low) 41.2, worst frame 33.3 ms, 1 stutters (frames over 50 ms), 453 frames
 (no scene), menu screen: 0.0 fps avg, min (1% low) ?, worst frame 0.0 ms, 0 stutters (frames over 50 ms), 10 frames
 

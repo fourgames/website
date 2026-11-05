@@ -11,7 +11,8 @@ extends Node2D
 ##   action("respawn", ...)            back at the start
 ##   action("level_complete", ...)     the goal reached
 ##   snapshot({...})                   at the start and every SNAPSHOT_S of play
-##   screen("")                        plain gameplay, nothing over it
+##   screen(level_id)                  the level is up, nothing over it
+##                                     ("level_1"; the pause menu goes back to it)
 ##
 ## Movement is the level's own: a square against the walls' rectangles, one axis
 ## at a time, so it plays the same headless as on screen.
@@ -62,12 +63,14 @@ func _ready() -> void:
 	player.position = Levels.center(_data.start)
 	add_child(player)
 	_make_hud()
-	add_child(PauseMenu.new())
+	var pause := PauseMenu.new()
+	pause.back_to = level_id
+	add_child(pause)
 	# TestGame starts the session a frame after boot when this is the first
 	# scene; what is said before that would be lost.
 	await get_tree().process_frame
 	await get_tree().process_frame
-	GameData.screen("")
+	GameData.screen(level_id)
 	GameData.progress({"level": level_id, "coins": TestGame.total_coins, "deaths": TestGame.deaths})
 	GameData.track_player(player)
 	_snapshot()

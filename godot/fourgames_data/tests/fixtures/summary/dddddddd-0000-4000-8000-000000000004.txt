@@ -2,7 +2,7 @@ Here is a play session from the fourgames_data test project (Four Games' player-
 
 == Session ==
 id dddddddd-0000-4000-8000-000000000004, app 5207970, a TEST session
-started <null>, length 1:50
+started <null>, length 1:50 (active 1:50, idle 0:00)
 game ? (build ?), Godot ?, ?, locale ?
 no end received (the game crashed, was killed, or is still uploading)
 
@@ -26,6 +26,7 @@ at start: (none sent)
 no changes
 
 == Performance (per scene and screen) ==
+boot: not measured to the first frame, 907 ms to playable (normal)
 no perf events
 
 == Hardware ==

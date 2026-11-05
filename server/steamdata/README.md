@@ -171,7 +171,7 @@ and 250 MB, once a day.
 | File | What | Used by |
 | --- | --- | --- |
 | `overview` | when it was built, how much history, counts, tag and genre names | everything |
-| `growth` | releases (and those releases' reviews) per year since 2006 and per month for six years, for Steam and each tag and genre | Growth |
+| `growth` | releases (and those releases' reviews) per year since 2006 and per month for six years, for Steam and each tag and genre; and Steam's users online at the peak, for *new games vs Steam's players* | Growth |
 | `games` | every game released in the last three years, one compact row: price, reviews, % positive, first 10 tags, flags (Linux, Mac, Deck, Early Access, Godot, demo), languages, hit index, reviews gained in 7 and 28 days, most players seen | Gap finder, Hit index |
 | `godot` | the Godot set with everything the finder scores on, the studio's other games and the engine evidence | Godot finder, Leads |
 | `trends` | each tag's momentum, and the alerts | Trends |
@@ -191,6 +191,12 @@ Definitions (also under *How this works* in each view):
   90+ within 90 days and 30+ reviews, or 30+ reviews this week). Each is noted once in
   `alerts-state.json` (a tag again after 30 days); the very first run only notes what's there.
   New ones go to Discord when `MARKET_DISCORD_WEBHOOK` is set in `/etc/fourgames/steamdata.env`.
+- **Steam's users**: the most logged in at once. Before the server measured it, Steam's all-time
+  record as of each year's end, as the press reported it (`USER_RECORDS` in market.py, with sources;
+  SteamDB's charts can't be used, its terms forbid scraping). From November 2026 the daily job also
+  reads Steam's own stats feed (`store.steampowered.com/stats/userdata.json`, the last 48 hours, one
+  request a day) and keeps each whole UTC day's peak in `MARKET_DIR/steam-users.json`; a period uses
+  that when it's higher than the record. Like steam.db it can't be fetched again: back it up with it.
 - **Revenue** (in the browser): reviews × sales per review (30 by default, adjustable) × the game's
   price × 0.5 (Steam's cut, VAT, refunds, discounts). A rough guide, not sales data.
 

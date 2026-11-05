@@ -64,6 +64,84 @@ MIN_TAG_GAMES = 15          # a tag needs this many recent releases to have a tr
 ALERT_REPEAT_DAYS = 30
 INDIE = 492  # the Indie user tag
 
+# Steam's users logged in at once: its all-time record as reported at the time (Valve's own number,
+# quoted in the press; SteamDB's charts can't be used, its terms forbid scraping). The years before
+# the server started measuring use the record as of each year's end. From then on the daily job keeps
+# each day's peak from Steam's own stats feed (USERS_FEED, the last 48 hours) in steam-users.json.
+USER_RECORDS = [
+    ("2014-06-29", 8_000_000, "https://80.lv/articles/steam-2015-record"),
+    ("2015-01-01", 8_466_441, "https://80.lv/articles/steam-2015-record"),
+    ("2016-01-03", 12_332_504, "https://gameranx.com/updates/id/32454/article/steam-breaks-new-record-with-over-12-million-concurrent-users/"),
+    ("2017-01-08", 14_370_167, "https://pcgamer.com/steam-passes-14-million-concurrent-users-for-first-time-ever"),
+    ("2017-09-17", 15_000_000, "https://www.ubergizmo.com/2017/09/steam-hits-15-million-concurrent-users"),
+    ("2018-01-06", 18_537_490, "https://www.gamespot.com/articles/steam-hits-concurrent-user-record/1100-6473305/"),
+    ("2020-03-14", 20_313_451, "https://www.gamespot.com/articles/steam-hits-concurrent-user-record/1100-6473305/"),
+    ("2021-01-02", 25_000_000, "https://www.pcgamer.com/uk/steam-cracks-25m-concurrent-users-as-the-new-year-begins/"),
+    ("2021-04-04", 26_900_000, "https://gamesradar.com/au/almost-265-million-of-us-were-on-steam-at-the-same-time-today"),
+    ("2022-01-09", 28_230_853, "https://pcgamer.com/steam-smashes-28-million-concurrent-usersnearly-3-million-more-than-last-year"),
+    ("2023-01-08", 33_000_000, "https://www.theverge.com/2023/1/9/23546139/steam-10-million-concurrent-players-record-breaking-valve-gaming"),
+    ("2024-01-07", 33_600_000, "https://pcgamer.com/software/steam-has-just-beaten-its-concurrent-players-record-once-again-with-a-whopping-39-2-million-at-one-time"),
+    ("2024-12-01", 39_200_000, "https://pcgamer.com/software/steam-has-just-beaten-its-concurrent-players-record-once-again-with-a-whopping-39-2-million-at-one-time"),
+    ("2025-10-12", 41_666_455, "https://consolepcgaming.com/steam-hits-41-8-million-concurrent-players-and-sets-a-new-all-time-record"),
+    ("2026-01-05", 41_816_052, "https://consolepcgaming.com/steam-hits-41-8-million-concurrent-players-and-sets-a-new-all-time-record"),
+]
+USERS_FEED = "https://store.steampowered.com/stats/userdata.json"
+
+
+def record_day(date: str) -> int:
+    return calendar.timegm(time.strptime(date, "%Y-%m-%d")) // DAY
+
+
+def fetch_users(state_path: str, now: int) -> dict[int, int]:
+    """Steam's users logged in, the peak of each UTC day the feed covers in full (it holds the last
+    48 hours, so yesterday always is). Kept in steam-users.json: it can't be fetched again later."""
+    try:
+        with open(state_path) as f:
+            days = {int(k): v for k, v in json.load(f).items()}
+    except (OSError, ValueError):
+        days = {}
+    try:
+        request = urllib.request.Request(USERS_FEED, headers={"User-Agent": USER_AGENT})
+        with urllib.request.urlopen(request, timeout=30) as r:
+            series = json.load(r)
+        points = [(int(t) // 1000, int(v)) for s in series if "logged in" in str(s.get("label", "")).lower()
+                  for t, v in s.get("data", [])]
+    except Exception as error:  # one missed day isn't worth failing the build for
+        log.warning("Steam's user count couldn't be read: %s", error)
+        points = []
+    if points:
+        first, last = min(t for t, _ in points), max(t for t, _ in points)
+        peaks: dict[int, int] = {}
+        for t, v in points:
+            d = t // DAY
+            peaks[d] = max(peaks.get(d, 0), v)
+        for d, v in peaks.items():
+            # Only days the feed covers from start to end (within its 5-minute steps).
+            if first <= d * DAY + 600 and last >= (d + 1) * DAY - 600:
+                days[d] = max(days.get(d, 0), v)
+        write_json(state_path, {str(k): v for k, v in sorted(days.items())}, gz=False)
+    return days
+
+
+def users_by(periods: list[int], period_of, end_of, measured: dict[int, int]) -> tuple[list, list]:
+    """For each period: Steam's all-time record as of its end, or the highest daily peak measured in
+    it when that's higher. Returns the values and where each came from ("measured", "record" or None)."""
+    by_period: dict[int, int] = {}
+    for d, v in measured.items():
+        p = period_of(d)
+        by_period[p] = max(by_period.get(p, 0), v)
+    values, kinds = [], []
+    for p in periods:
+        end = end_of(p)
+        record = max((v for date, v, _ in USER_RECORDS if record_day(date) <= end), default=None)
+        mine = by_period.get(p)
+        if mine is not None and (record is None or mine >= record):
+            values.append(mine); kinds.append("measured")
+        else:
+            values.append(record); kinds.append("record" if record is not None else None)
+    return values, kinds
+
+
 # Flags in a games.json row (a bit field, so the rows stay small).
 F_LINUX, F_MAC, F_DECK_OK, F_DECK_VERIFIED, F_EARLY, F_FREE, F_GODOT, F_DEMO = (1 << i for i in range(8))
 
@@ -209,7 +287,8 @@ def month_label(index: int) -> str:
     return f"{index // 12}-{index % 12 + 1:02d}"
 
 
-def growth(games: list[Game], tag_names: dict[int, str], genre_names: dict[int, str], today: int) -> dict[str, Any]:
+def growth(games: list[Game], tag_names: dict[int, str], genre_names: dict[int, str], today: int,
+           measured: dict[int, int] | None = None) -> dict[str, Any]:
     released = [g for g in games if g.release_day is not None and not g.coming_soon and g.release_day <= today]
     this_year = time.gmtime(today * DAY).tm_year
     first_year = 2006  # Steam's third-party games start here; earlier is a handful of Valve's
@@ -238,11 +317,18 @@ def growth(games: list[Game], tag_names: dict[int, str], genre_names: dict[int, 
                 s["mr"][mi] += g.reviews
     # How far into this year (and month) we are, so the dashboard can show a full-year pace.
     start_of_year = calendar.timegm((this_year, 1, 1, 0, 0, 0)) // DAY
+    year_end = lambda y: calendar.timegm((y + 1, 1, 1, 0, 0, 0)) // DAY - 1
+    month_end = lambda m: calendar.timegm(((m + 1) // 12, (m + 1) % 12 + 1, 1, 0, 0, 0)) // DAY - 1
+    users_y, users_y_kind = users_by(years, lambda d: time.gmtime(d * DAY).tm_year, year_end, measured or {})
+    users_m, users_m_kind = users_by(months, month_index, month_end, measured or {})
     return {
         "years": years, "months": [month_label(m) for m in months],
         "yearDone": round((today - start_of_year + 1) / 365, 3),
         "monthDone": round(time.gmtime(today * DAY).tm_mday / 30.4, 3),
         "total": total,
+        # Steam's users logged in at once: per period, the measured peak or the all-time record by its end.
+        "users": {"y": users_y, "yKind": users_y_kind, "m": users_m, "mKind": users_m_kind,
+                  "records": [{"date": d, "users": v, "source": src} for d, v, src in USER_RECORDS]},
         "tags": {str(t): {"name": tag_names.get(t, f"Tag {t}"), **s} for t, s in per_tag.items() if sum(s["y"]) >= 20},
         "genres": {str(x): {"name": genre_names.get(x, f"Genre {x}"), **s} for x, s in per_genre.items() if sum(s["y"]) >= 20},
         "note": f"A game counts for its first {TOP_TAGS} user tags. Reviews are each year's releases' review counts today.",
@@ -492,7 +578,8 @@ def write_json(path: str, data: Any, gz: bool = True) -> int:
 FILES = ("overview", "growth", "games", "godot", "trends")
 
 
-def build(db_path: str, out_dir: str, now: float | None = None, webhook: str = "", post: bool = True) -> dict[str, Any]:
+def build(db_path: str, out_dir: str, now: float | None = None, webhook: str = "", post: bool = True,
+          fetch: bool = True) -> dict[str, Any]:
     started = time.time()
     now = int(now if now is not None else started)
     today = cadence.day_number(now)
@@ -511,6 +598,7 @@ def build(db_path: str, out_dir: str, now: float | None = None, webhook: str = "
         godot = godot_rows(db, games)
     finally:
         db.close()
+    measured = fetch_users(os.path.join(out_dir, "steam-users.json"), now) if fetch else {}
     alerts = find_alerts(games, trend, today)
     fresh = remember_alerts(alerts, os.path.join(out_dir, "alerts-state.json"), now)
     trend["alerts"] = alerts
@@ -524,7 +612,7 @@ def build(db_path: str, out_dir: str, now: float | None = None, webhook: str = "
                 "tags": {str(k): v for k, v in tag_names.items()}, "genres": {str(k): v for k, v in genre_names.items()},
                 "newAlerts": len(fresh)}
     sizes = {
-        "growth": write_json(os.path.join(out_dir, "growth.json.gz"), growth(games, tag_names, genre_names, today)),
+        "growth": write_json(os.path.join(out_dir, "growth.json.gz"), growth(games, tag_names, genre_names, today, measured)),
         "games": write_json(os.path.join(out_dir, "games.json.gz"), recent_rows(games, today)),
         "godot": write_json(os.path.join(out_dir, "godot.json.gz"), {"games": godot}),
         "trends": write_json(os.path.join(out_dir, "trends.json.gz"), trend),

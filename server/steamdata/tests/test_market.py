@@ -59,7 +59,7 @@ def make_steam(db_path, rng):
 def test_build(tmp_path, rng):
     db_path, out = tmp_path / "steam.db", tmp_path / "market"
     make_steam(str(db_path), rng)
-    result = market.build(str(db_path), str(out), now=NOW, post=False)
+    result = market.build(str(db_path), str(out), now=NOW, post=False, fetch=False)
 
     overview = read(out, "overview")
     assert overview["games"] == 183 and overview["comingSoon"] == 1 and overview["godot"] == 2
@@ -96,17 +96,17 @@ def test_alerts_once_and_not_on_the_first_run(tmp_path, rng, monkeypatch):
     make_steam(str(db_path), rng)
     posted = []
     monkeypatch.setattr(market, "post_discord", lambda hook, alerts: posted.append(list(alerts)))
-    first = market.build(str(db_path), str(out), now=NOW, webhook="https://example.invalid/hook")
+    first = market.build(str(db_path), str(out), now=NOW, webhook="https://example.invalid/hook", fetch=False)
     assert first["alerts"] and first["fresh"] == [], "the first run only learns what's there"
     # Forget one alert: it's new on the next run, and only it is posted.
     state_path = out / "alerts-state.json"
     state = json.loads(state_path.read_text())
     del state["game:5000"]
     state_path.write_text(json.dumps(state))
-    second = market.build(str(db_path), str(out), now=NOW + 3600, webhook="https://example.invalid/hook")
+    second = market.build(str(db_path), str(out), now=NOW + 3600, webhook="https://example.invalid/hook", fetch=False)
     assert [a["key"] for a in second["fresh"]] == ["game:5000"]
     assert [a["key"] for a in posted[-1]] == ["game:5000"]
-    third = market.build(str(db_path), str(out), now=NOW + 7200, webhook="https://example.invalid/hook")
+    third = market.build(str(db_path), str(out), now=NOW + 7200, webhook="https://example.invalid/hook", fetch=False)
     assert third["fresh"] == []
 
 
@@ -124,5 +124,28 @@ def test_read_only(tmp_path, rng):
     db_path = tmp_path / "steam.db"
     make_steam(str(db_path), rng)
     before = db_path.stat().st_mtime_ns
-    market.build(str(db_path), str(tmp_path / "market"), now=NOW, post=False)
+    market.build(str(db_path), str(tmp_path / "market"), now=NOW, post=False, fetch=False)
     assert db_path.stat().st_mtime_ns == before
+
+
+def test_steam_users_from_records_and_the_feed(tmp_path, monkeypatch):
+    """Records until the server measures; a measured day wins only where it's higher; days the feed
+    covers only in part aren't kept."""
+    import io
+    day = cadence.day_number(NOW)
+    start = day * DAY - DAY  # yesterday 00:00, five-minute steps up to now
+    points = [[(start + i * 300) * 1000, 30_000_000 + i] for i in range(int((NOW - start) // 300))]
+    feed = json.dumps([{"label": "Steam users logged in", "data": points}]).encode()
+    monkeypatch.setattr(market.urllib.request, "urlopen", lambda *a, **k: io.BytesIO(feed))
+    measured = market.fetch_users(str(tmp_path / "users.json"), int(NOW))
+    assert list(measured) == [day - 1], "today isn't over, so only yesterday is kept"
+    assert json.loads((tmp_path / "users.json").read_text()) == {str(day - 1): measured[day - 1]}
+
+    years = [2017, 2019, 2026]
+    end = lambda y: market.calendar.timegm((y + 1, 1, 1, 0, 0, 0)) // DAY - 1
+    of = lambda d: market.time.gmtime(d * DAY).tm_year
+    values, kinds = market.users_by(years, of, end, measured)
+    assert values[:2] == [15_000_000, 18_537_490] and kinds[:2] == ["record", "record"]
+    assert values[2] == 41_816_052 and kinds[2] == "record", "the January record is higher than this day"
+    values, kinds = market.users_by([2026], of, end, {day - 1: 50_000_000})
+    assert (values, kinds) == ([50_000_000], ["measured"])

@@ -208,6 +208,7 @@ function growthView() {
     C.about(g.note, " The last year (or month) is still going: the dashed line is its pace for a whole one. Share of releases shows what developers make; share of reviews shows what players buy, so a tag whose review share runs ahead of its release share is under-supplied. Genres are the store's own (only for games whose full metadata is in, which is all of them a few days after the collector started)."),
     h("div.filters", C.chips([["years", "By year"], ["months", "By month (6 years)"]], f.mode, (v) => { f.mode = v; draw(); }, "Period")),
     chartBox("Steam's growth", `${fmt(total.reduce((a, b) => a + b, 0))} games released ${labels[0]}–${labels.at(-1)}.`, steam),
+    years && g.users ? playersVsGames(g) : null,
     h("div.filters",
       C.chips([["tags", "Tags"], ["genres", "Genres"]], f.kind, (v) => { f.kind = v; f.picked = null; draw(); }, "Tags or genres"),
       C.chips([["share", "Share of releases"], ["reviewShare", "Share of reviews"], ["perGame", "Reviews per game"], ["count", "Releases"]], f.metric, (v) => { f.metric = v; draw(); }, "Measure")),
@@ -216,6 +217,44 @@ function growthView() {
         h("i", { style: `background:${COLORS[i % COLORS.length]}` }), pool[id].name, " ×")),
         f.picked.length < 5 ? add : null,
         h("datalist", { id: "mk-pool" }, ...options.map(([, s]) => h("option", { value: s.name }))))));
+}
+
+// New games against Steam's users: does the player count grow as fast as the number of games? Both
+// indexed to the first year with a user count (= 100), with players per new game alongside.
+function playersVsGames(g) {
+  const h = C.h;
+  // From 2018, the first full year of Steam Direct (Greenlight ended in 2017): before that far fewer
+  // games could come out, so an older base year makes the games line dwarf everything else.
+  const first = Math.max(g.years.indexOf(2018), g.users.y.findIndex((v) => v != null));
+  if (first < 0) return null;
+  const last = g.years.length - 1;
+  // This year so far, as a whole year's pace.
+  const releases = g.total.y.map((n, i) => i === last && g.yearDone > 0 && g.yearDone < 1 ? n / g.yearDone : n);
+  const years = g.years.slice(first).map(String);
+  const rel = releases.slice(first), users = g.users.y.slice(first);
+  const perGame = users.map((u, i) => u != null && rel[i] ? u / rel[i] : null);
+  const index = (xs) => { const base = xs.find((v) => v != null); return xs.map((v) => v == null || !base ? null : (v / base) * 100); };
+  const chart = lineChart({
+    labels: years, aria: "New games and Steam users, indexed",
+    series: [
+      { name: "Games released", color: "var(--sw-1)", values: index(rel) },
+      { name: "Steam users online (peak)", color: "var(--sw-3)", values: index(users) },
+      { name: "Players per new game", color: "var(--sw-2)", values: index(perGame) },
+    ],
+    fmt: (v) => v == null ? "–" : String(Math.round(v)),
+  });
+  const a = perGame[0], b = perGame.at(-1);
+  const kinds = g.users.yKind.slice(first);
+  return h("div",
+    h("div.kpis",
+      kpi(`Games released, ${years[0]} → ${years.at(-1)}`, times(rel.at(-1) / rel[0]), `${fmt(rel[0])} → ${fmt(rel.at(-1))}${g.yearDone < 1 ? " (this year's pace)" : ""}`),
+      kpi("Steam users online", times(users.at(-1) / users[0]), `${fmt(users[0])} → ${fmt(users.at(-1))} at the peak`),
+      kpi("Players per new game", `${b >= a ? "+" : "−"}${pct(Math.abs(b / a - 1))}`, `${fmt(a)} → ${fmt(b)}`)),
+    chartBox("New games vs Steam's players", `${years[0]} = 100 (the first full year of Steam Direct). When the orange line falls, games are being added faster than players: each new game shares the audience with more others.`, chart,
+      h("details.mk-sources", h("summary", "Where the user numbers come from"),
+        h("p", "Steam's all-time record of users logged in at once, as of each year's end, as reported at the time (Valve's own count, quoted in the press; SteamDB can't be used, its terms forbid scraping). From November 2026 the server keeps each day's peak from Steam's own stats feed, and a year uses that when it's higher. ",
+          kinds.includes("measured") ? `Measured: ${years.filter((_, i) => kinds[i] === "measured").join(", ")}.` : ""),
+        h("ul", ...g.users.records.map((r) => h("li", `${r.date}: ${fmt(r.users)} `, h("a", { href: r.source, target: "_blank", rel: "noopener" }, "source")))))));
 }
 
 function chartBox(title, sub, chart, extra) {

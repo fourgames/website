@@ -46,9 +46,9 @@ Collects player feedback for every Four Games title on Steam, triages it with Cl
    - repeated reports, at 3, 5, 10, 25… players;
    - someone going live on Twitch (every new stream), a new YouTube video or article, with a link to join the chat or comment;
    - a new Steam curator review;
-   - a **spike**: at least 3 players posting a negative review or a bug report in the last 24 hours, and at least 3 times their usual day (the 14 days before). It says which update went out just before, if one did, and which issues the posts are about. It pings once, then again a day later or when the count doubles (`check_spike` in `run.py`).
+   - a **spike**: at least 3 players posting a negative review or a bug report in the last 24 hours, and at least 3 times their usual day (the 14 days before). It says which update went out just before, if one did, and which issues the posts are about. It's posted once, then again a day later or when the count doubles (`check_spike` in `run.py`).
 
-   Every alert @mentions `DISCORD_MENTION`.
+   Only urgent issues, new negative reviews, bug reports and refund notes, and YouTube videos and streams (YouTube and Twitch) @mention `DISCORD_MENTION`. Flips, repeated reports, spikes, articles and curator reviews are posted without the mention.
 
    A game's first run only records a baseline, so the backfill doesn't flood Discord.
 

@@ -1097,8 +1097,9 @@ def draft_thanks_replies(state, game):
 
 
 def send_alerts(state, game, run, first_run):
-    """Urgent issues, new negative reviews and bug reports, flips to negative and clusters, each
-    pinging you. A game's first run only sets the baseline."""
+    """Urgent issues, new negative reviews, bug reports and refund notes, and videos and streams ping you;
+    spikes, repeated reports, flips to negative, articles and curators are posted without a ping.
+    A game's first run only sets the baseline."""
     import notify
 
     items, issues = state["items"], state["issues"]
@@ -1140,13 +1141,17 @@ def send_alerts(state, game, run, first_run):
             continue
         posts.append(notify.new_post(game, item, negative, bugs))
     spike = [] if first_run else check_spike(state, game)
-    # Streams, videos and articles about the game (media.py), newest last.
-    coverage = [notify.media(game, state["media"]["items"][i]) for i in sorted(run.get("media") or [], key=lambda i: state["media"]["items"][i]["at"])]
+    # Streams, videos and articles about the game (media.py), newest last. Videos and streams ping;
+    # articles don't.
+    found = [state["media"]["items"][i] for i in sorted(run.get("media") or [], key=lambda i: state["media"]["items"][i]["at"])]
+    watch = [notify.media(game, m) for m in found if m["source"] != "news"]
+    articles = [notify.media(game, m) for m in found if m["source"] == "news"]
     # Curators who reviewed the game since the last look (community.py).
     curators = [] if first_run else [notify.curator(game, c) for c in run.get("curators") or []]
-    for batch in (spike, urgent, posts, clusters, flips, coverage, curators):
+    # Urgent issues, new negative reviews, bug reports and refund notes, videos and streams ping; the rest are posted to the channel without the mention.
+    for batch, ping in ((urgent, True), (posts, True), (watch, True), (spike, False), (clusters, False), (flips, False), (articles, False), (curators, False)):
         for start in range(0, len(batch), 10):
-            notify.send(batch[start : start + 10], ping=True)
+            notify.send(batch[start : start + 10], ping=ping)
 
 
 SPIKE_MIN = 3  # bad posts in a day, from different players
@@ -1598,16 +1603,16 @@ def test_discord():
     owner = lambda item: next(games[a] for a, s in states.items() if item["id"] in s["items"])
     test = "🧪 **Test** of the player feedback alerts: one of each kind, made from real posts. Nothing is wrong."
     sent = [notify.send([notify.urgent(game, posts[0], issue)], ping=True, note=test + "\n**1. Urgent issue** (pings you):")]
-    sent.append(notify.send([notify.cluster(game, issue, posts)], ping=True, note="**2. Repeated reports** (pings you):"))
+    sent.append(notify.send([notify.cluster(game, issue, posts)], note="**2. Repeated reports** (no ping):"))
     if negative:
         sent.append(notify.send([notify.new_post(owner(negative), negative, True, bug_points(negative))], ping=True, note="**3. New negative review** (pings you):"))
     if bug_post:
         sent.append(notify.send([notify.new_post(owner(bug_post), bug_post, False, bug_points(bug_post))], ping=True, note="**4. New bug report** (pings you):"))
     if negative:
-        sent.append(notify.send([notify.flip(owner(negative), negative)], ping=True, note="**5. Review flipped to negative** (pings you):"))
+        sent.append(notify.send([notify.flip(owner(negative), negative)], note="**5. Review flipped to negative** (no ping):"))
     release = max(state["releases"], key=lambda r: r["time"], default=None)
     sent.append(notify.send([notify.spike(game, posts, max(SPIKE_MIN, issue["mentions"]), 0.4, release, [(issue, issue["mentions"])])],
-                            ping=True, note="**5b. Spike in negative reviews and bug reports** (pings you):"))
+                            note="**5b. Spike in negative reviews and bug reports** (no ping):"))
     # One of each kind of coverage, from the data when there is one.
     covered = {}
     for a, s in states.items():
@@ -1615,7 +1620,8 @@ def test_discord():
             covered.setdefault(m["source"], (games[a], m))
     for n, source in enumerate(("twitch", "youtube", "news"), 6):
         if source in covered:
-            sent.append(notify.send([notify.media(*covered[source])], ping=True, note=f"**{n}. {notify.MEDIA[source][1]}** (pings you):"))
+            ping = source != "news"
+            sent.append(notify.send([notify.media(*covered[source])], ping=ping, note=f"**{n}. {notify.MEDIA[source][1]}** ({'pings you' if ping else 'no ping'}):"))
     print(f"[discord] test: {sum(sent)} of {len(sent)} messages accepted")
     if not all(sent):
         sys.exit(1)

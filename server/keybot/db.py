@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS games (
     -- Keys one person can have of this game, counting every reason and earlier KeyBot claims.
     -- 0 means no limit.
     per_user_limit    INTEGER NOT NULL DEFAULT 1,
-    -- 0: private, only handed out by the team (/keys grant, /keys grant-role, approved requests).
+    -- 0: private, only handed out by the team (/keys grant to a user or a role, approved requests).
     public            INTEGER NOT NULL DEFAULT 1,
     -- The stock warning already sent since the last restock: 0 none, 1 at 10%, 2 out of keys.
     stock_warning     INTEGER NOT NULL DEFAULT 0
@@ -234,7 +234,8 @@ class Store:
 
     def update_game_settings(self, game_id: int, *, public: bool | None = None,
                              per_user_limit: int | None = None,
-                             required_role_ids: list[int] | None = None) -> sqlite3.Row:
+                             required_role_ids: list[int] | None = None,
+                             steam_app_id: int | None = None) -> sqlite3.Row:
         """Changes the settings that are given (None leaves one as it is). The updated row."""
         if per_user_limit is not None and not 0 <= per_user_limit <= MAX_PER_USER_LIMIT:
             raise ValueError(f"per_user_limit must be 0 to {MAX_PER_USER_LIMIT}")
@@ -246,6 +247,8 @@ class Store:
             if required_role_ids is not None:
                 ids = list(dict.fromkeys(str(int(r)) for r in required_role_ids))
                 db.execute("UPDATE games SET required_role_ids = ? WHERE id = ?", (json.dumps(ids), game_id))
+            if steam_app_id is not None:
+                db.execute("UPDATE games SET steam_app_id = ? WHERE id = ?", (steam_app_id, game_id))
             row = db.execute("SELECT * FROM games WHERE id = ?", (game_id,)).fetchone()
         if row is None:
             raise KeyError(game_id)
@@ -279,7 +282,7 @@ class Store:
         return self.db.execute("SELECT COUNT(*) FROM keys WHERE game_id = ?", (game_id,)).fetchone()[0]
 
     def unclaimed_keys(self, game_id: int) -> list[str]:
-        """The values of the game's keys nobody has, oldest first (for /keys export)."""
+        """The values of the game's keys nobody has, oldest first (for /keys game export:)."""
         return [row[0] for row in self.db.execute(
             "SELECT value FROM keys WHERE game_id = ? AND status = 'available' ORDER BY id", (game_id,))]
 
@@ -393,7 +396,7 @@ class Store:
             return cursor.rowcount == 1
 
     def key_by_value(self, value: str) -> sqlite3.Row | None:
-        """A key and its game, by the key itself (for /keys lookup)."""
+        """A key and its game, by the key itself (for /keys find)."""
         value = value.strip()
         return self.db.execute(
             """SELECT k.*, g.name AS game FROM keys k JOIN games g ON g.id = k.game_id
@@ -421,13 +424,14 @@ class Store:
                GROUP BY g.id ORDER BY g.name"""
         ).fetchall()
 
-    def recent_handouts(self, limit: int = 15) -> list[sqlite3.Row]:
-        # No key values here: the log shows key ids only.
+    def recent_handouts(self, limit: int = 15, game_id: int | None = None) -> list[sqlite3.Row]:
+        """The latest handouts, of every game or one. No key values here: the log shows key ids only."""
         return self.db.execute(
             """SELECT k.id, k.given_to, k.given_at, k.reason, k.request_id, g.name AS game
                FROM keys k JOIN games g ON g.id = k.game_id
-               WHERE k.status = 'given' ORDER BY k.given_at DESC, k.id DESC LIMIT ?""",
-            (limit,),
+               WHERE k.status = 'given' AND (? IS NULL OR k.game_id = ?)
+               ORDER BY k.given_at DESC, k.id DESC LIMIT ?""",
+            (game_id, game_id, limit),
         ).fetchall()
 
     # Claims from the old KeyBot

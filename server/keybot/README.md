@@ -11,47 +11,46 @@ There are three commands: `/claim` and `/request` for everyone, `/keys …` for 
 | YouTube members (the **YouTube Member** role from Discord's YouTube integration, or a game's own roles) | `/claim game:` | The key shows up in the reply, which only they can see, with a Steam link that fills it in (`store.steampowered.com/account/registerkey?key=…`). A copy goes by DM as a receipt; if their DMs are closed they still get the key, and the reply says so. One key per game per person by default, for good: lapsing and rejoining doesn't give another. Non-members get a link to [join](https://www.youtube.com/@FourGamesAB/join). |
 | Everyone | `/claim` (no game) | Only to them: the public games with keys left (keys per person, keys left, which roles can claim them), then their own keys with a Steam link each and the games they claimed with the old KeyBot. Pages of 10 lines, and a menu of the games they can claim right now. |
 | Content creators | `/request game: type:creator` | A one-time **Verify your channel** link (15 minutes). They sign in with Discord, which shows us their *verified* YouTube and Twitch connections. A YouTube channel with 1,000+ subscribers and an upload in the last 60 days, or a Twitch channel with 500+ followers, gets the key by DM at once; anything else goes to the admin channel. |
-| Press | `/request game: type:press outlet: email:` | Always goes to the admin channel (`outlet:` and `email:` are required for press). The email isn't checked yet; once the company mail exists, the bot could send a confirmation link first. |
-| The team (Manage Server, or the `ADMIN_ROLE_ID` role) | `/keys grant user: game:` | One key to that person by DM (also from private games). Keeps to the game's per-person limit and refuses banned people. If their DMs are closed, no key is used and you're told. |
-| | `/keys grant-role role: game:` | One key by DM to everyone with the role, after a confirmation that shows how many people have it, how many can get one and how many keys are left. Skips the banned and those at the limit, and says how many got one. Off unless `GRANTROLE_ENABLED=1` (see below). |
-| | `/keys add game: file:` | Adds keys from a .txt (one per line) or .csv (finds the key column itself, e.g. a Steamworks download). Skips keys it already has and says how many it added. |
-| | `/keys games [name:] [steam_app_id:]` | Lists the games, or adds one / sets its Steam app id. |
-| | `/keys settings game: [public:] [per_user_limit:] [add_role:] [remove_role:] [clear_roles:]` | Shows a game's settings, or changes them (see below). |
-| | `/keys status` | Per game: keys left, given out by reason (member, creator, press, manual), old KeyBot claims, open requests, settings. |
-| | `/keys log [count:]` | The latest handouts: who, which game, why, and the key's id (never the key). |
-| | `/keys lookup user:` / `key:` | Every key someone got (ids, games, and the keys themselves, only to you), their old KeyBot claims and bans; or who has a key (by the key or `#id`). |
-| | `/keys export game:` | That game's unclaimed keys as a .txt, one per line, only to you. The keys stay in the bot. |
-| | `/keys ban user: [game:]` / `/keys unban user: [game:]` | Stops (or lets again) someone getting keys for one game, or every game without `game:`: no `/claim`, `/request`, `/keys grant` or approval. Keys they already have stay theirs. |
-| | `/keys bans [game:]` | Every ban, or the ones that apply to a game (its own and the every-game ones). |
+| Press | `/request game: type:press` | Opens a short form (outlet and work email, both required), then goes to the admin channel. The email isn't checked yet; once the company mail exists, the bot could send a confirmation link first. |
+| The team (Manage Server, or the `ADMIN_ROLE_ID` role) | `/keys status [game:] [count:]` | Per game: keys left, given out by reason (member, creator, press, manual), old KeyBot claims, open requests, settings and Steam app id; then the latest handouts (10 by default, up to 25 with `count:`): who, which game, why, and the key's id (never the key). With `game:`, only that game. |
+| | `/keys add file: game:` / `/keys add file: name: [steam_app_id:]` | Adds keys from a .txt (one per line) or .csv (finds the key column itself, e.g. a Steamworks download) to a game the bot has (`game:`), or adds a new game with them (`name:`, and its Steam app id if you have it). Skips keys it already has and says how many it added. |
+| | `/keys grant game: user:` | One key to that person by DM (also from private games). Keeps to the game's per-person limit and refuses banned people. If their DMs are closed, no key is used and you're told. |
+| | `/keys grant game: role:` | One key by DM to everyone with the role, after a confirmation that shows how many people have it, how many can get one and how many keys are left. Skips the banned and those at the limit, and says how many got one. Give `user:` or `role:`, not both. `role:` is refused unless `GRANTROLE_ENABLED=1` (see below). |
+| | `/keys game game: [public:] [per_user_limit:] [add_role:] [remove_role:] [clear_roles:] [steam_app_id:] [export:]` | Shows a game's settings, or changes them (see below). `export:True` also sends that game's unclaimed keys as a .txt, one per line, only to you; the keys stay in the bot. |
+| | `/keys find user:` / `key:` | Every key someone got (ids, games, and the keys themselves, only to you), their old KeyBot claims and bans; or who has a key (by the key or `#id`). |
+| | `/keys ban action:ban user: [game:]` / `action:unban user: [game:]` | Stops (or lets again) someone getting keys for one game, or every game without `game:`: no `/claim`, `/request`, `/keys grant` or approval. Keys they already have stay theirs. |
+| | `/keys ban action:list [game:]` | Every ban, or the ones that apply to a game (its own and the every-game ones). |
 
 Discord only shows `/keys` to people with **Manage Server** (its default permission). If the team
 has the `ADMIN_ROLE_ID` role instead, let that role see it under *Server Settings → Integrations →
 Four Games → /keys*. The bot checks every `/keys` command itself either way.
 
 On every start the bot replaces the server's command list with these three, so commands from older
-versions (`/mykeys`, `/pools`, `/request-press`, `/grant`, `/grantrole`) disappear by themselves. It
+versions (`/mykeys`, `/pools`, `/request-press`, `/grant`, `/grantrole`) and the old `/keys` subcommands
+(`games`, `log`, `settings`, `grant-role`, `lookup`, `export`, `unban`, `bans`) disappear by themselves. It
 only uses server commands; if it finds global ones (it never made any), it removes them.
 
 ### Per-game settings
 
-Each game has three settings, changed with `/keys settings` (with no changes it just shows them):
+Each game has three settings, changed with `/keys game` (with no changes it just shows them, and its
+Steam app id, which `steam_app_id:` sets):
 
 - **Public / private** (`public:`, default public). Private games aren't in `/claim`; the team hands them
-  out with `/keys grant`, `/keys grant-role` or by approving a request. `/keys games` and `/keys status`
-  list them.
+  out with `/keys grant` (to a user or a role) or by approving a request. `/keys status` lists them.
 - **Keys per person** (`per_user_limit:`, 0 to 300, default 1; 0 means no limit). It counts every key of
   that game the person has, whatever the reason, plus claims recorded from the old KeyBot. Lowering it
   doesn't take keys back.
 - **Roles that can claim it** (`add_role:`, `remove_role:`, `clear_roles:`). Any one of the roles is
   enough. With none set, the `MEMBER_ROLE` setting decides, as before.
 
-### /keys grant-role and the Server Members intent
+### /keys grant role: and the Server Members intent
 
-`/keys grant-role` needs the list of everyone with a role, which Discord only gives a bot with the privileged
+`/keys grant role:` needs the list of everyone with a role, which Discord only gives a bot with the privileged
 **Server Members Intent**. It's off by default, so the bot asks for no privileged intents. To turn it on:
 Developer Portal → the application → **Bot** → *Privileged Gateway Intents* → **Server Members Intent**
 on and save; then `GRANTROLE_ENABLED=1` in `/etc/fourgames/keybot.env` and restart the bot. (With the
-setting on but the intent off in the portal, the bot can't log in.) The subcommand shows up once it's on.
+setting on but the intent off in the portal, the bot can't log in.) The `role:` option is always there,
+but until it's on the bot answers that it's turned off.
 
 Requests in the admin channel are cards with the person, their channels and numbers, why it wasn't
 approved by itself, and **Approve** / **Deny** buttons that keep working after a restart. Approve
@@ -81,7 +80,7 @@ own account:
    the **Application ID**: that's `DISCORD_CLIENT_ID`.
 2. **Bot**: *Reset Token* and copy it (`DISCORD_BOT_TOKEN`; Discord shows it once). Turn **Public
    Bot** off, so only you can add it to servers. Leave all three *Privileged Gateway Intents* off:
-   the bot doesn't need them (only `/keys grant-role` does, see above).
+   the bot doesn't need them (only `/keys grant role:` does, see above).
 3. **OAuth2**: *Reset Secret* and copy it (`DISCORD_CLIENT_SECRET`). Under **Redirects**, add
    `https://api.fourgames.se/keybot/callback` and save.
 4. **Invite it** with no server-wide permissions (the slash commands and DMs don't need any):
@@ -138,9 +137,10 @@ and `curl https://api.fourgames.se/keybot/health` should say `{"ok": true, …}`
    Product Keys*, ask for a batch (for streamers and press), and wait for Valve to approve it.
 2. Download the batch from the same page. The .csv or .txt is fine as it is: the bot finds the key
    column (a header with "Key" in it, or the column that looks like `XXXXX-XXXXX-XXXXX`).
-3. In Discord, once per game: `/keys games name:Game Name steam_app_id:1234560`.
-4. `/keys add game:Game Name file:` and attach the download. The answer (only you see it) says how
-   many were added and skipped. Delete the downloaded file afterwards; the bot has the keys now.
+3. In Discord, the first batch of a game: `/keys add file: name:Game Name steam_app_id:1234560` and
+   attach the download; that adds the game too. Later batches: `/keys add file: game:Game Name`. The
+   answer (only you see it) says how many were added and skipped. Delete the downloaded file
+   afterwards; the bot has the keys now.
 
 Adding the same file twice adds nothing the second time. On the server, `python -m keybot.admin
 import-keys` does the same from the command line (see below).
@@ -189,7 +189,7 @@ command used in the last 30 days, which the members' claims take care of.
    ```
 
    Add `--steam-app-id` with the game's app id if the game isn't in the bot yet, so the DMs link
-   its store page. Then set each game like its pool was (`/keys settings`: private, keys per person, roles).
+   its store page. Then set each game like its pool was (`/keys game`: private, keys per person, roles).
 4. **Record who already claimed what** in KeyBot (its dashboard, or `/lookup` there), so they can't
    claim the same game again here. One line per claim, e.g. the Reforge Front key already claimed:
 

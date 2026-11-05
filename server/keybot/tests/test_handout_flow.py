@@ -183,6 +183,10 @@ class FakeResponse:
     async def defer(self, **kwargs):
         self.deferred = True
 
+    async def send_modal(self, modal):
+        self.modal = modal
+        self.deferred = True
+
     def is_done(self):
         return self.deferred or bool(self.sent)
 
@@ -280,7 +284,7 @@ def test_request_and_creator_respect_bans_and_limits(bot):
     assert len(user.sent) == 1
 
 
-# /keys grant and /keys grant-role
+# /keys grant, to a user or to everyone with a role
 
 
 def test_grant_needs_the_dm_and_respects_limit_and_bans(bot):

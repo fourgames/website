@@ -53,7 +53,7 @@ def mark_claimed(store: Store, game_name: str, user: str, note: str | None) -> i
         return 2
     game = store.game_by_name(game_name)
     if game is None:
-        print(f"No game named {game_name!r}. Add it first (import-keys, or /keys games in Discord).",
+        print(f"No game named {game_name!r}. Add it first (import-keys, or /keys add name: in Discord).",
               file=sys.stderr)
         return 1
     count = store.record_prior_claim(game["id"], int(user), note)

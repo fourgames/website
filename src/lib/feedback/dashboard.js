@@ -650,7 +650,7 @@ async function init() {
   else if (wanted === "status") pickUptime();
   else if (wanted === "market") pickMarket();
   else if (games.some((g) => g.appId === Number(wanted))) pickGame(Number(wanted));
-  else if (games.length) pickHome();
+  else if (games.length) pickHome(wanted === "all" && hash.get("tab") === "sales");
 }
 
 // Brand marks for the service cards: Steam, Discord and GitHub as in the site's Icon.vue, Claude
@@ -1095,7 +1095,7 @@ const uptimeView = () => h("iframe.uptime-frame", { src: STATUS_PAGE, title: "Fo
 
 function setHash() {
   // Keep vue-router's history state; only the hash changes.
-  history.replaceState(history.state, "", `${location.pathname}${location.search}${state.market ? "#app=market" : state.uptime ? "#app=status" : state.gameData ? "#app=gamedata" : state.home ? "#app=all" : `#app=${state.game.appId}&tab=${state.tab}`}`);
+  history.replaceState(history.state, "", `${location.pathname}${location.search}${state.market ? "#app=market" : state.uptime ? "#app=status" : state.gameData ? "#app=gamedata" : state.home ? `#app=all${state.homeSales ? "&tab=sales" : ""}` : `#app=${state.game.appId}&tab=${state.tab}`}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -1181,9 +1181,12 @@ function renderStats() {
   const urgent = bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high");
   const still = bugs.filter((i) => i.status === "still_happening");
   const fresh = items().filter((i) => !i.dev && i.created >= t - DAY);
+  // `chart` is the chart it opens below, or a function: then the card opens that view instead.
   const tile = (label, value, sub, trend, color, chart) => {
-    const body = [h("div.label", label, chart ? h("span.kpi-more", state.expanded === chart ? "Hide chart ▴" : "Chart ▾") : null), h("div.value", value), ...(Array.isArray(sub) ? sub : [sub]).filter(Boolean).map((line) => h("div.sub", line)), trend ? spark(trend, color) : null];
+    const go = typeof chart === "function";
+    const body = [h("div.label", label, chart ? h("span.kpi-more", go ? "Sales →" : state.expanded === chart ? "Hide chart ▴" : "Chart ▾") : null), h("div.value", value), ...(Array.isArray(sub) ? sub : [sub]).filter(Boolean).map((line) => h("div.sub", line)), trend ? spark(trend, color) : null];
     if (!chart) return h("div.kpi", ...body);
+    if (go) return h("button.kpi.kpi-open", { type: "button", title: "Open Sales", onclick: chart }, ...body);
     return h("button.kpi.kpi-open", { type: "button", "aria-expanded": String(state.expanded === chart), onclick: () => {
       state.expanded = state.expanded === chart ? null : chart;
       renderStats();
@@ -1209,7 +1212,8 @@ function renderStats() {
         daily(14, (d) => playersAt(state.index.discord.members, d + DAY - 1) ?? 0), "#5865f2", "discord")
       : null,
     wishlists: wishlistDays().length ? wishlistTile(tile) : null,
-    revenue: salesDays().length ? tile("Gross all time", usd(grossAll), `${usd(revenue.slice(-7).reduce((a, b) => a + b, 0))} in the last 7 days`, revenue, "var(--fb-positive)") : null,
+    revenue: salesDays().length ? tile("Gross all time", usd(grossAll), `${usd(revenue.slice(-7).reduce((a, b) => a + b, 0))} in the last 7 days`, revenue, "var(--fb-positive)",
+      () => { state.tab = "sales"; render(); window.scrollTo({ top: 0 }); }) : null,
     bugs: tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent", openBugsPerDay, "var(--type-bug)"),
     posts: tile("New posts", fresh.length, "last 24 h", postsPerDay),
   };
@@ -1371,7 +1375,7 @@ function render() {
   if (state.home) {
     renderHomeTop();
     setHash();
-    document.getElementById("fb-view").replaceChildren(homeView());
+    document.getElementById("fb-view").replaceChildren(state.homeSales ? allSalesView() : homeView());
     return;
   }
   if (isResearch() && !RESEARCH_TABS.includes(state.tab)) state.tab = "issues";
@@ -2802,9 +2806,11 @@ const gameTag = (g) => h("button.game-tag", { type: "button", title: `Open ${g.m
   g.meta.capsule ? h("img", { src: g.meta.capsule, alt: "", loading: "lazy" }) : null, g.meta.name);
 const NEW_REVIEW_DAYS = 3;
 
-async function pickHome() {
+// `sales` (only when passed as true, not a click event) opens every game's sales together.
+async function pickHome(sales) {
   store.set("app", "all");
   state.home = true;
+  state.homeSales = sales === true;
   state.gameData = false;
   state.uptime = false;
   state.market = false;
@@ -2858,9 +2864,15 @@ function renderHomeTop() {
   const bugs = games.flatMap((g) => inGame(g, () => issues("bug").filter(isActive)));
   const fresh = games.flatMap((g) => Object.values(g.items || {}).filter((i) => !i.dev && i.created >= now() - DAY));
   const tile = (label, value, sub, trend, color) => h("div.kpi", h("div.label", label), h("div.value", value), h("div.sub", sub), trend ? spark(trend, color) : null);
+  // The money cards open (and close again) every game's sales added up.
+  const money = (label, value, sub, trend, color) => h("button.kpi.kpi-open", { type: "button", "aria-expanded": String(!!state.homeSales), title: state.homeSales ? "Back to all posts" : "Sales, every game together", onclick: () => {
+    state.homeSales = !state.homeSales;
+    render();
+    window.scrollTo({ top: 0 });
+  } }, h("div.label", label, h("span.kpi-more", state.homeSales ? "Close ▴" : "Sales →")), h("div.value", value), h("div.sub", sub), trend ? spark(trend, color) : null);
   document.getElementById("fb-stats").replaceChildren(...[
-    sales.length ? tile("Gross all time", usd(sum("gross")), `${usd(sum("net"))} net · every game`) : null,
-    sales.length ? tile("Gross, 7 days", usd(sum("gross", now() - 7 * DAY)), `${usd(sum("net", now() - 7 * DAY))} net`, gross, "var(--fb-positive)") : null,
+    sales.length ? money("Gross all time", usd(sum("gross")), `${usd(sum("net"))} net · every game`) : null,
+    sales.length ? money("Gross, 7 days", usd(sum("gross", now() - 7 * DAY)), `${usd(sum("net", now() - 7 * DAY))} net`, gross, "var(--fb-positive)") : null,
     tile("Open bugs", bugs.length, `${bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high").length} high or urgent`),
     tile("New posts", fresh.length, "last 24 h"),
   ].filter(Boolean));
@@ -3064,17 +3076,40 @@ function salesDays() {
   return Object.entries(state.sales?.days || {}).map(([d, apps]) => [d, apps[id]]).filter(([, t]) => t);
 }
 
-function salesView() {
+// [[date, totals]] with every game's totals added up, oldest first.
+function allSalesDays() {
+  return Object.entries(state.sales?.days || {}).map(([d, apps]) => {
+    const t = { countries: {} };
+    for (const s of Object.values(apps)) {
+      for (const k of ["gross", "net", "units", "returnedUnits", "activations"]) t[k] = (t[k] || 0) + (s[k] || 0);
+      t.discount = Math.max(t.discount || 0, s.discount || 0);
+      for (const [cc, [net, units]] of Object.entries(s.countries || {})) {
+        const c = (t.countries[cc] ||= [0, 0]);
+        c[0] += net; c[1] += units;
+      }
+    }
+    return [d, t];
+  }).sort((a, b) => (a[0] < b[0] ? -1 : 1));
+}
+
+// All games: what every game earned together, with each game's launch marked and its share below.
+function allSalesView() {
+  const back = h("a", { href: "#", onclick: (e) => { e.preventDefault(); state.homeSales = false; render(); } }, "← All posts");
+  return h("div", h("p.meta", back, " · Sales, every game added up"), salesView(true));
+}
+
+function salesView(all = false) {
+  const daysOf = all ? allSalesDays : salesDays;
   if (!Object.keys(state.sales?.days || {}).length) {
     const s = state.index.status?.sales;
     return h("div.card", h("p", "No sales data yet."),
       h("p.meta", s && !s.ok ? s.message : "The collector reads Steam's sales hourly with the STEAM_FINANCIAL_KEY secret (a Financial API Group's key); they show here after its next run."));
   }
-  if (!salesDays().length) return h("p.empty", state.game.meta?.status === "upcoming" ? "Not out yet: sales show here from launch." : "No sales for this game in Steam's data yet.");
+  if (!all && !salesDays().length) return h("p.empty", state.game.meta?.status === "upcoming" ? "Not out yet: sales show here from launch." : "No sales for this game in Steam's data yet.");
   const f = state.filters.sales;
   const body = h("div");
   const draw = () => {
-    const days = salesDays();
+    const days = daysOf();
     const end = now();
     // The chart starts at this game's first sale, never before (nothing to show there); the account
     // card counts the whole range, since other games sold earlier.
@@ -3086,17 +3121,17 @@ function salesView() {
     const sum = (list, k) => list.reduce((a, [, t]) => a + (t[k] || 0), 0);
     const units = sum(inRange, "units"), refunded = sum(inRange, "returnedUnits");
     const tile = (label, value, sub) => h("div.kpi", h("div.label", label), h("div.value", value), sub ? h("div.sub", sub) : null);
-    body.replaceChildren(
+    body.replaceChildren(...[
       // All time first (what you'll look at most), then the zoomed range.
       h("section.kpis", { "aria-label": "Sales summary" },
         tile("Gross all time", usd(sum(days, "gross")), `${usd(sum(days, "net"))} net · ${sum(days, "units") - sum(days, "returnedUnits")} units kept`),
         tile("Gross in range", usd(sum(inRange, "gross")), `${usd(sum(inRange, "net"))} net, after refunds and tax`),
         tile("Units kept", units - refunded, `${units} sold, ${refunded} refunded (${units ? Math.round((100 * refunded) / units) : 0}%)`),
         sum(inRange, "activations") ? tile("Key activations", sum(inRange, "activations"), "keys from outside Steam") : null),
-      revenueChart(inRange, start, end, markers(start, end)),
-      refundReasons(),
-      accountTotals(from),
-      countryBreakdown(inRange));
+      revenueChart(inRange, start, end, all ? launchMarkers(start, end) : markers(start, end)),
+      all ? null : refundReasons(),
+      accountTotals(from, all),
+      countryBreakdown(inRange)].filter(Boolean));
   };
   const range = chips([[7, "1w"], [30, "1m"], [90, "3m"], [365, "1y"], [0, "max"]], f.range, (v) => { f.range = v; draw(); }, "Zoom");
   draw();
@@ -3211,7 +3246,11 @@ function revenueChart(days, start, end, releases) {
 }
 
 // Every game on the account together, in the range and since launch, and each game's share.
-function accountTotals(start) {
+// Each game's launch in the range, named after the game, for the every-game chart.
+const launchMarkers = (start, end) => gamesLoaded().flatMap((g) => inGame(g, () => markers(start, end).filter(isLaunch)
+  .map((r) => ({ ...r, launch: true, name: `${g.meta.name} release` })))).sort((a, b) => a.time - b.time);
+
+function accountTotals(start, all = false) {
   const per = new Map();
   for (const [d, apps] of Object.entries(state.sales?.days || {})) {
     for (const [id, t] of Object.entries(apps)) {
@@ -3227,14 +3266,14 @@ function accountTotals(start) {
   const total = (k, all) => rows.reduce((a, [, g]) => a + (all ? g.all[k] : g[k]), 0);
   const max = Math.max(1, ...rows.map(([, g]) => g.gross));
   const stat = (value, label) => h("div.sh-stat", h("div.sh-value", value), h("div.sh-label", label));
-  return h("div.chart-card", h("h3", "Your account"), h("div.sub", "Every game together"),
+  return h("div.chart-card", h("h3", all ? "Per game" : "Your account"), h("div.sub", all ? "Each game's share" : "Every game together"),
     h("div.stat-header",
       stat(usd(total("gross")), "gross in this range"),
       stat(usd(total("net")), "net in this range"),
       stat(usd(total("gross", true)), "gross, all time"),
       stat(usd(total("net", true)), `net, all time · ${total("units", true)} units`)),
     h("div.bars", ...rows.flatMap(([id, g]) => [
-      h("span", id === String(state.game.appId) ? h("b", name(id)) : name(id)),
+      h("span", id === String(state.game?.appId) ? h("b", name(id)) : name(id)),
       h("div", h("div.bar", { style: `width:${(100 * g.gross) / max}%` })),
       h("span.n", `${usd(g.gross)} gross · ${usd(g.net)} net · ${g.units}`)])));
 }

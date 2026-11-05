@@ -43,9 +43,10 @@ from .limits import Refused, read_json
 
 log = logging.getLogger("gamedata.ideas")
 
-MODEL = "claude-opus-5-5"
-# Opus 5.5's default is medium; said out loud so a model change doesn't silently move it.
-EFFORT = "medium"
+# Haiku 5.5, the model the feedback loop already uses: about $0.003 an idea (Opus 5.5 would be ~40x that).
+MODEL = "claude-haiku-5-5"
+# Haiku 5.5's default is medium; high costs a little more output and judges the market data more carefully.
+EFFORT = "high"
 MAX_TOKENS = 16000
 CLAUDE_TIMEOUT = 300.0
 # The dashboard waits up to two minutes per call; at most two Claude calls at once.
@@ -361,13 +362,9 @@ async def ask_claude(client, idea: dict[str, Any], history: list[dict[str, Any]]
     """(the analysis, the model that answered, usage). Refused on any failure, with a message for the owner."""
     import anthropic
     try:
-        async with client.beta.messages.stream(
+        async with client.messages.stream(
             model=MODEL,
             max_tokens=MAX_TOKENS,
-            # A refusal by Opus 5.5's safety classifiers is retried server-side on the model
-            # Anthropic recommends for that category.
-            betas=["server-side-fallback-2026-07-01"],
-            fallbacks="default",
             output_config={"effort": EFFORT, "format": {"type": "json_schema", "schema": SCHEMA}},
             # The brief changes once a day: several ideas scored the same day share the cached prefix.
             system=[{"type": "text", "text": SYSTEM + market_brief(m), "cache_control": {"type": "ephemeral"}}],

@@ -154,8 +154,8 @@ all are left out. It counts towards the admin rate limits like every other call.
 the 32-bit account ids of discussion posts into SteamID64s (76561197960265728 + id) before it asks.
 
 **The game ideas** (`ideas.py`). The dashboard's Market page has "My game ideas": the owner types an
-idea and the server asks Claude (`claude-opus-5-5`, effort medium, structured output; refusals fall back
-server-side with `fallbacks: "default"`) with a market brief built from the files in `MARKET_DIR`:
+idea and the server asks Claude (`claude-haiku-5-5`, the model the feedback loop uses, effort high, structured output;
+about $0.003 an idea) with a market brief built from the files in `MARKET_DIR`:
 every rated tag of `trends.json` as one line (id, name, releases now and a year ago, supply, hit rate,
 hits/rated games, median and top-10% reviews, demand), the other tag names from `overview.json` and
 Steam's releases vs peak users per year from `growth.json`, about 4,000 tokens. The answer: the Steam tags

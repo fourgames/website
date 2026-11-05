@@ -88,12 +88,12 @@ class FakeStream:
 
 
 class FakeClaude:
-    """client.beta.messages.stream(...) as the SDK has it; every call's arguments are kept."""
+    """client.messages.stream(...) as the SDK has it; every call's arguments are kept."""
 
     def __init__(self):
         self.calls: list[dict] = []
         self.replies: list = []
-        self.beta = SimpleNamespace(messages=SimpleNamespace(stream=self.stream))
+        self.messages = SimpleNamespace(stream=self.stream)
 
     def reply(self, result=None, stop_reason="end_turn", text=None):
         content = [SimpleNamespace(type="thinking", thinking=""),
@@ -179,7 +179,7 @@ def test_scoring_saving_and_the_history(tmp_path, market):
         assert idea["tags"] == [1, 2] and len(idea["points"]) == 1 and idea["points"][0]["day"] == "2026-11-05"
 
         call = fake.calls[0]
-        assert call["model"] == "claude-opus-5-5" and call["fallbacks"] == "default"
+        assert call["model"] == "claude-haiku-5-5" and "fallbacks" not in call
         assert call["output_config"]["format"]["schema"] is ideas.SCHEMA
         assert "1|Extraction Shooter|" in call["system"][0]["text"]
         assert "dwarves" in call["messages"][0]["content"]

@@ -249,6 +249,14 @@ export default {
 			discordTitle: "在 Discord 上和我們聊聊",
 			discordText: "在伺服器裡留言，那裡是我們回覆最快的地方。",
 		},
+		faq: {
+			title: "常見問題",
+			key: { q: "我能拿到遊戲的序號嗎？", a: "在做影片、直播或文章？請在我們的 {discord} 使用 /request，詳情見{press}。想要所有遊戲？YouTube 會員免費取得。" },
+			bug: { q: "我發現了 bug，或是遊戲遇到問題。", a: "請在我們的 {discord} 告訴我們，那裡我們看到得最快，也能問清楚發生了什麼事。" },
+			data: { q: "你們的遊戲收集哪些資料？我能刪除嗎？", a: "都寫在{privacy}頁面上。在那裡用 Steam 登入，就能自己下載資料、選擇退出或匿名化。" },
+			down: { q: "是不是有什麼服務停了？", a: "{status}頁面顯示目前各項服務的運作情況。" },
+			coverage: { q: "我可以做你們遊戲的影片或直播嗎？", a: "可以。{press}裡的標誌、美術和預告片都可以在文章、影片和直播中免費使用。" },
+		},
 		licensedIp: "授權 IP",
 		partners: {
 			series: {
@@ -376,6 +384,7 @@ export default {
 		seeData: "查看你的資料",
 		updated: "最後更新：{date}",
 		imy: "IMY",
+		emailHidden: "我們的電子郵件地址",
 		policy: {
 			title: "隱私權政策",
 			intro: "簡單來說：我們的遊戲會告訴我們它們運作得如何，好讓我們把遊戲做得更好。我們絕不販售任何東西，你隨時可以在這裡選擇退出。",

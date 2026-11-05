@@ -46,11 +46,12 @@ export const SITE = {
 	},
 	// The contact form's backend on our server (server/contact): it mails each message to support@.
 	contact: "https://api.fourgames.se/contact",
-	// The press kit (/press) shows this address (an alias of danny@ at Strato).
-	press: { email: "press@fourgames.se" },
 	// The privacy page (/privacy): who to write to, and the player-data API it signs in to with Steam
 	// (server/gamedata, see server/gamedata/SPEC.md). The page calls it from the browser, with a cookie.
-	privacy: { email: "privacy@fourgames.se" },
+	// The address is kept in two parts and only joined in the browser (PolicyText.vue), so it's never
+	// whole in the prerendered HTML or the bundle, where scrapers look. Everything else goes through
+	// the contact form, so no other address is shown anywhere.
+	privacy: { emailUser: "privacy", emailDomain: "fourgames.se" },
 	gamedata: "https://api.fourgames.se/gamedata/v1",
 	// The server's public status page; the privacy page links it when the API doesn't answer.
 	status: "https://status.fourgames.se",

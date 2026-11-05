@@ -3,6 +3,7 @@ import Button from "@/components/ui/Button.vue";
 import Section from "@/components/ui/Section.vue";
 import PageHeader from "@/components/layout/PageHeader.vue";
 import CommunityCard from "@/components/shared/CommunityCard.vue";
+import ContactFaq from "@/components/jobs/ContactFaq.vue";
 import ContactForm from "@/components/jobs/ContactForm.vue";
 import PartnerGrid from "@/components/jobs/PartnerGrid.vue";
 import { useI18n } from "@/i18n/index.js";
@@ -32,6 +33,7 @@ const { t } = useI18n();
 		:title="t('jobs.contact.title')"
 		:description="t('jobs.contact.description')"
 	>
+		<ContactFaq />
 		<div class="grid gap-5 lg:grid-cols-2">
 			<CommunityCard
 				:title="t('jobs.contact.discordTitle')"

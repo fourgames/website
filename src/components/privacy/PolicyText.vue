@@ -1,4 +1,5 @@
 <script setup>
+import { onMounted, ref } from "vue";
 import I18nT from "@/components/ui/I18nT.vue";
 import { SITE } from "@/data/site.js";
 import { useI18n } from "@/i18n/index.js";
@@ -8,13 +9,17 @@ import { useI18n } from "@/i18n/index.js";
 defineProps({ keypath: { type: String, required: true } });
 
 const { t, path } = useI18n();
-const email = SITE.privacy.email;
+// Joined only in the browser, after hydration: the prerendered HTML (what scrapers read) has a
+// plain "our email address" instead, and people see the real link a moment later.
+const email = ref(null);
+onMounted(() => (email.value = `${SITE.privacy.emailUser}@${SITE.privacy.emailDomain}`));
 </script>
 
 <template>
 	<I18nT :keypath="keypath">
 		<template #email>
-			<a :href="`mailto:${email}`" class="link">{{ email }}</a>
+			<a v-if="email" :href="`mailto:${email}`" class="link">{{ email }}</a>
+			<span v-else>{{ t("privacy.emailHidden") }}</span>
 		</template>
 		<template #imy>
 			<a href="https://www.imy.se/en/" target="_blank" rel="noopener noreferrer" class="link"

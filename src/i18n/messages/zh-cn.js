@@ -248,6 +248,14 @@ export default {
 			discordTitle: "在 Discord 上和我们聊聊",
 			discordText: "在服务器里留言，那里是我们回复最快的地方。",
 		},
+		faq: {
+			title: "常见问题",
+			key: { q: "我能拿到游戏的激活码吗？", a: "在做视频、直播或文章？请在我们的 {discord} 使用 /request，详情见{press}。想要所有游戏？YouTube 会员免费获得。" },
+			bug: { q: "我发现了 bug，或者游戏遇到了问题。", a: "请在我们的 {discord} 告诉我们，那里我们看到得最快，也能问清楚发生了什么。" },
+			data: { q: "你们的游戏收集哪些数据？我能删除吗？", a: "都写在{privacy}页面上。在那里用 Steam 登录，就能自己下载数据、选择退出或匿名化。" },
+			down: { q: "是不是有什么服务挂了？", a: "{status}页面显示当前各项服务的运行情况。" },
+			coverage: { q: "我可以做你们游戏的视频或直播吗？", a: "可以。{press}里的标志、美术和预告片都可以在文章、视频和直播中免费使用。" },
+		},
 		licensedIp: "授权 IP",
 		partners: {
 			series: {
@@ -375,6 +383,7 @@ export default {
 		seeData: "查看你的数据",
 		updated: "最后更新：{date}",
 		imy: "IMY",
+		emailHidden: "我们的邮箱地址",
 		policy: {
 			title: "隐私政策",
 			intro: "简单来说：我们的游戏会告诉我们它们运行得怎样，好让我们把游戏做得更好。我们绝不出售任何东西，你随时可以在这里选择退出。",

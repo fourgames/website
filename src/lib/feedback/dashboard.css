@@ -2855,3 +2855,24 @@
 	font: inherit;
 	font-size: 0.8125rem;
 }
+/* Market: the design picker above the view (while several designs are on trial) */
+.fb .mk-design-bar {
+	display: flex;
+	justify-content: flex-end;
+	margin-bottom: 0.75rem;
+}
+.fb .mk-design {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	color: var(--fb-muted);
+	font-size: 0.8125rem;
+}
+.fb .mk-design select {
+	font: inherit;
+	color: var(--fb-ink);
+	background: var(--fb-card);
+	border: 1px solid var(--fb-line);
+	border-radius: 6px;
+	padding: 0.25rem 0.5rem;
+}

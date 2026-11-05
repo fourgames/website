@@ -1072,8 +1072,33 @@ function pickUptime() {
 }
 
 // Market: all of Steam, from the server's collector (server/steamdata); its own file, market.js,
-// loaded the first time it opens.
+// loaded the first time it opens. Several designs are on trial: the picker in the header switches
+// between them (remembered in market-design).
+const MARKET_DESIGNS = {
+  brief: ["Briefing", () => import("./market-brief.js")],
+  analyst: ["Analyst", () => import("./market-analyst.js")],
+  scout: ["Scout board", () => import("./market-scout.js")],
+  classic: ["First version", () => import("./market.js")],
+};
+const marketDesign = () => MARKET_DESIGNS[store.get("market-design")] ? store.get("market-design") : "brief";
 let marketModule = null;
+let marketModuleDesign = null;
+async function loadMarketModule() {
+  const design = marketDesign();
+  if (marketModuleDesign !== design) {
+    marketModule = await MARKET_DESIGNS[design][1]();
+    marketModuleDesign = design;
+  }
+}
+function marketPicker() {
+  return h("label.mk-design", h("span", "Design"),
+    h("select", { "aria-label": "Market design", onchange: async (e) => {
+      store.set("market-design", e.target.value);
+      await loadMarketModule();
+      document.getElementById("fb-view").replaceChildren();
+      if (state.market) render();
+    } }, ...Object.entries(MARKET_DESIGNS).map(([id, [label]]) => h("option", { value: id, selected: id === marketDesign() }, label))));
+}
 async function pickMarket() {
   store.set("app", "market");
   state.home = false;
@@ -1082,7 +1107,7 @@ async function pickMarket() {
   state.game = null;
   state.picked = null;
   state.market = true;
-  marketModule ||= await import("./market.js");
+  await loadMarketModule();
   if (state.market) render();
 }
 const marketHelpers = () => ({ h, svgEl, chips, about, adminGet, fmtNum, fmtDate, fmtDateTime, plural, copy, store, dataOverride: DATA_OVERRIDE });
@@ -1358,7 +1383,11 @@ function render() {
     marketModule.marketTop(marketHelpers());
     setHash();
     // Kept while it's open, so a refresh of the feedback data doesn't reset its filters or scroll.
-    if (!document.querySelector("#fb-view .mk")) document.getElementById("fb-view").replaceChildren(marketModule.marketView(marketHelpers()));
+    // (The picker sits above the view: a design may redraw the header itself.)
+    if (!document.querySelector(`#fb-view [data-market="${marketModuleDesign}"]`)) {
+      const view = h("div", { "data-market": marketModuleDesign }, h("div.mk-design-bar", marketPicker()), marketModule.marketView(marketHelpers()));
+      document.getElementById("fb-view").replaceChildren(view);
+    }
     return;
   }
   if (state.uptime) {

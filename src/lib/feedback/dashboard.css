@@ -1131,6 +1131,12 @@
 		grid-template-columns: minmax(0, 1fr);
 	}
 }
+/* Links to the accounts behind the services, under the cards */
+.fb .svc-links {
+	margin-top: 8px;
+	font-size: 0.8125rem;
+	color: var(--fb-muted);
+}
 /* A card per service; the last-activity line sits at the bottom so the cards line up */
 .fb .svc {
 	display: flex;

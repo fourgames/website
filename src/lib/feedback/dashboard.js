@@ -682,6 +682,11 @@ const SERVICES = {
   news: ["News", "Articles about your games on Google News, and articles, Reddit threads, web pages and download copies from your Google Alerts", "nothing found yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs", "https://www.google.com/alerts"],
   github: ["GitHub", "Runs it all every 5 min, saves the data, rebuilds the site on store changes", "no changes yet", "https://github.com/fourgames/website/actions/workflows/feedback.yml", "See the runs"],
 };
+// Accounts the services rely on but nothing here checks: links under the cards.
+const ACCOUNTS = [
+  ["Strato", "https://www.strato.se/apps/CustomerService", "Server, domain and email"],
+  ["Strato Webmail", "https://webmail.strato.com/", "The company inbox"],
+];
 // The GitHub card's text and link while the collector runs on the server instead of the workflow.
 const ON_SERVER = ["Runs it all every 5 min on the server, saves the data to GitHub, rebuilds the site on store changes", "https://github.com/fourgames/website/blob/main/server/README.md", "Server setup"];
 
@@ -910,6 +915,7 @@ function renderStatus() {
   el.replaceChildren(...[
     bad.length ? null : h("div.svc-top", h("button.linkish", { type: "button", "aria-expanded": "true", onclick: toggleAll }, "Hide details ▴")),
     h("div.svc-grid", ...Object.entries(SERVICES).map(card)),
+    h("div.svc-links", "Accounts: ", ...ACCOUNTS.flatMap(([name, href, what], i) => [i ? " · " : null, h("a", { href, target: "_blank", rel: "noopener", title: what }, name, " ↗")].filter(Boolean))),
     state.costsOpen && claudeGames().length ? costPanel() : null,
   ].filter(Boolean));
 }

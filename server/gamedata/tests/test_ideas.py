@@ -288,3 +288,21 @@ def test_checks_and_who_may(tmp_path, market, monkeypatch):
         assert "DELETE" in response.headers["Access-Control-Allow-Methods"]
     run(tmp_path, steps, **ADMIN)
     assert (tmp_path / "elsewhere" / "my.db").exists()
+
+
+def test_the_listed_tags_their_pairs_and_the_biggest_games_reach_claude(tmp_path, monkeypatch):
+    """The template's Genre line is read as Steam tags; their pair's hit rate and the biggest games
+    with them go into the prompt, and a listed tag Claude left out is kept."""
+    rows = [[100 + i, f"Shooter {i}", TODAY - 30 - i, 999, 5000 - i if i < 3 else 2, 90, [1, 2], 0, 1, 95 if i < 4 else 10, None, None, None]
+            for i in range(12)]
+    write_market(tmp_path, rows=rows)
+    monkeypatch.setenv("MARKET_DIR", str(tmp_path))
+    m = ideas.Market.load()
+    text = "Working title: Dig\nGenre (closest Steam tags): Roguelite, extraction shooter, Not A Tag\nHook: x"
+    assert ideas.listed_tags(text, m) == [2, 1]
+    prompt = ideas.user_prompt({"text": text}, [], m)
+    assert "Roguelite + Extraction Shooter: 4 hits of 12 games" in prompt
+    assert "Shooter 0 (5,000 reviews" in prompt
+    kept = ideas.tidy(answer(tags=[{"id": 1, "name": "Extraction Shooter", "why": "core"}]), m, [2, 1])
+    assert [t["id"] for t in kept["tags"]] == [1, 2] and kept["tags"][1]["why"] == "listed by you"
+    assert ideas.user_prompt({"text": "no template here"}, [], m).count("Tag pairs") == 0

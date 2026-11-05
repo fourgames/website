@@ -217,6 +217,93 @@ def market_score(tag_ids: list[int], m: Market) -> dict[str, Any] | None:
     return {"score": round(score), "tagsScore": round(tags, 1), "tags": parts, "pair": pair}
 
 
+# The evidence for one idea: the tags the owner listed, how their pairs did, the biggest similar games
+
+EVIDENCE_DAYS = 365   # pairs: games released 14 days to a year before the market day
+COMPARABLE_DAYS = 3 * 365  # comparable games: the whole of games.json (three years)
+
+
+def evidence_games(games: dict[str, Any]) -> dict[str, Any]:
+    """games.json cut down to what the evidence needs: top tags, day, hit, reviews, name."""
+    cols = {name: i for i, name in enumerate(games.get("columns", []))}
+    top = games.get("topTags", 5)
+    rows = [(frozenset((row[cols["tags"]] or [])[:top]), row[cols["day"]], row[cols["hit"]], row[cols["reviews"]] or 0,
+             row[cols["name"]]) for row in games.get("rows", []) if row[cols["day"]] is not None]
+    return {"rows": rows}
+
+
+def listed_tags(text: str, m: Market) -> list[int]:
+    """The Steam tags the owner named on the template's "Genre (closest Steam tags):" line, as ids."""
+    by_name = {n.lower(): i for i, n in m.names.items()}
+    out: list[int] = []
+    for line in text.splitlines():
+        head, _, rest = line.partition(":")
+        if not rest or not head.strip().lower().startswith(("genre", "tags", "steam tags")):
+            continue
+        for part in rest.replace("/", ",").replace(";", ",").split(","):
+            tag = by_name.get(part.strip().strip(".").lower())
+            if tag is not None and tag not in out:
+                out.append(tag)
+    return out[:8]
+
+
+def _median(xs: list[int]) -> int | None:
+    xs = sorted(xs)
+    return xs[len(xs) // 2] if xs else None
+
+
+def evidence(tag_ids: list[int], m: Market) -> str:
+    """For the listed tags: each pair's hit rate (shrunk like the brief's), median reviews and new games in
+    90 days, and the biggest games of the last three years with the pair, and with each tag alone."""
+    if not tag_ids or not isinstance(m.today, int):
+        return ""
+    games = market_file("games", evidence_games)
+    if not games:
+        return ""
+    lo = (m.trends.get("hitRateWindow") or [14, 180])[0]
+    pairs = [(a, b) for i, a in enumerate(tag_ids) for b in tag_ids[i + 1:]]
+    lines = []
+    stats = []
+    for a, b in pairs:
+        rated, reviews, recent, biggest = 0, [], 0, []
+        hits = 0
+        for tags, day, hit, revs, name in games["rows"]:
+            if a not in tags or b not in tags:
+                continue
+            age = m.today - day
+            if age <= 90:
+                recent += 1
+            if age <= COMPARABLE_DAYS:
+                biggest.append((revs, name, day))
+            if hit is not None and lo <= age <= EVIDENCE_DAYS:
+                rated += 1
+                hits += hit >= 90
+                reviews.append(revs)
+        if not rated and not biggest:
+            continue
+        rate = (hits + m.prior * m.base_hit) / (rated + m.prior)
+        top = sorted(biggest, reverse=True)[:3]
+        stats.append((rate, rated, f"{m.name(a)} + {m.name(b)}: {hits} hits of {rated} games released 2 weeks to a year ago "
+                      f"({pct(hits / rated) if rated else '-'} raw, {pct(rate)} allowing for chance), median {_median(reviews)} reviews, "
+                      f"{recent} new in the last 90 days; biggest in 3 years: "
+                      + ("; ".join(f"{n} ({r:,} reviews, {iso_day(d)[:4]})" for r, n, d in top) or "none")))
+    if stats:
+        lines.append("Tag pairs from the tags the owner listed (games with both tags among their top 5). These are the "
+                     "closest match to the idea: weigh them above single tags, and say when a pair has few games:")
+        lines += [f"- {t}" for _, _, t in sorted(stats, key=lambda x: -x[0])[:10]]
+    singles = []
+    for t in tag_ids:
+        top = sorted(((revs, name, day) for tags, day, hit, revs, name in games["rows"]
+                      if t in tags and m.today - day <= COMPARABLE_DAYS), reverse=True)[:3]
+        if top:
+            singles.append(f"- {m.name(t)}: " + "; ".join(f"{n} ({r:,} reviews, {iso_day(d)[:4]})" for r, n, d in top))
+    if singles:
+        lines.append("The biggest games of the last three years with each listed tag (proof that buyers exist; they "
+                     "are outliers, not what a typical game gets):")
+        lines += singles
+    return "\n".join(lines)
+
+
 # The market brief Claude reads
 
 
@@ -262,15 +349,23 @@ def market_brief(m: Market) -> str:
 
 
 SYSTEM = """You assess game ideas for a small indie studio: one to three people, making small PC games in \
-Godot for Steam, fast (months, not years), self-published. They want ideas that can find players on Steam now, \
-and they also want to know when timing would be better.
+Godot for Steam, fast (months, not years), self-published, using AI tools heavily for art, code and content. \
+They want ideas that can find players on Steam now, and they also want to know when timing would be better.
+
+How to weigh the evidence, strongest first: (1) the idea's own tag pairs and the real games that did well with \
+them (given with the idea), (2) single-tag numbers, (3) general knowledge. A pair with a few games but a famous \
+hit is a real signal that buyers exist, though not a promise; say both. The overall score is about the market \
+opportunity (demand, competition, hit odds, timing); small_team_fit is reported on its own and moves the overall \
+score only a little (at most about 10 points), because the studio decides scope separately. Judge scope by how \
+many hard systems it has (netcode, physics, AI, procedural generation), not by art or content volume.
 
 Judge with the market data below, not general hype. Quote its numbers in your reasons (hit rates, median and \
 top-10% reviews, releases, supply, demand) in plain words a non-analyst understands. Small tags have few games: \
 say how sure the data is. A rising supply means more competition arriving; strong demand with modest supply is \
 the opening to look for. Being early can mean no audience yet; being late means a crowded tag.
 
-Map the idea to 2-6 Steam tags from the data, the core one first, using the ids exactly as listed. \
+Map the idea to 2-6 Steam tags from the data, the core one first, using the ids exactly as listed. Include \
+every tag the owner listed that fits the idea (you may reorder them or add better ones). \
 Scores are 0-100, where 50 is an average Steam idea for a team like this. Sub-scores, in this order: \
 demand, competition (high = little competition), hit_odds, small_team_fit (scope, art, multiplayer and \
 content load for 1-3 people in Godot), timing. Each reason is one line. Pivots are concrete changes to this \
@@ -310,8 +405,11 @@ SCHEMA: dict[str, Any] = {
 }
 
 
-def user_prompt(idea: dict[str, Any], history: list[dict[str, Any]]) -> str:
+def user_prompt(idea: dict[str, Any], history: list[dict[str, Any]], m: Market | None = None) -> str:
     parts = [f"The idea:\n{idea['text']}"]
+    proof = evidence(listed_tags(idea["text"], m), m) if m else ""
+    if proof:
+        parts.append(proof)
     if idea.get("notes"):
         parts.append(f"The owner's notes:\n{idea['notes']}")
     if history:
@@ -322,7 +420,7 @@ def user_prompt(idea: dict[str, Any], history: list[dict[str, Any]]) -> str:
     return "\n\n".join(parts)
 
 
-def tidy(result: dict[str, Any], m: Market) -> dict[str, Any]:
+def tidy(result: dict[str, Any], m: Market, listed: list[int] | None = None) -> dict[str, Any]:
     """Claude's answer kept to the shape the dashboard draws: known tags only, scores 0-100, the
     sub-scores in their fixed order, the lists capped."""
     def score(x):
@@ -335,12 +433,17 @@ def tidy(result: dict[str, Any], m: Market) -> dict[str, Any]:
         if isinstance(t.get("id"), int) and t["id"] in m.names and t["id"] not in seen:
             seen.add(t["id"])
             tags.append({"id": t["id"], "name": m.name(t["id"]), "why": str(t.get("why", ""))})
+    # The tags the owner listed stay, even when Claude left one out (they know their game).
+    for t in listed or []:
+        if t not in seen and t in m.names:
+            seen.add(t)
+            tags.append({"id": t, "name": m.name(t), "why": "listed by you"})
     by_key = {s.get("key"): s for s in result.get("subscores") or []}
     subscores = [{"key": k, "score": score(by_key[k].get("score")), "reason": str(by_key[k].get("reason", ""))}
                  for k in SUBSCORES if k in by_key]
     timing = result.get("timing") or {}
     return {
-        "tags": tags[:MAX_TAGS],
+        "tags": tags[:MAX_TAGS + 2],
         "score": score(result.get("score")),
         "subscores": subscores,
         "verdict": str(result.get("verdict", "")),
@@ -368,7 +471,7 @@ async def ask_claude(client, idea: dict[str, Any], history: list[dict[str, Any]]
             output_config={"effort": EFFORT, "format": {"type": "json_schema", "schema": SCHEMA}},
             # The brief changes once a day: several ideas scored the same day share the cached prefix.
             system=[{"type": "text", "text": SYSTEM + market_brief(m), "cache_control": {"type": "ephemeral"}}],
-            messages=[{"role": "user", "content": user_prompt(idea, history)}],
+            messages=[{"role": "user", "content": user_prompt(idea, history, m)}],
         ) as stream:
             message = await stream.get_final_message()
     except anthropic.AuthenticationError:
@@ -585,7 +688,7 @@ async def score(request: web.Request, store: Ideas, idea: dict[str, Any]) -> Non
     started = time.monotonic()
     async with store.parallel:
         raw, model, usage = await ask_claude(store.client, idea, history, m)
-    result = tidy(raw, m)
+    result = tidy(raw, m, listed_tags(idea["text"], m))
     log.info("idea %d scored %s by %s in %.0fs (%s)", idea["id"], result["score"], model,
              time.monotonic() - started, usage)
     await asyncio.to_thread(store.add_analysis, idea, m.day, model, result, usage)

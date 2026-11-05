@@ -158,8 +158,13 @@ idea and the server asks Claude (`claude-haiku-5-5`, the model the feedback loop
 about $0.003 an idea) with a market brief built from the files in `MARKET_DIR`:
 every rated tag of `trends.json` as one line (id, name, releases now and a year ago, supply, hit rate,
 hits/rated games, median and top-10% reviews, demand), the other tag names from `overview.json` and
-Steam's releases vs peak users per year from `growth.json`, about 4,000 tokens. The answer: the Steam tags
-it maps to (unknown ids are dropped), a score 0-100, five sub-scores with a reason each (`demand`,
+Steam's releases vs peak users per year from `growth.json`, about 4,000 tokens. With the idea come its own
+evidence: the tags named on the template's "Genre (closest Steam tags):" line, each pair of them from
+`games.json` (hits of the games released 2 weeks to a year ago, the shrunk rate, median reviews, new in 90
+days, the three biggest games of three years) and each tag's three biggest games, about 1,000 tokens.
+Claude weighs those pairs and games above single tags, and small-team fit moves the overall score only a
+little (scope is the owner's call). The answer: the Steam tags
+it maps to (unknown ids are dropped; listed tags it left out are kept), a score 0-100, five sub-scores with a reason each (`demand`,
 `competition`, `hit_odds`, `small_team_fit`, `timing`), a verdict, risks, 2-4 pivots, 2-3 alternatives and
 timing advice (`now`/`soon`/`wait`, why, and the signal to watch). Every analysis is kept with its date,
 the market day and the idea's text as it was. Errors: `503 claude_not_configured` (no

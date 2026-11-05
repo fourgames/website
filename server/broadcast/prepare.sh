@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Turns any video (trailer, gameplay capture) into a file Steam's broadcast accepts, with a "not live"
-# banner, once. Run it on the Mac (brew install ffmpeg), then copy the result to the server:
+# banner, once. Run it on the server (it has ffmpeg), or on a Mac with ffmpeg and copy the result over:
 #   server/broadcast/prepare.sh trailer.mov pomo-valley.mp4 ["Pre-recorded"]
 #   scp pomo-valley.mp4 fourgames-server:/srv/fourgames/broadcast/
 # Steam's rules: H.264 High 4.1, 30 or 60 fps, keyframe every 2 s, CBR, at most 7000 kbit/s; AAC-LC

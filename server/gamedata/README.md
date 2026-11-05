@@ -36,6 +36,11 @@ work. Errors are JSON, `{"ok": false, "error": "<code>", "message": "…"}`, wit
 | `GET /v1/admin/sessions/<id>/summary` | the dashboard | Its "Copy for Claude" text (`text/plain`). |
 | `POST /v1/admin/players` | the dashboard | The game data of the players behind a game's Steam posts (below). |
 | `GET /v1/admin/market/<name>` | the dashboard | The Steam market files (`overview`, `growth`, `games`, `godot`, `trends`) that server/steamdata/market.py builds daily into `MARKET_DIR` (default `/srv/fourgames/steamdata/market`), sent gzipped as they are. 404 `not_built` before the first build. |
+| `GET /v1/admin/ideas` | the dashboard | The owner's game ideas, newest first, each with its latest Claude analysis, every earlier score and its daily market score (below). |
+| `POST /v1/admin/ideas` | the dashboard | `{"text", "notes"?}`: saves the idea and scores it with Claude (30-60 s). `201 {"idea"}`; when the scoring fails nothing is kept. |
+| `POST /v1/admin/ideas/<id>/score` | the dashboard | Asks Claude again, with today's market data; the earlier analyses stay. |
+| `PUT /v1/admin/ideas/<id>` | the dashboard | `{"text"?, "notes"?, "archived"?}`. |
+| `DELETE /v1/admin/ideas/<id>` | the dashboard | The idea and its history (send `{}`: admin writes need a JSON body). |
 | `GET /health` (or `/v1/health`) | anyone, the status page | `{"ok": true, "time", "disk": {"used_bytes", "free_bytes", "total_bytes", "low_space"}}` |
 
 Each entry of `games` (in `/v1/me` and the lookup) is one app id, so a player's demo and full game show
@@ -148,6 +153,40 @@ has zero counts, `null` times, no rows and `"other_games_sessions": <n>`. Steami
 all are left out. It counts towards the admin rate limits like every other call. The dashboard turns
 the 32-bit account ids of discussion posts into SteamID64s (76561197960265728 + id) before it asks.
 
+**The game ideas** (`ideas.py`). The dashboard's Market page has "My game ideas": the owner types an
+idea and the server asks Claude (`claude-opus-5-5`, effort medium, structured output; refusals fall back
+server-side with `fallbacks: "default"`) with a market brief built from the files in `MARKET_DIR`:
+every rated tag of `trends.json` as one line (id, name, releases now and a year ago, supply, hit rate,
+hits/rated games, median and top-10% reviews, demand), the other tag names from `overview.json` and
+Steam's releases vs peak users per year from `growth.json`, about 4,000 tokens. The answer: the Steam tags
+it maps to (unknown ids are dropped), a score 0-100, five sub-scores with a reason each (`demand`,
+`competition`, `hit_odds`, `small_team_fit`, `timing`), a verdict, risks, 2-4 pivots, 2-3 alternatives and
+timing advice (`now`/`soon`/`wait`, why, and the signal to watch). Every analysis is kept with its date,
+the market day and the idea's text as it was. Errors: `503 claude_not_configured` (no
+`ANTHROPIC_API_KEY`), `503 market_not_built`, `502 claude_refused` / `claude_error` / `claude_bad_answer`,
+`503 claude_key_refused`, `429 claude_busy`, `504 claude_timeout`. At most two Claude calls run at once.
+
+The **daily market score** needs no Claude: each GET gives every live (not archived) idea one point for
+the market files' day (`overview.today`) if it has none, from its mapped tags, so the history grows as the
+market moves (a re-score replaces that day's point, its tags may have changed). Per tag, 50 is an
+average Steam tag:
+
+```
+hit     = 50 + 25 * log2(hitRate / baseHitRate)              twice Steam's hit rate: 75
+crowd   = 50 - 20 * log2(supply)                             share of releases doubled in a year: 30
+demand  = 50 + 25 * log2(demand), 50 while unknown
+reviews = 50 + 12 * log2((medianReviews + 1) / (baseMedianReviews + 1))
+tag     = 0.45 hit + 0.20 crowd + 0.15 demand + 0.20 reviews          (each part clamped to 0-100)
+tags    = the tags' scores weighted 1, 1/1.25, 1/1.5, ... in Claude's order (the core tag first)
+pair    = 50 + 25 * log2(pairHitRate / baseHitRate): the idea's tag pair whose games (in games.json,
+          released 14-180 days before the market day, both tags in their top 5) hit most often, shrunk
+          like trends' hit rate (+30 base-rate games), only with 10+ games
+score   = 0.7 tags + 0.3 pair, or tags alone without a pair; no rated tag: no point
+```
+
+Ideas live in SQLite at `IDEAS_DB` (default `DATA_DIR/ideas.db`, so `/srv/fourgames/gamedata/ideas.db`):
+`ideas`, `analyses` (every Claude answer, with its tokens used) and `points` (one per idea per day).
+
 ## What's stored, and how
 
 | | Where | Kept |
@@ -240,7 +279,7 @@ which lists the countries, and the export's README.txt, which already says it), 
 *IP Geolocation by [DB-IP](https://db-ip.com)*.
 
 The code: `web.py` (routes, CORS, cookies, the internal lookup, the hourly job), `admin.py` (the owner's
-endpoints and the GitHub proxy), `summary.py` (the replay viewer's "Copy for Claude"), `steam.py` (tickets,
+endpoints and the GitHub proxy), `ideas.py` (the owner's game ideas and their Claude scoring), `summary.py` (the replay viewer's "Copy for Claude"), `steam.py` (tickets,
 ownership, OpenID), `validate.py` (shape checks), `limits.py` (rate limits, body and gzip caps),
 `store.py` (SQLite and files), `export.py` (the zip), `retention.py` (the unlinking), `geo.py` and
 `geoupdate.py`, `signing.py` (pids and tokens), `config.py`. Settings are in `gamedata.env.example`.
@@ -273,6 +312,8 @@ adding `EnvironmentFile=/etc/fourgames/feedback.env` to `gamedata.service` *abov
 Read on `fourgames/website`; the feedback loop's own token has only Actions on website, so it needs
 widening (or use a token of its own). Restart, sign in on fourgames.se/fb-dash, and
 `GET /v1/admin/github-check` (from the dashboard's page, or with its cookie and `Origin`) says what works.
+For "My game ideas", `ANTHROPIC_API_KEY` in `gamedata.env` (a key from platform.claude.com), then
+`uv pip install … -r server/gamedata/requirements.txt` (the `anthropic` SDK) and a restart.
 
 **Caddy**: the `api.fourgames.se` block in `server/Caddyfile` needs, before any other `/gamedata` route:
 
@@ -302,4 +343,4 @@ apart from the backups.
 | Restart | `sudo systemctl restart gamedata` (needed after a code change or an env change, e.g. a new app id) |
 | Disk | `curl -s localhost:8103/health`; uploads stop by themselves at `GAMEDATA_MIN_FREE_MB` free |
 | New dependency | `uv pip install --python /srv/fourgames/gamedata-venv/bin/python -r /srv/fourgames/own/server/gamedata/requirements.txt` |
-| Tests | `cd server && python -m pytest gamedata/tests` (with pytest and the requirements installed; no network: Steam, GitHub and the geo database are faked) |
+| Tests | `cd server && python -m pytest gamedata/tests` (with pytest and the requirements installed; no network: Steam, GitHub, Claude and the geo database are faked) |

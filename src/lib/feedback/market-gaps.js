@@ -204,6 +204,21 @@ export function computeGaps(files, { target, small, mustId, pairs }) {
   return { res, scored: cache.get(sk) };
 }
 
+// The best tag pairs that contain `tag` (by gap score), for "find an angle" hints elsewhere on the
+// page. Only pairs with `minGames`+ games, so a lucky handful can't be the suggestion. Pairs that do
+// better than either of their tags alone (bonus ×`minBonus`+) come first, so the angle is a real
+// improvement when one exists. Uses the owner's earn target once the gap finder restored it.
+export function topPairsWith(files, tag, { small = true, target = S.target, limit = 1, minGames = GAP_FILTERS.minGames, minBonus = 1.05 } = {}) {
+  if (!files?.games || tag == null) return [];
+  const { scored } = computeGaps(files, { target, small, mustId: null, pairs: true });
+  const id = String(tag);
+  const better = (r) => (r.bonus ?? 0) >= minBonus;
+  // A pair clearly worse than its tags alone (under ×0.95) is no angle at all.
+  return scored.filter((r) => r.n >= minGames && (r.bonus ?? 1) >= 0.95 && r.k.split("+").includes(id))
+    .sort((a, b) => better(b) - better(a) || b.gap - a.gap).slice(0, limit)
+    .map((r) => ({ ...r, better: better(r), other: r.k.split("+").filter((k) => k !== id).map((k) => (files.overview?.tags?.[k] || `Tag ${k}`).trim()).join(" + ") }));
+}
+
 // The rows for a view: filters, search, Combined, order.
 export function viewRows(scored, { filters, q, rank, sort, pairs }) {
   const keys = usableRank(rank, pairs);
@@ -225,7 +240,8 @@ function restore() {
   // Fall back on the merged page's older keys, so the owner's target and filters carry over.
   const old = (k) => { try { return C.store.get(`mkv-merged-${k}`); } catch { return null; } };
   const target = Number(load("target") ?? old("target")); if (target >= 100) S.target = target;
-  const pairs = load("pairs") ?? old("pairs"); if (pairs === "true" || pairs === "false") S.pairs = pairs === "true";
+  // "pairs2": tag pairs became the default; a "single tags" choice stored before that is ignored.
+  const pairs = load("pairs2"); if (pairs === "true" || pairs === "false") S.pairs = pairs === "true";
   const must = load("must"); if (typeof must === "string") S.must = must;
   try { const f = JSON.parse(load("filters") ?? old("gapF") ?? "null"); if (f && typeof f === "object") for (const k of Object.keys(GAP_FILTERS)) S.filters[k] = Number.isFinite(f[k]) ? f[k] : null; } catch {}
   try { const r = JSON.parse(load("rank") || "null"); if (Array.isArray(r)) { const ok = r.filter((k) => METRIC[k]); if (ok.length) S.rank = ok; } } catch {}
@@ -281,7 +297,7 @@ function build() {
   U.clear.hidden = !anyFilter();
 
   U.pairBtns = [[true, "Tag pairs"], [false, "Single tags"]].map(([v, label]) => h("button", { type: "button", "aria-pressed": String(S.pairs === v),
-    onclick: () => { if (S.pairs === v) return; S.pairs = v; save("pairs", String(v)); S.shown = PAGE; if (S.sort?.key === "bonus") S.sort = null; update(); } }, label));
+    onclick: () => { if (S.pairs === v) return; S.pairs = v; save("pairs2", String(v)); S.shown = PAGE; if (S.sort?.key === "bonus") S.sort = null; update(); } }, label));
   U.chips = METRICS.map((m) => h("button.mkg-chip", { type: "button", "aria-pressed": String(S.rank.includes(m.key)), "data-k": m.key,
     title: m.good < 0 ? `${m.label}: fewer new games in the last 90 days ranks higher.` : `${m.label}: higher ranks higher.`,
     onclick: () => {
@@ -469,4 +485,4 @@ function injectStyle() {
   document.head.append(el);
 }
 
-export const _test = { unpackGames, gapFinder, withGapScores, filterGaps, searchRows, percentiler, combinedScores, sortRows, usableRank, computeGaps, viewRows, GAP_FILTERS, METRICS };
+export const _test = { topPairsWith, unpackGames, gapFinder, withGapScores, filterGaps, searchRows, percentiler, combinedScores, sortRows, usableRank, computeGaps, viewRows, GAP_FILTERS, METRICS };

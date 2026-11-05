@@ -19,6 +19,7 @@ request, GET included, must come from the site (Origin: SITE_ORIGIN); a PUT or P
   players' sessions, one session in the shape the replay viewer reads, and its "Copy for Claude".
 - GET /v1/admin/market/<name>: the Steam market files (overview, growth, games, godot, trends)
   that server/steamdata/market.py builds daily into MARKET_DIR, gzipped as they are on disk.
+- /v1/admin/ideas*: the owner's game ideas, scored by Claude against the market files (ideas.py).
 - POST /v1/admin/players: the game data of the players behind a game's Steam posts, for the chips
   on the dashboard's post cards. The steamids the dashboard sends are only turned into pids, never
   kept or logged.
@@ -40,7 +41,7 @@ from urllib.parse import urlencode
 import aiohttp
 from aiohttp import web
 
-from . import export, summary
+from . import export, ideas, summary
 from . import web as W
 from .limits import Refused, read_json
 from .signing import make_pid, short, valid_steamid
@@ -445,4 +446,5 @@ def add_routes(app: web.Application, prefix: str) -> None:
     add("GET", f"{v1}/sessions/{{session_id}}/summary", session_summary)
     add("POST", f"{v1}/players", players)
     add("GET", f"{v1}/market/{{name}}", market)
+    ideas.add_routes(app, v1)
     add("OPTIONS", f"{v1}/{{rest:.*}}", W.preflight)

@@ -192,6 +192,11 @@ def _languages(text: str | None) -> tuple[int | None, int | None]:
     return len(names), sum(1 for n in names if n.endswith("*"))
 
 
+def first_release(release_ts: int | None, original_ts: int | None) -> int | None:
+    stamps = [t for t in (release_ts, original_ts) if t]
+    return min(stamps) // DAY if stamps else None
+
+
 def connect(db_path: str) -> sqlite3.Connection:
     db = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=30)
     db.row_factory = sqlite3.Row
@@ -202,7 +207,7 @@ def read_games(db: sqlite3.Connection) -> list[Game]:
     games = []
     ids: dict[int, int] = {}  # one int object per tag id, not one per game (millions of them)
     for r in db.execute("""SELECT appid, name, release_ts, coming_soon, early_access, is_free, reviews,
-                                  positive_pct, price, price_original, tags, genres, languages, linux, mac,
+                                  positive_pct, price, price_original, original_release_ts, tags, genres, languages, linux, mac,
                                   deck, godot, developers, publishers, players_max, achievements,
                                   controller_support, demos, dlc_count, metacritic, details_at,
                                   release_display
@@ -212,7 +217,8 @@ def read_games(db: sqlite3.Connection) -> list[Game]:
         full_price = r["price_original"] if r["price_original"] is not None else r["price"]
         games.append(Game(
             appid=r["appid"], name=r["name"] or f"App {r['appid']}",
-            release_day=r["release_ts"] // DAY if r["release_ts"] else None,
+            # The first release: a game that left Early Access counts from when it first came out.
+            release_day=first_release(r["release_ts"], r["original_release_ts"]),
             coming_soon=bool(r["coming_soon"]), early_access=bool(r["early_access"]),
             is_free=bool(r["is_free"]), reviews=r["reviews"] or 0, positive_pct=r["positive_pct"],
             price=full_price, tags=tuple(ids.setdefault(t, t) for t in _json_list(r["tags"])[:ROW_TAGS] if isinstance(t, int)),

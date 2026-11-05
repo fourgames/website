@@ -138,6 +138,12 @@ def test_small_tags_are_pulled_toward_steams_hit_rate():
     assert small["hitRate"] < big["hitRate"] < 0.25
 
 
+def test_a_game_out_of_early_access_counts_from_its_first_release():
+    assert market.first_release(2000 * 86400, 1500 * 86400) == 1500
+    assert market.first_release(2000 * 86400, None) == 2000
+    assert market.first_release(None, None) is None
+
+
 def test_read_only(tmp_path, rng):
     """The builder never writes to steam.db (the collector owns it)."""
     db_path = tmp_path / "steam.db"

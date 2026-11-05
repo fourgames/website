@@ -1,16 +1,25 @@
 // The player feedback dashboard behind /fb-dash (src/views/FeedbackView.vue). Plain DOM code, loaded
 // only when that page opens, so the rest of the site never ships it. All the data is in a private repo,
 // fourgames/feedback-data (written by .github/workflows/feedback.yml, which runs in this public repo
-// and writes it with a deploy key), read straight through GitHub's API with your token, so new data
-// shows up without a deploy and nobody without access to that repo sees any of it.
+// and writes it with a deploy key), read through GitHub's API, so new data shows up without a deploy.
+// Signing in is with Steam, the owner's accounts only: the game-data server (server/gamedata,
+// admin.py) checks the sign-in and passes the dashboard's GitHub calls on with its own token, so no
+// token is kept in the browser, and nobody else sees any of it. It also has the players' game data
+// (the Game data section).
 // Add ?data=<base url> to read another copy of the data, e.g. a local test run.
 import CSS from "./dashboard.css?inline";
+import { SITE } from "@/data/site.js";
 
 // The data is read from its newest commit (see dataBase), so a file never mixes two runs; "main" only
 // when GitHub's API can't say which commit that is.
 const DATA_OVERRIDE = new URLSearchParams(location.search).get("data")?.replace(/\/$/, "");
-const DATA_REPO = "https://api.github.com/repos/fourgames/feedback-data";
-const SITE_REPO = "https://api.github.com/repos/fourgames/website";
+// The game-data server: the Steam sign-in, the GitHub proxy (the same paths as api.github.com/repos/
+// fourgames/<repo>/…, for the calls this file makes) and the players' sessions.
+const GAMEDATA = SITE.gamedata;
+const ADMIN = `${GAMEDATA}/admin`;
+const DATA_REPO = `${ADMIN}/github/feedback-data`;
+const SITE_REPO = `${ADMIN}/github/website`;
+const SIGN_IN = `${GAMEDATA}/auth/steam?return=/fb-dash`;
 const SERVER_STATUS = "https://api.fourgames.se/status/own.json";
 let DATA = "main"; // the data commit on screen
 const DAY = 86400;
@@ -108,9 +117,9 @@ async function getJson(path) {
   }
   // A commit's files never change, so the browser may keep them; "main" is always asked again.
   const cache = DATA === "main" ? "no-store" : "default";
-  const meta = await fetch(`${DATA_REPO}/contents/${path}?ref=${DATA}`, { cache, signal: AbortSignal.timeout(20000),
-    headers: { Accept: "application/vnd.github.object+json", Authorization: `Bearer ${store.get("token")}` } });
-  if (!meta.ok) throw Object.assign(new Error(`${path}: HTTP ${meta.status}`), { status: meta.status });
+  const meta = await fetch(`${DATA_REPO}/contents/${path}?ref=${DATA}`, { cache, credentials: "include", signal: AbortSignal.timeout(20000),
+    headers: { Accept: "application/vnd.github.object+json" } });
+  if (!meta.ok) throw await failure(path, meta);
   const file = await meta.json();
   // A file under 1 MB comes with the answer. A bigger one (a research game's can be 30 MB) is read
   // from its download link, which carries a short-lived key and comes compressed (the API's own
@@ -134,9 +143,8 @@ async function getIndex() {
 // cleared.json in the data repo ({appId: {issueId: {as: "fixed", at, title, note, release}}}, release
 // being the gid of the update it's in, or null for the next one) so every browser sees it; the
 // collecting workflow only reads that file, so the two never conflict. The site is static, so saving
-// goes straight to GitHub's API with the fine-grained token you paste once per browser (the same one
-// that reads the data): the token is the password, and only someone who can write to the data repo
-// has one. With ?data= (a test copy) nothing is saved.
+// goes to GitHub's API through the game-data server, which takes it only from the owner's Steam
+// sign-in and adds its own token. With ?data= (a test copy) nothing is saved.
 // The next collecting run has Claude judge your line like a patch-notes line (feedback/run.py:
 // apply_manual_fixes, which records its verdict in the game's manualFixes): a real fix becomes
 // "likely fixed", with reply drafts (once the update is out) and "still happening" as after a
@@ -144,7 +152,6 @@ async function getIndex() {
 // ---------------------------------------------------------------------------
 
 const CLEARED_PATH = "cleared.json";
-const TOKEN_URL = "https://github.com/settings/personal-access-tokens/new?name=Feedback%20dashboard&target_name=fourgames&expires_in=366&contents=write";
 
 // The files only the dashboard writes: what you marked fixed, your Claude credit, the games you
 // want to bundle with and the games you compare with.
@@ -214,9 +221,17 @@ const b64 = {
   decode: (data) => new TextDecoder().decode(Uint8Array.from(atob(data.replace(/\s/g, "")), (c) => c.charCodeAt(0))),
 };
 
-async function github(path, token, options = {}) {
-  return fetch(path ? `${DATA_REPO}/${path}` : DATA_REPO, { ...options, cache: "no-store", signal: AbortSignal.timeout(15000),
-    headers: { Accept: "application/vnd.github+json", Authorization: `Bearer ${token}`, ...(options.body ? { "Content-Type": "application/json" } : {}) } });
+// The data repo, through the game-data server: the browser sends only its sign-in cookie.
+async function github(path, options = {}) {
+  return fetch(`${DATA_REPO}/${path}`, { ...options, cache: "no-store", credentials: "include", signal: AbortSignal.timeout(15000),
+    headers: { Accept: "application/vnd.github+json", ...(options.body ? { "Content-Type": "application/json" } : {}) } });
+}
+
+// An Error for a refused call, with its status and what the server (or GitHub) said.
+async function failure(what, res) {
+  let message = "";
+  try { message = (await res.clone().json()).message || ""; } catch {}
+  return Object.assign(new Error(`${what}: HTTP ${res.status}${message ? ` (${message})` : ""}`), { status: res.status, reason: message });
 }
 
 // A small form in a dialog. `check(form)` returns what to resolve with, or throws an Error whose
@@ -249,23 +264,50 @@ function formDialog(title, body, submitLabel, check) {
   });
 }
 
-function askToken() {
-  const input = h("input.dlg-input", { type: "password", placeholder: "github_pat_…", autocomplete: "off", spellcheck: "false", required: true });
-  return formDialog("Unlock the feedback", [
-    h("p", "The feedback data is in a private repo on GitHub, so reading it (and saving what you mark) needs a GitHub token that can. It's kept in this browser only."),
-    h("ol",
-      h("li", h("a", { href: TOKEN_URL, target: "_blank", rel: "noopener" }, "Create a fine-grained token ↗"), " with owner ", h("b", "fourgames"), ", only the ", h("b", "feedback-data"), " repository, and ", h("b", "Contents: Read and write"), "."),
-      h("li", "Paste it here.")),
-    input,
-  ], "Unlock", async () => {
-    const token = input.value.trim();
-    const res = await github("", token);
-    const repo = res.ok ? await res.json() : null;
-    // Fine-grained tokens don't report their own permissions here; a save that's refused says so.
-    if (!repo || repo.permissions?.push === false) throw new Error(res.status === 401 ? "GitHub doesn't accept that token." : "That token can't see the feedback-data repo.");
-    store.set("token", token);
-    return token;
-  });
+// Who's signed in, asked of the game-data server: "admin", or why not ("signedOut", "notAdmin",
+// "wrongSite", "unreachable").
+async function whoAmI() {
+  try {
+    const res = await fetch(`${ADMIN}/me`, { credentials: "include", cache: "no-store", signal: AbortSignal.timeout(10000) });
+    const body = await res.json().catch(() => ({}));
+    if (res.ok) {
+      state.signedInUntil = body.until || null;
+      return "admin";
+    }
+    return res.status === 401 ? "signedOut" : body.error === "not_admin" ? "notAdmin" : body.error === "bad_origin" ? "wrongSite" : "unreachable";
+  } catch {
+    return "unreachable";
+  }
+}
+
+// What Steam's sign-in said, when it sent you back here without signing you in (?signin=failed or
+// cancelled), taken off the address.
+function signInResult() {
+  const params = new URLSearchParams(location.search);
+  const result = params.get("signin");
+  if (!result) return null;
+  params.delete("signin");
+  const query = params.toString();
+  history.replaceState(history.state, "", `${location.pathname}${query ? "?" + query : ""}${location.hash}`);
+  return result === "cancelled" ? "cancelled" : "failed";
+}
+
+async function signOut() {
+  try {
+    await fetch(`${GAMEDATA}/auth/signout`, { method: "POST", credentials: "include", headers: { "Content-Type": "application/json" }, body: "{}", signal: AbortSignal.timeout(10000) });
+  } catch {}
+  store.del("api");
+  state.signedInUntil = null;
+  renderAccount();
+  locked("signedOutNow");
+}
+
+// Signed in, in the page header: until when, and Sign out.
+function renderAccount() {
+  const el = document.getElementById("fb-account");
+  if (!el) return;
+  if (DATA_OVERRIDE || !state.signedInUntil) return el.replaceChildren();
+  el.replaceChildren(h("span", `Signed in with Steam until ${fmtTime(state.signedInUntil)}`), h("button.linkish", { type: "button", onclick: signOut }, "Sign out"));
 }
 
 // What you changed and where, for Claude to judge like a patch-notes line.
@@ -308,11 +350,10 @@ async function setFixed(issue, fixed) {
 }
 
 // Changes one of the files only the dashboard writes (state[key], saved at path in the repo): shown
-// at once, then saved through GitHub's API with your token. When something else saved the file in
-// between, GitHub refuses and it goes again; when saving fails, the change is taken back.
+// at once, then saved through GitHub's API (by way of the game-data server). When something else
+// saved the file in between, GitHub refuses and it goes again; when saving fails, the change is
+// taken back.
 async function saveData(key, path, change, message, done) {
-  const token = DATA_OVERRIDE ? "test" : store.get("token") || await askToken();
-  if (!token) return;
   const before = structuredClone(state[key] || {});
   state[key] = change(structuredClone(before));
   redraw();
@@ -320,11 +361,11 @@ async function saveData(key, path, change, message, done) {
   if (DATA_OVERRIDE) return toast("Test copy of the data: not saved");
   try {
     for (let attempt = 0; ; attempt++) {
-      const res = await github(`contents/${path}?ref=main`, token);
+      const res = await github(`contents/${path}?ref=main`);
       if (!res.ok && res.status !== 404) throw res;
       const file = res.ok ? await res.json() : null;
       const data = change(file ? JSON.parse(b64.decode(file.content)) : {});
-      const put = await github(`contents/${path}`, token, { method: "PUT",
+      const put = await github(`contents/${path}`, { method: "PUT",
         body: JSON.stringify({ message, branch: "main", sha: file?.sha, content: b64.encode(JSON.stringify(data, null, 1) + "\n") }) });
       if (put.ok) {
         // Read the data from this commit on, so a refresh doesn't show the old file for a minute.
@@ -339,10 +380,11 @@ async function saveData(key, path, change, message, done) {
   } catch (err) {
     state[key] = before;
     redraw();
-    if (err.status === 401 || err.status === 403 || err.status === 404) {
-      store.del("token");
-      toast("GitHub refused the token; try again to enter a new one");
-    } else toast("Couldn't save to GitHub; try again");
+    // The sign-in ran out, or it's not the owner's: sign in again. GitHub's own refusals (of the
+    // server's token) come as 502 with what GitHub said.
+    if (err.status === 401 || err.status === 403) return locked(err.status === 401 ? "expired" : "notAdmin");
+    const reason = err instanceof Response ? (await failure("", err)).reason : "";
+    toast(reason ? `Couldn't save: ${reason}` : "Couldn't save to GitHub; try again");
   }
 }
 
@@ -495,8 +537,8 @@ async function serverBase() {
 
 async function apiBase() {
   const read = (k) => { try { return JSON.parse(store.get(k)); } catch { return null; } };
-  // A recent answer is reused, so refreshing the page doesn't ask GitHub again (unauthenticated
-  // calls are limited to 60 an hour per connection).
+  // A recent answer is reused, so refreshing the page doesn't ask GitHub again (its hourly limit is
+  // the server's token's, shared with everything else that uses it).
   const cached = read("api");
   if (cached && Date.now() - cached.at < 60 * 1000) return applyApi(cached);
   // After a timeout or the hourly limit, skip the API until it's likely back, and load the data
@@ -504,7 +546,7 @@ async function apiBase() {
   if ((read("apiDownUntil") || 0) > Date.now()) return cached ? applyApi(cached, true) : (DATA = "main");
   let limitedUntil = null;
   // GitHub's API sometimes hangs rather than failing; never wait more than a few seconds for it.
-  const api = (path, repo = SITE_REPO) => fetch(`${repo}/${path}`, { cache: "no-store", signal: AbortSignal.timeout(5000), headers: { Authorization: `Bearer ${store.get("token")}` } })
+  const api = (path, repo = SITE_REPO) => fetch(`${repo}/${path}`, { cache: "no-store", credentials: "include", signal: AbortSignal.timeout(5000) })
     .then((res) => {
       if (!res.ok) limitedUntil = Number(res.headers.get("x-ratelimit-reset")) * 1000 || Date.now() + 10 * 60 * 1000;
       return res.json();
@@ -545,28 +587,55 @@ function applyApi(answer, stale = false) {
   if (answer.deploy) state.deploy = answer.deploy;
 }
 
-// Without a token: say why there's nothing here, with a button to unlock.
-function locked(reason = "") {
+// Not signed in as the owner: say why there's nothing here, with what to do about it.
+const LOCKED = {
+  signedOut: "The feedback and the players' game data are private: sign in with the owner's Steam account.",
+  signedOutNow: "Signed out. Sign in with Steam to open the dashboard again.",
+  expired: "Your sign-in has run out (it lasts 12 hours): sign in with Steam again.",
+  failed: "Steam's sign-in didn't go through: try again.",
+  cancelled: "The sign-in was cancelled on Steam.",
+  notAdmin: "You're signed in with a Steam account that isn't the owner's. Sign out, then sign in with the owner's account.",
+  wrongSite: "The game-data server only answers the dashboard on fourgames.se/fb-dash.",
+  unreachable: "The game-data server (api.fourgames.se) can't be reached, so the dashboard can't tell who you are. Try again in a minute.",
+};
+function locked(reason) {
   document.getElementById("fb-title").textContent = "Locked";
   document.getElementById("fb-updated").textContent = "";
+  for (const id of ["fb-stats", "fb-links", "fb-expand"]) document.getElementById(id)?.replaceChildren();
+  const signIn = h("a.btn.primary", { href: SIGN_IN }, "Sign in with Steam");
+  const action = reason === "notAdmin" ? h("button.btn", { type: "button", onclick: signOut }, "Sign out")
+    : reason === "unreachable" ? h("button.btn.primary", { type: "button", onclick: () => init() }, "Try again")
+    : reason === "wrongSite" ? null : signIn;
   document.getElementById("fb-view").replaceChildren(h("div.card",
-    h("p", `${reason ? reason + " " : ""}The feedback data is private: unlock it with a GitHub token that can read the feedback-data repo.`),
-    h("button.btn.primary", { type: "button", onclick: async () => { if (await askToken()) init(); } }, "Unlock")));
+    h("p", LOCKED[reason] || LOCKED.signedOut),
+    action ? h("div.gd-actions", action) : null,
+    // The note about signing in.
+    h("p.gd-note", "Signing in goes through Steam and the game-data server (api.fourgames.se), which reads and saves the feedback on GitHub with its own token and keeps the players' game data. All this browser keeps is the server's sign-in cookie, for 12 hours.")));
 }
 
 async function init() {
-  // Nothing is shown without a token that can read the private data repo.
-  if (!DATA_OVERRIDE && !store.get("token") && !await askToken()) return locked();
+  // The GitHub token this page used to keep (before the Steam sign-in): gone for good.
+  store.del("token");
+  const result = signInResult();
+  // Nothing is shown without the owner's sign-in.
+  if (!DATA_OVERRIDE) {
+    const who = await whoAmI();
+    if (who !== "admin") return locked(who === "signedOut" && result ? result : who);
+    renderAccount();
+  }
   await dataBase();
   try {
     state.index = await getIndex();
   } catch (e) {
-    if ([401, 403, 404].includes(e.status) && !DATA_OVERRIDE) {
-      store.del("token");
+    if ((e.status === 401 || e.status === 403) && !DATA_OVERRIDE) {
       store.del("api");
-      return locked("GitHub refused the saved token.");
+      return locked(e.status === 401 ? "expired" : "notAdmin");
     }
-    document.getElementById("fb-updated").textContent = "No data yet: the feedback workflow hasn't committed anything. (" + e.message + ")";
+    document.getElementById("fb-updated").textContent = "No data yet: the feedback workflow hasn't committed anything. (" + e.message + ")" +
+      (e.status === 404 && !DATA_OVERRIDE ? " If it has, the server's GitHub token may not see fourgames/feedback-data." : "");
+    // The players' game data doesn't come from GitHub: it opens all the same.
+    state.index = { games: [] };
+    document.getElementById("fb-view").replaceChildren(h("p.empty", h("button.btn", { type: "button", onclick: pickGameData }, "Open the game data")));
     return;
   }
   await loadCleared();
@@ -576,8 +645,9 @@ async function init() {
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = hash.get("app") || store.get("app");
   state.tab = NAV.some(([, tabs]) => tabs.some(([id]) => id === hash.get("tab"))) ? hash.get("tab") : state.tab;
-  // All games first, unless a game was asked for (or was the last one open).
-  if (games.some((g) => g.appId === Number(wanted))) pickGame(Number(wanted));
+  // All games first, unless a game was asked for (or was the last one open), or the game data.
+  if (wanted === "gamedata") pickGameData();
+  else if (games.some((g) => g.appId === Number(wanted))) pickGame(Number(wanted));
   else if (games.length) pickHome();
 }
 
@@ -868,8 +938,8 @@ function orderedGames() {
 // Research games: other studios' games you add to learn from (feedback/run.py: research_run),
 // saved in research.json in the data repo ({appId: {at, name, group?}}). The collector reads and sorts every
 // review and thread like your own games' (up to a Claude cost cap each), without alerts or replies.
-// A group (a studio, say) lists its games under their own heading. Adding one needs the GitHub
-// token, like every save, so only someone who can write to the repo can.
+// A group (a studio, say) lists its games under their own heading. Adding one needs the
+// owner's sign-in, like every save.
 const RESEARCH_PATH = "research.json";
 const researchGames = () => {
   const collected = new Map((state.index?.research || []).map((g) => [g.appId, g]));
@@ -927,24 +997,27 @@ function renderGames() {
     h("span.g-name", g.name, h("span.g-sub", sub(g))));
   const home = () => h("button.g-item", { type: "button", "aria-current": String(state.home), onclick: pickHome },
     h("span.g-thumb.g-all", "All"), h("span.g-name", "All games", h("span.g-sub", "needs attention and every post")));
+  const data = () => h("button.g-item", { type: "button", "aria-current": String(!!state.gameData), onclick: pickGameData },
+    h("span.g-thumb.g-all", "Data"), h("span.g-name", "Game data", h("span.g-sub", "players' sessions, for replays")));
   const researchItem = (g) => h("button.g-item", { type: "button", title: g.name, "aria-current": String(!state.home && state.game?.appId === g.appId), onclick: () => pickGame(g.appId) },
     g.capsule ? h("img.g-thumb", { src: g.capsule, alt: "", loading: "lazy" }) : h("span.g-thumb"),
     h("span.g-name", g.name, h("span.g-sub", researchStatus(g))));
   const add = () => h("button.g-item.g-add", { type: "button", onclick: askResearch }, h("span.g-thumb.g-all", "+"), h("span.g-name", "Add a research game", h("span.g-sub", "another studio's game, to learn from")));
   // Ungrouped research games under "Research", then each group under its own heading.
   const groups = [...new Set(research.map((g) => g.group))].sort((a, b) => (a || "").localeCompare(b || ""));
-  document.getElementById("fb-games-side").replaceChildren(h("div.side-label", "Games"), home(), ...games.map(item));
+  document.getElementById("fb-games-side").replaceChildren(h("div.side-label", "Games"), home(), data(), ...games.map(item));
   // Research games go in their own card at the bottom, under the views.
   document.getElementById("fb-research-side").replaceChildren(
     ...groups.flatMap((name) => [h("div.side-label", name ? `Research · ${name}` : "Research"), ...research.filter((g) => g.group === name).map(researchItem)]),
     add());
-  document.getElementById("fb-games-strip").replaceChildren(home(), ...games.map(item), ...research.map(researchItem), add());
+  document.getElementById("fb-games-strip").replaceChildren(home(), data(), ...games.map(item), ...research.map(researchItem), add());
 }
 
 async function pickGame(appId) {
   store.set("app", appId);
   state.picked = appId;
   state.home = false;
+  state.gameData = false;
   const meta = metaOf(appId);
   if (!state.games[appId]) {
     // A research game's file can be tens of MB: say which game is coming instead of leaving the last
@@ -970,7 +1043,7 @@ async function pickGame(appId) {
 
 function setHash() {
   // Keep vue-router's history state; only the hash changes.
-  history.replaceState(history.state, "", `${location.pathname}${location.search}${state.home ? "#app=all" : `#app=${state.game.appId}&tab=${state.tab}`}`);
+  history.replaceState(history.state, "", `${location.pathname}${location.search}${state.gameData ? "#app=gamedata" : state.home ? "#app=all" : `#app=${state.game.appId}&tab=${state.tab}`}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -1220,9 +1293,15 @@ const about = (...kids) => h("details.about", h("summary", "How this works"), h(
 function render() {
   state.drawn = drawnKey(); // what's on screen, so a refresh only redraws for new data
   renderGames();
-  // On All games the views are one game's, so they're hidden.
-  document.querySelector(".fb .side-views").hidden = state.home;
-  document.getElementById("fb-nav-top").hidden = state.home;
+  // On All games (and Game data) the views are one game's, so they're hidden.
+  document.querySelector(".fb .side-views").hidden = state.home || state.gameData;
+  document.getElementById("fb-nav-top").hidden = state.home || state.gameData;
+  if (state.gameData) {
+    renderDataTop();
+    setHash();
+    document.getElementById("fb-view").replaceChildren(gameDataView());
+    return;
+  }
   if (state.home) {
     renderHomeTop();
     setHash();
@@ -2659,6 +2738,7 @@ const NEW_REVIEW_DAYS = 3;
 async function pickHome() {
   store.set("app", "all");
   state.home = true;
+  state.gameData = false;
   state.game = null;
   document.getElementById("fb-view").replaceChildren(h("p.empty", "Loading…"));
   await Promise.all(state.index.games.filter((g) => !state.games[g.appId])
@@ -3404,6 +3484,172 @@ function reviewsChart(start, end, releases) {
   });
   svg.addEventListener("pointerleave", () => { tip.style.display = "none"; });
   return card;
+}
+
+
+// ---------------------------------------------------------------------------
+// Game data: the play sessions the games send to the game-data server (server/gamedata), newest
+// first, with one session's key numbers and two ways to take it elsewhere: Copy for replay (the
+// session as JSON, for the fourgames_data project's replay viewer: Paste session) and Copy for
+// Claude (the summary that viewer makes, written by the server the same way).
+// ---------------------------------------------------------------------------
+
+const gd = { app: "all", test: "all", list: null, next: null, apps: [], error: null, loading: false, picked: null, session: null, text: null, detailError: null };
+
+// One of the owner's endpoints. A sign-in that ran out (or isn't the owner's) shows the sign-in.
+async function adminGet(path) {
+  const res = await fetch(`${ADMIN}/${path}`, { credentials: "include", cache: "no-store", signal: AbortSignal.timeout(30000) });
+  if (res.status === 401 || res.status === 403) {
+    gd.list = null;
+    locked(res.status === 401 ? "expired" : "notAdmin");
+    throw Object.assign(new Error("not signed in"), { signedOut: true });
+  }
+  if (!res.ok) throw await failure(path.split("?")[0], res);
+  return res;
+}
+const serverError = (e) => e.name === "TimeoutError" ? "The game-data server didn't answer; try again." : e.message;
+
+function pickGameData() {
+  store.set("app", "gamedata");
+  state.home = false;
+  state.game = null;
+  state.picked = null;
+  state.gameData = true;
+  render();
+  if (!gd.list && !gd.loading) loadSessions();
+}
+
+function redrawData() {
+  if (!state.gameData || !document.getElementById("fb-view")) return;
+  const y = window.scrollY;
+  renderDataTop();
+  document.getElementById("fb-view").replaceChildren(gameDataView());
+  window.scrollTo(0, y);
+}
+
+// The list for the filters, from the start, or the next page of it.
+async function loadSessions(more = false) {
+  const query = new URLSearchParams({ limit: "50" });
+  if (gd.app !== "all") query.set("app_id", gd.app);
+  if (gd.test !== "all") query.set("test", gd.test === "test" ? "1" : "0");
+  if (more && gd.next) query.set("before", gd.next);
+  const asked = query.toString();
+  gd.loading = asked;
+  if (!more) gd.list = null;
+  redrawData();
+  try {
+    const body = await (await adminGet(`sessions?${asked}`)).json();
+    if (gd.loading !== asked) return; // the filters changed meanwhile
+    gd.list = more ? [...(gd.list || []), ...body.sessions] : body.sessions;
+    gd.next = body.next;
+    gd.apps = body.apps || [];
+    gd.error = null;
+  } catch (e) {
+    if (e.signedOut || gd.loading !== asked) return;
+    gd.error = serverError(e);
+  }
+  gd.loading = false;
+  redrawData();
+}
+
+// Opens a session under its row (or closes it again): its data and its summary, both at once, so
+// both copy buttons work straight away.
+async function pickSession(id) {
+  if (gd.picked === id) {
+    gd.picked = null;
+    return redrawData();
+  }
+  Object.assign(gd, { picked: id, session: null, text: null, detailError: null });
+  redrawData();
+  try {
+    const [session, text] = await Promise.all([
+      adminGet(`sessions/${id}`).then((res) => res.json()).then((body) => body.session),
+      adminGet(`sessions/${id}/summary`).then((res) => res.text()),
+    ]);
+    if (gd.picked !== id) return;
+    Object.assign(gd, { session, text });
+  } catch (e) {
+    if (e.signedOut || gd.picked !== id) return;
+    gd.detailError = serverError(e);
+  }
+  redrawData();
+}
+
+const appName = (appId) => metaOf(appId)?.name || `App ${appId}`;
+// Seconds of play as a clock: "0:40", "12:05", "1:02:03".
+function fmtPlay(s) {
+  const t = Math.max(0, Math.floor(Number(s) || 0));
+  const mm = String(Math.floor(t / 60) % 60), ss = String(t % 60).padStart(2, "0");
+  return t >= 3600 ? `${Math.floor(t / 3600)}:${mm.padStart(2, "0")}:${ss}` : `${mm}:${ss}`;
+}
+const isoTime = (iso) => iso ? fmtDateTime(Date.parse(iso) / 1000) : null;
+
+function renderDataTop() {
+  document.getElementById("fb-capsule").hidden = true;
+  document.getElementById("fb-title").replaceChildren("Game data");
+  const total = gd.apps.reduce((a, x) => a + x.sessions, 0);
+  const tests = gd.apps.reduce((a, x) => a + (x.test_sessions || 0), 0);
+  document.getElementById("fb-updated").replaceChildren(gd.apps.length
+    ? `${plural(total, "session")} from ${plural(gd.apps.length, "game")}, ${fmtNum(tests)} of them test sessions · newest first`
+    : "What the games send while players play");
+  for (const id of ["fb-links", "fb-stats", "fb-expand"]) document.getElementById(id).replaceChildren();
+}
+
+// The picked session's key numbers, from its data, and the two copy buttons.
+function sessionDetail() {
+  if (gd.detailError) return h("div.gd-session", h("p.empty", gd.detailError));
+  const s = gd.session;
+  if (!s) return h("div.gd-session", h("p.empty", "Loading the session…"));
+  const events = Array.isArray(s.events) ? s.events : [];
+  const count = (type) => events.filter((e) => e?.type === type).length;
+  const length = Math.max(events.reduce((m, e) => Math.max(m, Number(e?.t) || 0), 0), Number(s.playtime_s ?? s.summary?.playtime_s) || 0);
+  const hw = s.hardware || {};
+  const crashes = s.crashes || [];
+  const rows = [
+    ["Started", isoTime(s.started) || "?"],
+    ["Ended", isoTime(s.ended) || "no end received (it crashed, was killed, or is still uploading)"],
+    ["Length", `${fmtPlay(length)}${s.active_s != null ? ` (active ${fmtPlay(s.active_s)}, idle ${fmtPlay(s.idle_s)})` : ""}`],
+    ["Game", [s.game_version && `v${s.game_version}`, s.build_id && `build ${s.build_id}`, s.godot_version && `Godot ${s.godot_version}`].filter(Boolean).join(" · ") || "?"],
+    ["Where", [s.platform, s.locale, s.country && country(s.country), s.region].filter(Boolean).join(" · ") || "?"],
+    ["Events", [fmtNum(events.length), plural(count("action"), "action"), plural(count("death"), "death"), plural(count("error"), "error")].join(" · ")],
+    ["Crashes", crashes.length ? `${crashes.length} ${crashes.length === 1 ? "crash" : "crashes"} (${crashes.map((c) => c.signal || "?").join(", ")})` : "none"],
+    ["Hardware", Object.keys(hw).length ? [hw.os, hw.cpu, hw.ram_mb && `${Math.round(hw.ram_mb / 1024)} GB RAM`, hw.gpu, hw.screen_w && `${hw.screen_w}×${hw.screen_h}`, hw.steam_deck && "Steam Deck"].filter(Boolean).join(" · ") : "not sent"],
+    ["Last scene", s.last_scene || s.summary?.last_scene || "?"],
+    ["Session", s.session_id],
+  ];
+  return h("div.gd-session",
+    h("table.data", ...rows.map(([k, v]) => h("tr", h("th", k), h("td", v)))),
+    h("div.gd-actions",
+      h("button.btn.primary", { type: "button", onclick: (e) => copy(JSON.stringify(s), e.currentTarget) }, "Copy for replay"),
+      h("button.btn", { type: "button", disabled: !gd.text, onclick: (e) => copy(gd.text, e.currentTarget) }, "Copy for Claude")),
+    h("p.gd-note", "Copy for replay: open the fourgames_data project's replay viewer and press Paste session. Copy for Claude: the viewer's own summary of the session, for a chat."));
+}
+
+function gameDataView() {
+  const filters = h("div.filters",
+    chips([["all", "All games"], ...gd.apps.map((a) => [String(a.app_id), appName(a.app_id)])], gd.app, (v) => { gd.app = v; loadSessions(); }, "Game"),
+    chips([["all", "Real and test"], ["real", "Real"], ["test", "Test"]], gd.test, (v) => { gd.test = v; loadSessions(); }, "Real or test sessions"));
+  const row = (s) => {
+    const meta = metaOf(s.app_id);
+    return h("button.att-row", { type: "button", "aria-current": String(gd.picked === s.id), "aria-expanded": String(gd.picked === s.id), onclick: () => pickSession(s.id) },
+      meta?.capsule ? h("img.att-thumb", { src: meta.capsule, alt: "", loading: "lazy" }) : h("span.att-thumb"),
+      h("span.att-text",
+        h("span.att-title", `${fmtDateTime(s.started)} · ${fmtPlay(s.length_s)}`, s.test ? h("span.pill", "Test") : null),
+        h("span.att-meta", [appName(s.app_id), s.game_version ? `v${s.game_version}` : null, plural(s.events, "event"),
+          s.country ? country(s.country) : null, s.ended ? null : "no end", `player ${s.pid}`].filter(Boolean).join(" · "))),
+      h("span.att-go", gd.picked === s.id ? "▾" : "▸"));
+  };
+  const list = gd.error ? h("p.empty", gd.error)
+    : !gd.list ? h("p.empty", "Loading…")
+    : !gd.list.length ? h("p.empty", "No sessions here yet.")
+    : h("div",
+      h("div.card.att-list", ...gd.list.flatMap((s) => [row(s), gd.picked === s.id ? sessionDetail() : null])),
+      gd.next ? h("button.btn.more", { type: "button", disabled: !!gd.loading, onclick: () => loadSessions(true) }, gd.loading ? "Loading…" : "Show more") : null);
+  return h("div",
+    about("Every play session the games send to the game-data server (server/gamedata), newest first. A test session is one of our own test accounts trying a game out (GAMEDATA_TEST_STEAMIDS); the rest are players'. ",
+      "A player shows as the start of their pseudonym, never a Steam ID. Pick a session for its numbers: Copy for replay puts it on the clipboard as JSON, for the fourgames_data project's replay viewer (Paste session); Copy for Claude puts the same summary as the viewer's Copy for Claude."),
+    filters,
+    list);
 }
 
 

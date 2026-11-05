@@ -896,6 +896,52 @@
 	color: var(--fb-muted);
 	flex: none;
 }
+/* Game data: the session list (rows as in Needs attention), a picked session opened under its row */
+.fb .att-row[aria-current="true"] {
+	background: var(--fb-card-2);
+}
+.fb .gd-session {
+	padding: 4px 10px 12px;
+}
+.fb .gd-session + .att-row {
+	border-top: 1px solid var(--fb-line);
+}
+.fb .gd-session table.data {
+	font-size: 0.8125rem;
+}
+.fb .gd-session th {
+	color: var(--fb-muted);
+	font-weight: 600;
+	white-space: nowrap;
+	vertical-align: top;
+}
+.fb .gd-session td {
+	overflow-wrap: anywhere;
+}
+.fb .gd-actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 8px;
+	margin-top: 12px;
+}
+.fb .gd-note {
+	color: var(--fb-muted);
+	font-size: 0.75rem;
+	margin: 10px 0 0;
+}
+/* Signed in, under the status line in the page header */
+.fb #fb-account {
+	display: flex;
+	justify-content: flex-end;
+	align-items: baseline;
+	gap: 10px;
+	color: var(--fb-muted);
+	font-size: 0.75rem;
+	margin-top: 6px;
+}
+.fb #fb-account:empty {
+	display: none;
+}
 .fb .game-tag {
 	display: inline-flex;
 	align-items: center;

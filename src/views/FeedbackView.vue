@@ -43,8 +43,9 @@ onMounted(async () => {
 		title="Player feedback"
 		description="Reviews, discussions, bugs and ideas for every game, sorted by Claude."
 	>
-		<!-- Filled by the dashboard: how often it collects and whether each service works. -->
-		<div class="fb"><div id="fb-status"></div></div>
+		<!-- Filled by the dashboard: how often it collects and whether each service works, and who's
+		signed in (with Steam, the owner's account only). -->
+		<div class="fb"><div id="fb-status"></div><div id="fb-account"></div></div>
 	</PageHeader>
 	<section class="bg-bg">
 		<div class="container-page padded">

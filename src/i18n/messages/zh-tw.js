@@ -72,15 +72,15 @@ export default {
 	},
 	footer: {
 		games: { heading: "遊戲", all: "所有遊戲", steam: "在 Steam 上追蹤", members: "會員免費" },
-		studio: { heading: "工作室", home: "首頁", code: "開源", jobs: "合作", contact: "聯繫我們", press: "媒體資料包", privacy: "隱私" },
+		studio: { heading: "工作室", code: "開源", jobs: "合作", contact: "聯繫我們", press: "媒體資料包", privacy: "隱私" },
 		resources: {
 			heading: "資源",
 			videos: "影片",
-			youtube: "YouTube 頻道",
 			github: "GitHub",
 			issue: "回報網站問題",
+			status: "伺服器狀態",
 		},
-		community: { heading: "社群", discord: "Discord", membership: "會員", steam: "Steam" },
+		community: { heading: "社群", discord: "Discord", youtube: "YouTube" },
 		copyright: "© {year} {name}。保留所有權利。四葉草圖示作者：{author}（CC BY 3.0）。",
 	},
 	hero: {

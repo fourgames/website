@@ -71,15 +71,15 @@ export default {
 	},
 	footer: {
 		games: { heading: "游戏", all: "全部游戏", steam: "在 Steam 上关注", members: "会员免费" },
-		studio: { heading: "工作室", home: "首页", code: "开源", jobs: "合作", contact: "联系我们", press: "媒体资料包", privacy: "隐私" },
+		studio: { heading: "工作室", code: "开源", jobs: "合作", contact: "联系我们", press: "媒体资料包", privacy: "隐私" },
 		resources: {
 			heading: "资源",
 			videos: "视频",
-			youtube: "YouTube 频道",
 			github: "GitHub",
 			issue: "报告网站问题",
+			status: "服务器状态",
 		},
-		community: { heading: "社区", discord: "Discord", membership: "会员", steam: "Steam" },
+		community: { heading: "社区", discord: "Discord", youtube: "YouTube" },
 		copyright: "© {year} {name}。保留所有权利。四叶草图标作者：{author}（CC BY 3.0）。",
 	},
 	hero: {

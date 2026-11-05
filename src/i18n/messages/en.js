@@ -75,15 +75,15 @@ export default {
 	},
 	footer: {
 		games: { heading: "Games", all: "All games", steam: "Follow on Steam", members: "Free for members" },
-		studio: { heading: "Studio", home: "Home", code: "Open Source", jobs: "Work with us", contact: "Contact", press: "Press kit", privacy: "Privacy" },
+		studio: { heading: "Studio", code: "Open Source", jobs: "Work with us", contact: "Contact", press: "Press kit", privacy: "Privacy" },
 		resources: {
 			heading: "Resources",
 			videos: "Videos",
-			youtube: "YouTube channel",
 			github: "GitHub",
 			issue: "Report a website issue",
+			status: "Server status",
 		},
-		community: { heading: "Community", discord: "Discord", membership: "Membership", steam: "Steam" },
+		community: { heading: "Community", discord: "Discord", youtube: "YouTube" },
 		copyright: "© {year} {name}. All rights reserved. Clover icon by {author} (CC BY 3.0).",
 	},
 	hero: {

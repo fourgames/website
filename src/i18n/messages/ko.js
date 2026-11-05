@@ -74,15 +74,15 @@ export default {
 	},
 	footer: {
 		games: { heading: "게임", all: "모든 게임", steam: "Steam에서 팔로우", members: "멤버십 회원 무료" },
-		studio: { heading: "스튜디오", home: "홈", code: "오픈 소스", jobs: "협업", contact: "문의하기", press: "프레스 키트", privacy: "개인정보" },
+		studio: { heading: "스튜디오", code: "오픈 소스", jobs: "협업", contact: "문의하기", press: "프레스 키트", privacy: "개인정보" },
 		resources: {
 			heading: "리소스",
 			videos: "동영상",
-			youtube: "YouTube 채널",
 			github: "GitHub",
 			issue: "웹사이트 문제 신고하기",
+			status: "서버 상태",
 		},
-		community: { heading: "커뮤니티", discord: "Discord", membership: "멤버십", steam: "Steam" },
+		community: { heading: "커뮤니티", discord: "Discord", youtube: "YouTube" },
 		copyright: "© {year} {name}. All rights reserved. 클로버 아이콘 제작: {author} (CC BY 3.0).",
 	},
 	hero: {

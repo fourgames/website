@@ -73,15 +73,15 @@ export default {
 	},
 	footer: {
 		games: { heading: "ゲーム", all: "すべてのゲーム", steam: "Steamでフォロー", members: "メンバーは無料" },
-		studio: { heading: "スタジオ", home: "ホーム", code: "オープンソース", jobs: "協業", contact: "お問い合わせ", press: "プレスキット", privacy: "プライバシー" },
+		studio: { heading: "スタジオ", code: "オープンソース", jobs: "協業", contact: "お問い合わせ", press: "プレスキット", privacy: "プライバシー" },
 		resources: {
 			heading: "リソース",
 			videos: "動画",
-			youtube: "YouTubeチャンネル",
 			github: "GitHub",
 			issue: "サイトの問題を報告",
+			status: "サーバーの状態",
 		},
-		community: { heading: "コミュニティ", discord: "Discord", membership: "メンバーシップ", steam: "Steam" },
+		community: { heading: "コミュニティ", discord: "Discord", youtube: "YouTube" },
 		copyright: "© {year} {name}. All rights reserved. クローバーアイコン：{author}（CC BY 3.0）",
 	},
 	hero: {

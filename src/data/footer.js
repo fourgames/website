@@ -16,7 +16,6 @@ export const FOOTER_COLUMNS = [
 		id: "studio",
 		heading: "footer.studio.heading",
 		links: [
-			{ label: "footer.studio.home", to: "/" },
 			{ label: "footer.studio.code", to: "/code" },
 			{ label: "footer.studio.jobs", to: "/jobs" },
 			{ label: "footer.studio.contact", to: "/jobs#contact" },
@@ -29,9 +28,9 @@ export const FOOTER_COLUMNS = [
 		heading: "footer.resources.heading",
 		links: [
 			{ label: "footer.resources.videos", to: "/videos" },
-			{ label: "footer.resources.youtube", href: SITE.links.youtube },
 			{ label: "footer.resources.github", href: SITE.links.github },
 			{ label: "footer.resources.issue", href: SITE.links.issues },
+			{ label: "footer.resources.status", href: SITE.status },
 		],
 	},
 	{
@@ -39,8 +38,7 @@ export const FOOTER_COLUMNS = [
 		heading: "footer.community.heading",
 		links: [
 			{ label: "footer.community.discord", href: SITE.links.discord },
-			{ label: "footer.community.membership", href: SITE.links.youtubeJoin },
-			{ label: "footer.community.steam", href: SITE.links.steam },
+			{ label: "footer.community.youtube", href: SITE.links.youtube },
 		],
 	},
 ];

@@ -2668,3 +2668,15 @@
 	color: var(--fb-muted);
 	font-size: 0.8125rem;
 }
+
+/* Status: the public status page, embedded as it is; a screen tall, so it scrolls inside */
+.fb .uptime-frame {
+	display: block;
+	width: 100%;
+	height: calc(100vh - 140px);
+	min-height: 560px;
+	border: 0;
+	border-radius: var(--radius-card);
+	background: var(--fb-card);
+	box-shadow: var(--fb-shadow);
+}

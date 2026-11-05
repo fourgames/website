@@ -647,6 +647,7 @@ async function init() {
   state.tab = NAV.some(([, tabs]) => tabs.some(([id]) => id === hash.get("tab"))) ? hash.get("tab") : state.tab;
   // All games first, unless a game was asked for (or was the last one open), or the game data.
   if (wanted === "gamedata") pickGameData();
+  else if (wanted === "status") pickUptime();
   else if (games.some((g) => g.appId === Number(wanted))) pickGame(Number(wanted));
   else if (games.length) pickHome();
 }
@@ -1005,18 +1006,20 @@ function renderGames() {
     h("span.g-thumb.g-all", "All"), h("span.g-name", "All games", h("span.g-sub", "needs attention and every post")));
   const data = () => h("button.g-item", { type: "button", "aria-current": String(!!state.gameData), onclick: pickGameData },
     h("span.g-thumb.g-all", "Data"), h("span.g-name", "Game data", h("span.g-sub", "players' sessions, for replays")));
+  const uptime = () => h("button.g-item", { type: "button", "aria-current": String(!!state.uptime), onclick: pickUptime },
+    h("span.g-thumb.g-all", "Up"), h("span.g-name", "Status", h("span.g-sub", "whether the site, server and bots run")));
   const researchItem = (g) => h("button.g-item", { type: "button", title: g.name, "aria-current": String(!state.home && state.game?.appId === g.appId), onclick: () => pickGame(g.appId) },
     g.capsule ? h("img.g-thumb", { src: g.capsule, alt: "", loading: "lazy" }) : h("span.g-thumb"),
     h("span.g-name", g.name, h("span.g-sub", researchStatus(g))));
   const add = () => h("button.g-item.g-add", { type: "button", onclick: askResearch }, h("span.g-thumb.g-all", "+"), h("span.g-name", "Add a research game", h("span.g-sub", "another studio's game, to learn from")));
   // Ungrouped research games under "Research", then each group under its own heading.
   const groups = [...new Set(research.map((g) => g.group))].sort((a, b) => (a || "").localeCompare(b || ""));
-  document.getElementById("fb-games-side").replaceChildren(h("div.side-label", "Games"), home(), data(), ...games.map(item));
+  document.getElementById("fb-games-side").replaceChildren(h("div.side-label", "Games"), home(), data(), uptime(), ...games.map(item));
   // Research games go in their own card at the bottom, under the views.
   document.getElementById("fb-research-side").replaceChildren(
     ...groups.flatMap((name) => [h("div.side-label", name ? `Research · ${name}` : "Research"), ...research.filter((g) => g.group === name).map(researchItem)]),
     add());
-  document.getElementById("fb-games-strip").replaceChildren(home(), data(), ...games.map(item), ...research.map(researchItem), add());
+  document.getElementById("fb-games-strip").replaceChildren(home(), data(), uptime(), ...games.map(item), ...research.map(researchItem), add());
 }
 
 async function pickGame(appId) {
@@ -1024,6 +1027,7 @@ async function pickGame(appId) {
   state.picked = appId;
   state.home = false;
   state.gameData = false;
+  state.uptime = false;
   const meta = metaOf(appId);
   if (!state.games[appId]) {
     // A research game's file can be tens of MB: say which game is coming instead of leaving the last
@@ -1047,9 +1051,30 @@ async function pickGame(appId) {
   render();
 }
 
+// The public status page (server/status-page, status.fourgames.se), shown here as it is: its checks
+// run in the page itself, so there's one status page to keep up, not two.
+const STATUS_PAGE = "https://status.fourgames.se/";
+function pickUptime() {
+  store.set("app", "status");
+  state.home = false;
+  state.gameData = false;
+  state.game = null;
+  state.picked = null;
+  state.uptime = true;
+  render();
+}
+function renderUptimeTop() {
+  document.getElementById("fb-capsule").hidden = true;
+  document.getElementById("fb-title").replaceChildren("Status");
+  document.getElementById("fb-updated").replaceChildren("The public status page, checked from this browser every minute");
+  document.getElementById("fb-links").replaceChildren(h("a.btn", { href: STATUS_PAGE, target: "_blank", rel: "noopener" }, "Open status.fourgames.se ↗"));
+  for (const id of ["fb-stats", "fb-expand"]) document.getElementById(id).replaceChildren();
+}
+const uptimeView = () => h("iframe.uptime-frame", { src: STATUS_PAGE, title: "Four Games status" });
+
 function setHash() {
   // Keep vue-router's history state; only the hash changes.
-  history.replaceState(history.state, "", `${location.pathname}${location.search}${state.gameData ? "#app=gamedata" : state.home ? "#app=all" : `#app=${state.game.appId}&tab=${state.tab}`}`);
+  history.replaceState(history.state, "", `${location.pathname}${location.search}${state.uptime ? "#app=status" : state.gameData ? "#app=gamedata" : state.home ? "#app=all" : `#app=${state.game.appId}&tab=${state.tab}`}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -1300,8 +1325,15 @@ function render() {
   state.drawn = drawnKey(); // what's on screen, so a refresh only redraws for new data
   renderGames();
   // On All games (and Game data) the views are one game's, so they're hidden.
-  document.querySelector(".fb .side-views").hidden = state.home || state.gameData;
-  document.getElementById("fb-nav-top").hidden = state.home || state.gameData;
+  document.querySelector(".fb .side-views").hidden = state.home || state.gameData || state.uptime;
+  document.getElementById("fb-nav-top").hidden = state.home || state.gameData || state.uptime;
+  if (state.uptime) {
+    renderUptimeTop();
+    setHash();
+    // Kept while it's open, so going back to it doesn't start its checks over.
+    if (!document.querySelector("#fb-view .uptime-frame")) document.getElementById("fb-view").replaceChildren(uptimeView());
+    return;
+  }
   if (state.gameData) {
     renderDataTop();
     setHash();
@@ -2746,6 +2778,7 @@ async function pickHome() {
   store.set("app", "all");
   state.home = true;
   state.gameData = false;
+  state.uptime = false;
   state.game = null;
   document.getElementById("fb-view").replaceChildren(h("p.empty", "Loading…"));
   await Promise.all(state.index.games.filter((g) => !state.games[g.appId])
@@ -3522,6 +3555,7 @@ function pickGameData() {
   state.game = null;
   state.picked = null;
   state.gameData = true;
+  state.uptime = false;
   render();
   if (!gd.list && !gd.loading) loadSessions();
 }

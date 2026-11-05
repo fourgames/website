@@ -5,6 +5,7 @@ import Icon from "@/components/ui/Icon.vue";
 import LogoMark from "@/components/ui/LogoMark.vue";
 import NavLink from "@/components/ui/NavLink.vue";
 import LanguageMenu from "./LanguageMenu.vue";
+import NavItem from "./NavItem.vue";
 import { DONATE, NAV_LEFT, NAV_RIGHT } from "@/data/nav.js";
 import { useI18n } from "@/i18n/index.js";
 import { reshuffleHero } from "@/lib/hero.js";
@@ -27,7 +28,7 @@ watch(
 );
 
 // The private feedback dashboard (/fb-dash) isn't linked anywhere, but once a browser has opened it,
-// it marks itself in localStorage and gets a header link back to it. Read after mount
+// it marks itself in localStorage and gets a "Dashboard" header link back to it. Read after mount
 // only, so the prerendered HTML (and every other visitor) never has the link.
 const showFeedback = ref(false);
 onMounted(() => {
@@ -89,15 +90,7 @@ function onLogoClick() {
 
 			<nav id="site-nav" :aria-label="t('a11y.mainNav')" :class="['site-nav', { 'is-open': open }]">
 				<ul>
-					<li v-for="link in NAV_LEFT" :key="link.to">
-						<NavLink
-							:to="link.to"
-							class="nav-link aria-[current=page]:text-navbar-current"
-							@navigate="open = false"
-						>
-							{{ t(link.label) }}
-						</NavLink>
-					</li>
+					<NavItem v-for="link in NAV_LEFT" :key="link.to" :link="link" @navigate="open = false" />
 					<!-- Private and English-only, so not translated. -->
 					<li v-if="showFeedback">
 						<!-- English-only page, so no NavLink (that would localise it to /ja/fb-dash). -->
@@ -106,33 +99,12 @@ function onLogoClick() {
 							class="nav-link aria-[current=page]:text-navbar-current"
 							@click="open = false"
 						>
-							Feedback
+							Dashboard
 						</RouterLink>
 					</li>
 				</ul>
 				<ul>
-					<li v-for="link in NAV_RIGHT" :key="link.label">
-						<NavLink
-							v-if="link.to"
-							:to="link.to"
-							class="nav-link aria-[current=page]:text-navbar-current"
-							@navigate="open = false"
-						>
-							{{ t(link.label) }}
-						</NavLink>
-						<a
-							v-else
-							:href="link.href"
-							target="_blank"
-							rel="noopener noreferrer"
-							class="nav-link"
-							@click="open = false"
-						>
-							<Icon v-if="link.icon" :name="link.icon" class="size-4" />
-							{{ t(link.label) }}
-							<span class="sr-only">{{ t("a11y.newTab") }}</span>
-						</a>
-					</li>
+					<NavItem v-for="link in NAV_RIGHT" :key="link.to" :link="link" @navigate="open = false" />
 					<LanguageMenu />
 					<li class="fund hidden nav:block">
 						<NavLink :to="DONATE.to" class="nav-donate">

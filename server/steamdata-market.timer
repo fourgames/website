@@ -1,0 +1,13 @@
+# Runs steamdata-market.service once a day, after the collector's daily snapshot (from 00:05 UTC,
+# about an hour). Persistent: a run missed while the server was off happens at the next boot.
+# Install: sudo systemctl enable --now steamdata-market.timer   Check: systemctl list-timers steamdata-market
+[Unit]
+Description=Daily Steam market numbers for the dashboard
+
+[Timer]
+OnCalendar=*-*-* 03:00:00 UTC
+RandomizedDelaySec=10min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

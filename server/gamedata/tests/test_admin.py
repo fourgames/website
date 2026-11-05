@@ -731,3 +731,27 @@ def test_godot_s_way_of_writing_numbers():
     assert summary.gd_str({"a": 1.0, "b": "x", "c": [1, None, True], "d": {}}) == \
         '{ "a": 1.0, "b": "x", "c": [1.0, <null>, true], "d": {  } }'
     assert summary.clock(83.4, True) == "1:23.4" and summary.clock(3725.0) == "62:05"
+
+
+# The Steam market files
+
+
+def test_market_files(tmp_path, monkeypatch):
+    import gzip
+    market = tmp_path / "market"
+    market.mkdir()
+    (market / "growth.json.gz").write_bytes(gzip.compress(b'{"years":[2025,2026]}'))
+    monkeypatch.setenv("MARKET_DIR", str(market))
+
+    async def steps(w):
+        cookie = await w.sign_in(back="/fb-dash")
+        response = await w.client.get("/gamedata/v1/admin/market/growth.json", headers=w.page(cookie))
+        assert response.status == 200 and await response.json() == {"years": [2025, 2026]}
+        assert response.headers["Content-Encoding"] == "gzip"
+        response = await w.client.get("/gamedata/v1/admin/market/trends", headers=w.page(cookie))
+        assert response.status == 404 and (await response.json())["error"] == "not_built"
+        response = await w.client.get("/gamedata/v1/admin/market/..%2Fsecret", headers=w.page(cookie))
+        assert response.status == 404
+        response = await w.client.get("/gamedata/v1/admin/market/growth", headers=w.page())
+        assert response.status == 401
+    run(tmp_path, steps, **ADMIN)

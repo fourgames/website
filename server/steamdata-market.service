@@ -1,0 +1,25 @@
+# Works out the dashboard's Market numbers from steam.db (server/steamdata/market.py): growth, the
+# last three years' releases with their hit index, the Godot games, tag trends and alerts, into
+# /srv/fourgames/steamdata/market/*.json.gz, which the game-data API hands to the signed-in owner.
+# New alerts go to Discord when MARKET_DISCORD_WEBHOOK is set in /etc/fourgames/steamdata.env.
+# Started daily by steamdata-market.timer; by hand: sudo systemctl start steamdata-market
+# Logs: journalctl -u steamdata-market
+[Unit]
+Description=Four Games Steam market numbers (daily)
+
+[Service]
+Type=oneshot
+User=fourgames
+WorkingDirectory=/srv/fourgames/own/server
+EnvironmentFile=/etc/fourgames/steamdata.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/fourgames/steamdata-venv/bin/python -m steamdata.market
+# About 10 seconds of one core and ~250 MB, once a day: behind everything else.
+Nice=10
+CPUWeight=20
+IOSchedulingClass=idle
+MemoryMax=600M
+TimeoutStartSec=15min
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full

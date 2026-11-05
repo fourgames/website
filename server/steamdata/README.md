@@ -4,8 +4,9 @@ Records Steam market data every day, from now on: history that can't be fetched 
 prices and discounts, player counts, release dates moving). It runs on the server as
 `steamdata.service`: one Python process (standard library only) that asks Steam's official
 endpoints for one thing at a time, slowly, and writes everything to one SQLite file,
-`/srv/fourgames/steamdata/steam.db`. The tools that use the data (market gaps, Godot games, trend
-alerts) come later; this only collects.
+`/srv/fourgames/steamdata/steam.db`. Once a day `steamdata-market.timer` works out what the
+dashboard's Market section shows from it (trends and alerts, Steam's growth, the gap finder, the hit
+index, the Godot finder and leads): see *The Market numbers*.
 
 Only official Steam endpoints and PCGamingWiki's public API, nothing scraped (no SteamDB: its terms
 forbid it). The data is for our own analysis: don't republish it (see *Using the data*).
@@ -158,6 +159,54 @@ Ideas for more, not built (none downloads game files):
 - **Developers**: a studio with one Godot game often makes the next one in Godot too (a weak
   signal, from `apps.developers`).
 
+## The Market numbers
+
+`python -m steamdata.market` (`market.py`, run daily at 03:00 UTC by `steamdata-market.timer`, after
+the snapshot) reads steam.db read-only and writes five gzipped JSON files to `MARKET_DIR`
+(`/srv/fourgames/steamdata/market`). The game-data API hands them to the signed-in owner
+(`GET /v1/admin/market/<name>`, server/gamedata/admin.py), and the dashboard's **Market** entry
+(src/lib/feedback/market.js) does the rest in the browser. Nothing here is public. About 10 seconds
+and 250 MB, once a day.
+
+| File | What | Used by |
+| --- | --- | --- |
+| `overview` | when it was built, how much history, counts, tag and genre names | everything |
+| `growth` | releases (and those releases' reviews) per year since 2006 and per month for six years, for Steam and each tag and genre | Growth |
+| `games` | every game released in the last three years, one compact row: price, reviews, % positive, first 10 tags, flags (Linux, Mac, Deck, Early Access, Godot, demo), languages, hit index, reviews gained in 7 and 28 days, most players seen | Gap finder, Hit index |
+| `godot` | the Godot set with everything the finder scores on, the studio's other games and the engine evidence | Godot finder, Leads |
+| `trends` | each tag's momentum, and the alerts | Trends |
+
+Definitions (also under *How this works* in each view):
+
+- **A game is a tag** when the tag is one of its first 5 user tags (the strongest).
+- **Hit index**: a game's review count as a percentile among every game released within 7 days of it,
+  with or without reviews; so games are only compared with games of the same age.
+- **Trends**, per tag with 15+ releases in the last 90 days: *supply* (its share of releases now
+  against the same 90 days a year ago), *hit rate* (the share of its games released 14–180 days ago
+  with hit index 90+, against all new games) and *reviews* (its share of all new reviews in the
+  latest 7 or 28 days against the window before; needs 14 days of history). *Heat* is their
+  geometric mean.
+- **Alerts**: a tag with heat 2+ that both grows and hits; an indie breakout (hit index 99 within 30
+  days of release, under $30, 300+ reviews or 100+ this week); a Godot game taking off (hit index
+  90+ within 90 days and 30+ reviews, or 30+ reviews this week). Each is noted once in
+  `alerts-state.json` (a tag again after 30 days); the very first run only notes what's there.
+  New ones go to Discord when `MARKET_DISCORD_WEBHOOK` is set in `/etc/fourgames/steamdata.env`.
+- **Revenue** (in the browser): reviews × sales per review (30 by default, adjustable) × the game's
+  price × 0.5 (Steam's cut, VAT, refunds, discounts). A rough guide, not sales data.
+
+Install, once (after `git pull` in `/srv/fourgames/own`):
+
+```bash
+sudo install -m 644 /srv/fourgames/own/server/steamdata-market.service /srv/fourgames/own/server/steamdata-market.timer /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now steamdata-market.timer
+sudo systemctl start steamdata-market && journalctl -u steamdata-market -n 5   # "market files built in ..."
+sudo systemctl restart gamedata                                                 # for the new route
+```
+
+Test the dashboard locally against a copy: build the files from a copy of steam.db, unzip them into
+`<dir>/market/<name>.json` next to an `index.json` of `{"games":[]}`, serve `<dir>` with CORS, and open
+`/fb-dash?data=<that url>#app=market`.
+
 ## Using the data
 
 - Steam: the Steam Web API Terms of Use (among other things, at most 100,000 calls a day). The
@@ -211,9 +260,10 @@ journalctl -u steamdata -f                            # "app list (full): ... ap
 | Pace | `WEBAPI_PER_MINUTE`, `APPDETAILS_PER_5MIN` in `/etc/fourgames/steamdata.env`, then restart |
 | Backup | one file, and history that can't be fetched again: add it to the backups when they exist. While it runs: `sqlite3 /srv/fourgames/steamdata/steam.db ".backup /path/steam-backup.db"` |
 | Disk | ~2 GB a year (see *Storage*); `SAMPLES_KEEP_DAYS` trims the raw player samples |
+| Market numbers | `sudo systemctl start steamdata-market` builds them now; `journalctl -u steamdata-market` |
 | Tests | `cd server && python -m pytest steamdata/tests` (with pytest; no network) |
 
 The code: `collector.py` (the lanes and the loop), `steam.py` (Steam's endpoints and replies),
-`pcgw.py` (PCGamingWiki), `engine.py` (engine hints), `cadence.py` (how often), `db.py` (the
+`pcgw.py` (PCGamingWiki), `engine.py` (engine hints), `market.py` (the Market numbers), `cadence.py` (how often), `db.py` (the
 schema and writes), `limiter.py`, `net.py` (HTTP), `stats.py`, `config.py`. Settings are in
 `steamdata.env.example`.

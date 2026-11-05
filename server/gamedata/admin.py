@@ -17,6 +17,8 @@ request, GET included, must come from the site (Origin: SITE_ORIGIN); a PUT or P
 - GET /v1/admin/github-check: what the server's token can do.
 - GET /v1/admin/sessions, /v1/admin/sessions/<id> and /v1/admin/sessions/<id>/summary: the
   players' sessions, one session in the shape the replay viewer reads, and its "Copy for Claude".
+- GET /v1/admin/market/<name>: the Steam market files (overview, growth, games, godot, trends)
+  that server/steamdata/market.py builds daily into MARKET_DIR, gzipped as they are on disk.
 - POST /v1/admin/players: the game data of the players behind a game's Steam posts, for the chips
   on the dashboard's post cards. The steamids the dashboard sends are only turned into pids, never
   kept or logged.
@@ -29,6 +31,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import os
 import re
 import time
 from typing import Any
@@ -407,6 +410,29 @@ def github_context(base: str):
     return context
 
 
+# The Steam market files (server/steamdata/market.py writes them; this only reads).
+
+
+MARKET_FILES = frozenset({"overview", "growth", "games", "godot", "trends"})
+MARKET_DIR = "/srv/fourgames/steamdata/market"
+
+
+async def market(request: web.Request) -> web.Response:
+    require_admin(request)
+    name = request.match_info["name"].removesuffix(".json")
+    if name not in MARKET_FILES:
+        raise Refused(404, "not_found", "no such market file")
+    path = os.path.join(os.environ.get("MARKET_DIR", "").strip() or MARKET_DIR, f"{name}.json.gz")
+    try:
+        with open(path, "rb") as f:
+            body = await asyncio.to_thread(f.read)
+    except FileNotFoundError:
+        raise Refused(404, "not_built", "the market files aren't built yet (steamdata-market.timer)") from None
+    # Already gzipped: the browser unpacks it. The files change once a day.
+    return web.Response(body=body, content_type="application/json",
+                        headers={"Content-Encoding": "gzip", "Cache-Control": "private, max-age=300"})
+
+
 def add_routes(app: web.Application, prefix: str) -> None:
     v1 = f"{prefix}/v1/admin"
     add = app.router.add_route
@@ -418,4 +444,5 @@ def add_routes(app: web.Application, prefix: str) -> None:
     add("GET", f"{v1}/sessions/{{session_id}}", session_detail)
     add("GET", f"{v1}/sessions/{{session_id}}/summary", session_summary)
     add("POST", f"{v1}/players", players)
+    add("GET", f"{v1}/market/{{name}}", market)
     add("OPTIONS", f"{v1}/{{rest:.*}}", W.preflight)

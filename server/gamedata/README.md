@@ -35,6 +35,7 @@ work. Errors are JSON, `{"ok": false, "error": "<code>", "message": "…"}`, wit
 | `GET /v1/admin/sessions/<id>` | the dashboard | One session, in the replay viewer's shape: `{"ok": true, "session": {…}}`. |
 | `GET /v1/admin/sessions/<id>/summary` | the dashboard | Its "Copy for Claude" text (`text/plain`). |
 | `POST /v1/admin/players` | the dashboard | The game data of the players behind a game's Steam posts (below). |
+| `GET /v1/admin/market/<name>` | the dashboard | The Steam market files (`overview`, `growth`, `games`, `godot`, `trends`) that server/steamdata/market.py builds daily into `MARKET_DIR` (default `/srv/fourgames/steamdata/market`), sent gzipped as they are. 404 `not_built` before the first build. |
 | `GET /health` (or `/v1/health`) | anyone, the status page | `{"ok": true, "time", "disk": {"used_bytes", "free_bytes", "total_bytes", "low_space"}}` |
 
 Each entry of `games` (in `/v1/me` and the lookup) is one app id, so a player's demo and full game show

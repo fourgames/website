@@ -172,8 +172,9 @@ and 250 MB, once a day.
 | --- | --- | --- |
 | `overview` | when it was built, how much history, counts, tag and genre names | everything |
 | `growth` | releases (and those releases' reviews) per year since 2006 and per month for six years, for Steam and each tag and genre; and Steam's users online at the peak, for *new games vs Steam's players* | Growth |
-| `games` | every game released in the last three years, one compact row: price, reviews, % positive, first 10 tags, flags (Linux, Mac, Deck, Early Access, Godot, demo), languages, hit index, reviews gained in 7 and 28 days, most players seen | Gap finder, Hit index |
-| `godot` | the Godot set with everything the finder scores on, the studio's other games and the engine evidence | Godot finder, Leads |
+| `games` | every game released in the last three years, one compact row: price, reviews, % positive, first 10 tags, flags (Linux, Mac, Deck, Early Access, Godot, demo, self-published), languages, hit index, reviews gained in 7 and 28 days, most players seen | Gap finder, Hit index |
+| `godot` | the Godot set with everything the finder scores on, the studio's other games, the publisher's size and the engine evidence | Godot finder, Leads |
+| `upcoming` | games coming soon with a date in the next 18 months (or a demo out), any engine: tags, flags, the studio's released games and best one's reviews, the outside publisher's catalog size | Scouting before release |
 | `trends` | each tag's momentum, and the alerts | Trends |
 
 Definitions (also under *How this works* in each view):
@@ -183,11 +184,13 @@ Definitions (also under *How this works* in each view):
   with or without reviews; so games are only compared with games of the same age.
 - **Trends**, per tag with 15+ releases in the last 90 days: *supply* (its share of releases now
   against the same 90 days a year ago), *hit rate* (the share of its games released 14–180 days ago
-  with hit index 90+, against all new games) and *reviews* (its share of all new reviews in the
+  with hit index 90+, against all new games; pulled toward Steam's rate by 30 made-up average
+  games, so a tag with a handful of games and a few hits can't top the list) and *reviews* (its share of all new reviews in the
   latest 7 or 28 days against the window before; needs 14 days of history). *Heat* is their
   geometric mean.
-- **Alerts**: a tag with heat 2+ that both grows and hits; an indie breakout (hit index 99 within 30
-  days of release, under $30, 300+ reviews or 100+ this week); a Godot game taking off (hit index
+- **Self-published**: no publisher besides the developers.
+- **Alerts**: a tag with heat 2+ that both grows and hits (the 8 hottest a day at most); an indie breakout (hit index 99 within 30
+  days of release, under $30, 300+ reviews or 100+ this week); a self-published Godot game taking off (hit index
   90+ within 90 days and 30+ reviews, or 30+ reviews this week). Each is noted once in
   `alerts-state.json` (a tag again after 30 days); the very first run only notes what's there.
   New ones go to Discord when `MARKET_DISCORD_WEBHOOK` is set in `/etc/fourgames/steamdata.env`.

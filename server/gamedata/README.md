@@ -34,6 +34,7 @@ work. Errors are JSON, `{"ok": false, "error": "<code>", "message": "…"}`, wit
 | `GET /v1/admin/sessions` | the dashboard | The sessions, newest first (below). |
 | `GET /v1/admin/sessions/<id>` | the dashboard | One session, in the replay viewer's shape: `{"ok": true, "session": {…}}`. |
 | `GET /v1/admin/sessions/<id>/summary` | the dashboard | Its "Copy for Claude" text (`text/plain`). |
+| `POST /v1/admin/players` | the dashboard | The game data of the players behind a game's Steam posts (below). |
 | `GET /health` (or `/v1/health`) | anyone, the status page | `{"ok": true, "time", "disk": {"used_bytes", "free_bytes", "total_bytes", "low_space"}}` |
 
 Each entry of `games` (in `/v1/me` and the lookup) is one app id, so a player's demo and full game show
@@ -82,7 +83,7 @@ privacy page's Steam sign-in with `?return=/fb-dash`; an admin is a valid `fg_pr
 one of `GAMEDATA_ADMIN_STEAMIDS`' (worked out again at every request, so taking an id out and restarting
 ends its access at once). An admin's cookie lasts 12 hours, wherever they signed in (anyone else's 1).
 Every admin request, GETs included, must carry `Origin: https://fourgames.se` (so no other site, link or
-script tag can use the cookie), and a PUT a JSON body. Not signed in: `401 not_signed_in`; signed in as
+script tag can use the cookie), and a PUT or POST a JSON body. Not signed in: `401 not_signed_in`; signed in as
 someone else: `403 not_admin`; another origin: `403 bad_origin`. `POST /v1/auth/signout` signs out. The
 answers have CORS for the site with credentials; rate limits are 1,200 per 10 minutes per IP and 900 per
 admin.
@@ -132,6 +133,19 @@ the viewer's "Paste session" opens it. Sessions whose event files add up to over
 `413`. `GET /v1/admin/sessions/<id>/summary` is the text the viewer's "Copy for Claude" builds for it:
 `summary.py` is a line-for-line port of `summary.gd`, and both are tested against the same files
 (`godot/fourgames_data/tests/fixtures/summary/`, written by `tests/tools/summary_golden.gd` there).
+
+**The players behind posts.** `POST /v1/admin/players` with `{"steamids": [...], "app_id": <optional>}`
+(JSON, at most 200 SteamID64s, as strings; repeats count once; anything else is `400 bad_request` /
+`bad_steamid`) gives the chips on the dashboard's post cards: `{"ok": true, "players": {"<steamid>": …}}`,
+keyed by the steamids sent, each turned into its pid and never kept or logged. An opted-out (or
+anonymised) player is `{"opted_out": true}` and nothing else, here too. Anyone else with sessions
+(of `app_id`, when given) is `{"opted_out": false, "sessions", "test_sessions" (counted in `sessions`
+too), "playtime_s", "first_seen", "last_seen" (unix seconds), "recent"}`: `recent` is their newest
+10 sessions, newest first, as rows of the sessions list above (with their `test` mark; no steamid, the
+pid's first 8 characters only). With `app_id`, a player with no sessions of it but some of other games
+has zero counts, `null` times, no rows and `"other_games_sessions": <n>`. Steamids with no sessions at
+all are left out. It counts towards the admin rate limits like every other call. The dashboard turns
+the 32-bit account ids of discussion posts into SteamID64s (76561197960265728 + id) before it asks.
 
 ## What's stored, and how
 

@@ -120,7 +120,7 @@ require `Origin: https://fourgames.se` (CSRF) and JSON bodies.
 The owner signs in with the same Steam sign-in (`/v1/auth/steam?return=/fb-dash`). An admin is a
 signed-in cookie whose pid is one of `GAMEDATA_ADMIN_STEAMIDS`' (12 h cookie; everyone else's stays 1 h).
 Every `/v1/admin/*` request needs `Origin: https://fourgames.se` (GETs too) and the admin cookie: `401
-not_signed_in`, `403 not_admin` otherwise; a PUT also needs a JSON body. CORS as for the player endpoints.
+not_signed_in`, `403 not_admin` otherwise; a PUT or POST also needs a JSON body. CORS as for the player endpoints.
 - `GET /v1/admin/me` → `{"ok": true, "admin": true, "until": <expiry>}`.
 - `GET|PUT /v1/admin/github/<repo>/<path>` → `https://api.github.com/repos/fourgames/<repo>/<path>` with
   the server's token (`GAMEDATA_GITHUB_TOKEN`, else `GH_TOKEN`), for the dashboard's calls only:
@@ -137,6 +137,11 @@ not_signed_in`, `403 not_admin` otherwise; a PUT also needs a JSON body. CORS as
   into (so its "Paste session" opens it).
 - `GET /v1/admin/sessions/<id>/summary` → the viewer's "Copy for Claude" text for it, as plain text
   (`summary.py`, a port of `summary.gd`, tested against the same fixture).
+- `POST /v1/admin/players` `{"steamids": [...] (max 200), "app_id"?}` → `{"ok": true, "players":
+  {"<steamid>": …}}` for the dashboard's post cards: `{"opted_out": true}` alone for opted-out players;
+  else `sessions`, `test_sessions`, `playtime_s`, `first_seen`, `last_seen` and `recent` (the newest 10
+  sessions, as the list's rows) of that app, plus `other_games_sessions` when they have none of it but
+  some of other games. Steamids with no data are left out; none is stored or logged.
 
 ### Internal lookup (the feedback loop and dashboards, localhost only)
 

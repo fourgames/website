@@ -2646,6 +2646,7 @@ function postView(item, focus = null) {
             versionAt(item.created),
           ].filter(Boolean).join(" · "))))),
     aboutPlayer(item.author?.about),
+    gameDataSlot(item),
     ...p.body,
     h("div.meta", ...p.flags, item.forum && item.kind !== "review" ? h("span", item.forum) : null, p.link));
 }
@@ -3562,17 +3563,22 @@ async function pickSession(id) {
   Object.assign(gd, { picked: id, session: null, text: null, detailError: null });
   redrawData();
   try {
-    const [session, text] = await Promise.all([
-      adminGet(`sessions/${id}`).then((res) => res.json()).then((body) => body.session),
-      adminGet(`sessions/${id}/summary`).then((res) => res.text()),
-    ]);
+    const found = await fetchSession(id);
     if (gd.picked !== id) return;
-    Object.assign(gd, { session, text });
+    Object.assign(gd, found);
   } catch (e) {
     if (e.signedOut || gd.picked !== id) return;
     gd.detailError = serverError(e);
   }
   redrawData();
+}
+// One session's data and its summary, asked for together.
+async function fetchSession(id) {
+  const [session, text] = await Promise.all([
+    adminGet(`sessions/${id}`).then((res) => res.json()).then((body) => body.session),
+    adminGet(`sessions/${id}/summary`).then((res) => res.text()),
+  ]);
+  return { session, text };
 }
 
 const appName = (appId) => metaOf(appId)?.name || `App ${appId}`;
@@ -3595,10 +3601,12 @@ function renderDataTop() {
   for (const id of ["fb-links", "fb-stats", "fb-expand"]) document.getElementById(id).replaceChildren();
 }
 
-// The picked session's key numbers, from its data, and the two copy buttons.
-function sessionDetail() {
-  if (gd.detailError) return h("div.gd-session", h("p.empty", gd.detailError));
-  const s = gd.session;
+// The picked session's key numbers, from its data, and the two copy buttons. `d` holds the picked
+// session as pickSession leaves it in gd (session, text, detailError); a post card's player panel
+// keeps its own.
+function sessionDetail(d = gd) {
+  if (d.detailError) return h("div.gd-session", h("p.empty", d.detailError));
+  const s = d.session;
   if (!s) return h("div.gd-session", h("p.empty", "Loading the session…"));
   const events = Array.isArray(s.events) ? s.events : [];
   const count = (type) => events.filter((e) => e?.type === type).length;
@@ -3621,24 +3629,27 @@ function sessionDetail() {
     h("table.data", ...rows.map(([k, v]) => h("tr", h("th", k), h("td", v)))),
     h("div.gd-actions",
       h("button.btn.primary", { type: "button", onclick: (e) => copy(JSON.stringify(s), e.currentTarget) }, "Copy for replay"),
-      h("button.btn", { type: "button", disabled: !gd.text, onclick: (e) => copy(gd.text, e.currentTarget) }, "Copy for Claude")),
+      h("button.btn", { type: "button", disabled: !d.text, onclick: (e) => copy(d.text, e.currentTarget) }, "Copy for Claude")),
     h("p.gd-note", "Copy for replay: open the fourgames_data project's replay viewer and press Paste session. Copy for Claude: the viewer's own summary of the session, for a chat."));
+}
+
+// A session in a list (a row of GET /v1/admin/sessions), opened or not.
+function sessionRow(s, open, onPick) {
+  const meta = metaOf(s.app_id);
+  return h("button.att-row", { type: "button", "aria-current": String(open), "aria-expanded": String(open), onclick: onPick },
+    meta?.capsule ? h("img.att-thumb", { src: meta.capsule, alt: "", loading: "lazy" }) : h("span.att-thumb"),
+    h("span.att-text",
+      h("span.att-title", `${fmtDateTime(s.started)} · ${fmtPlay(s.length_s)}`, s.test ? h("span.pill", "Test") : null),
+      h("span.att-meta", [appName(s.app_id), s.game_version ? `v${s.game_version}` : null, plural(s.events, "event"),
+        s.country ? country(s.country) : null, s.ended ? null : "no end", `player ${s.pid}`].filter(Boolean).join(" · "))),
+    h("span.att-go", open ? "▾" : "▸"));
 }
 
 function gameDataView() {
   const filters = h("div.filters",
     chips([["all", "All games"], ...gd.apps.map((a) => [String(a.app_id), appName(a.app_id)])], gd.app, (v) => { gd.app = v; loadSessions(); }, "Game"),
     chips([["all", "Real and test"], ["real", "Real"], ["test", "Test"]], gd.test, (v) => { gd.test = v; loadSessions(); }, "Real or test sessions"));
-  const row = (s) => {
-    const meta = metaOf(s.app_id);
-    return h("button.att-row", { type: "button", "aria-current": String(gd.picked === s.id), "aria-expanded": String(gd.picked === s.id), onclick: () => pickSession(s.id) },
-      meta?.capsule ? h("img.att-thumb", { src: meta.capsule, alt: "", loading: "lazy" }) : h("span.att-thumb"),
-      h("span.att-text",
-        h("span.att-title", `${fmtDateTime(s.started)} · ${fmtPlay(s.length_s)}`, s.test ? h("span.pill", "Test") : null),
-        h("span.att-meta", [appName(s.app_id), s.game_version ? `v${s.game_version}` : null, plural(s.events, "event"),
-          s.country ? country(s.country) : null, s.ended ? null : "no end", `player ${s.pid}`].filter(Boolean).join(" · "))),
-      h("span.att-go", gd.picked === s.id ? "▾" : "▸"));
-  };
+  const row = (s) => sessionRow(s, gd.picked === s.id, () => pickSession(s.id));
   const list = gd.error ? h("p.empty", gd.error)
     : !gd.list ? h("p.empty", "Loading…")
     : !gd.list.length ? h("p.empty", "No sessions here yet.")
@@ -3652,6 +3663,132 @@ function gameDataView() {
     list);
 }
 
+
+// ---------------------------------------------------------------------------
+// Game data on the post cards: a review's or discussion post's author who has played (sessions on
+// the game-data server) gets a chip under their name, "🎮 3 sessions · 1 h 20 min"; clicking it
+// opens their newest sessions in the card, with the same Copy for replay / Copy for Claude as Game
+// data. Asked for in the background, once per game for all its posts' authors (POST
+// /v1/admin/players), and kept for the page's lifetime (a reload asks again); posts whose author
+// has no data show nothing, and a failure only goes to the console.
+// ---------------------------------------------------------------------------
+
+// A discussion post's author is a 32-bit Steam account id, a review's a SteamID64.
+const STEAM64 = 76561197960265728n;
+function steam64(id) {
+  const text = String(id ?? "").trim();
+  if (!/^\d{1,20}$/.test(text)) return null;
+  const n = BigInt(text);
+  const full = n >= STEAM64 ? n : STEAM64 + n;
+  return full > STEAM64 && full <= STEAM64 + 0xFFFFFFFFn ? String(full) : null;
+}
+const POSTED_ON_STEAM = new Set(["review", "topic", "reply"]);
+const authorId = (item) => POSTED_ON_STEAM.has(item.kind) ? steam64(item.author?.id) : null;
+
+// "<app id>:<steamid>" -> the server's entry, or null for no data; and the ones being asked for.
+const gdPlayers = new Map();
+const gdAsking = new Set();
+const gdWanted = new Map(); // app id -> the game, until the next flush
+let gdFailedAt = 0;
+const PLAYERS_BATCH = 200;
+const playerKey = (appId, steamid) => `${appId}:${steamid}`;
+
+// Under a post's author: the chip (now, when known; else once the answer comes), or nothing.
+function gameDataSlot(item) {
+  const game = state.game;
+  const steamid = authorId(item);
+  if (!steamid || !game?.appId || game.meta?.research) return null;
+  const key = playerKey(game.appId, steamid);
+  const slot = h("div.gd-slot", { "data-key": key, onclick: (e) => e.stopPropagation() });
+  if (gdPlayers.has(key)) fillSlot(slot, gdPlayers.get(key));
+  else wantPlayers(game);
+  return slot;
+}
+
+function wantPlayers(game) {
+  if (gdWanted.has(game.appId)) return;
+  gdWanted.set(game.appId, game);
+  setTimeout(askPlayers, 0); // after the render
+}
+
+// Every author of the wanted games' posts not asked for yet, 200 at a time.
+async function askPlayers() {
+  const games = [...gdWanted.values()];
+  gdWanted.clear();
+  if (Date.now() - gdFailedAt < 60000) return; // the server just failed; the next redraw tries again
+  for (const game of games) {
+    const steamids = [...new Set(Object.values(game.items || {}).map(authorId).filter(Boolean))]
+      .filter((id) => { const key = playerKey(game.appId, id); return !gdPlayers.has(key) && !gdAsking.has(key); });
+    for (let i = 0; i < steamids.length; i += PLAYERS_BATCH) {
+      const batch = steamids.slice(i, i + PLAYERS_BATCH);
+      const keys = batch.map((id) => playerKey(game.appId, id));
+      keys.forEach((key) => gdAsking.add(key));
+      try {
+        const res = await fetch(`${ADMIN}/players`, { method: "POST", credentials: "include", cache: "no-store", signal: AbortSignal.timeout(20000),
+          headers: { "Content-Type": "application/json" }, body: JSON.stringify({ steamids: batch, app_id: game.appId }) });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const found = (await res.json()).players || {};
+        batch.forEach((id) => gdPlayers.set(playerKey(game.appId, id), found[id] || null));
+      } catch (e) {
+        gdFailedAt = Date.now();
+        console.warn("Game data for the posts' players:", e.message);
+        return;
+      } finally {
+        keys.forEach((key) => gdAsking.delete(key));
+      }
+      const wanted = new Set(keys);
+      document.querySelectorAll(".fb .gd-slot[data-key]").forEach((slot) => {
+        if (wanted.has(slot.dataset.key) && !slot.childNodes.length) fillSlot(slot, gdPlayers.get(slot.dataset.key));
+      });
+    }
+  }
+}
+
+// Seconds played: "25 s" under a minute, else as fmtSpan ("12 min", "1 h 20 min").
+const fmtPlayed = (s) => s < 60 ? `${Math.round(s)} s` : fmtSpan(s);
+function sessionCount(p) {
+  const tests = p.test_sessions || 0;
+  if (tests && tests === p.sessions) return plural(tests, "test session");
+  return `${plural(p.sessions, "session")}${tests ? ` (${tests} test)` : ""}`;
+}
+
+function fillSlot(slot, p) {
+  if (!p) return;
+  if (p.opted_out) {
+    slot.append(h("span.gd-chip.gd-off", { title: "This player opted out of game data (fourgames.se/privacy), so nothing of theirs is shown" }, "opted out"));
+    return;
+  }
+  if (!p.sessions) {
+    if (p.other_games_sessions) slot.append(h("span.gd-chip.gd-off", { title: "No sessions of this game; sessions of our other games" }, `🎮 ${plural(p.other_games_sessions, "session")} in other games`));
+    return;
+  }
+  const panel = h("div.gd-player", { hidden: true });
+  const view = { picked: null, session: null, text: null, detailError: null };
+  const chip = h("button.gd-chip", { type: "button", "aria-expanded": "false", title: "This player's game data", onclick: () => {
+    panel.hidden = !panel.hidden;
+    chip.setAttribute("aria-expanded", String(!panel.hidden));
+    if (!panel.hidden && !panel.childNodes.length) draw();
+  } }, `🎮 ${sessionCount(p)} · ${fmtPlayed(p.playtime_s)}`);
+  const pick = async (id) => {
+    if (view.picked === id) { view.picked = null; return draw(); }
+    Object.assign(view, { picked: id, session: null, text: null, detailError: null });
+    draw();
+    try {
+      const found = await fetchSession(id);
+      if (view.picked === id) Object.assign(view, found);
+    } catch (e) {
+      if (e.signedOut || view.picked !== id) return;
+      view.detailError = serverError(e);
+    }
+    if (view.picked === id) draw();
+  };
+  const draw = () => panel.replaceChildren(
+    h("div.gd-player-sum", [sessionCount(p), `${fmtPlayed(p.playtime_s)} played`,
+      p.first_seen ? `first ${fmtDate(p.first_seen)}` : null, p.last_seen ? `last ${ago(p.last_seen)}` : null].filter(Boolean).join(" · ")),
+    h("div.att-list", ...p.recent.flatMap((s) => [sessionRow(s, view.picked === s.id, () => pick(s.id)), view.picked === s.id ? sessionDetail(view) : null])),
+    p.sessions > p.recent.length ? h("p.gd-note", `The newest ${p.recent.length} of ${p.sessions} sessions.`) : null);
+  slot.append(chip, panel);
+}
 
 // ---------------------------------------------------------------------------
 // Mount (called by src/views/FeedbackView.vue once the page is in the browser)

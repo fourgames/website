@@ -3,7 +3,7 @@
 Signing in is the privacy page's Steam sign-in (web.auth_steam, ?return=/fb-dash): an admin is a
 valid fg_privacy cookie whose pid is one of GAMEDATA_ADMIN_STEAMIDS' pids, worked out again at every
 request, so taking a steamid out of the list (and restarting) ends its access at once. Every admin
-request, GET included, must come from the site (Origin: SITE_ORIGIN); a PUT also needs a JSON body.
+request, GET included, must come from the site (Origin: SITE_ORIGIN); a PUT or POST also needs a JSON body.
 401 not_signed_in / 403 not_admin otherwise.
 
 - GET /v1/admin/me: who's signed in (an admin, and until when).
@@ -17,6 +17,9 @@ request, GET included, must come from the site (Origin: SITE_ORIGIN); a PUT also
 - GET /v1/admin/github-check: what the server's token can do.
 - GET /v1/admin/sessions, /v1/admin/sessions/<id> and /v1/admin/sessions/<id>/summary: the
   players' sessions, one session in the shape the replay viewer reads, and its "Copy for Claude".
+- POST /v1/admin/players: the game data of the players behind a game's Steam posts, for the chips
+  on the dashboard's post cards. The steamids the dashboard sends are only turned into pids, never
+  kept or logged.
 
 The logs show the first 8 characters of the admin's pid, paths and sizes; never the token.
 """
@@ -37,7 +40,7 @@ from aiohttp import web
 from . import export, summary
 from . import web as W
 from .limits import Refused, read_json
-from .signing import short
+from .signing import make_pid, short, valid_steamid
 
 log = logging.getLogger("gamedata.admin")
 
@@ -79,6 +82,10 @@ CONDITIONAL = ("If-None-Match", "If-Modified-Since")
 SESSION_ID = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")
 BEFORE = re.compile(r"^([0-9]{1,12})(?::([0-9a-f-]{36}))?$")
 MAX_LIST = 200
+# POST /v1/admin/players: up to 200 steamids (17 digits each, as strings or numbers).
+PLAYERS_CAPS = (16 * KB, 16 * KB)
+MAX_PLAYERS = 200
+RECENT = 10
 
 
 class GitHub:
@@ -363,6 +370,31 @@ async def session_summary(request: web.Request) -> web.Response:
     return web.Response(text=text, content_type="text/plain", charset="utf-8")
 
 
+async def players(request: web.Request) -> web.Response:
+    """{"steamids": [...], "app_id"?} -> {"players": {steamid: ...}}: see Store.players. Keyed by
+    the steamids the dashboard sent (the server has none of its own); repeats count once."""
+    pid = require_admin(request)
+    body = await read_json(request, *PLAYERS_CAPS, require_json_type=True)
+    if not set(body) <= {"steamids", "app_id"}:
+        raise Refused(400, "bad_request", "send {steamids, app_id}")
+    steamids = body.get("steamids")
+    if not isinstance(steamids, list) or len(steamids) > MAX_PLAYERS:
+        raise Refused(400, "bad_request", f"steamids must be a list of at most {MAX_PLAYERS} SteamID64s")
+    app_id = body.get("app_id")
+    if app_id is not None and (not isinstance(app_id, int) or isinstance(app_id, bool) or not 0 < app_id < 10**10):
+        raise Refused(400, "bad_request", "app_id must be a Steam app id")
+    pepper = request.app[W.CONFIG].pepper
+    by_pid: dict[str, str] = {}
+    for index, value in enumerate(steamids):
+        steamid = valid_steamid(value)
+        if steamid is None:
+            raise Refused(400, "bad_steamid", f"steamids[{index}] isn't a SteamID64 (17 digits)")
+        by_pid[make_pid(pepper, steamid)] = steamid
+    found = request.app[W.STORE].players(list(by_pid), app_id, RECENT)
+    log.info("players for %s: %d steamids, %d with data or an opt-out", short(pid), len(by_pid), len(found))
+    return W.ok({"players": {by_pid[p]: entry for p, entry in found.items()}})
+
+
 # Plumbing
 
 
@@ -385,4 +417,5 @@ def add_routes(app: web.Application, prefix: str) -> None:
     add("GET", f"{v1}/sessions", sessions)
     add("GET", f"{v1}/sessions/{{session_id}}", session_detail)
     add("GET", f"{v1}/sessions/{{session_id}}/summary", session_summary)
+    add("POST", f"{v1}/players", players)
     add("OPTIONS", f"{v1}/{{rest:.*}}", W.preflight)

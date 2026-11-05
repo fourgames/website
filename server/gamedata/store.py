@@ -171,6 +171,18 @@ def hardware_dict(row: sqlite3.Row) -> dict[str, Any]:
             "refresh_hz": row["refresh_hz"], "steam_deck": bool(deck) if deck is not None else None}
 
 
+# A session in the dashboard's lists: never a steamid (none is stored), only the pid's first 8 characters.
+LIST_COLUMNS = ("session_id, app_id, started, ended, playtime_s, last_t, test, events, game_version, "
+                "country, platform, pid")
+
+
+def list_row(row: sqlite3.Row) -> dict[str, Any]:
+    return {"id": row["session_id"], "app_id": row["app_id"], "started": row["started"], "ended": row["ended"],
+            "length_s": round(row["playtime_s"] if row["playtime_s"] is not None else row["last_t"] or 0),
+            "test": bool(row["test"]), "events": row["events"], "game_version": row["game_version"],
+            "country": row["country"], "platform": row["platform"], "pid": row["pid"][:8]}
+
+
 def month(ts: float) -> str:
     return datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m")
 
@@ -522,7 +534,7 @@ class Store:
             out[pid] = {"opted_out": False, "games": [by_app[app] for app in sorted(by_app)]}
         return out
 
-    # The owner's dashboard (GET /v1/admin/sessions)
+    # The owner's dashboard (GET /v1/admin/sessions, POST /v1/admin/players)
 
     def list_sessions(self, app_id: int | None = None, test: bool | None = None, limit: int = 50,
                       before: tuple[int, str] | None = None) -> tuple[list[dict[str, Any]], tuple[int, str] | None]:
@@ -539,17 +551,57 @@ class Store:
             where.append("(started < ? OR (started = ? AND session_id < ?))")
             args += [before[0], before[0], before[1]]
         rows = self.db.execute(
-            f"""SELECT session_id, app_id, started, ended, playtime_s, last_t, test, events, game_version,
-                       country, platform, pid
+            f"""SELECT {LIST_COLUMNS}
                 FROM sessions {"WHERE " + " AND ".join(where) if where else ""}
                 ORDER BY started DESC, session_id DESC LIMIT ?""", (*args, limit + 1)).fetchall()
-        out = [{"id": row["session_id"], "app_id": row["app_id"], "started": row["started"], "ended": row["ended"],
-                "length_s": round(row["playtime_s"] if row["playtime_s"] is not None else row["last_t"] or 0),
-                "test": bool(row["test"]), "events": row["events"], "game_version": row["game_version"],
-                "country": row["country"], "platform": row["platform"], "pid": row["pid"][:8]}
-               for row in rows[:limit]]
+        out = [list_row(row) for row in rows[:limit]]
         more = len(rows) > limit and out
         return out, ((out[-1]["started"], out[-1]["id"]) if more else None)
+
+    def players(self, pids: list[str], app_id: int | None = None,
+                recent: int = 10) -> dict[str, dict[str, Any]]:
+        """For the dashboard's post cards (POST /v1/admin/players), per pid: {"opted_out": True}
+        alone for opted-out (and anonymised) players; else their sessions (of app_id, when given),
+        test sessions included and counted apart, total playtime, first and last seen (unix
+        seconds), and the newest `recent` sessions as list_sessions rows. With app_id, a player
+        with no sessions of it but some of other games has zero counts, no rows and
+        other_games_sessions. Pids with no sessions at all (and not opted out) are left out."""
+        pids = list(dict.fromkeys(pids))
+        if not pids:
+            return {}
+        db = self.db
+        marks = ",".join("?" * len(pids))
+        out: dict[str, dict[str, Any]] = {row[0]: {"opted_out": True} for row in db.execute(
+            f"SELECT pid FROM players WHERE opted_out = 1 AND pid IN ({marks})", pids)}
+        wanted = [pid for pid in pids if pid not in out]
+        if not wanted:
+            return out
+        marks = ",".join("?" * len(wanted))
+        of_app, app_args = ("AND app_id = ?", [app_id]) if app_id is not None else ("", [])
+        for row in db.execute(
+                f"""SELECT pid, COUNT(*) AS sessions, SUM(test) AS test_sessions,
+                           SUM(COALESCE(playtime_s, last_t, 0)) AS playtime_s,
+                           MIN(started) AS first_seen, MAX(last_seen) AS last_seen
+                    FROM sessions WHERE pid IN ({marks}) {of_app} GROUP BY pid""", (*wanted, *app_args)):
+            out[row["pid"]] = {"opted_out": False, "sessions": row["sessions"], "test_sessions": row["test_sessions"] or 0,
+                               "playtime_s": round(row["playtime_s"] or 0), "first_seen": row["first_seen"],
+                               "last_seen": row["last_seen"], "recent": []}
+        for row in db.execute(
+                f"""SELECT * FROM (SELECT {LIST_COLUMNS}, ROW_NUMBER() OVER (
+                           PARTITION BY pid ORDER BY started DESC, session_id DESC) AS rn
+                        FROM sessions WHERE pid IN ({marks}) {of_app})
+                    WHERE rn <= ? ORDER BY pid, rn""", (*wanted, *app_args, recent)):
+            out[row["pid"]]["recent"].append(list_row(row))
+        if app_id is not None:
+            elsewhere = [pid for pid in wanted if pid not in out]
+            if elsewhere:
+                marks = ",".join("?" * len(elsewhere))
+                for pid, count in db.execute(
+                        f"""SELECT pid, COUNT(*) FROM sessions WHERE pid IN ({marks}) AND app_id != ?
+                            GROUP BY pid""", (*elsewhere, app_id)):
+                    out[pid] = {"opted_out": False, "sessions": 0, "test_sessions": 0, "playtime_s": 0,
+                                "first_seen": None, "last_seen": None, "recent": [], "other_games_sessions": count}
+        return out
 
     def session_apps(self) -> list[dict[str, int]]:
         """Every app with sessions: how many, and how many of them are test sessions."""

@@ -929,6 +929,52 @@
 	font-size: 0.75rem;
 	margin: 10px 0 0;
 }
+/* Game data on a post card: a chip under the author (in the badges' style), their sessions under it */
+.fb .gd-slot {
+	margin: 6px 0 2px;
+}
+.fb .gd-slot:empty {
+	display: none;
+}
+.fb .gd-chip {
+	display: inline-flex;
+	align-items: center;
+	gap: 5px;
+	font: inherit;
+	font-size: 0.75rem;
+	font-weight: 600;
+	padding: 2px 9px;
+	border: 0;
+	border-radius: 99px;
+	white-space: nowrap;
+	background: var(--fb-card-2);
+	color: var(--fb-ink-2);
+}
+.fb button.gd-chip:hover,
+.fb button.gd-chip[aria-expanded="true"] {
+	background: var(--fb-hover);
+	color: var(--fb-ink);
+}
+.fb .gd-chip.gd-off {
+	background: none;
+	padding-left: 0;
+	font-weight: 400;
+	color: var(--fb-muted);
+}
+.fb .gd-player {
+	margin-top: 6px;
+	border: 1px solid var(--fb-line);
+	border-radius: 0.5rem;
+	padding: 4px;
+}
+.fb .gd-player-sum {
+	color: var(--fb-muted);
+	font-size: 0.8125rem;
+	padding: 4px 10px 2px;
+}
+.fb .gd-player .gd-note {
+	margin: 4px 10px 6px;
+}
 /* Signed in, under the status line in the page header */
 .fb #fb-account {
 	display: flex;

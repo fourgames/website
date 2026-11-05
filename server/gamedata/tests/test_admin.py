@@ -1,5 +1,5 @@
 """The owner's endpoints (admin.py): who may, the dashboard's GitHub proxy (against a fake GitHub),
-and the sessions list, one session and its "Copy for Claude"."""
+the sessions list, one session and its "Copy for Claude", and the players behind posts."""
 
 from __future__ import annotations
 
@@ -537,6 +537,123 @@ def test_a_session_too_large_to_show(tmp_path, monkeypatch):
         cookie = await w.sign_in()
         response = await w.client.get(f"/gamedata/v1/admin/sessions/{real}", headers=w.page(cookie))
         assert response.status == 413
+    run(tmp_path, steps, **ADMIN, **TEST_ENV)
+
+
+# The players behind posts (POST /v1/admin/players)
+
+STRANGER = "76561198000000003"  # no data anywhere
+FRIEND_PID = make_pid(ENV["GAMEDATA_PEPPER"], FRIEND)
+PLAYERS = "/gamedata/v1/admin/players"
+
+
+async def players_of(w, cookie, body, status=200):
+    response = await w.client.post(PLAYERS, json=body, headers=w.page(cookie))
+    assert response.status == status, await response.text()
+    data = await response.json()
+    return data["players"] if status == 200 else data["error"]
+
+
+def test_players_only_for_the_owner_from_the_site(tmp_path):
+    async def steps(w):
+        body = {"steamids": [STEAMID]}
+        response = await w.client.post(PLAYERS, json=body, headers=w.page())
+        assert (response.status, (await response.json())["error"]) == (401, "not_signed_in")
+        friend = await w.sign_in(steamid=FRIEND)
+        response = await w.client.post(PLAYERS, json=body, headers=w.page(friend))
+        assert (response.status, (await response.json())["error"]) == (403, "not_admin")
+        owner = await w.sign_in()
+        for headers in ({"Origin": "https://evil.example"}, {}):
+            response = await w.client.post(PLAYERS, json=body, headers={**headers, "Cookie": f"fg_privacy={owner}"})
+            assert (response.status, (await response.json())["error"]) == (403, "bad_origin")
+        # A form post (no preflight) can't get in either.
+        response = await w.client.post(PLAYERS, data="steamids=1", headers={
+            **w.page(owner), "Content-Type": "application/x-www-form-urlencoded"})
+        assert response.status == 415
+        assert (await w.client.get(PLAYERS, headers=w.page(owner))).status == 405
+        # The browser asks first (JSON from another origin): POST is allowed, for the site only.
+        response = await w.client.options(PLAYERS, headers={
+            "Origin": SITE, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "content-type"})
+        assert response.status == 204 and "POST" in response.headers["Access-Control-Allow-Methods"]
+        assert await players_of(w, owner, body) == {}
+    run(tmp_path, steps, **ADMIN)
+
+
+def test_players_behind_posts(tmp_path, caplog):
+    caplog.set_level(logging.INFO)
+
+    async def steps(w):
+        real, test, later, other = await a_few_sessions(w)
+        cookie = await w.sign_in()
+        listed = (await (await w.client.get("/gamedata/v1/admin/sessions", headers=w.page(cookie))).json())["sessions"]
+        rows = {s["id"]: s for s in listed}
+
+        # Every game: test sessions counted and marked, the newest first, the list's own rows.
+        found = await players_of(w, cookie, {"steamids": [STEAMID, FRIEND, STRANGER, STEAMID, int(FRIEND)]})
+        assert set(found) == {STEAMID, FRIEND}, "no data at all: left out; repeats once"
+        me = found[STEAMID]
+        assert {k: v for k, v in me.items() if k != "recent"} == {
+            "opted_out": False, "sessions": 3, "test_sessions": 2, "playtime_s": 42,
+            "first_seen": 1000, "last_seen": me["last_seen"]}
+        assert me["last_seen"] >= 3000
+        assert me["recent"] == [rows[later], rows[test], rows[real]]
+        assert [s["test"] for s in me["recent"]] == [True, True, False]
+        assert found[FRIEND]["sessions"] == 1 and found[FRIEND]["recent"] == [rows[other]]
+        assert "other_games_sessions" not in me
+        # Only the steamids the dashboard sent, as keys: none in the rows, nor a whole pid.
+        values = json.dumps([entry for entry in found.values()])
+        assert STEAMID not in values and FRIEND not in values and PID not in values and FRIEND_PID not in values
+
+        # The game being looked at.
+        found = await players_of(w, cookie, {"steamids": [STEAMID, FRIEND], "app_id": APP_ID})
+        assert found[STEAMID]["sessions"] == 1 and found[STEAMID]["test_sessions"] == 0
+        assert found[STEAMID]["playtime_s"] == 40 and found[STEAMID]["recent"] == [rows[real]]
+        assert found[FRIEND] == {"opted_out": False, "sessions": 0, "test_sessions": 0, "playtime_s": 0,
+                                 "first_seen": None, "last_seen": None, "recent": [], "other_games_sessions": 1}
+        found = await players_of(w, cookie, {"steamids": [STEAMID], "app_id": TEST_APP})
+        assert found[STEAMID]["sessions"] == 2 and found[STEAMID]["test_sessions"] == 2
+        assert found[STEAMID]["playtime_s"] == 1 and found[STEAMID]["recent"] == [rows[later], rows[test]]
+        assert await players_of(w, cookie, {"steamids": [STRANGER], "app_id": APP_ID}) == {}
+
+        # Opted out: that alone, here too, whatever the game.
+        w.store.set_opted_out(FRIEND_PID, True)
+        for extra in ({}, {"app_id": 3958210}, {"app_id": APP_ID}):
+            found = await players_of(w, cookie, {"steamids": [FRIEND, STEAMID], **extra})
+            assert found[FRIEND] == {"opted_out": True}
+        text = "\n".join(r.getMessage() for r in caplog.records if r.name.startswith("gamedata"))
+        assert "players for " in text and STEAMID not in text and FRIEND not in text
+    run(tmp_path, steps, **ADMIN, **TEST_ENV)
+
+
+def test_players_limits(tmp_path):
+    limits = Limits()
+
+    async def steps(w):
+        cookie = await w.sign_in()
+        many = [str(76561198000000000 + n) for n in range(1, 202)]
+        assert await players_of(w, cookie, {"steamids": many[:200]}) == {}
+        for body in ({"steamids": many}, {"steamids": "x"}, {}, {"steamids": [STEAMID], "app_id": "5207970"},
+                     {"steamids": [STEAMID], "app_id": True}, {"steamids": [STEAMID], "app_id": 0},
+                     {"steamids": [STEAMID], "more": 1}):
+            assert await players_of(w, cookie, body, 400) == "bad_request", body
+        for bad in ("1029710208", "76561197960265728", "7656119800000000x", None, 1.5):
+            assert await players_of(w, cookie, {"steamids": [STEAMID, bad]}, 400) == "bad_steamid", bad
+        response = await w.client.post(PLAYERS, data=b"{" * 20000, headers={**w.page(cookie), "Content-Type": "application/json"})
+        assert response.status == 413
+        # The admin limits count it like every other call.
+        limits.admin_pid.limit = 0
+        assert (await w.client.post(PLAYERS, json={"steamids": []}, headers=w.page(cookie))).status == 429
+    run(tmp_path, steps, limits=limits, **ADMIN)
+
+
+def test_players_newest_sessions_only(tmp_path):
+    async def steps(w):
+        real, test, later, _ = await a_few_sessions(w)
+        found = w.store.players([PID, PID, FRIEND_PID, "0" * 32], recent=2)
+        assert [s["id"] for s in found[PID]["recent"]] == [later, test]
+        assert found[PID]["sessions"] == 3
+        assert w.store.players([]) == {}
+        assert admin.RECENT == 10 and admin.MAX_PLAYERS == 200
     run(tmp_path, steps, **ADMIN, **TEST_ENV)
 
 

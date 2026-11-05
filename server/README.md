@@ -94,9 +94,9 @@ then `gh workflow enable` both workflows and start them (*Run workflow*). The Sa
 
 ## 5. Subdomains with HTTPS
 
-In Strato's *Domänadministration*, for each of `discord`, `youtube`, `steam` and `github`: remove the
-redirect and set an **A record** to the server's IP (the package has 5 subdomains; `join` and `press`
-can go). Then:
+In Strato's *Domänadministration*, for each of `discord`, `youtube`, `steam`, `github`, `press`, `api` and
+`status`: remove the redirect and set an **A record** to the server's IP (`www` stays on GitHub Pages;
+`join` isn't used). Then:
 
 ```bash
 ssh fourgames-server 'sudo cp /srv/fourgames/own/server/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy'

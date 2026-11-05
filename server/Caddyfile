@@ -25,6 +25,13 @@ github.fourgames.se {
 	redir https://github.com/fourgames
 }
 
+# The press kit; press.fourgames.se/<game> opens that game's press page.
+press.fourgames.se {
+	@root path /
+	redir @root https://fourgames.se/press
+	redir https://fourgames.se/press{uri}
+}
+
 # The player data API. For now the feedback loop's status: feedback/loop.sh writes
 # /srv/fourgames/status/<part>.json after each run, and the dashboard (fourgames.se/fb-dash) reads it
 # to tell the collector is running.

@@ -1111,7 +1111,7 @@ async function pickMarket() {
   await loadMarketModule();
   if (state.market) render();
 }
-const marketHelpers = () => ({ h, svgEl, chips, about, adminGet, fmtNum, fmtDate, fmtDateTime, plural, copy, store, dataOverride: DATA_OVERRIDE });
+const marketHelpers = () => ({ h, svgEl, chips, about, adminGet, adminSend, fmtNum, fmtDate, fmtDateTime, plural, copy, store, dataOverride: DATA_OVERRIDE });
 function renderUptimeTop() {
   document.getElementById("fb-capsule").hidden = true;
   document.getElementById("fb-title").replaceChildren("Status");
@@ -3638,6 +3638,18 @@ const gd = { app: "all", test: "all", list: null, next: null, apps: [], error: n
 // One of the owner's endpoints. A sign-in that ran out (or isn't the owner's) shows the sign-in.
 async function adminGet(path) {
   const res = await fetch(`${ADMIN}/${path}`, { credentials: "include", cache: "no-store", signal: AbortSignal.timeout(30000) });
+  if (res.status === 401 || res.status === 403) {
+    gd.list = null;
+    locked(res.status === 401 ? "expired" : "notAdmin");
+    throw Object.assign(new Error("not signed in"), { signedOut: true });
+  }
+  if (!res.ok) throw await failure(path.split("?")[0], res);
+  return res;
+}
+// A write to the admin API (POST, PUT or DELETE, with a JSON body), signed in like adminGet.
+async function adminSend(path, method, body, timeout = 120000) {
+  const res = await fetch(`${ADMIN}/${path}`, { method, credentials: "include", cache: "no-store", signal: AbortSignal.timeout(timeout),
+    headers: body === undefined ? {} : { "Content-Type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
   if (res.status === 401 || res.status === 403) {
     gd.list = null;
     locked(res.status === 401 ? "expired" : "notAdmin");

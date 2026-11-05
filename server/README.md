@@ -23,6 +23,7 @@ something does, like the player data API's database.
 | `broadcast/`, `steam-broadcast@.service`, `steam-broadcast-status.*` | Looping videos as 24/7 broadcasts on the games' Steam store pages, one service per stream, plus their status for the status page: [broadcast/README.md](broadcast/README.md) |
 | `Caddyfile` | The subdomains: `discord`, `youtube`, `steam`, `github` (short links) and `api` (status, key bot) |
 | `status-page/` | The public status page at `status.fourgames.se`: static files Caddy serves from `/srv/fourgames/own/server/status-page` |
+| `uptime/`, `uptime-check.service`, `uptime-check.timer` | The status page's 90-day history: every part checked from the server once a minute, kept in SQLite and written to `api.fourgames.se/status/history.json`: [uptime/README.md](uptime/README.md) |
 
 ## 1. Log in with your key
 

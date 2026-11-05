@@ -1,0 +1,11 @@
+# Runs uptime-check.service at the start of every minute, so each day has one check a minute.
+# Install: sudo systemctl enable --now uptime-check.timer   Check: systemctl list-timers uptime-check
+[Unit]
+Description=Four Games uptime history: a check every minute
+
+[Timer]
+OnCalendar=*-*-* *:*:00
+AccuracySec=1s
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,19 @@
+# Checks every part of Four Games once from the server, adds the minute to the 90-day history and
+# writes /srv/fourgames/status/history.json for status.fourgames.se (server/uptime/check.py).
+# Started every minute by uptime-check.timer. Logs (only the minutes something isn't up):
+# journalctl -u uptime-check
+[Unit]
+Description=Four Games uptime history: one check of every part
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=fourgames
+# The system python3: the check needs nothing outside the standard library.
+ExecStart=/usr/bin/python3 /srv/fourgames/own/server/uptime/check.py
+# Each check gives up after 10 seconds; a run normally takes one or two.
+TimeoutStartSec=50s
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full

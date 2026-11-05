@@ -1,4 +1,5 @@
-// Checks each part of Four Games from the visitor's browser, every minute.
+// Checks each part of Four Games from the visitor's browser, every minute, and shows the server's
+// 90-day history of each under it.
 // Served as plain static files by Caddy at https://status.fourgames.se (see server/Caddyfile).
 "use strict";
 
@@ -12,7 +13,17 @@ const LIMITS = { own: [15 * 60, 60 * 60], research: [75 * 60, 2 * 60 * 60] };
 
 const LABELS = { running: "Running", delayed: "Delayed", down: "Down", unknown: "Unknown" };
 
+// The 90-day history under each row: server/uptime/check.py checks every part from the server once a
+// minute and writes this file. Read at load and every 5 minutes; without it the rows have no bars.
+const HISTORY_URL = `${API}/status/history.json`;
+const HISTORY_REFRESH_MS = 5 * 60_000;
+// Phones get the last 30 days, so each bar stays wide enough to see.
+const NARROW = window.matchMedia("(max-width: 559.98px)");
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+
 let lastChecked = 0;
+let uptimeHistory = null;
+let historyLoaded = 0;
 
 function fetchWithTimeout(url, options = {}) {
 	const controller = new AbortController();
@@ -160,6 +171,113 @@ function showUpdated() {
 	updated.textContent = lastChecked ? `Updated ${ago(now() - lastChecked)}` : "Checking…";
 }
 
+// --- The history bars ---
+
+// Minutes not down out of minutes checked (degraded counts as up), rounded down like check.py does,
+// so any time down never shows as 100%. Null without any checks.
+function uptimeOf(daily) {
+	let checked = 0;
+	let down = 0;
+	for (const day of daily) {
+		if (!day) continue;
+		checked += day[0] + day[1] + day[2];
+		down += day[2];
+	}
+	return checked ? Math.floor(((checked - down) * 10_000) / checked) / 100 : null;
+}
+
+function formatUptime(percent) {
+	if (typeof percent !== "number" || !Number.isFinite(percent)) return null;
+	return percent >= 100 ? "100%" : `${percent.toFixed(2)}%`;
+}
+
+function duration(minutes) {
+	if (minutes < 60) return `${minutes} min`;
+	const h = Math.floor(minutes / 60);
+	const m = minutes % 60;
+	return m ? `${h} h ${m} min` : `${h} h`;
+}
+
+const total = (counts) => (counts ? counts[0] + counts[1] + counts[2] : 0);
+
+// Green: no time down and under 15 minutes degraded. Orange: under an hour down, or 15 minutes or
+// more degraded. Red: an hour or more down. Grey: no data.
+function level(counts) {
+	if (!total(counts)) return "none";
+	const [, degraded, down] = counts;
+	if (down >= 60) return "down";
+	if (down > 0 || degraded >= 15) return "warn";
+	return "ok";
+}
+
+// "5 Nov 2026: 99.3% up · 10 min down · 4 min degraded"
+function dayTitle(day, counts) {
+	const [y, m, d] = day.split("-").map(Number);
+	const date = `${d} ${MONTHS[m - 1]} ${y}`;
+	const minutes = total(counts);
+	if (!minutes) return `${date}: No data`;
+	const [, degraded, down] = counts;
+	const up = Math.floor(((minutes - down) * 1000) / minutes) / 10;
+	const parts = [`${up >= 100 ? "100" : up.toFixed(1)}% up`];
+	if (down) parts.push(`${duration(down)} down`);
+	if (degraded) parts.push(`${duration(degraded)} degraded`);
+	return `${date}: ${parts.join(" · ")}`;
+}
+
+function historyStrip(allDays, part, span) {
+	const days = allDays.slice(-span);
+	const daily = part.daily.slice(-span);
+	const uptime = formatUptime(span >= allDays.length ? part.uptime : uptimeOf(daily));
+
+	const strip = document.createElement("div");
+	strip.className = "history";
+	const bars = document.createElement("div");
+	bars.className = "bars";
+	bars.setAttribute("role", "img");
+	bars.setAttribute("aria-label", `Uptime for the last ${span} days: ${uptime ?? "No data yet"}`);
+	days.forEach((day, i) => {
+		const bar = document.createElement("span");
+		bar.className = "bar";
+		bar.dataset.level = level(daily[i]);
+		bar.title = dayTitle(day, daily[i]);
+		bars.append(bar);
+	});
+	const legend = document.createElement("p");
+	legend.className = "history-legend";
+	for (const text of [`${span} days ago`, uptime ? `${uptime} uptime` : "No data yet", "Today"]) {
+		const item = document.createElement("span");
+		item.textContent = text;
+		legend.append(item);
+	}
+	strip.append(bars, legend);
+	return strip;
+}
+
+function showHistory() {
+	if (!uptimeHistory) return;
+	const span = Math.min(NARROW.matches ? 30 : 90, uptimeHistory.days.length);
+	for (const row of document.querySelectorAll("[data-check]")) {
+		row.querySelector(".history")?.remove();
+		const part = uptimeHistory.parts[row.dataset.check];
+		if (!part || !Array.isArray(part.daily) || part.daily.length !== uptimeHistory.days.length) continue;
+		row.append(historyStrip(uptimeHistory.days, part, span));
+	}
+}
+
+async function loadHistory() {
+	historyLoaded = Date.now();
+	try {
+		const response = await fetchWithTimeout(HISTORY_URL);
+		if (!response.ok) return;
+		const data = await response.json();
+		if (!data || !Array.isArray(data.days) || !data.days.length || typeof data.parts !== "object" || !data.parts) return;
+		uptimeHistory = data;
+		showHistory();
+	} catch {
+		// Left out quietly (or kept as last read); the live checks don't need it.
+	}
+}
+
 async function refresh() {
 	const rows = [...document.querySelectorAll("[data-check]")];
 	const results = await Promise.all(
@@ -170,6 +288,8 @@ async function refresh() {
 			} catch {
 				result = { state: "unknown", detail: "Couldn't check it right now." };
 			}
+			row.hidden = result === HIDDEN;
+			if (row.hidden) return null;
 			show(row, result);
 			return result;
 		}),
@@ -180,8 +300,13 @@ async function refresh() {
 }
 
 refresh();
+loadHistory();
 setInterval(refresh, REFRESH_MS);
+setInterval(loadHistory, HISTORY_REFRESH_MS);
 setInterval(showUpdated, 15_000);
+NARROW.addEventListener("change", showHistory);
 document.addEventListener("visibilitychange", () => {
-	if (!document.hidden && now() - lastChecked > REFRESH_MS / 1000) refresh();
+	if (document.hidden) return;
+	if (now() - lastChecked > REFRESH_MS / 1000) refresh();
+	if (Date.now() - historyLoaded > HISTORY_REFRESH_MS) loadHistory();
 });

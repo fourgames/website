@@ -95,6 +95,7 @@ def test_build(tmp_path, rng):
 
     growth = read(out, "growth")
     assert sum(growth["total"]["y"]) == 182
+    assert sum(growth["total"]["q"]["100"]) == sum(1 for r in games["rows"] if r[4] >= 100)
     assert growth["tags"][str(COZY)]["name"] == "Cozy" and sum(growth["tags"][str(COZY)]["y"]) == 10 + 30 + 1
 
 

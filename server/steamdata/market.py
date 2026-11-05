@@ -68,6 +68,7 @@ PRIOR_GAMES = 30            # hit rates are pulled toward Steam's by this many m
 UPCOMING_DAYS = 540         # upcoming.json: planned within the next year and a half
 TAG_ALERTS = 8              # at most this many "heating up" alerts a day, the hottest
 ALERT_REPEAT_DAYS = 30
+REVIEW_BARS = (10, 50, 100)  # growth.json: releases per year that reached this many reviews
 INDIE = 492  # the Indie user tag
 
 # Steam's users logged in at once: its all-time record as reported at the time (Valve's own number,
@@ -307,6 +308,8 @@ def growth(games: list[Game], tag_names: dict[int, str], genre_names: dict[int, 
         return {"y": [0] * len(years), "yr": [0] * len(years), "m": [0] * len(months), "mr": [0] * len(months)}
 
     total = series()
+    # Releases per year that reached N reviews: real competition, not every low-effort upload.
+    total["q"] = {str(n): [0] * len(years) for n in REVIEW_BARS}
     per_tag: dict[int, dict] = defaultdict(series)
     per_genre: dict[int, dict] = defaultdict(series)
     for g in released:
@@ -315,6 +318,10 @@ def growth(games: list[Game], tag_names: dict[int, str], genre_names: dict[int, 
         yi = y - first_year if y >= first_year else None
         mi = m - months[0] if m >= months[0] else None
         targets = [total] + [per_tag[t] for t in g.tags[:TOP_TAGS]] + [per_genre[x] for x in g.genres]
+        if yi is not None:
+            for n in REVIEW_BARS:
+                if g.reviews >= n:
+                    total["q"][str(n)][yi] += 1
         for s in targets:
             if yi is not None:
                 s["y"][yi] += 1

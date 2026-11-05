@@ -58,6 +58,12 @@ export const routes = [
 		meta: { head: { key: "press" } },
 	},
 	{
+		path: `${L}/principles`,
+		name: "principles",
+		component: () => import("@/views/PrinciplesView.vue"),
+		meta: { head: { key: "principles" } },
+	},
+	{
 		path: `${L}/privacy`,
 		name: "privacy",
 		component: () => import("@/views/PrivacyView.vue"),
@@ -96,6 +102,7 @@ export const routes = [
 	{ path: `${L}/code.html`, redirect: keepLocale("/code") },
 	{ path: `${L}/jobs.html`, redirect: keepLocale("/jobs") },
 	{ path: `${L}/press.html`, redirect: keepLocale("/press") },
+	{ path: `${L}/principles.html`, redirect: keepLocale("/principles") },
 	{ path: `${L}/privacy.html`, redirect: keepLocale("/privacy") },
 	{ path: `${L}/press/:game([^/]+)\\.html`, redirect: (to) => localizePath(`/press/${to.params.game}`, localeFromPath(to.path)) },
 	{ path: "/fb-dash.html", redirect: "/fb-dash" },
@@ -118,6 +125,7 @@ export const prerenderTargets = [
 	{ url: "/code", file: "code.html", sitemap: true },
 	{ url: "/jobs", file: "jobs.html", sitemap: true },
 	{ url: "/press", file: "press.html", sitemap: true },
+	{ url: "/principles", file: "principles.html", sitemap: true },
 	{ url: "/privacy", file: "privacy.html", sitemap: true },
 	// The game press kits (press/<slug>.html) are added by src/entry-server.js, from the Steam data.
 	{ url: "/fb-dash", file: "fb-dash.html", sitemap: false, localized: false },

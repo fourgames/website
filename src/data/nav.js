@@ -53,6 +53,14 @@ export const NAV_LEFT = [
 
 export const NAV_RIGHT = [
 	{
+		label: "nav.principles",
+		to: "/principles",
+		children: [
+			{ label: "nav.fairPublishing", to: "/principles#publishing" },
+			{ label: "nav.contact", to: "/jobs#contact" },
+		],
+	},
+	{
 		label: "nav.jobs",
 		to: "/jobs",
 		children: [

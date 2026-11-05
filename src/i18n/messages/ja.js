@@ -33,6 +33,10 @@ export default {
 			title: "プレスキット",
 			description: "Four Gamesのプレスキット。スタジオのファクトシート、ロゴ、ゲーム一覧、取材用キーの入手方法をまとめています。",
 		},
+		principles: {
+			title: "理念",
+			description: "Four Gamesが大切にしていること：長く続くカタログ、デジタルな会社、ゲームのアップデート、公正なパブリッシング。",
+		},
 		privacy: {
 			title: "プライバシー",
 			description: "Four Gamesのデータの扱い方：ゲームとこのサイトが集めるもの、その理由、そしてデータの確認・ダウンロード・オプトアウト・匿名化の方法。",
@@ -71,6 +75,8 @@ export default {
 		jobs: "協業",
 		press: "プレス",
 		community: "コミュニティ",
+		principles: "理念",
+		fairPublishing: "公正なパブリッシング",
 		privacy: "プライバシー",
 		steam: "Steamでフォロー",
 		youtube: "YouTubeでフォロー",
@@ -93,7 +99,7 @@ export default {
 	},
 	footer: {
 		games: { heading: "ゲーム", all: "すべてのゲーム", steam: "Steamでフォロー", members: "メンバーは無料" },
-		studio: { heading: "スタジオ", code: "オープンソース", jobs: "協業", contact: "お問い合わせ", press: "プレスキット", privacy: "プライバシー" },
+		studio: { heading: "スタジオ", code: "オープンソース", jobs: "協業", contact: "お問い合わせ", press: "プレスキット", principles: "理念", privacy: "プライバシー" },
 		resources: {
 			heading: "リソース",
 			videos: "動画",
@@ -484,6 +490,46 @@ export default {
 				copy: "コピーが必要ですか？キャンセルして、先にデータをダウンロードしてください。",
 				cancel: "キャンセル",
 				yes: "はい、匿名化します",
+			},
+		},
+	},
+	principles: {
+		title: "理念",
+		description: "Four Gamesが大切にしていることと、会社の運営方針。",
+		cta: "協業について",
+		listTitle: "大切にしていること",
+		items: {
+			catalog: {
+				title: "長く続くカタログを",
+				text: "私たちはゲームを開発し、買収し、パブリッシングして、長く続くカタログを築いています。目先の利益が目的ではありません。",
+			},
+			digital: {
+				title: "デジタルな会社",
+				text: "サーバーやツール、作業スペースは必要な分だけ借りています。所有するのは、私たちのゲームとそのIPだけです。",
+			},
+			updates: {
+				title: "ゲームをアップデートし続ける",
+				text: "プレイヤーがいる限り、大きな問題がなくなり、完成したと感じられるまで、修正と改善を続けます。",
+			},
+			publishing: {
+				title: "公正なパブリッシング",
+				text: "あなたのゲームをパブリッシングする際、私たちはIPを長期的に引き継ぎ、合意した期間は収益の大部分をあなたが受け取ります。",
+			},
+			languages: {
+				title: "主要なすべての言語で",
+				text: "ゲームとストアページを主要なすべての言語に翻訳し、できるだけ多くのプレイヤーに遊んでもらえるようにしています。",
+			},
+			tools: {
+				title: "無料ツールを優先",
+				text: "Godotをはじめとする無料ツールを使い、手数料やロイヤリティは明らかに見合う場合にだけ支払います。",
+			},
+			profits: {
+				title: "利益はゲームへ",
+				text: "得た利益は、さらに多くのゲームの開発、買収、パブリッシングに使います。",
+			},
+			next: {
+				title: "次に目指す場所",
+				text: "Steamに加えて、ほかのPCストア、モバイル、コンソール。",
 			},
 		},
 	},

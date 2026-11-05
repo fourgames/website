@@ -35,6 +35,10 @@ export default {
 			title: "Press kit",
 			description: "The Four Games press kit: studio factsheet, logos, our games and how to get a key for coverage.",
 		},
+		principles: {
+			title: "Principles",
+			description: "What Four Games believes in: building a catalog for the long run, staying a digital company, keeping games updated and publishing fairly.",
+		},
 		privacy: {
 			title: "Privacy",
 			description: "How Four Games handles your data: what our games and this website collect, why, and how to see, download, opt out of or anonymise it.",
@@ -73,6 +77,8 @@ export default {
 		jobs: "Work with us",
 		press: "Press",
 		community: "Community",
+		principles: "Principles",
+		fairPublishing: "Fair publishing",
 		privacy: "Privacy",
 		steam: "Follow on Steam",
 		youtube: "Follow on YouTube",
@@ -95,7 +101,7 @@ export default {
 	},
 	footer: {
 		games: { heading: "Games", all: "All games", steam: "Follow on Steam", members: "Free for members" },
-		studio: { heading: "Studio", code: "Open Source", jobs: "Work with us", contact: "Contact", press: "Press kit", privacy: "Privacy" },
+		studio: { heading: "Studio", code: "Open Source", jobs: "Work with us", contact: "Contact", press: "Press kit", principles: "Principles", privacy: "Privacy" },
 		resources: {
 			heading: "Resources",
 			videos: "Videos",
@@ -481,6 +487,46 @@ export default {
 				copy: "Want a copy? Cancel and download your data first.",
 				cancel: "Cancel",
 				yes: "Yes, anonymise my data",
+			},
+		},
+	},
+	principles: {
+		title: "Principles",
+		description: "What we believe in and how we run Four Games.",
+		cta: "Work with us",
+		listTitle: "What we stand for",
+		items: {
+			catalog: {
+				title: "A catalog for the long run",
+				text: "We make, acquire and publish games to build a catalog that lasts. We're not here for quick money.",
+			},
+			digital: {
+				title: "A digital company",
+				text: "We rent the servers, tools and spaces we need, and own only our games and their IP.",
+			},
+			updates: {
+				title: "We keep games updated",
+				text: "As long as a game has players, we keep fixing and improving it until there are no major issues left and it feels complete.",
+			},
+			publishing: {
+				title: "Fair publishing",
+				text: "When we publish your game, we take on the IP for the long term, and you keep most of the earnings for a period we agree on together.",
+			},
+			languages: {
+				title: "All major languages",
+				text: "Our games and store pages are translated into all major languages, so as many players as possible can play them.",
+			},
+			tools: {
+				title: "Free tools first",
+				text: "We use Godot and other free tools, and only pay fees or royalties when it's clearly worth it.",
+			},
+			profits: {
+				title: "Profits go back into games",
+				text: "What we earn pays for making, acquiring and publishing more games.",
+			},
+			next: {
+				title: "Where we might go next",
+				text: "Besides Steam: other PC stores, mobile and consoles.",
 			},
 		},
 	},

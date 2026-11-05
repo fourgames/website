@@ -34,6 +34,10 @@ export default {
 			title: "프레스 키트",
 			description: "Four Games 프레스 키트: 스튜디오 팩트 시트, 로고, 게임 목록, 취재용 키를 받는 방법을 모았어요.",
 		},
+		principles: {
+			title: "원칙",
+			description: "Four Games가 믿는 것: 오래가는 카탈로그, 디지털 회사, 꾸준한 업데이트, 공정한 배급.",
+		},
 		privacy: {
 			title: "개인정보",
 			description: "Four Games의 데이터 처리 방식: 게임과 이 웹사이트가 수집하는 것, 그 이유, 그리고 데이터를 확인·다운로드·수집 거부·익명화하는 방법.",
@@ -72,6 +76,8 @@ export default {
 		jobs: "협업",
 		press: "프레스",
 		community: "커뮤니티",
+		principles: "원칙",
+		fairPublishing: "공정한 배급",
 		privacy: "개인정보",
 		steam: "Steam에서 팔로우",
 		youtube: "YouTube에서 팔로우",
@@ -94,7 +100,7 @@ export default {
 	},
 	footer: {
 		games: { heading: "게임", all: "모든 게임", steam: "Steam에서 팔로우", members: "멤버십 회원 무료" },
-		studio: { heading: "스튜디오", code: "오픈 소스", jobs: "협업", contact: "문의하기", press: "프레스 키트", privacy: "개인정보" },
+		studio: { heading: "스튜디오", code: "오픈 소스", jobs: "협업", contact: "문의하기", press: "프레스 키트", principles: "원칙", privacy: "개인정보" },
 		resources: {
 			heading: "리소스",
 			videos: "동영상",
@@ -481,6 +487,46 @@ export default {
 				copy: "사본이 필요하신가요? 취소하고 먼저 데이터를 다운로드하세요.",
 				cancel: "취소",
 				yes: "네, 익명화합니다",
+			},
+		},
+	},
+	principles: {
+		title: "원칙",
+		description: "Four Games가 믿는 것과 회사를 운영하는 방식.",
+		cta: "협업 문의",
+		listTitle: "우리가 지키는 것",
+		items: {
+			catalog: {
+				title: "오래가는 카탈로그",
+				text: "우리는 게임을 만들고, 인수하고, 배급하며 오래가는 카탈로그를 쌓습니다. 빠른 수익이 목적이 아닙니다.",
+			},
+			digital: {
+				title: "디지털 회사",
+				text: "서버, 도구, 작업 공간은 필요한 만큼 빌려 쓰고, 우리가 소유하는 것은 게임과 그 IP뿐입니다.",
+			},
+			updates: {
+				title: "게임을 꾸준히 업데이트",
+				text: "플레이어가 있는 한, 큰 문제가 사라지고 완성됐다고 느낄 때까지 계속 고치고 개선합니다.",
+			},
+			publishing: {
+				title: "공정한 배급",
+				text: "여러분의 게임을 배급할 때 우리는 IP를 장기적으로 맡고, 함께 정한 기간 동안 수익의 대부분은 여러분이 가져갑니다.",
+			},
+			languages: {
+				title: "모든 주요 언어로",
+				text: "게임과 스토어 페이지를 모든 주요 언어로 번역해 최대한 많은 플레이어가 즐길 수 있게 합니다.",
+			},
+			tools: {
+				title: "무료 도구 우선",
+				text: "Godot와 다른 무료 도구를 사용하며, 수수료나 로열티는 확실히 그만한 가치가 있을 때만 냅니다.",
+			},
+			profits: {
+				title: "수익은 다시 게임으로",
+				text: "벌어들인 수익은 더 많은 게임을 만들고, 인수하고, 배급하는 데 씁니다.",
+			},
+			next: {
+				title: "다음 목표",
+				text: "Steam 외에도 다른 PC 스토어, 모바일, 콘솔.",
 			},
 		},
 	},

@@ -32,6 +32,10 @@ export default {
 			title: "媒體資料包",
 			description: "Four Games 媒體資料包：工作室概況、標誌、我們的遊戲，以及如何取得評測用序號。",
 		},
+		principles: {
+			title: "理念",
+			description: "Four Games 的理念：長期打造遊戲陣容、做數位化公司、持續更新遊戲、公平發行。",
+		},
 		privacy: {
 			title: "隱私",
 			description: "Four Games 如何處理你的資料：我們的遊戲和本網站收集什麼、為什麼收集，以及如何查看、下載、選擇退出或匿名化。",
@@ -70,6 +74,8 @@ export default {
 		jobs: "合作",
 		press: "媒體",
 		community: "社群",
+		principles: "理念",
+		fairPublishing: "公平發行",
 		privacy: "隱私",
 		steam: "在 Steam 上追蹤",
 		youtube: "在 YouTube 上追蹤",
@@ -92,7 +98,7 @@ export default {
 	},
 	footer: {
 		games: { heading: "遊戲", all: "所有遊戲", steam: "在 Steam 上追蹤", members: "會員免費" },
-		studio: { heading: "工作室", code: "開源", jobs: "合作", contact: "聯繫我們", press: "媒體資料包", privacy: "隱私" },
+		studio: { heading: "工作室", code: "開源", jobs: "合作", contact: "聯繫我們", press: "媒體資料包", principles: "理念", privacy: "隱私" },
 		resources: {
 			heading: "資源",
 			videos: "影片",
@@ -477,6 +483,46 @@ export default {
 				copy: "想保留一份副本？請先取消並下載你的資料。",
 				cancel: "取消",
 				yes: "是的，匿名化我的資料",
+			},
+		},
+	},
+	principles: {
+		title: "理念",
+		description: "Four Games 的信念與經營方式。",
+		cta: "與我們合作",
+		listTitle: "我們堅持的事",
+		items: {
+			catalog: {
+				title: "長期打造遊戲陣容",
+				text: "我們開發、收購並發行遊戲，打造長久的遊戲陣容，而不是為了賺快錢。",
+			},
+			digital: {
+				title: "數位化公司",
+				text: "伺服器、工具和辦公空間依需求租用，我們只擁有自己的遊戲及其 IP。",
+			},
+			updates: {
+				title: "持續更新遊戲",
+				text: "只要遊戲還有玩家，我們就會持續修正和改進，直到沒有重大問題、感覺完整為止。",
+			},
+			publishing: {
+				title: "公平發行",
+				text: "我們發行你的遊戲時會長期接手 IP，而在雙方議定的期間內，大部分收入歸你。",
+			},
+			languages: {
+				title: "支援所有主要語言",
+				text: "我們將遊戲和商店頁面翻譯成所有主要語言，讓盡可能多的玩家都能遊玩。",
+			},
+			tools: {
+				title: "優先使用免費工具",
+				text: "我們使用 Godot 和其他免費工具，只有在明顯值得時才支付費用或分潤。",
+			},
+			profits: {
+				title: "利潤回到遊戲中",
+				text: "我們的收入用於開發、收購和發行更多遊戲。",
+			},
+			next: {
+				title: "下一步方向",
+				text: "除了 Steam，還有其他 PC 商店、行動平台和主機。",
 			},
 		},
 	},

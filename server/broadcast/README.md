@@ -16,8 +16,8 @@ loop anything itself ("You need to continue to send us the video"), so the serve
    set the game's App ID (the base game, not a demo), *Create RTMP Token*, and set the broadcast to
    **Public** (new ones are friends only). The token is a password.
 5. **Mark it as not live.** Steam's rule for replays: a banner or title that says the stream is not
-   live. `prepare.sh` puts "Trailer · not live" in the top left; a title like "Pomo Valley trailer
-   (not live)" covers it too.
+   live. `prepare.sh` puts "Pre-recorded" in the bottom right (pass another text as its third
+   argument); a title like "Pomo Valley trailer (pre-recorded)" covers it too.
 
 ## Server side
 

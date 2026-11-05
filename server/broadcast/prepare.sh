@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Turns any video (trailer, gameplay capture) into a file Steam's broadcast accepts, with a "not live"
 # banner, once. Run it on the Mac (brew install ffmpeg), then copy the result to the server:
-#   server/broadcast/prepare.sh trailer.mov pomo-valley.mp4 ["Trailer · not live"]
+#   server/broadcast/prepare.sh trailer.mov pomo-valley.mp4 ["Pre-recorded"]
 #   scp pomo-valley.mp4 fourgames-server:/srv/fourgames/broadcast/
 # Steam's rules: H.264 High 4.1, 30 or 60 fps, keyframe every 2 s, CBR, at most 7000 kbit/s; AAC-LC
 # audio at most 128 kbit/s. A replay must say it isn't live, hence the banner. 1080p30 at 4500 kbit/s
@@ -9,7 +9,7 @@
 set -euo pipefail
 in=${1:?usage: prepare.sh INPUT OUTPUT.mp4 [BANNER]}
 out=${2:?usage: prepare.sh INPUT OUTPUT.mp4 [BANNER]}
-banner=${3:-Trailer · not live}
+banner=${3:-Pre-recorded}
 command -v ffmpeg >/dev/null || { echo "ffmpeg is missing: brew install ffmpeg" >&2; exit 1; }
 
 font=""
@@ -17,13 +17,13 @@ for f in "/System/Library/Fonts/Supplemental/Arial Bold.ttf" /usr/share/fonts/tr
   [ -r "$f" ] && { font=$f; break; }
 done
 
-# Scale to fit 1920x1080 (black bars when it isn't 16:9), 30 fps, and the banner in the top left.
+# Scale to fit 1920x1080 (black bars when it isn't 16:9), 30 fps, and the banner in the bottom right.
 vf="scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,fps=30"
 # (Read into a variable first: with pipefail, grep -q closing the pipe early would count as a failure.)
 filters=$(ffmpeg -hide_banner -filters 2>/dev/null)
 if [[ $filters == *drawtext* ]]; then
   text=${banner//:/\\:}
-  vf+=",drawtext=${font:+fontfile='$font':}text='${text//\'/}':fontsize=34:fontcolor=white:box=1:boxcolor=black@0.55:boxborderw=14:x=36:y=36"
+  vf+=",drawtext=${font:+fontfile='$font':}text='${text//\'/}':fontsize=34:fontcolor=white:box=1:boxcolor=black@0.55:boxborderw=14:x=w-tw-48:y=h-th-48"
 else
   echo "This ffmpeg can't draw text: the banner is left out. Put 'not live' in the stream title on Steam instead." >&2
 fi

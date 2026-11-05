@@ -3,6 +3,9 @@
 Built in a worker thread with its own database connection, into a temporary file under
 DATA_DIR/tmp (on disk, not in memory), one batch at a time, so a long play history costs disk for
 a moment and very little memory.
+
+Also one session on its own (session()), for the owner's dashboard: the same row and files, put
+together the way the replay viewer (godot/fourgames_data/game/replay/export_reader.gd) reads them.
 """
 
 from __future__ import annotations
@@ -198,3 +201,82 @@ def build(data_dir: str | Path, pid: str, link_months: int) -> IO[bytes]:
         store.close()
     out.seek(0)
     return out
+
+
+# One session, for GET /v1/admin/sessions/<id>
+
+# A session whose event files add up to more than this (gzipped) isn't put together in memory.
+MAX_SESSION_GZ = 64 * 1024 * 1024
+
+
+class SessionTooLarge(Exception):
+    pass
+
+
+def _crash_entry(store: Store, row, test: bool) -> dict[str, Any]:
+    """A crashes.json entry, with its log (log_tail, last_events) in it rather than in a file."""
+    entry = clean_row(row)
+    entry["test"] = test
+    entry["log_file"] = None
+    if row["path"]:
+        try:
+            log = read_gzip_json(store.root / row["path"])
+        except (OSError, ValueError):
+            log = None
+        if isinstance(log, dict):
+            entry["log_tail"] = log.get("log_tail")
+            entry["last_events"] = log.get("last_events", [])
+    return entry
+
+
+def session(data_dir: str | Path, session_id: str) -> dict[str, Any] | None:
+    """The session as one JSON object, None if there's none with that id: its sessions.json row
+    (as in the download) with, as export_reader.gd attaches them to a session it reads,
+      events    every batch's events, in seq order (as sent; the viewer sorts them by t)
+      hardware  its hardware.json row, or {}
+      settings  the settings it started with (settings.json's data), or {}
+      crashes   the crash reports about this session, each a crashes.json entry plus log_tail and
+                last_events
+      reported  the crash report this session sent about an earlier one, or {}
+    No pid in it. Run it in a thread; SessionTooLarge past MAX_SESSION_GZ of event files."""
+    store = Store(data_dir)
+    try:
+        db = store.db
+        row = db.execute("SELECT * FROM sessions WHERE session_id = ?", (session_id,)).fetchone()
+        if row is None:
+            return None
+        test = bool(row["test"])
+        out = clean_row(row)
+        batches = db.execute("SELECT seq, path, bytes FROM batches WHERE session_id = ? ORDER BY seq",
+                             (session_id,)).fetchall()
+        if sum(b["bytes"] for b in batches) > MAX_SESSION_GZ:
+            raise SessionTooLarge(session_id)
+        events: list[Any] = []
+        for batch in batches:
+            try:
+                data = read_gzip_json(store.root / batch["path"])
+            except (OSError, ValueError):
+                continue  # missing or damaged, as the download skips it
+            if isinstance(data, dict) and isinstance(data.get("events"), list):
+                events.extend(data["events"])
+        out["events"] = events
+        hardware = db.execute("SELECT * FROM hardware WHERE session_id = ?", (session_id,)).fetchone()
+        out["hardware"] = clean_row(hardware) if hardware else {}
+        settings = db.execute("SELECT data FROM settings WHERE session_id = ?", (session_id,)).fetchone()
+        try:
+            data = json.loads(settings["data"]) if settings else {}
+        except ValueError:
+            data = {}
+        out["settings"] = data if isinstance(data, dict) else {}
+        # The reports about it came from the same player's next launch, which may or may not be a test one.
+        def reporter_test(crash) -> bool:
+            found = db.execute("SELECT test FROM sessions WHERE session_id = ?", (crash["session_id"],)).fetchone()
+            return bool(found and found["test"])
+
+        out["crashes"] = [_crash_entry(store, crash, reporter_test(crash)) for crash in db.execute(
+            "SELECT * FROM crashes WHERE crashed_session_id = ? ORDER BY received", (session_id,)).fetchall()]
+        reported = db.execute("SELECT * FROM crashes WHERE session_id = ?", (session_id,)).fetchone()
+        out["reported"] = _crash_entry(store, reported, test) if reported else {}
+        return out
+    finally:
+        store.close()

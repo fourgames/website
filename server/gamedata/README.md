@@ -3,7 +3,9 @@
 The server side of the games' data collection, built against [SPEC.md](SPEC.md). The games (through the
 `fourgames_data` Godot plugin) send sessions, game actions, hardware, settings and crash reports; players
 see, download, opt out of or anonymise theirs on [fourgames.se/privacy](https://fourgames.se/privacy)
-after signing in with Steam. It runs as `gamedata.service`: one small Python web server (aiohttp) on
+after signing in with Steam. The owner signs in the same way on the feedback dashboard
+([fourgames.se/fb-dash](https://fourgames.se/fb-dash)), which reads the sessions and reaches GitHub through
+this server (below, "The owner's endpoints"). It runs as `gamedata.service`: one small Python web server (aiohttp) on
 `localhost:8103`, behind Caddy at `https://api.fourgames.se/gamedata/`, with its data in
 `/srv/fourgames/gamedata`.
 
@@ -18,14 +20,20 @@ work. Errors are JSON, `{"ok": false, "error": "<code>", "message": "…"}`, wit
 | `POST /v1/events` | the game (Bearer token) | One batch, gzip (`Content-Encoding: gzip`) or plain JSON. A repeated `seq` answers `{"ok": true, "duplicate": true}` and isn't stored twice. Events whose `data` is over 32 KB are left out and counted: `{"ok": true, "dropped": 1}`. |
 | `POST /v1/session/end` | the game (Bearer) | `seq`, `playtime_s`, `summary`, `active_s`, `idle_s`, `first_session`, `last_scene`, `last_screen`. A second end answers `duplicate`; the first stays. |
 | `POST /v1/crash` | the game (Bearer token of the *new* session) | The previous launch's crash. One per session (a retry answers `duplicate`). `crashed_session_id` is only kept if it's the same player's session. |
-| `GET /v1/auth/steam?return=/privacy` | the page | Redirects to Steam's sign-in (OpenID 2.0). `return` is a path on the site (`/privacy`, `/ja/privacy`, …, an optional `?query`; no scheme, no `//`). |
-| `GET /v1/auth/callback` | Steam | Checks Steam's answer (below), sets the `fg_privacy` cookie and redirects to `https://fourgames.se<return>`. On failure it redirects there with `?signin=failed` (or `?signin=cancelled`), without a cookie. |
+| `GET /v1/auth/steam?return=/privacy` | the page | Redirects to Steam's sign-in (OpenID 2.0). `return` is a path on the site (`/privacy`, `/ja/privacy`, …, `/fb-dash` for the dashboard, an optional `?query`; no scheme, no `//`). |
+| `GET /v1/auth/callback` | Steam | Checks Steam's answer (below), sets the `fg_privacy` cookie (1 hour; 12 for an admin) and redirects to `https://fourgames.se<return>`. On failure it redirects there with `?signin=failed` (or `?signin=cancelled`), without a cookie. |
 | `GET /v1/me` | the page (cookie) | `{"ok": true, "signed_in": false}`, or `signed_in: true` with `opted_out` and `games` (below). |
 | `POST /v1/me/optout` | the page | `{"opted_out": true\|false}`; works before a player's first session too. |
 | `GET /v1/me/export` | the page | `fourgames-data.zip`: everything stored for the player as JSON, plus a README.txt explaining every field. Streamed from a temporary file; one is built at a time. |
 | `POST /v1/me/anonymise` | the page | `{"confirm": true}`: anonymises (below) and clears the cookie. |
 | `POST /v1/auth/signout` | the page | Clears the cookie. |
 | `POST /v1/internal/lookup` | our tools, on this machine | Game data for public steamids (a Steam review's or discussion post's author), below. |
+| `GET /v1/admin/me` | the dashboard (admin cookie) | `{"ok": true, "admin": true, "until": <the sign-in's expiry, unix seconds>}`. |
+| `GET, PUT /v1/admin/github/<repo>/<path>` | the dashboard | The GitHub proxy (below). |
+| `GET /v1/admin/github-check` | the dashboard | What the server's GitHub token can do: `{"statuses", "scopes", "can": {"read_data", "read_runs", "write_data"}, "message"}`. |
+| `GET /v1/admin/sessions` | the dashboard | The sessions, newest first (below). |
+| `GET /v1/admin/sessions/<id>` | the dashboard | One session, in the replay viewer's shape: `{"ok": true, "session": {…}}`. |
+| `GET /v1/admin/sessions/<id>/summary` | the dashboard | Its "Copy for Claude" text (`text/plain`). |
 | `GET /health` (or `/v1/health`) | anyone, the status page | `{"ok": true, "time", "disk": {"used_bytes", "free_bytes", "total_bytes", "low_space"}}` |
 
 Each entry of `games` (in `/v1/me` and the lookup) is one app id, so a player's demo and full game show
@@ -66,6 +74,64 @@ GAMEDATA_TEST_STEAMIDS=76561198xxxxxxxxx
 - The internal lookup leaves them out (and the hardware, progress, versions and crashes they sent);
   send `"include_test": true` to see them. A player with only test sessions isn't in its answer.
 - Databases made before test mode get the column (default 0, not test) when the service starts.
+
+## The owner's endpoints (the feedback dashboard)
+
+`/v1/admin/*` (`admin.py`) are for the feedback dashboard on fourgames.se/fb-dash. Signing in is the
+privacy page's Steam sign-in with `?return=/fb-dash`; an admin is a valid `fg_privacy` cookie whose pid is
+one of `GAMEDATA_ADMIN_STEAMIDS`' (worked out again at every request, so taking an id out and restarting
+ends its access at once). An admin's cookie lasts 12 hours, wherever they signed in (anyone else's 1).
+Every admin request, GETs included, must carry `Origin: https://fourgames.se` (so no other site, link or
+script tag can use the cookie), and a PUT a JSON body. Not signed in: `401 not_signed_in`; signed in as
+someone else: `403 not_admin`; another origin: `403 bad_origin`. `POST /v1/auth/signout` signs out. The
+answers have CORS for the site with credentials; rate limits are 1,200 per 10 minutes per IP and 900 per
+admin.
+
+**The GitHub proxy.** `/v1/admin/github/<repo>/<path>` forwards to
+`https://api.github.com/repos/fourgames/<repo>/<path>` with `Authorization: Bearer` the server's token
+(`GAMEDATA_GITHUB_TOKEN`, else `GH_TOKEN`), so no token is kept in the browser. Only the calls the
+dashboard makes (`src/lib/feedback/dashboard.js`) are forwarded; anything else is `404 not_proxied` (or
+`400 bad_query` for a query it doesn't send, `405` for another method):
+
+| Repo | Call | Query |
+| --- | --- | --- |
+| `feedback-data` | `GET contents/<name>.json`, `GET contents/games/<app id>.json` (names: lower-case letters, digits, `-`, `_`) | `ref=main` or a commit sha, or none |
+| `feedback-data` | `PUT contents/{cleared,credit,bundles,competitors,research}.json`, body exactly `{message, branch: "main", sha?, content}` (base64) | none |
+| `feedback-data` | `GET commits` | `per_page=1`…`10` |
+| `website` | `GET actions/workflows/{feedback,static}.yml/runs` | `per_page=1`…`10` |
+
+The browser's `Accept` (`application/vnd.github+json`, `…object+json` or `application/json`) and its
+`If-None-Match` / `If-Modified-Since` go on; nothing else does (no cookie, no `Authorization`). GitHub's
+status and body come back as they are (a 404 for a file not saved yet, 409/422 for a save that raced
+another, 304), with its `ETag`, `Last-Modified`, `Link`, `Retry-After`, `X-RateLimit-*`,
+`X-GitHub-Request-Id` and, for a GET, `Cache-Control` (private, a minute); never its cookies or the token.
+Its refusals of the token itself become `502 github_token_refused` (401: wrong, expired, revoked) and
+`502 github_forbidden` (403, with GitHub's message and the permission it says it needs), so the
+dashboard never takes them for its own sign-in running out; GitHub's rate limit is `429 rate_limited`
+with `Retry-After`; GitHub down or slow is `502 github_unavailable` / `504 github_timeout` (20 s, a save
+30 s); no token is `503 github_not_configured`. Answers over 8 MB are refused (`502 github_too_large`):
+files over 1 MB come back as a `download_url` the browser reads from GitHub itself, as before. Six calls
+to GitHub at most run at once. `GET /v1/admin/github-check` tries the reads (the repo, `index.json`,
+website's runs) and says what's missing; whether saving works shows at the first save (a classic
+token's `X-OAuth-Scopes` say so in advance).
+
+**The sessions.** `GET /v1/admin/sessions?app_id=&test=&limit=&before=`: `test=1` only test sessions,
+`test=0` only real ones, neither both; `limit` 1 to 200 (50); `before` the previous answer's `next`.
+`{"ok": true, "sessions": [{"id", "app_id", "started", "ended" (unix seconds, null without an end),
+"length_s" (the reported playtime, else the latest event time), "test", "events", "game_version",
+"country", "platform", "pid" (its first 8 characters)}], "next": "<started>:<id>" or null, "apps":
+[{"app_id", "sessions", "test_sessions"}]}`. Never a steamid (none is stored) or a whole pid.
+
+`GET /v1/admin/sessions/<id>` gives one session in the same shape as the replay viewer
+(`godot/fourgames_data/game/replay/export_reader.gd`) makes of a session in a player's download: its
+`sessions.json` row (times ISO, no pid) with `events` (every batch's, in seq order), `hardware` (its
+`hardware.json` row, or `{}`), `settings` (the settings it started with, or `{}`), `crashes` (the
+reports about it, each a `crashes.json` entry with `log_tail` and `last_events` in it) and `reported`
+(the report it sent about an earlier session, or `{}`). The dashboard's "Copy for replay" copies it, and
+the viewer's "Paste session" opens it. Sessions whose event files add up to over 64 MB (gzipped) answer
+`413`. `GET /v1/admin/sessions/<id>/summary` is the text the viewer's "Copy for Claude" builds for it:
+`summary.py` is a line-for-line port of `summary.gd`, and both are tested against the same files
+(`godot/fourgames_data/tests/fixtures/summary/`, written by `tests/tools/summary_golden.gd` there).
 
 ## What's stored, and how
 
@@ -111,7 +177,7 @@ GAMEDATA_TEST_STEAMIDS=76561198xxxxxxxxx
   (`openid.mode=check_authentication`). A signed `state` (10 minutes) and a matching `fg_openid` cookie tie
   the answer to the browser that started the sign-in.
 - **The cookie** `fg_privacy` holds the pid and an expiry, signed with `GAMEDATA_COOKIE_SECRET`: HttpOnly,
-  Secure, SameSite=None, Domain `api.fourgames.se`, 1 hour.
+  Secure, SameSite=None, Domain `api.fourgames.se`, 1 hour (12 for an admin, see "The owner's endpoints").
 - **CORS and CSRF:** the player routes send `Access-Control-Allow-Origin: https://fourgames.se` and
   `Allow-Credentials: true` (preflights too); every POST must have `Origin: https://fourgames.se` and a JSON
   body (`Content-Type: application/json`).
@@ -126,7 +192,7 @@ GAMEDATA_TEST_STEAMIDS=76561198xxxxxxxxx
   sign-ins 20; downloads 5 an hour per player; and at most `GAMEDATA_MAX_MB_PER_DAY` (50) MB of gzipped
   events per player a day.
 - **Logs** show the first 8 characters of a pid, counts and sizes: never a steamid, a ticket, an IP, a
-  country or what's in an event. aiohttp's access log is off.
+  country, what's in an event or the GitHub token. aiohttp's access log is off.
 
 ## The internal lookup
 
@@ -158,7 +224,8 @@ a minute. Without the file, country and region are null and nothing else changes
 which lists the countries, and the export's README.txt, which already says it), credit it as
 *IP Geolocation by [DB-IP](https://db-ip.com)*.
 
-The code: `web.py` (routes, CORS, cookies, the internal lookup, the hourly job), `steam.py` (tickets,
+The code: `web.py` (routes, CORS, cookies, the internal lookup, the hourly job), `admin.py` (the owner's
+endpoints and the GitHub proxy), `summary.py` (the replay viewer's "Copy for Claude"), `steam.py` (tickets,
 ownership, OpenID), `validate.py` (shape checks), `limits.py` (rate limits, body and gzip caps),
 `store.py` (SQLite and files), `export.py` (the zip), `retention.py` (the unlinking), `geo.py` and
 `geoupdate.py`, `signing.py` (pids and tokens), `config.py`. Settings are in `gamedata.env.example`.
@@ -182,6 +249,15 @@ journalctl -u gamedata -f               # "listening on 127.0.0.1:8103" means it
 ```
 
 The publisher key's group in Steamworks must include the games in `GAMEDATA_APP_IDS` (and their demos).
+
+**The dashboard** (optional): `GAMEDATA_ADMIN_STEAMIDS` (the owner's SteamID64s) and a GitHub token for
+its proxy, either `GAMEDATA_GITHUB_TOKEN` in `gamedata.env` or the feedback loop's `GH_TOKEN`, read by
+adding `EnvironmentFile=/etc/fourgames/feedback.env` to `gamedata.service` *above* its
+`EnvironmentFile=/etc/fourgames/gamedata.env` (the later file wins where both set a name, e.g.
+`STEAM_PUBLISHER_KEY`). The token needs Contents: Read and write on `fourgames/feedback-data` and Actions:
+Read on `fourgames/website`; the feedback loop's own token has only Actions on website, so it needs
+widening (or use a token of its own). Restart, sign in on fourgames.se/fb-dash, and
+`GET /v1/admin/github-check` (from the dashboard's page, or with its cookie and `Origin`) says what works.
 
 **Caddy**: the `api.fourgames.se` block in `server/Caddyfile` needs, before any other `/gamedata` route:
 
@@ -211,4 +287,4 @@ apart from the backups.
 | Restart | `sudo systemctl restart gamedata` (needed after a code change or an env change, e.g. a new app id) |
 | Disk | `curl -s localhost:8103/health`; uploads stop by themselves at `GAMEDATA_MIN_FREE_MB` free |
 | New dependency | `uv pip install --python /srv/fourgames/gamedata-venv/bin/python -r /srv/fourgames/own/server/gamedata/requirements.txt` |
-| Tests | `cd server && python -m pytest gamedata/tests` (with pytest and the requirements installed; no network: Steam and the geo database are faked) |
+| Tests | `cd server && python -m pytest gamedata/tests` (with pytest and the requirements installed; no network: Steam, GitHub and the geo database are faked) |

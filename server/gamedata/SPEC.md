@@ -115,6 +115,29 @@ batch, 2000 events per batch.
 CORS: `Access-Control-Allow-Origin: https://fourgames.se`, `Allow-Credentials: true`; POSTs also
 require `Origin: https://fourgames.se` (CSRF) and JSON bodies.
 
+### Owner endpoints (the feedback dashboard, fourgames.se/fb-dash)
+
+The owner signs in with the same Steam sign-in (`/v1/auth/steam?return=/fb-dash`). An admin is a
+signed-in cookie whose pid is one of `GAMEDATA_ADMIN_STEAMIDS`' (12 h cookie; everyone else's stays 1 h).
+Every `/v1/admin/*` request needs `Origin: https://fourgames.se` (GETs too) and the admin cookie: `401
+not_signed_in`, `403 not_admin` otherwise; a PUT also needs a JSON body. CORS as for the player endpoints.
+- `GET /v1/admin/me` → `{"ok": true, "admin": true, "until": <expiry>}`.
+- `GET|PUT /v1/admin/github/<repo>/<path>` → `https://api.github.com/repos/fourgames/<repo>/<path>` with
+  the server's token (`GAMEDATA_GITHUB_TOKEN`, else `GH_TOKEN`), for the dashboard's calls only:
+  feedback-data `GET contents/*.json` and `games/<id>.json` (`?ref=`), `PUT` of the dashboard's own five
+  files, `GET commits?per_page=`, website `GET actions/workflows/{feedback,static}.yml/runs?per_page=`.
+  GitHub's answer passes through (status, body, ETag/Link/rate-limit headers); its refusals of the token
+  become `502 github_token_refused` / `github_forbidden`. `GET /v1/admin/github-check` says what the
+  token can do.
+- `GET /v1/admin/sessions?app_id=&test=&limit=&before=` → newest first: `id, app_id, started, ended,
+  length_s, test, events, game_version, country, platform, pid` (8 characters), `next`, and `apps` with
+  their counts. Never a steamid.
+- `GET /v1/admin/sessions/<id>` → `{"ok": true, "session": …}`: that session's `sessions.json` row with its
+  `events`, `hardware`, `settings`, `crashes` and `reported`, the shape the replay viewer reads a download
+  into (so its "Paste session" opens it).
+- `GET /v1/admin/sessions/<id>/summary` → the viewer's "Copy for Claude" text for it, as plain text
+  (`summary.py`, a port of `summary.gd`, tested against the same fixture).
+
 ### Internal lookup (the feedback loop and dashboards, localhost only)
 
 `POST /v1/internal/lookup` with header `X-Internal-Key: <GAMEDATA_INTERNAL_KEY>`, only from

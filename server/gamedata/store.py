@@ -74,6 +74,7 @@ CREATE TABLE IF NOT EXISTS sessions (
 );
 CREATE INDEX IF NOT EXISTS sessions_by_pid ON sessions(pid, app_id);
 CREATE INDEX IF NOT EXISTS sessions_by_app ON sessions(app_id, started);
+CREATE INDEX IF NOT EXISTS sessions_by_started ON sessions(started);
 
 CREATE TABLE IF NOT EXISTS hardware (
     session_id  TEXT PRIMARY KEY,
@@ -520,6 +521,40 @@ class Store:
         for pid, by_app in games.items():
             out[pid] = {"opted_out": False, "games": [by_app[app] for app in sorted(by_app)]}
         return out
+
+    # The owner's dashboard (GET /v1/admin/sessions)
+
+    def list_sessions(self, app_id: int | None = None, test: bool | None = None, limit: int = 50,
+                      before: tuple[int, str] | None = None) -> tuple[list[dict[str, Any]], tuple[int, str] | None]:
+        """Sessions, newest first: (rows, the cursor for the next page or None). `before` is a
+        (started, session_id) cursor; only the first 8 characters of a pid are shown."""
+        where, args = [], []
+        if app_id is not None:
+            where.append("app_id = ?")
+            args.append(app_id)
+        if test is not None:
+            where.append("test = ?")
+            args.append(int(test))
+        if before is not None:
+            where.append("(started < ? OR (started = ? AND session_id < ?))")
+            args += [before[0], before[0], before[1]]
+        rows = self.db.execute(
+            f"""SELECT session_id, app_id, started, ended, playtime_s, last_t, test, events, game_version,
+                       country, platform, pid
+                FROM sessions {"WHERE " + " AND ".join(where) if where else ""}
+                ORDER BY started DESC, session_id DESC LIMIT ?""", (*args, limit + 1)).fetchall()
+        out = [{"id": row["session_id"], "app_id": row["app_id"], "started": row["started"], "ended": row["ended"],
+                "length_s": round(row["playtime_s"] if row["playtime_s"] is not None else row["last_t"] or 0),
+                "test": bool(row["test"]), "events": row["events"], "game_version": row["game_version"],
+                "country": row["country"], "platform": row["platform"], "pid": row["pid"][:8]}
+               for row in rows[:limit]]
+        more = len(rows) > limit and out
+        return out, ((out[-1]["started"], out[-1]["id"]) if more else None)
+
+    def session_apps(self) -> list[dict[str, int]]:
+        """Every app with sessions: how many, and how many of them are test sessions."""
+        return [{"app_id": row[0], "sessions": row[1], "test_sessions": row[2]} for row in self.db.execute(
+            "SELECT app_id, COUNT(*), SUM(test) FROM sessions GROUP BY app_id ORDER BY app_id")]
 
     def rows(self, table: str, pid: str) -> list[sqlite3.Row]:
         assert table in PID_TABLES

@@ -95,3 +95,26 @@ func test_a_scene_change_s_perf_goes_with_its_scene() -> void:
 	assert_true(lines[2].begins_with("level_1: 60.0 fps avg") and lines[2].ends_with("200 frames"), lines[2])
 	assert_true(lines[3].begins_with("viewer, replay_viewer screen: 120.0 fps avg"), lines[3])
 	assert_eq(lines.size(), 5, "three lines and the gap after them")
+
+
+## The server's port (server/gamedata/summary.py, GET /v1/admin/sessions/<id>/summary)
+## is tested against the same files: both must write exactly this. After a change
+## here on purpose, tests/tools/summary_golden.gd writes them again.
+func test_the_server_s_text_is_the_same() -> void:
+	var result := ExportReader.open("res://tests/fixtures/summary_sessions.json")
+	assert_true(result.ok, str(result.error))
+	assert_eq(result.sessions.size(), 4)
+	for session: Dictionary in result.sessions:
+		var path := "res://tests/fixtures/summary/%s.txt" % session.session_id
+		assert_true(FileAccess.file_exists(path), path)
+		var expected := FileAccess.get_file_as_string(path)
+		var text := Summary.build(session)
+		if text != expected:
+			var lines := text.split("\n")
+			var want := expected.split("\n")
+			for i in maxi(lines.size(), want.size()):
+				if i >= lines.size() or i >= want.size() or lines[i] != want[i]:
+					assert_eq(lines[i] if i < lines.size() else "", want[i] if i < want.size() else "",
+							"%s line %d" % [session.session_id, i + 1])
+					break
+		assert_true(text == expected, "%s says what the fixture says" % session.session_id)

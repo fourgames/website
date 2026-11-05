@@ -1,0 +1,148 @@
+Here is a play session from the fourgames_data test project (Four Games' player-data test game); it was downloaded from fourgames.se/privacy and summarised by the project's replay viewer.
+
+== Session ==
+id dddddddd-0000-4000-8000-000000000004, app 5207970, a TEST session
+started <null>, length 1:50
+game ? (build ?), Godot ?, ?, locale ?
+no end received (the game crashed, was killed, or is still uploading)
+
+== Levels ==
+level_1 "First steps": entered 0:00, completed at 0:10 (9.75 s on the level), coins 8/8, deaths 0
+level_2 "Saw mill": entered 0:11, not completed, coins 0/10, deaths 8
+total: 8 coins, 8 deaths
+
+== Deaths ==
+0:23 level_2, saw at (23, 2)
+0:35 level_2, saw at (35, 2)
+0:48 level_2, saw at (48, 2)
+1:00 level_2, saw at (60, 2)
+1:13 level_2, saw at (73, 2)
+1:25 level_2, saw at (85, 2)
+1:38 level_2, saw at (98, 2)
+1:50 level_2, saw at (110, 2)
+
+== Settings ==
+at start: (none sent)
+no changes
+
+== Performance (per scene and screen) ==
+no perf events
+
+== Hardware ==
+? | ? (? cores) | 0 GB RAM | GPU unknown | ?
+
+== Errors and crashes ==
+none
+
+== Key events (JSON) ==
+[{"t":1,"type":"action","name":"coin","data":{"level":"level_1","coin":"0","x":0,"y":5}},
+{"t":2,"type":"action","name":"coin","data":{"level":"level_1","coin":1,"x":10,"y":5}},
+{"t":3,"type":"action","name":"coin","data":{"level":"level_1","coin":"2","x":20,"y":5}},
+{"t":4,"type":"action","name":"coin","data":{"level":"level_1","coin":3,"x":30,"y":5}},
+{"t":5,"type":"action","name":"coin","data":{"level":"level_1","coin":"4","x":40,"y":5}},
+{"t":6,"type":"action","name":"coin","data":{"level":"level_1","coin":5,"x":50,"y":5}},
+{"t":7,"type":"action","name":"coin","data":{"level":"level_1","coin":"6","x":60,"y":5}},
+{"t":8,"type":"action","name":"coin","data":{"level":"level_1","coin":7,"x":70,"y":5}},
+{"t":9.5,"type":"action","name":"coin","data":{"level":"level_1","coin":3}},
+{"t":10,"type":"action","name":"level_complete","data":{"level":"level_1","time_s":9.75}},
+{"t":10,"type":"action","name":"level_complete","data":{"level":"level_1","time_s":1}},
+{"t":11.25,"type":"action","name":"step","data":{"level":"level_2","i":1,"note":"üüüüüüüüüüüüüüüüüüüü","x":34.875,"y":99}},
+{"t":11.5,"type":"action","name":"step","data":{"level":"level_2","i":2,"note":"üüüüüüüüüüüüüüüüüüüü","x":35.65,"y":98}},
+{"t":12,"type":"action","name":"step","data":{"level":"level_2","i":4,"note":"üüüüüüüüüüüüüüüüüüüü","x":37.2,"y":96}},
+{"t":12.25,"type":"action","name":"step","data":{"level":"level_2","i":5,"note":"üüüüüüüüüüüüüüüüüüüü","x":37.975,"y":95}},
+{"t":12.75,"type":"action","name":"step","data":{"level":"level_2","i":7,"note":"üüüüüüüüüüüüüüüüüüüü","x":39.525,"y":93}},
+{"t":13,"type":"action","name":"step","data":{"level":"level_2","i":8,"note":"üüüüüüüüüüüüüüüüüüüü","x":40.3,"y":92}},
+{"t":13.5,"type":"action","name":"step","data":{"level":"level_2","i":10,"note":"üüüüüüüüüüüüüüüüüüüü","x":41.85,"y":90}},
+{"t":13.75,"type":"action","name":"step","data":{"level":"level_2","i":11,"note":"üüüüüüüüüüüüüüüüüüüü","x":42.625,"y":89}},
+{"t":14.25,"type":"action","name":"step","data":{"level":"level_2","i":13,"note":"üüüüüüüüüüüüüüüüüüüü","x":44.175,"y":87}},
+{"t":14.5,"type":"action","name":"step","data":{"level":"level_2","i":14,"note":"üüüüüüüüüüüüüüüüüüüü","x":44.95,"y":86}},
+{"t":15,"type":"action","name":"step","data":{"level":"level_2","i":16,"note":"üüüüüüüüüüüüüüüüüüüü","x":46.5,"y":84}},
+{"t":15.25,"type":"action","name":"step","data":{"level":"level_2","i":17,"note":"üüüüüüüüüüüüüüüüüüüü","x":47.275,"y":83}},
+{"t":15.75,"type":"action","name":"step","data":{"level":"level_2","i":19,"note":"üüüüüüüüüüüüüüüüüüüü","x":48.825,"y":81}},
+{"t":16,"type":"action","name":"step","data":{"level":"level_2","i":20,"note":"üüüüüüüüüüüüüüüüüüüü","x":49.6,"y":80}},
+{"t":16.5,"type":"action","name":"step","data":{"level":"level_2","i":22,"note":"üüüüüüüüüüüüüüüüüüüü","x":51.15,"y":78}},
+{"t":16.75,"type":"action","name":"step","data":{"level":"level_2","i":23,"note":"üüüüüüüüüüüüüüüüüüüü","x":51.925,"y":77}},
+{"t":17.25,"type":"action","name":"step","data":{"level":"level_2","i":25,"note":"üüüüüüüüüüüüüüüüüüüü","x":53.475,"y":75}},
+{"t":17.5,"type":"action","name":"step","data":{"level":"level_2","i":26,"note":"üüüüüüüüüüüüüüüüüüüü","x":54.25,"y":74}},
+{"t":18,"type":"action","name":"step","data":{"level":"level_2","i":28,"note":"üüüüüüüüüüüüüüüüüüüü","x":55.8,"y":72}},
+{"t":18.25,"type":"action","name":"step","data":{"level":"level_2","i":29,"note":"üüüüüüüüüüüüüüüüüüüü","x":56.575,"y":71}},
+{"t":18.75,"type":"action","name":"step","data":{"level":"level_2","i":31,"note":"üüüüüüüüüüüüüüüüüüüü","x":58.125,"y":69}},
+{"t":19,"type":"action","name":"step","data":{"level":"level_2","i":32,"note":"üüüüüüüüüüüüüüüüüüüü","x":58.9,"y":68}},
+{"t":19.5,"type":"action","name":"step","data":{"level":"level_2","i":34,"note":"üüüüüüüüüüüüüüüüüüüü","x":60.45,"y":66}},
+{"t":19.75,"type":"action","name":"step","data":{"level":"level_2","i":35,"note":"üüüüüüüüüüüüüüüüüüüü","x":61.225,"y":65}},
+{"t":20.25,"type":"action","name":"step","data":{"level":"level_2","i":37,"note":"üüüüüüüüüüüüüüüüüüüü","x":62.775,"y":63}},
+{"t":20.5,"type":"action","name":"step","data":{"level":"level_2","i":38,"note":"üüüüüüüüüüüüüüüüüüüü","x":63.55,"y":62}},
+{"t":21,"type":"action","name":"step","data":{"level":"level_2","i":40,"note":"üüüüüüüüüüüüüüüüüüüü","x":65.1,"y":60}},
+{"t":21.25,"type":"action","name":"step","data":{"level":"level_2","i":41,"note":"üüüüüüüüüüüüüüüüüüüü","x":65.875,"y":59}},
+{"t":21.75,"type":"action","name":"step","data":{"level":"level_2","i":43,"note":"üüüüüüüüüüüüüüüüüüüü","x":67.425,"y":57}},
+{"t":22,"type":"action","name":"step","data":{"level":"level_2","i":44,"note":"üüüüüüüüüüüüüüüüüüüü","x":68.2,"y":56}},
+{"t":22.5,"type":"action","name":"step","data":{"level":"level_2","i":46,"note":"üüüüüüüüüüüüüüüüüüüü","x":69.75,"y":54}},
+{"t":22.75,"type":"action","name":"step","data":{"level":"level_2","i":47,"note":"üüüüüüüüüüüüüüüüüüüü","x":70.525,"y":53}},
+{"t":23.25,"type":"action","name":"step","data":{"level":"level_2","i":49,"note":"üüüüüüüüüüüüüüüüüüüü","x":72.075,"y":51}},
+{"t":23.25,"type":"death","data":{"cause":"saw","level":"level_2","scene":"res://game/level_2.tscn","x":23.25,"y":2.5}},
+{"t":23.5,"type":"action","name":"step","data":{"level":"level_2","i":50,"note":"üüüüüüüüüüüüüüüüüüüü","x":72.85,"y":50}},
+{"t":24,"type":"action","name":"step","data":{"level":"level_2","i":52,"note":"üüüüüüüüüüüüüüüüüüüü","x":74.4,"y":48}},
+{"t":24.25,"type":"action","name":"step","data":{"level":"level_2","i":53,"note":"üüüüüüüüüüüüüüüüüüüü","x":75.175,"y":47}},
+{"t":24.75,"type":"action","name":"step","data":{"level":"level_2","i":55,"note":"üüüüüüüüüüüüüüüüüüüü","x":76.725,"y":45}},
+{"t":25,"type":"action","name":"step","data":{"level":"level_2","i":56,"note":"üüüüüüüüüüüüüüüüüüüü","x":77.5,"y":44}},
+{"t":25.5,"type":"action","name":"step","data":{"level":"level_2","i":58,"note":"üüüüüüüüüüüüüüüüüüüü","x":79.05,"y":42}},
+{"t":25.75,"type":"action","name":"step","data":{"level":"level_2","i":59,"note":"üüüüüüüüüüüüüüüüüüüü","x":79.825,"y":41}},
+{"t":26.25,"type":"action","name":"step","data":{"level":"level_2","i":61,"note":"üüüüüüüüüüüüüüüüüüüü","x":81.375,"y":39}},
+{"t":26.5,"type":"action","name":"step","data":{"level":"level_2","i":62,"note":"üüüüüüüüüüüüüüüüüüüü","x":82.15,"y":38}},
+{"t":27,"type":"action","name":"step","data":{"level":"level_2","i":64,"note":"üüüüüüüüüüüüüüüüüüüü","x":83.7,"y":36}},
+{"t":27.25,"type":"action","name":"step","data":{"level":"level_2","i":65,"note":"üüüüüüüüüüüüüüüüüüüü","x":84.475,"y":35}},
+{"t":27.75,"type":"action","name":"step","data":{"level":"level_2","i":67,"note":"üüüüüüüüüüüüüüüüüüüü","x":86.025,"y":33}},
+{"t":28,"type":"action","name":"step","data":{"level":"level_2","i":68,"note":"üüüüüüüüüüüüüüüüüüüü","x":86.8,"y":32}},
+{"t":28.5,"type":"action","name":"step","data":{"level":"level_2","i":70,"note":"üüüüüüüüüüüüüüüüüüüü","x":88.35,"y":30}},
+{"t":28.75,"type":"action","name":"step","data":{"level":"level_2","i":71,"note":"üüüüüüüüüüüüüüüüüüüü","x":89.125,"y":29}},
+{"t":29.25,"type":"action","name":"step","data":{"level":"level_2","i":73,"note":"üüüüüüüüüüüüüüüüüüüü","x":90.675,"y":27}},
+{"t":29.5,"type":"action","name":"step","data":{"level":"level_2","i":74,"note":"üüüüüüüüüüüüüüüüüüüü","x":91.45,"y":26}},
+{"t":30,"type":"action","name":"step","data":{"level":"level_2","i":76,"note":"üüüüüüüüüüüüüüüüüüüü","x":93,"y":24}},
+{"t":30.25,"type":"action","name":"step","data":{"level":"level_2","i":77,"note":"üüüüüüüüüüüüüüüüüüüü","x":93.775,"y":23}},
+{"t":30.75,"type":"action","name":"step","data":{"level":"level_2","i":79,"note":"üüüüüüüüüüüüüüüüüüüü","x":95.325,"y":21}},
+{"t":31,"type":"action","name":"step","data":{"level":"level_2","i":80,"note":"üüüüüüüüüüüüüüüüüüüü","x":96.1,"y":20}},
+{"t":31.5,"type":"action","name":"step","data":{"level":"level_2","i":82,"note":"üüüüüüüüüüüüüüüüüüüü","x":97.65,"y":18}},
+{"t":31.75,"type":"action","name":"step","data":{"level":"level_2","i":83,"note":"üüüüüüüüüüüüüüüüüüüü","x":98.425,"y":17}},
+{"t":32.25,"type":"action","name":"step","data":{"level":"level_2","i":85,"note":"üüüüüüüüüüüüüüüüüüüü","x":99.975,"y":15}},
+{"t":32.5,"type":"action","name":"step","data":{"level":"level_2","i":86,"note":"üüüüüüüüüüüüüüüüüüüü","x":100.75,"y":14}},
+{"t":33,"type":"action","name":"step","data":{"level":"level_2","i":88,"note":"üüüüüüüüüüüüüüüüüüüü","x":102.3,"y":12}},
+{"t":33.25,"type":"action","name":"step","data":{"level":"level_2","i":89,"note":"üüüüüüüüüüüüüüüüüüüü","x":103.075,"y":11}},
+{"t":33.75,"type":"action","name":"step","data":{"level":"level_2","i":91,"note":"üüüüüüüüüüüüüüüüüüüü","x":104.625,"y":9}},
+{"t":34,"type":"action","name":"step","data":{"level":"level_2","i":92,"note":"üüüüüüüüüüüüüüüüüüüü","x":105.4,"y":8}},
+{"t":34.5,"type":"action","name":"step","data":{"level":"level_2","i":94,"note":"üüüüüüüüüüüüüüüüüüüü","x":106.95,"y":6}},
+{"t":34.75,"type":"action","name":"step","data":{"level":"level_2","i":95,"note":"üüüüüüüüüüüüüüüüüüüü","x":107.725,"y":5}},
+{"t":35.25,"type":"action","name":"step","data":{"level":"level_2","i":97,"note":"üüüüüüüüüüüüüüüüüüüü","x":109.275,"y":3}},
+{"t":35.5,"type":"action","name":"step","data":{"level":"level_2","i":98,"note":"üüüüüüüüüüüüüüüüüüüü","x":110.05,"y":2}},
+{"t":35.75,"type":"death","data":{"cause":"saw","level":"level_2","scene":"res://game/level_2.tscn","x":35.75,"y":2.5}},
+{"t":36,"type":"action","name":"step","data":{"level":"level_2","i":100,"note":"üüüüüüüüüüüüüüüüüüüü","x":111.6,"y":0}},
+{"t":36.25,"type":"action","name":"step","data":{"level":"level_2","i":101,"note":"üüüüüüüüüüüüüüüüüüüü","x":112.375,"y":-1}},
+{"t":36.75,"type":"action","name":"step","data":{"level":"level_2","i":103,"note":"üüüüüüüüüüüüüüüüüüüü","x":113.925,"y":-3}},
+{"t":37,"type":"action","name":"step","data":{"level":"level_2","i":104,"note":"üüüüüüüüüüüüüüüüüüüü","x":114.7,"y":-4}},
+{"t":37.5,"type":"action","name":"step","data":{"level":"level_2","i":106,"note":"üüüüüüüüüüüüüüüüüüüü","x":116.25,"y":-6}},
+{"t":37.75,"type":"action","name":"step","data":{"level":"level_2","i":107,"note":"üüüüüüüüüüüüüüüüüüüü","x":117.025,"y":-7}},
+{"t":38.25,"type":"action","name":"step","data":{"level":"level_2","i":109,"note":"üüüüüüüüüüüüüüüüüüüü","x":118.575,"y":-9}},
+{"t":38.5,"type":"action","name":"step","data":{"level":"level_2","i":110,"note":"üüüüüüüüüüüüüüüüüüüü","x":119.35,"y":-10}},
+{"t":39,"type":"action","name":"step","data":{"level":"level_2","i":112,"note":"üüüüüüüüüüüüüüüüüüüü","x":120.9,"y":-12}},
+{"t":39.25,"type":"action","name":"step","data":{"level":"level_2","i":113,"note":"üüüüüüüüüüüüüüüüüüüü","x":121.675,"y":-13}},
+{"t":39.75,"type":"action","name":"step","data":{"level":"level_2","i":115,"note":"üüüüüüüüüüüüüüüüüüüü","x":123.225,"y":-15}},
+{"t":40,"type":"action","name":"step","data":{"level":"level_2","i":116,"note":"üüüüüüüüüüüüüüüüüüüü","x":124,"y":-16}},
+{"t":40.5,"type":"action","name":"step","data":{"level":"level_2","i":118,"note":"üüüüüüüüüüüüüüüüüüüü","x":125.55,"y":-18}},
+{"t":40.75,"type":"action","name":"step","data":{"level":"level_2","i":119,"note":"üüüüüüüüüüüüüüüüüüüü","x":126.325,"y":-19}},
+{"t":41.25,"type":"action","name":"step","data":{"level":"level_2","i":121,"note":"üüüüüüüüüüüüüüüüüüüü","x":127.875,"y":-21}},
+{"t":41.5,"type":"action","name":"step","data":{"level":"level_2","i":122,"note":"üüüüüüüüüüüüüüüüüüüü","x":128.65,"y":-22}},
+{"t":42,"type":"action","name":"step","data":{"level":"level_2","i":124,"note":"üüüüüüüüüüüüüüüüüüüü","x":130.2,"y":-24}},
+{"t":42.25,"type":"action","name":"step","data":{"level":"level_2","i":125,"note":"üüüüüüüüüüüüüüüüüüüü","x":130.975,"y":-25}},
+{"t":42.75,"type":"action","name":"step","data":{"level":"level_2","i":127,"note":"üüüüüüüüüüüüüüüüüüüü","x":132.525,"y":-27}},
+{"t":43,"type":"action","name":"step","data":{"level":"level_2","i":128,"note":"üüüüüüüüüüüüüüüüüüüü","x":133.3,"y":-28}},
+{"t":43.5,"type":"action","name":"step","data":{"level":"level_2","i":130,"note":"üüüüüüüüüüüüüüüüüüüü","x":134.85,"y":-30}},
+{"t":43.75,"type":"action","name":"step","data":{"level":"level_2","i":131,"note":"üüüüüüüüüüüüüüüüüüüü","x":135.625,"y":-31}},
+{"t":44.25,"type":"action","name":"step","data":{"level":"level_2","i":133,"note":"üüüüüüüüüüüüüüüüüüüü","x":137.175,"y":-33}},
+{"t":44.5,"type":"action","name":"step","data":{"level":"level_2","i":134,"note":"üüüüüüüüüüüüüüüüüüüü","x":137.95,"y":-34}},
+{"t":45,"type":"action","name":"step","data":{"level":"level_2","i":136,"note":"üüüüüüüüüüüüüüüüüüüü","x":139.5,"y":-36}},
+{"t":45.25,"type":"action","name":"step","data":{"level":"level_2","i":137,"note":"üüüüüüüüüüüüüüüüüüüü","x":140.275,"y":-37}},
+{"t":45.75,"type":"action","name":"step","data":{"level":"level_2","i":139,"note":"üüüüüüüüüüüüüüüüüüüü","x":141.825,"y":-39}},
+{"t":46,"type":"action","name":"step","data":{"level":"level_2","i":140,"note":"üüüüüüüüüüüüüüüüüüüü","x":142.6,"y":-40}},
+{"t":46.5,"type":"action","name":"step","data":{"level":"level_2","i":142,"note":"üüüüüüüüüüüüüüüüüüüü","x":144.15,"y":-42}},
+{"t":46.75,"type":"action","name":"step","data":{"level":"level_2","i":143,"note":"üüüüüüüüüüüüüüüüüüüü","x":144.925,"y":-43}},
+{"t":47.25,"type":"action","name":"step","data":{"level":"level_2","i":145,"note":"üüüüüüüüüüüüüüüüüüüü","x":146.475,"y":-45}},
+{"left_out":175}]

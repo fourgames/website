@@ -1,7 +1,8 @@
 extends Control
 
 ## The replay viewer: open a player's data download (the .zip from
-## fourgames.se/privacy, or the sessions.json of an unzipped one), pick a
+## fourgames.se/privacy, or the sessions.json of an unzipped one) or paste a
+## session copied in the feedback dashboard (Game data, Copy for replay), pick a
 ## session, and watch it again -- the level, the path, a marker moving in time
 ## with play/pause at 1x, 4x or 16x, a timeline to scrub with a tick per coin,
 ## death, level complete and setting change, and the events alongside,
@@ -71,7 +72,18 @@ func _unhandled_input(event: InputEvent) -> void:
 #region What it does
 ## Reads a download; the session list shows what is in it. False if it could not.
 func open_file(path: String) -> bool:
-	var result := ExportReader.open(path)
+	return _show(ExportReader.open(path), path.get_file())
+
+
+## Opens the session on the clipboard (the dashboard's "Copy for replay"), or
+## the one in `text`. False, with a word on what to copy, if there is none.
+func paste_session(text := "") -> bool:
+	if text.is_empty() and DisplayServer.has_feature(DisplayServer.FEATURE_CLIPBOARD):
+		text = DisplayServer.clipboard_get()
+	return _show(ExportReader.parse_json(text), "From the clipboard")
+
+
+func _show(result: Dictionary, from: String) -> bool:
 	if not result.ok:
 		_status.text = result.error
 		return false
@@ -79,7 +91,7 @@ func open_file(path: String) -> bool:
 	_session_list.clear()
 	for session: Dictionary in sessions:
 		_session_list.add_item(ExportReader.label(session))
-	_status.text = "%s: %d sessions" % [path.get_file(), sessions.size()]
+	_status.text = "%s: %d sessions" % [from, sessions.size()]
 	if not sessions.is_empty():
 		_session_list.select(0)
 		select_session(0)
@@ -165,6 +177,7 @@ func _build() -> void:
 	var top := HBoxContainer.new()
 	column.add_child(top)
 	_button(top, "Open download…", _choose_file)
+	_button(top, "Paste session", paste_session)
 	_button(top, "Back", _back)
 	_status = Label.new()
 	_status.text = "Download your data on fourgames.se/privacy (sign in with Steam, Download), then open the zip here."

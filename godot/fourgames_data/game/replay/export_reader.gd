@@ -7,8 +7,12 @@ extends RefCounted
 ##                unzipped one, with the rest of the files read from beside it; or
 ##                a JSON file of sessions that carry their own "events"
 ##   parse(files) the same from {name in the zip: its text}, for the tests
+##   parse_json(text)  sessions that carry their own events, as text: what the
+##                feedback dashboard's "Copy for replay" copies (one session from
+##                GET /v1/admin/sessions/<id>, in this same shape), the endpoint's
+##                whole answer, or a JSON file of sessions as above
 ##
-## Either gives {ok, error, sessions}. Each session is its sessions.json row
+## Each gives {ok, error, sessions}. Each session is its sessions.json row
 ## (session_id, app_id, started, ended, game_version, ..., summary, test) plus:
 ##
 ##   events    every batch's events, by seq, then sorted by t (ties kept in order)
@@ -20,6 +24,8 @@ extends RefCounted
 
 const EVENTS_DIR := "events/"
 const NEEDS := "Open fourgames-data.zip from fourgames.se/privacy, or the sessions.json inside it."
+const PASTE_NEEDS := "No session on the clipboard. In the feedback dashboard: Game data, pick a session, " \
+		+ "Copy for replay; then Paste session here."
 
 
 static func open(path: String) -> Dictionary:
@@ -50,21 +56,51 @@ static func _open_json(path: String) -> Dictionary:
 	var data: Variant = _json(text)
 	if data == null:
 		return _fail("%s is not JSON." % path.get_file())
-	if data is Dictionary and data.get("sessions") is Array:
-		data = data.sessions
-	if not data is Array:
-		return _fail(NEEDS)
-	var embedded := false
-	for row: Variant in data:
-		if row is Dictionary and row.get("events") is Array:
-			embedded = true
-	if embedded:
-		return _from_rows(data, {})
+	var rows: Variant = data.sessions if data is Dictionary and data.get("sessions") is Array else data
+	if not rows is Array:
+		# One session from the admin endpoint, saved to a file.
+		rows = _rows_of(data)
+		if rows.is_empty():
+			return _fail(NEEDS)
+	if _embedded(rows):
+		return _from_rows(rows, {})
 	# An unzipped download: the other files are next to sessions.json.
 	var base := path.get_base_dir()
 	var files := {"sessions.json": text}
 	_read_folder(base, "", files, 0)
 	return parse(files)
+
+
+## Sessions with their own events, from text (the clipboard): see the top.
+static func parse_json(text: String) -> Dictionary:
+	var rows := _rows_of(_json(text.strip_edges()))
+	if rows.is_empty():
+		return _fail(PASTE_NEEDS)
+	if not _embedded(rows):
+		return _fail("Those sessions have no events with them (a download's sessions.json): open the whole "
+				+ "download with Open download… instead.")
+	return _from_rows(rows, {})
+
+
+## The session rows in what JSON gave: a list of them, {"sessions": [...]},
+## the admin endpoint's {"ok": true, "session": {...}}, or one session.
+static func _rows_of(data: Variant) -> Array:
+	if data is Dictionary and data.get("sessions") is Array:
+		data = data.sessions
+	elif data is Dictionary and data.get("session") is Dictionary:
+		data = [data.session]
+	elif data is Dictionary and data.has("session_id"):
+		data = [data]
+	if not data is Array:
+		return []
+	return (data as Array).filter(func(row: Variant) -> bool: return row is Dictionary and row.has("session_id"))
+
+
+static func _embedded(rows: Array) -> bool:
+	for row: Variant in rows:
+		if row is Dictionary and row.get("events") is Array:
+			return true
+	return false
 
 
 ## Every .json under `folder`, by its path inside it, a few levels down.
@@ -145,7 +181,9 @@ static func _from_rows(rows: Array, extra: Dictionary) -> Dictionary:
 		if not session.settings is Dictionary:
 			session.settings = {}
 		session["crashes"] = extra.get("crashes", {}).get(sid, session.get("crashes", []))
-		session["reported"] = extra.get("reported", {}).get(sid, {})
+		session["reported"] = extra.get("reported", {}).get(sid, session.get("reported", {}))
+		if not session.reported is Dictionary:
+			session.reported = {}
 		session["duration"] = duration_of(session)
 		sessions.append(session)
 	# Newest first; the times are ISO strings, which sort as they read.

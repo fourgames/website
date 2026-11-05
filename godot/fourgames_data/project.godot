@@ -23,7 +23,6 @@ TestGame="*res://game/test_game.gd"
 [display]
 
 window/stretch/mode="canvas_items"
-window/stretch/aspect="keep"
 
 [editor_plugins]
 

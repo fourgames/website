@@ -1,0 +1,45 @@
+Here is a play session from the fourgames_data test project (Four Games' player-data test game); it was downloaded from fourgames.se/privacy and summarised by the project's replay viewer.
+
+== Session ==
+id aaaaaaaa-0000-4000-8000-000000000001, app 5207970, a TEST session
+started 2026-11-05T14:00:00Z, length 0:40 (active 0:38, idle 0:02)
+game 1.0.0 (build 26413834), Godot 4.7.0, macos, locale en, from SE
+ended cleanly at 2026-11-05T14:01:00Z on res://game/level_2.tscn
+end summary: 21 events, 3 actions, 1 errors, session 4 on this install (normal)
+
+== Levels ==
+level_1 "First steps": entered 0:01, completed at 0:30 (29 s on the level), coins 1/8, deaths 1
+level_2 "Saw mill": entered 0:31, not completed, coins 0/10, deaths 0
+total: 1 coins, 1 deaths
+
+== Deaths ==
+0:06 level_1, spikes at (400, 208)
+
+== Settings ==
+at start: show_fps=false, volume=0.8, window_mode=windowed
+0:10 volume: 0.8 -> 0.5
+
+== Performance (per scene and screen) ==
+boot: 812 ms to the first frame, 900 ms to playable (normal)
+level_1: 60.0 fps avg, min (1% low) 50.0, worst frame 30.0 ms, 0 stutters (frames over 50 ms), 1200 frames
+level_1, pause screen: 30.0 fps avg, min (1% low) 20.0, worst frame 70.0 ms, 2 stutters (frames over 50 ms), 300 frames
+
+== Hardware ==
+macOS Tahoe (26.1) | Apple M2 (8 cores) | 16 GB RAM | Apple M2 | gl_compatibility | 2560x1440 @ 120 Hz
+
+== Errors and crashes ==
+0:35 script_error: boom (res://game/level.gd:3 in _touch)
+this launch reported a crash of session bbbbbbbb-0000-4000-8000-000000000002 (SIGSEGV)
+
+== Key events (JSON) ==
+[{"t":0,"type":"load","name":"boot","data":{"boot_kind":"normal","boot_ms":812,"to_play_ms":900,"by":"mark_playing"}},
+{"t":0.5,"type":"screen","data":{"name":"","from":"title"}},
+{"t":1,"type":"load","name":"scene","data":{"scene":"res://game/level_1.tscn","from":"res://game/title.tscn","ms":12.5}},
+{"t":1,"type":"progress","data":{"level":"level_1","coins":0,"deaths":0}},
+{"t":5.2,"type":"action","name":"coin","data":{"level":"level_1","coin":0,"x":208,"y":144,"level_coins":1,"coins":1}},
+{"t":6,"type":"death","data":{"cause":"spikes","level":"level_1","coins":1,"scene":"res://game/level_1.tscn","x":400,"y":208,"rot":0}},
+{"t":6.7,"type":"action","name":"respawn","data":{"level":"level_1","level_deaths":1}},
+{"t":10,"type":"setting_changed","data":{"key":"volume","old":0.8,"new":0.5}},
+{"t":30,"type":"action","name":"level_complete","data":{"level":"level_1","time_s":29,"coins":1,"coins_max":8,"deaths":1}},
+{"t":31,"type":"load","name":"scene","data":{"scene":"res://game/level_2.tscn","from":"res://game/level_1.tscn","ms":8}},
+{"t":35,"type":"error","name":"script_error","data":{"message":"boom","file":"res://game/level.gd","line":3,"function":"_touch"}}]

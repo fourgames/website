@@ -1,5 +1,5 @@
-"""The HTTP side: the games' endpoints, the privacy page's endpoints, and one internal lookup for
-our own tools (localhost only).
+"""The HTTP side: the games' endpoints, the privacy page's endpoints, one internal lookup for
+our own tools (localhost only), and the owner's endpoints for the feedback dashboard (admin.py).
 
 Caddy forwards https://api.fourgames.se/gamedata/* here. The routes answer both with and without
 the /gamedata prefix, so it works whether Caddy strips it (handle_path) or not (handle).
@@ -29,7 +29,7 @@ from urllib.parse import urlencode
 import aiohttp
 from aiohttp import web
 
-from . import export, retention, validate
+from . import admin, export, retention, validate
 from .config import Config
 from .geo import Geo, open_mmdb
 from .limits import RateLimiter, Refused, read_json
@@ -50,9 +50,13 @@ DISK = web.AppKey("disk", dict)
 USAGE = web.AppKey("usage", dict)
 STEAM_URLS = web.AppKey("steam_urls", tuple)
 GEO = web.AppKey("geo", Geo)
+# The pids of GAMEDATA_ADMIN_STEAMIDS: a signed-in cookie with one of them is the owner (admin.py).
+ADMIN_PIDS = web.AppKey("admin_pids", frozenset)
 
 COOKIE = "fg_privacy"
 COOKIE_TTL = 3600
+# An admin's sign-in (the dashboard stays open all day, on a TV say) lasts longer.
+ADMIN_COOKIE_TTL = 12 * 3600
 # The browser half of the sign-in's state: it ties Steam's answer to the browser that started it.
 STATE_COOKIE = "fg_openid"
 STATE_TTL = 600
@@ -80,6 +84,10 @@ DEFAULT_RETURN = "/privacy"
 
 # The privacy page's routes (without the /gamedata prefix): CORS with credentials for SITE_ORIGIN.
 PLAYER_PATHS = frozenset({"/v1/me", "/v1/me/optout", "/v1/me/export", "/v1/me/anonymise", "/v1/auth/signout"})
+# The owner's routes (admin.py): the same CORS, and GitHub's headers the dashboard reads.
+ADMIN_PREFIX = "/v1/admin/"
+ADMIN_EXPOSED = ("ETag, Last-Modified, Link, Retry-After, X-RateLimit-Limit, X-RateLimit-Remaining, "
+                 "X-RateLimit-Reset, X-RateLimit-Used, X-RateLimit-Resource")
 
 
 class Limits:
@@ -96,6 +104,10 @@ class Limits:
         self.page_ip = RateLimiter(120, 600, clock)
         self.sign_in_ip = RateLimiter(20, 600, clock)
         self.export_pid = RateLimiter(5, 3600, clock)
+        # The dashboard reads a dozen files at a load, every game's on All games, and asks again
+        # every 5 minutes.
+        self.admin_ip = RateLimiter(1200, 600, clock)
+        self.admin_pid = RateLimiter(900, 600, clock)
 
 
 # Helpers
@@ -388,13 +400,19 @@ async def crash(request: web.Request) -> web.Response:
 # The privacy page's side
 
 
-def signed_in_pid(request: web.Request) -> str | None:
+def cookie_claims(request: web.Request) -> dict[str, Any] | None:
+    """The sign-in cookie's contents (p: the pid, e: its expiry), if it's valid."""
     try:
         claims = verify(request.app[CONFIG].cookie_secret, "cookie", request.cookies.get(COOKIE, ""))
     except TokenError:
         return None
     pid = claims.get("p")
-    return pid if isinstance(pid, str) and PID.match(pid) else None
+    return claims if isinstance(pid, str) and PID.match(pid) else None
+
+
+def signed_in_pid(request: web.Request) -> str | None:
+    claims = cookie_claims(request)
+    return claims["p"] if claims else None
 
 
 def require_pid(request: web.Request) -> str:
@@ -533,9 +551,10 @@ async def auth_callback(request: web.Request) -> web.Response:
         return failed(f"Steam unavailable ({error})")
     pid = make_pid(cfg.pepper, steamid)
     del steamid
-    log.info("signed in %s", short(pid))
+    ttl = ADMIN_COOKIE_TTL if pid in request.app[ADMIN_PIDS] else COOKIE_TTL
+    log.info("signed in %s%s", short(pid), " (admin)" if ttl == ADMIN_COOKIE_TTL else "")
     response = redirect(site_url(cfg, back))
-    set_cookie(response, cfg, sign(cfg.cookie_secret, "cookie", {"p": pid}, COOKIE_TTL), COOKIE_TTL)
+    set_cookie(response, cfg, sign(cfg.cookie_secret, "cookie", {"p": pid}, ttl), ttl)
     response.set_cookie(STATE_COOKIE, "", max_age=0, path="/", secure=True, httponly=True, samesite="Lax")
     return response
 
@@ -639,18 +658,21 @@ async def on_prepare(request: web.Request, response: web.StreamResponse) -> None
     response.headers.setdefault("Cache-Control", "no-store")
     response.headers.setdefault("X-Content-Type-Options", "nosniff")
     response.headers.setdefault("Referrer-Policy", "no-referrer")
-    if bare_path(request.path) in PLAYER_PATHS:
+    path = bare_path(request.path)
+    is_admin = path.startswith(ADMIN_PREFIX)
+    if path in PLAYER_PATHS or is_admin:
         cfg = request.app[CONFIG]
-        response.headers["Vary"] = "Origin"
+        # The admin answers differ by who's signed in, and a GitHub file may be kept a minute.
+        response.headers["Vary"] = "Origin, Cookie" if is_admin else "Origin"
         if request.headers.get("Origin", "").rstrip("/") == cfg.site_origin:
             response.headers["Access-Control-Allow-Origin"] = cfg.site_origin
             response.headers["Access-Control-Allow-Credentials"] = "true"
             if request.method == "OPTIONS":
-                response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+                response.headers["Access-Control-Allow-Methods"] = "GET, PUT, OPTIONS" if is_admin else "GET, POST, OPTIONS"
                 response.headers["Access-Control-Allow-Headers"] = "Content-Type"
                 response.headers["Access-Control-Max-Age"] = "600"
             else:
-                response.headers["Access-Control-Expose-Headers"] = "Content-Disposition"
+                response.headers["Access-Control-Expose-Headers"] = ADMIN_EXPOSED if is_admin else "Content-Disposition"
 
 
 HTTP_ERRORS = {400: "bad_request", 404: "not_found", 405: "method_not_allowed", 413: "too_large"}
@@ -716,7 +738,7 @@ async def _retention(app: web.Application):
 
 def make_app(config: Config, *, steam_api: str = PARTNER_API, steam_openid: str = OPENID_LOGIN,
              run_retention: bool = True, limits: Limits | None = None,
-             geo_opener=open_mmdb) -> web.Application:
+             geo_opener=open_mmdb, github_api: str | None = None) -> web.Application:
     # auto_decompress off: read_json unpacks gzip itself, with a cap. aiohttp's own unpacking has
     # none, so a small gzip bomb could fill the memory. client_max_size is a backstop; read_json
     # enforces the real per-route caps while streaming.
@@ -732,7 +754,9 @@ def make_app(config: Config, *, steam_api: str = PARTNER_API, steam_openid: str 
     app[USAGE] = {}
     app[STEAM_URLS] = (steam_api, steam_openid)
     app[GEO] = Geo(config.geoip_db, opener=geo_opener)
+    app[ADMIN_PIDS] = frozenset(make_pid(config.pepper, steamid) for steamid in config.admin_steamids)
     app.cleanup_ctx.append(_steam)
+    app.cleanup_ctx.append(admin.github_context(github_api or admin.GITHUB_API))
     if run_retention:
         app.cleanup_ctx.append(_retention)
     app.on_response_prepare.append(on_prepare)
@@ -756,6 +780,9 @@ def make_app(config: Config, *, steam_api: str = PARTNER_API, steam_openid: str 
         add("POST", f"{v1}/me/anonymise", me_anonymise)
         for path in PLAYER_PATHS:
             add("OPTIONS", f"{prefix}{path}", preflight)
+
+        # The owner's (admin.py): signed in with one of GAMEDATA_ADMIN_STEAMIDS.
+        admin.add_routes(app, prefix)
 
         # Caddy answers 404 for /gamedata/v1/internal/* from outside; check_internal refuses too.
         add("POST", f"{v1}/internal/lookup", internal_lookup)

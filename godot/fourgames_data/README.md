@@ -54,7 +54,10 @@ alone unless given `-- --steam`; `-- --fake-steam` uses the tests' stand-in
    gives `fourgames-data.zip` (every session, its events, hardware, settings and
    crashes; test sessions say `"test": true`).
 2. In the game: Replay viewer, then "Open download…" and pick the zip (or the
-   `sessions.json` of an unzipped one; or drop the file on the window).
+   `sessions.json` of an unzipped one; or drop the file on the window). Or, for
+   anyone's session: on the feedback dashboard (fourgames.se/fb-dash, the owner's
+   Steam sign-in), Game data, pick the session, "Copy for replay"; then "Paste
+   session" here.
 3. Pick a session (date, length, app, TEST, events). Play/Pause, 1×/4×/16×, and
    the timeline to scrub: a tick per coin (yellow), death (red), level complete
    (green), setting change (purple), error (pink). The events on the right
@@ -64,7 +67,9 @@ alone unless given `-- --steam`; `-- --fake-steam` uses the tests' stand-in
 4. "Copy for Claude" puts a summary on the clipboard and shows it too: the
    session, the levels, coins, deaths (where, when), settings and their
    changes, fps per scene and screen, the machine, errors and crashes, and the
-   key events as JSON (about 15 KB at most). Paste it into a chat.
+   key events as JSON (about 15 KB at most). Paste it into a chat. The dashboard's
+   "Copy for Claude" gives the same text: the server builds it with a port of
+   `summary.gd` (`server/gamedata/summary.py`).
 
 Without the editor:
 
@@ -92,7 +97,14 @@ G="$G" sh tests/tools/play_check.sh .
 
 `run_tests` prints `TESTS: N passed, M failed` and exits 0 or 1: the addon's
 suites, the levels (every coin and goal reachable), the replay reader and
-timeline (`test_replay`) and the summary (`test_summary`).
+timeline (`test_replay`, with Paste session) and the summary (`test_summary`).
+`test_summary` also checks that `summary.gd` still writes
+`tests/fixtures/summary/<session>.txt` for each session of
+`tests/fixtures/summary_sessions.json`; the server's port is tested against the
+same files. After changing `summary.gd` on purpose, write them again from a copy
+(`"$G" --headless --path . --script res://tests/tools/summary_golden.gd -- "$PWD/tests/fixtures/summary"`,
+then copy that folder back) and port the change to `server/gamedata/summary.py`
+until `python -m pytest gamedata/tests/test_admin.py` passes.
 `live_check.sh` starts `tests/tools/fake_server.py`, plays a session over the
 real HTTPRequest and the quit's blocking HTTPClient, checks what the server got,
 and checks a quit with the server gone stays inside its 1.5 s budget.

@@ -96,6 +96,62 @@ func test_a_json_of_sessions_with_their_events_opens() -> void:
 	assert_eq(result.sessions[0].events.map(func(e: Dictionary) -> String: return e.name), ["a", "b"])
 
 
+func test_a_pasted_session_opens() -> void:
+	# The dashboard's "Copy for replay": one session from GET /v1/admin/sessions/<id>.
+	var rows: Array = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/summary_sessions.json"))
+	var a: Dictionary = rows[0]
+	for text: String in [JSON.stringify(a), JSON.stringify({"ok": true, "session": a}),
+			JSON.stringify({"sessions": [a]}), "  " + JSON.stringify([a]) + "\n"]:
+		var result := ExportReader.parse_json(text)
+		assert_true(result.ok, str(result.error))
+		assert_eq(result.sessions.size(), 1)
+		var session: Dictionary = result.sessions[0]
+		assert_eq(session.session_id, Fixture.A)
+		assert_eq(session.events.size(), Fixture.batch_0().size() + Fixture.batch_1().size())
+		assert_eq(session.duration, 40.0)
+		assert_eq(session.hardware.gpu, "Apple M2")
+		assert_eq(session.settings.volume, 0.8)
+		assert_eq(session.reported.crashed_session_id, Fixture.B, "the crash it reported comes along")
+	# (The file as written, not stringified again here: Godot writes a vertical tab as \v,
+	# which its own parser then refuses.)
+	var both := ExportReader.parse_json(FileAccess.get_file_as_string("res://tests/fixtures/summary_sessions.json"))
+	assert_true(both.ok, str(both.error))
+	assert_eq(both.sessions.size(), 4)
+	var b: Array = both.sessions.filter(func(row: Dictionary) -> bool: return row.session_id == Fixture.B)
+	assert_eq(b.size(), 1)
+	assert_eq(b[0].crashes[0].log_tail if not b.is_empty() else null, "starting\nloading world\nProgram crashed with signal 11")
+	# The same session read from a download and pasted: the same events.
+	var from_download: Dictionary = _a()
+	var pasted: Dictionary = ExportReader.parse_json(JSON.stringify(a)).sessions[0]
+	assert_eq(pasted.events, from_download.events)
+
+
+func test_what_is_not_a_pasted_session_says_so() -> void:
+	for text: String in ["", "hello", "{}", "[1, 2]", JSON.stringify({"ok": false, "error": "not_admin"})]:
+		var result := ExportReader.parse_json(text)
+		assert_false(result.ok, text)
+		assert_true(str(result.error).contains("Copy for replay"), str(result.error))
+	# A download's sessions.json on its own: no events to replay.
+	var rows: Array = JSON.parse_string(Fixture.files()["sessions.json"])
+	var result := ExportReader.parse_json(JSON.stringify(rows))
+	assert_false(result.ok)
+	assert_true(str(result.error).contains("Open download"), str(result.error))
+
+
+func test_the_viewer_pastes_a_session() -> void:
+	var viewer: Node = load("res://game/replay/viewer.tscn").instantiate()
+	(Engine.get_main_loop() as SceneTree).root.add_child(viewer)
+	var rows: Array = JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/summary_sessions.json"))
+	assert_true(viewer.paste_session(JSON.stringify({"ok": true, "session": rows[1]})))
+	assert_eq(viewer.sessions.size(), 1)
+	assert_eq(viewer.timeline.session.session_id, Fixture.B)
+	assert_false(viewer._copy.disabled, "Copy for Claude works on it too")
+	assert_false(viewer.paste_session("not a session"))
+	assert_true(viewer._status.text.contains("Copy for replay"), viewer._status.text)
+	assert_eq(viewer.sessions.size(), 1, "what was open stays open")
+	viewer.free()
+
+
 func test_what_is_not_a_download_says_so() -> void:
 	assert_false(ExportReader.open(scratch.path_join("missing.zip")).ok)
 	var text := scratch.path_join("notes.txt")

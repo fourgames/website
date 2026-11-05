@@ -1,0 +1,35 @@
+Here is a play session of Steam app 999, downloaded from fourgames.se/privacy and summarised by the fourgames_data replay viewer.
+
+== Session ==
+id bbbbbbbb-0000-4000-8000-000000000002, app 999
+started 2026-10-01T10:00:00Z, length 0:12
+game 0.3 (build ?), Godot ?, windows, locale ?
+no end received (the game crashed, was killed, or is still uploading)
+
+== Scenes ==
+res://world.tscn
+1 actions, 1 deaths
+
+== Deaths ==
+0:09 res://world.tscn, fell at (12, 6)
+
+== Settings ==
+at start: (none sent)
+no changes
+
+== Performance (per scene and screen) ==
+no perf events
+
+== Hardware ==
+not sent (no hardware consent, or none in the download)
+
+== Errors and crashes ==
+this session crashed: SIGSEGV, reported 2026-11-05T14:00:01Z by session aaaaaaaa-0000-4000-8000-000000000001
+log tail (last 3 lines):
+  starting
+  loading world
+  Program crashed with signal 11
+
+== Key events (JSON) ==
+[{"t":9,"type":"death","data":{"cause":"fell","scene":"res://world.tscn","x":12,"y":-3,"z":6,"yaw":0}},
+{"t":12.5,"type":"action","name":"jump","data":{}}]

@@ -1,0 +1,5729 @@
+[
+ {
+  "session_id": "aaaaaaaa-0000-4000-8000-000000000001",
+  "app_id": 5207970,
+  "started": "2026-11-05T14:00:00Z",
+  "last_seen": "2026-11-05T14:01:00Z",
+  "ended": "2026-11-05T14:01:00Z",
+  "game_version": "1.0.0",
+  "build_id": "26413834",
+  "godot_version": "4.7.0",
+  "platform": "macos",
+  "locale": "en",
+  "country": "SE",
+  "region": "Stockholm",
+  "consent_hardware": true,
+  "previous_crash": null,
+  "boot_kind": "normal",
+  "input_type": "keyboard",
+  "input_controller": null,
+  "dlc": null,
+  "owns_full_game": null,
+  "batches": 2,
+  "events": [
+   {
+    "t": 0.0,
+    "type": "load",
+    "name": "boot",
+    "data": {
+     "boot_kind": "normal",
+     "boot_ms": 812,
+     "to_play_ms": 900,
+     "by": "mark_playing"
+    }
+   },
+   {
+    "t": 0.5,
+    "type": "screen",
+    "data": {
+     "name": "",
+     "from": "title"
+    }
+   },
+   {
+    "t": 1.0,
+    "type": "load",
+    "name": "scene",
+    "data": {
+     "scene": "res://game/level_1.tscn",
+     "from": "res://game/title.tscn",
+     "ms": 12.5
+    }
+   },
+   {
+    "t": 1.0,
+    "type": "position",
+    "data": {
+     "scene": "res://game/level_1.tscn",
+     "x": 80.0,
+     "y": 336.0,
+     "rot": 0.0
+    }
+   },
+   {
+    "t": 1.0,
+    "type": "progress",
+    "data": {
+     "level": "level_1",
+     "coins": 0,
+     "deaths": 0
+    }
+   },
+   {
+    "t": 1.5,
+    "type": "position",
+    "data": {
+     "scene": "res://game/level_1.tscn",
+     "x": 100.0,
+     "y": 336.0,
+     "rot": 0.0
+    }
+   },
+   {
+    "t": 2.0,
+    "type": "position",
+    "data": {
+     "scene": "res://game/level_1.tscn",
+     "x": 120.0,
+     "y": 336.0,
+     "rot": 0.0
+    }
+   },
+   {
+    "t": 5.0,
+    "type": "position",
+    "data": {
+     "scene": "res://game/level_1.tscn",
+     "x": 200.0,
+     "y": 336.0,
+     "rot": 0.0
+    }
+   },
+   {
+    "t": 5.2,
+    "type": "action",
+    "name": "coin",
+    "data": {
+     "level": "level_1",
+     "coin": 0,
+     "x": 208.0,
+     "y": 144.0,
+     "level_coins": 1,
+     "coins": 1
+    }
+   },
+   {
+    "t": 6.0,
+    "type": "death",
+    "data": {
+     "cause": "spikes",
+     "level": "level_1",
+     "coins": 1,
+     "scene": "res://game/level_1.tscn",
+     "x": 400.0,
+     "y": 208.0,
+     "rot": 0.0
+    }
+   },
+   {
+    "t": 6.7,
+    "type": "action",
+    "name": "respawn",
+    "data": {
+     "level": "level_1",
+     "level_deaths": 1
+    }
+   },
+   {
+    "t": 6.7,
+    "type": "position",
+    "data": {
+     "scene": "res://game/level_1.tscn",
+     "x": 80.0,
+     "y": 336.0,
+     "rot": 0.0
+    }
+   },
+   {
+    "t": 7.2,
+    "type": "position",
+    "data": {
+     "scene": "res://game/level_1.tscn",
+     "x": 100.0,
+     "y": 336.0,
+     "rot": 0.0
+    }
+   },
+   {
+    "t": 10.0,
+    "type": "setting_changed",
+    "data": {
+     "key": "volume",
+     "old": 0.8,
+     "new": 0.5
+    }
+   },
+   {
+    "t": 20.0,
+    "type": "perf",
+    "data": {
+     "why": "interval",
+     "scene": "res://game/level_1.tscn",
+     "screen": "",
+     "frames": 1200,
+     "fps_avg": 60.0,
+     "fps_1pct_low": 50.0,
+     "frame_ms_max": 30.0,
+     "slow_frames": 0
+    }
+   },
+   {
+    "t": 25.0,
+    "type": "perf",
+    "data": {
+     "why": "interval",
+     "scene": "res://game/level_1.tscn",
+     "screen": "pause",
+     "frames": 300,
+     "fps_avg": 30.0,
+     "fps_1pct_low": 20.0,
+     "frame_ms_max": 70.0,
+     "slow_frames": 2
+    }
+   },
+   {
+    "t": 30.0,
+    "type": "action",
+    "name": "level_complete",
+    "data": {
+     "level": "level_1",
+     "time_s": 29.0,
+     "coins": 1,
+     "coins_max": 8,
+     "deaths": 1
+    }
+   },
+   {
+    "t": 31.0,
+    "type": "load",
+    "name": "scene",
+    "data": {
+     "scene": "res://game/level_2.tscn",
+     "from": "res://game/level_1.tscn",
+     "ms": 8.0
+    }
+   },
+   {
+    "t": 31.0,
+    "type": "position",
+    "data": {
+     "scene": "res://game/level_2.tscn",
+     "x": 80.0,
+     "y": 560.0,
+     "rot": 0.0
+    }
+   },
+   {
+    "t": 35.0,
+    "type": "error",
+    "name": "script_error",
+    "data": {
+     "message": "boom",
+     "file": "res://game/level.gd",
+     "line": 3,
+     "function": "_touch"
+    }
+   }
+  ],
+  "last_t": 35.0,
+  "last_progress": null,
+  "last_progress_t": null,
+  "playtime_s": 40.0,
+  "end_seq": 2,
+  "summary": {
+   "events": 21,
+   "actions": 3,
+   "errors": 1,
+   "session_number": 4,
+   "boot_kind": "normal",
+   "playtime_s": 40
+  },
+  "active_s": 38.0,
+  "idle_s": 2.0,
+  "first_session": false,
+  "last_scene": "res://game/level_2.tscn",
+  "last_screen": "",
+  "test": true,
+  "hardware": {
+   "session_id": "aaaaaaaa-0000-4000-8000-000000000001",
+   "app_id": 5207970,
+   "created": "2026-11-05T14:00:00Z",
+   "os": "macOS Tahoe (26.1)",
+   "cpu": "Apple M2",
+   "cpu_cores": 8,
+   "ram_mb": 16384,
+   "gpu": "Apple M2",
+   "gpu_driver": "",
+   "renderer": "gl_compatibility",
+   "screen_w": 2560,
+   "screen_h": 1440,
+   "refresh_hz": 120.0,
+   "steam_deck": false
+  },
+  "settings": {
+   "volume": 0.8,
+   "show_fps": false,
+   "window_mode": "windowed"
+  },
+  "crashes": [],
+  "reported": {
+   "crash_id": "c1",
+   "app_id": 5207970,
+   "session_id": "aaaaaaaa-0000-4000-8000-000000000001",
+   "crashed_session_id": "bbbbbbbb-0000-4000-8000-000000000002",
+   "game_version": "1.0.0",
+   "signal": "SIGSEGV",
+   "os": "macOS",
+   "received": "2026-11-05T14:00:01Z",
+   "events": 0,
+   "test": true,
+   "log_file": null,
+   "log_tail": "starting\nloading world\nProgram crashed with signal 11",
+   "last_events": []
+  }
+ },
+ {
+  "session_id": "bbbbbbbb-0000-4000-8000-000000000002",
+  "app_id": 999,
+  "started": "2026-10-01T10:00:00Z",
+  "ended": null,
+  "game_version": "0.3",
+  "platform": "windows",
+  "playtime_s": null,
+  "summary": null,
+  "test": false,
+  "events": [
+   {
+    "t": 1.0,
+    "type": "position",
+    "data": {
+     "scene": "res://world.tscn",
+     "x": 0.0,
+     "y": 1.0,
+     "z": 0.0,
+     "yaw": 0.0
+    }
+   },
+   {
+    "t": 4.0,
+    "type": "position",
+    "data": {
+     "scene": "res://world.tscn",
+     "x": 10.0,
+     "y": 1.0,
+     "z": 5.0,
+     "yaw": 0.0
+    }
+   },
+   {
+    "t": 9.0,
+    "type": "death",
+    "data": {
+     "cause": "fell",
+     "scene": "res://world.tscn",
+     "x": 12.0,
+     "y": -3.0,
+     "z": 6.0,
+     "yaw": 0.0
+    }
+   },
+   {
+    "t": 12.5,
+    "type": "action",
+    "name": "jump",
+    "data": {}
+   }
+  ],
+  "hardware": {},
+  "settings": {},
+  "crashes": [
+   {
+    "crash_id": "c1",
+    "app_id": 5207970,
+    "session_id": "aaaaaaaa-0000-4000-8000-000000000001",
+    "crashed_session_id": "bbbbbbbb-0000-4000-8000-000000000002",
+    "game_version": "1.0.0",
+    "signal": "SIGSEGV",
+    "os": "macOS",
+    "received": "2026-11-05T14:00:01Z",
+    "events": 0,
+    "test": true,
+    "log_file": null,
+    "log_tail": "starting\nloading world\nProgram crashed with signal 11",
+    "last_events": []
+   }
+  ],
+  "reported": {}
+ },
+ {
+  "session_id": "cccccccc-0000-4000-8000-000000000003",
+  "app_id": 3958210,
+  "started": "2026-11-04T09:30:00Z",
+  "ended": "2026-11-04T09:45:00Z",
+  "game_version": 1.5,
+  "build_id": 26413834,
+  "godot_version": null,
+  "platform": "linux",
+  "locale": "sv",
+  "country": null,
+  "playtime_s": null,
+  "active_s": null,
+  "idle_s": null,
+  "last_scene": null,
+  "test": false,
+  "summary": {
+   "events": 22.0,
+   "actions": "3",
+   "errors": null,
+   "session_number": 2.5,
+   "boot_kind": null,
+   "playtime_s": 13.75,
+   "active_s": 12.25,
+   "idle_s": 1.5,
+   "last_scene": "res://maps/cave.level.tscn"
+  },
+  "events": [
+   {
+    "t": 3.25,
+    "type": "load",
+    "name": "scene",
+    "data": {
+     "scene": "res://maps\\forest.tscn",
+     "ms": 0.57
+    }
+   },
+   {
+    "t": 0.1,
+    "type": "load",
+    "name": "boot",
+    "data": {
+     "boot_kind": "first_install",
+     "boot_ms": 1234.5,
+     "to_play_ms": null
+    }
+   },
+   {
+    "type": "action",
+    "name": "no time"
+   },
+   {
+    "t": "7",
+    "type": "action",
+    "name": "a string time"
+   },
+   {
+    "t": 4,
+    "type": "position",
+    "data": {
+     "scene": "res://maps\\forest.tscn",
+     "x": 12.99999999,
+     "y": -7.5
+    }
+   },
+   {
+    "t": 4.333333333333333,
+    "type": "death",
+    "data": {
+     "cause": null,
+     "scene": "res://maps\\forest.tscn",
+     "x": 12.99999999,
+     "y": -0.6
+    }
+   },
+   {
+    "t": 5.0,
+    "type": "death",
+    "data": {
+     "scene": "res://maps\\forest.tscn"
+    }
+   },
+   {
+    "t": 6.5,
+    "type": "setting_changed",
+    "data": {
+     "key": "graphics",
+     "old": {
+      "shadows": 2,
+      "aa": "msaa_4x",
+      "scale": 0.57
+     },
+     "new": [
+      1,
+      2.5,
+      null,
+      true
+     ]
+    }
+   },
+   {
+    "t": 6.6,
+    "type": "setting_changed",
+    "data": {
+     "key": "name",
+     "old": "a long setting value a long setting value a long setting value a long setting value a long setting value a long setting value ",
+     "new": null
+    }
+   },
+   {
+    "t": 6.7,
+    "type": "setting_changed",
+    "data": {
+     "key": "fov",
+     "old": 59.94,
+     "new": 1000000000000000.0
+    }
+   },
+   {
+    "t": 6.8,
+    "type": "setting_changed",
+    "data": {
+     "old": 0.30000000000000004,
+     "new": 12.345678901234567
+    }
+   },
+   {
+    "t": 7.0,
+    "type": "perf",
+    "data": {
+     "why": "interval",
+     "scene": "res://maps\\forest.tscn",
+     "screen": null,
+     "frames": 333,
+     "fps_avg": 59.94,
+     "fps_1pct_low": 41.25,
+     "frame_ms_max": 33.333333333333336,
+     "slow_frames": 1.0
+    }
+   },
+   {
+    "t": 8.0,
+    "type": "perf",
+    "data": {
+     "why": "scene_change",
+     "scene": "res://maps\\forest.tscn",
+     "screen": "map",
+     "frames": 120,
+     "fps_avg": 57.123456789,
+     "frame_ms_max": 18.75,
+     "slow_frames": 0
+    }
+   },
+   {
+    "t": 8.0,
+    "type": "load",
+    "name": "scene",
+    "data": {
+     "scene": "res://maps/cave.level.tscn",
+     "ms": 101
+    }
+   },
+   {
+    "t": 9.0,
+    "type": "perf",
+    "data": {
+     "why": "interval",
+     "scene": "res://maps/cave.level.tscn",
+     "screen": "",
+     "frames": 0,
+     "fps_avg": 60
+    }
+   },
+   {
+    "t": 9.5,
+    "type": "perf",
+    "data": {
+     "why": "interval",
+     "scene": "",
+     "screen": "menu",
+     "frames": 10,
+     "fps_avg": 0
+    }
+   },
+   {
+    "t": 10.0,
+    "type": "error",
+    "data": {
+     "message": "bad \u0001 thing\ttab \u000b vt \"quoted\" back\\slash 😀   éxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+     "file": null,
+     "line": 12.0
+    }
+   },
+   {
+    "t": 10.5,
+    "type": "error",
+    "name": null,
+    "data": {
+     "message": 3.5
+    }
+   },
+   {
+    "t": 11.0,
+    "type": "achievement",
+    "name": "first_blood",
+    "data": {
+     "id": "ACH_1",
+     "progress": 0.3333333333333333
+    }
+   },
+   {
+    "t": 11.5,
+    "type": "custom",
+    "name": "big",
+    "data": {
+     "n": 123456789012345678,
+     "f": 1.5e-07,
+     "neg": -0.0,
+     "e": 2.5e+20
+    }
+   },
+   {
+    "t": 12.0,
+    "type": "idle",
+    "data": {
+     "away": true
+    }
+   },
+   {
+    "t": 12.0,
+    "type": "input",
+    "data": {
+     "device": "pad",
+     "name": "Xbox"
+    }
+   },
+   {
+    "t": 13.0,
+    "type": "steam",
+    "name": "overlay",
+    "data": {
+     "on": false
+    }
+   }
+  ],
+  "hardware": {
+   "os": "SteamOS",
+   "cpu": "AMD Custom APU 0405",
+   "cpu_cores": 4,
+   "ram_mb": 15872,
+   "gpu": null,
+   "gpu_driver": "Mesa 24",
+   "renderer": "forward_plus",
+   "screen": [
+    1280,
+    800
+   ],
+   "refresh_hz": 59.94,
+   "steam_deck": true
+  },
+  "settings": {
+   "zoom": 1.25,
+   "aa": "msaa_4x",
+   "subtitles": true,
+   "keys": {
+    "jump": "space"
+   },
+   "langs": [
+    "en",
+    "sv"
+   ],
+   "none": null,
+   "whole": 3,
+   "Ä-first": "unicode key",
+   "B": "capital"
+  },
+  "crashes": [
+   {
+    "crash_id": "c2",
+    "session_id": "dddddddd-0000-4000-8000-000000000004",
+    "signal": null,
+    "received": null,
+    "log_tail": "\n\n  line 0: yyyyy\nline 1: yyyyy\nline 2: yyyyy\nline 3: yyyyy\nline 4: yyyyy\nline 5: yyyyy\nline 6: yyyyy\nline 7: yyyyy\nline 8: yyyyy\nline 9: yyyyy\nline 10: yyyyy\nline 11: yyyyy\nline 12: yyyyy\nline 13: yyyyy\nline 14: yyyyy\nline 15: yyyyy\nline 16: yyyyy\nline 17: yyyyy\nline 18: yyyyy\nline 19: yyyyy\nline 20: yyyyy\nline 21: yyyyy\nline 22: yyyyy\nline 23: yyyyy\nline 24: yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\n \u0001",
+    "last_events": []
+   },
+   "not a crash"
+  ],
+  "reported": {
+   "crashed_session_id": null,
+   "signal": "unclean exit"
+  }
+ },
+ {
+  "session_id": "dddddddd-0000-4000-8000-000000000004",
+  "app_id": 5207970,
+  "started": null,
+  "ended": null,
+  "playtime_s": 5,
+  "test": true,
+  "summary": {},
+  "events": [
+   {
+    "t": 0.0,
+    "type": "load",
+    "name": "scene",
+    "data": {
+     "scene": "res://game/level_1.tscn",
+     "ms": 3
+    }
+   },
+   {
+    "t": 0.0,
+    "type": "position",
+    "data": {
+     "scene": "res://game/level_1.tscn",
+     "x": 80,
+     "y": 336
+    }
+   },
+   {
+    "t": 1.0,
+    "type": "action",
+    "name": "coin",
+    "data": {
+     "level": "level_1",
+     "coin": "0",
+     "x": 0,
+     "y": 5
+    }
+   },
+   {
+    "t": 2.0,
+    "type": "action",
+    "name": "coin",
+    "data": {
+     "level": "level_1",
+     "coin": 1.0,
+     "x": 10,
+     "y": 5
+    }
+   },
+   {
+    "t": 3.0,
+    "type": "action",
+    "name": "coin",
+    "data": {
+     "level": "level_1",
+     "coin": "2",
+     "x": 20,
+     "y": 5
+    }
+   },
+   {
+    "t": 4.0,
+    "type": "action",
+    "name": "coin",
+    "data": {
+     "level": "level_1",
+     "coin": 3.0,
+     "x": 30,
+     "y": 5
+    }
+   },
+   {
+    "t": 5.0,
+    "type": "action",
+    "name": "coin",
+    "data": {
+     "level": "level_1",
+     "coin": "4",
+     "x": 40,
+     "y": 5
+    }
+   },
+   {
+    "t": 6.0,
+    "type": "action",
+    "name": "coin",
+    "data": {
+     "level": "level_1",
+     "coin": 5.0,
+     "x": 50,
+     "y": 5
+    }
+   },
+   {
+    "t": 7.0,
+    "type": "action",
+    "name": "coin",
+    "data": {
+     "level": "level_1",
+     "coin": "6",
+     "x": 60,
+     "y": 5
+    }
+   },
+   {
+    "t": 8.0,
+    "type": "action",
+    "name": "coin",
+    "data": {
+     "level": "level_1",
+     "coin": 7.0,
+     "x": 70,
+     "y": 5
+    }
+   },
+   {
+    "t": 9.5,
+    "type": "action",
+    "name": "coin",
+    "data": {
+     "level": "level_1",
+     "coin": 3
+    }
+   },
+   {
+    "t": 10.0,
+    "type": "action",
+    "name": "level_complete",
+    "data": {
+     "level": "level_1",
+     "time_s": 9.75
+    }
+   },
+   {
+    "t": 10.0,
+    "type": "action",
+    "name": "level_complete",
+    "data": {
+     "level": "level_1",
+     "time_s": 1.0
+    }
+   },
+   {
+    "t": 11.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 0,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 34.1,
+     "y": 100
+    }
+   },
+   {
+    "t": 11.0,
+    "type": "screen",
+    "data": {
+     "name": "menu_0"
+    }
+   },
+   {
+    "t": 11.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 1,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 34.875,
+     "y": 99
+    }
+   },
+   {
+    "t": 11.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 2,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 35.65,
+     "y": 98
+    }
+   },
+   {
+    "t": 11.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 3,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 36.425000000000004,
+     "y": 97
+    }
+   },
+   {
+    "t": 12.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 4,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 37.2,
+     "y": 96
+    }
+   },
+   {
+    "t": 12.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 5,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 37.975,
+     "y": 95
+    }
+   },
+   {
+    "t": 12.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 6,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 38.75,
+     "y": 94
+    }
+   },
+   {
+    "t": 12.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 7,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 39.525,
+     "y": 93
+    }
+   },
+   {
+    "t": 13.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 8,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 40.300000000000004,
+     "y": 92
+    }
+   },
+   {
+    "t": 13.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 9,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 41.075,
+     "y": 91
+    }
+   },
+   {
+    "t": 13.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 10,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 41.85,
+     "y": 90
+    }
+   },
+   {
+    "t": 13.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 11,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 42.625,
+     "y": 89
+    }
+   },
+   {
+    "t": 14.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 12,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 43.4,
+     "y": 88
+    }
+   },
+   {
+    "t": 14.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 13,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 44.175000000000004,
+     "y": 87
+    }
+   },
+   {
+    "t": 14.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 14,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 44.95,
+     "y": 86
+    }
+   },
+   {
+    "t": 14.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 15,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 45.725,
+     "y": 85
+    }
+   },
+   {
+    "t": 15.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 16,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 46.5,
+     "y": 84
+    }
+   },
+   {
+    "t": 15.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 17,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 47.275,
+     "y": 83
+    }
+   },
+   {
+    "t": 15.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 18,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 48.050000000000004,
+     "y": 82
+    }
+   },
+   {
+    "t": 15.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 19,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 48.825,
+     "y": 81
+    }
+   },
+   {
+    "t": 16.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 20,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 49.6,
+     "y": 80
+    }
+   },
+   {
+    "t": 16.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 21,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 50.375,
+     "y": 79
+    }
+   },
+   {
+    "t": 16.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 22,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 51.15,
+     "y": 78
+    }
+   },
+   {
+    "t": 16.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 23,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 51.925000000000004,
+     "y": 77
+    }
+   },
+   {
+    "t": 17.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 24,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 52.7,
+     "y": 76
+    }
+   },
+   {
+    "t": 17.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 25,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 53.475,
+     "y": 75
+    }
+   },
+   {
+    "t": 17.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 26,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 54.25,
+     "y": 74
+    }
+   },
+   {
+    "t": 17.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 27,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 55.025,
+     "y": 73
+    }
+   },
+   {
+    "t": 18.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 28,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 55.800000000000004,
+     "y": 72
+    }
+   },
+   {
+    "t": 18.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 29,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 56.575,
+     "y": 71
+    }
+   },
+   {
+    "t": 18.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 30,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 57.35,
+     "y": 70
+    }
+   },
+   {
+    "t": 18.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 31,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 58.125,
+     "y": 69
+    }
+   },
+   {
+    "t": 19.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 32,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 58.9,
+     "y": 68
+    }
+   },
+   {
+    "t": 19.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 33,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 59.675000000000004,
+     "y": 67
+    }
+   },
+   {
+    "t": 19.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 34,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 60.45,
+     "y": 66
+    }
+   },
+   {
+    "t": 19.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 35,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 61.225,
+     "y": 65
+    }
+   },
+   {
+    "t": 20.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 36,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 62.0,
+     "y": 64
+    }
+   },
+   {
+    "t": 20.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 37,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 62.775,
+     "y": 63
+    }
+   },
+   {
+    "t": 20.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 38,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 63.550000000000004,
+     "y": 62
+    }
+   },
+   {
+    "t": 20.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 39,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 64.325,
+     "y": 61
+    }
+   },
+   {
+    "t": 21.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 40,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 65.10000000000001,
+     "y": 60
+    }
+   },
+   {
+    "t": 21.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 41,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 65.875,
+     "y": 59
+    }
+   },
+   {
+    "t": 21.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 42,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 66.65,
+     "y": 58
+    }
+   },
+   {
+    "t": 21.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 43,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 67.425,
+     "y": 57
+    }
+   },
+   {
+    "t": 22.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 44,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 68.2,
+     "y": 56
+    }
+   },
+   {
+    "t": 22.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 45,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 68.97500000000001,
+     "y": 55
+    }
+   },
+   {
+    "t": 22.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 46,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 69.75,
+     "y": 54
+    }
+   },
+   {
+    "t": 22.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 47,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 70.525,
+     "y": 53
+    }
+   },
+   {
+    "t": 23.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 48,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 71.3,
+     "y": 52
+    }
+   },
+   {
+    "t": 23.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 49,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 72.075,
+     "y": 51
+    }
+   },
+   {
+    "t": 23.25,
+    "type": "death",
+    "data": {
+     "cause": "saw",
+     "level": "level_2",
+     "scene": "res://game/level_2.tscn",
+     "x": 23.25,
+     "y": 2.5
+    }
+   },
+   {
+    "t": 23.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 50,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 72.85000000000001,
+     "y": 50
+    }
+   },
+   {
+    "t": 23.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 51,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 73.625,
+     "y": 49
+    }
+   },
+   {
+    "t": 24.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 52,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 74.4,
+     "y": 48
+    }
+   },
+   {
+    "t": 24.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 53,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 75.175,
+     "y": 47
+    }
+   },
+   {
+    "t": 24.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 54,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 75.95,
+     "y": 46
+    }
+   },
+   {
+    "t": 24.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 55,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 76.72500000000001,
+     "y": 45
+    }
+   },
+   {
+    "t": 25.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 56,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 77.5,
+     "y": 44
+    }
+   },
+   {
+    "t": 25.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 57,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 78.275,
+     "y": 43
+    }
+   },
+   {
+    "t": 25.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 58,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 79.05,
+     "y": 42
+    }
+   },
+   {
+    "t": 25.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 59,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 79.825,
+     "y": 41
+    }
+   },
+   {
+    "t": 26.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 60,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 80.60000000000001,
+     "y": 40
+    }
+   },
+   {
+    "t": 26.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 61,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 81.375,
+     "y": 39
+    }
+   },
+   {
+    "t": 26.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 62,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 82.15,
+     "y": 38
+    }
+   },
+   {
+    "t": 26.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 63,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 82.925,
+     "y": 37
+    }
+   },
+   {
+    "t": 27.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 64,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 83.7,
+     "y": 36
+    }
+   },
+   {
+    "t": 27.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 65,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 84.47500000000001,
+     "y": 35
+    }
+   },
+   {
+    "t": 27.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 66,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 85.25,
+     "y": 34
+    }
+   },
+   {
+    "t": 27.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 67,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 86.025,
+     "y": 33
+    }
+   },
+   {
+    "t": 28.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 68,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 86.8,
+     "y": 32
+    }
+   },
+   {
+    "t": 28.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 69,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 87.575,
+     "y": 31
+    }
+   },
+   {
+    "t": 28.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 70,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 88.35000000000001,
+     "y": 30
+    }
+   },
+   {
+    "t": 28.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 71,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 89.125,
+     "y": 29
+    }
+   },
+   {
+    "t": 29.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 72,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 89.9,
+     "y": 28
+    }
+   },
+   {
+    "t": 29.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 73,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 90.675,
+     "y": 27
+    }
+   },
+   {
+    "t": 29.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 74,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 91.45,
+     "y": 26
+    }
+   },
+   {
+    "t": 29.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 75,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 92.22500000000001,
+     "y": 25
+    }
+   },
+   {
+    "t": 30.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 76,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 93.0,
+     "y": 24
+    }
+   },
+   {
+    "t": 30.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 77,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 93.775,
+     "y": 23
+    }
+   },
+   {
+    "t": 30.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 78,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 94.55,
+     "y": 22
+    }
+   },
+   {
+    "t": 30.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 79,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 95.325,
+     "y": 21
+    }
+   },
+   {
+    "t": 31.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 80,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 96.10000000000001,
+     "y": 20
+    }
+   },
+   {
+    "t": 31.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 81,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 96.875,
+     "y": 19
+    }
+   },
+   {
+    "t": 31.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 82,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 97.65,
+     "y": 18
+    }
+   },
+   {
+    "t": 31.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 83,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 98.425,
+     "y": 17
+    }
+   },
+   {
+    "t": 32.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 84,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 99.2,
+     "y": 16
+    }
+   },
+   {
+    "t": 32.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 85,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 99.97500000000001,
+     "y": 15
+    }
+   },
+   {
+    "t": 32.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 86,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 100.75,
+     "y": 14
+    }
+   },
+   {
+    "t": 32.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 87,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 101.525,
+     "y": 13
+    }
+   },
+   {
+    "t": 33.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 88,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 102.3,
+     "y": 12
+    }
+   },
+   {
+    "t": 33.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 89,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 103.075,
+     "y": 11
+    }
+   },
+   {
+    "t": 33.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 90,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 103.85000000000001,
+     "y": 10
+    }
+   },
+   {
+    "t": 33.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 91,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 104.625,
+     "y": 9
+    }
+   },
+   {
+    "t": 34.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 92,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 105.4,
+     "y": 8
+    }
+   },
+   {
+    "t": 34.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 93,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 106.175,
+     "y": 7
+    }
+   },
+   {
+    "t": 34.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 94,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 106.95,
+     "y": 6
+    }
+   },
+   {
+    "t": 34.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 95,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 107.72500000000001,
+     "y": 5
+    }
+   },
+   {
+    "t": 35.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 96,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 108.5,
+     "y": 4
+    }
+   },
+   {
+    "t": 35.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 97,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 109.275,
+     "y": 3
+    }
+   },
+   {
+    "t": 35.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 98,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 110.05,
+     "y": 2
+    }
+   },
+   {
+    "t": 35.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 99,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 110.825,
+     "y": 1
+    }
+   },
+   {
+    "t": 35.75,
+    "type": "death",
+    "data": {
+     "cause": "saw",
+     "level": "level_2",
+     "scene": "res://game/level_2.tscn",
+     "x": 35.75,
+     "y": 2.5
+    }
+   },
+   {
+    "t": 36.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 100,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 111.60000000000001,
+     "y": 0
+    }
+   },
+   {
+    "t": 36.0,
+    "type": "screen",
+    "data": {
+     "name": "menu_100"
+    }
+   },
+   {
+    "t": 36.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 101,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 112.375,
+     "y": -1
+    }
+   },
+   {
+    "t": 36.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 102,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 113.15,
+     "y": -2
+    }
+   },
+   {
+    "t": 36.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 103,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 113.925,
+     "y": -3
+    }
+   },
+   {
+    "t": 37.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 104,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 114.7,
+     "y": -4
+    }
+   },
+   {
+    "t": 37.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 105,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 115.47500000000001,
+     "y": -5
+    }
+   },
+   {
+    "t": 37.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 106,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 116.25,
+     "y": -6
+    }
+   },
+   {
+    "t": 37.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 107,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 117.025,
+     "y": -7
+    }
+   },
+   {
+    "t": 38.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 108,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 117.8,
+     "y": -8
+    }
+   },
+   {
+    "t": 38.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 109,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 118.575,
+     "y": -9
+    }
+   },
+   {
+    "t": 38.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 110,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 119.35000000000001,
+     "y": -10
+    }
+   },
+   {
+    "t": 38.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 111,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 120.125,
+     "y": -11
+    }
+   },
+   {
+    "t": 39.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 112,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 120.9,
+     "y": -12
+    }
+   },
+   {
+    "t": 39.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 113,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 121.675,
+     "y": -13
+    }
+   },
+   {
+    "t": 39.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 114,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 122.45,
+     "y": -14
+    }
+   },
+   {
+    "t": 39.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 115,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 123.22500000000001,
+     "y": -15
+    }
+   },
+   {
+    "t": 40.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 116,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 124.0,
+     "y": -16
+    }
+   },
+   {
+    "t": 40.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 117,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 124.775,
+     "y": -17
+    }
+   },
+   {
+    "t": 40.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 118,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 125.55,
+     "y": -18
+    }
+   },
+   {
+    "t": 40.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 119,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 126.325,
+     "y": -19
+    }
+   },
+   {
+    "t": 41.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 120,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 127.10000000000001,
+     "y": -20
+    }
+   },
+   {
+    "t": 41.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 121,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 127.875,
+     "y": -21
+    }
+   },
+   {
+    "t": 41.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 122,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 128.65,
+     "y": -22
+    }
+   },
+   {
+    "t": 41.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 123,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 129.425,
+     "y": -23
+    }
+   },
+   {
+    "t": 42.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 124,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 130.20000000000002,
+     "y": -24
+    }
+   },
+   {
+    "t": 42.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 125,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 130.975,
+     "y": -25
+    }
+   },
+   {
+    "t": 42.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 126,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 131.75,
+     "y": -26
+    }
+   },
+   {
+    "t": 42.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 127,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 132.525,
+     "y": -27
+    }
+   },
+   {
+    "t": 43.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 128,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 133.3,
+     "y": -28
+    }
+   },
+   {
+    "t": 43.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 129,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 134.07500000000002,
+     "y": -29
+    }
+   },
+   {
+    "t": 43.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 130,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 134.85,
+     "y": -30
+    }
+   },
+   {
+    "t": 43.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 131,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 135.625,
+     "y": -31
+    }
+   },
+   {
+    "t": 44.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 132,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 136.4,
+     "y": -32
+    }
+   },
+   {
+    "t": 44.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 133,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 137.175,
+     "y": -33
+    }
+   },
+   {
+    "t": 44.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 134,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 137.95000000000002,
+     "y": -34
+    }
+   },
+   {
+    "t": 44.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 135,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 138.725,
+     "y": -35
+    }
+   },
+   {
+    "t": 45.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 136,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 139.5,
+     "y": -36
+    }
+   },
+   {
+    "t": 45.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 137,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 140.275,
+     "y": -37
+    }
+   },
+   {
+    "t": 45.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 138,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 141.05,
+     "y": -38
+    }
+   },
+   {
+    "t": 45.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 139,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 141.82500000000002,
+     "y": -39
+    }
+   },
+   {
+    "t": 46.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 140,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 142.6,
+     "y": -40
+    }
+   },
+   {
+    "t": 46.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 141,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 143.375,
+     "y": -41
+    }
+   },
+   {
+    "t": 46.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 142,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 144.15,
+     "y": -42
+    }
+   },
+   {
+    "t": 46.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 143,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 144.925,
+     "y": -43
+    }
+   },
+   {
+    "t": 47.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 144,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 145.70000000000002,
+     "y": -44
+    }
+   },
+   {
+    "t": 47.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 145,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 146.475,
+     "y": -45
+    }
+   },
+   {
+    "t": 47.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 146,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 147.25,
+     "y": -46
+    }
+   },
+   {
+    "t": 47.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 147,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 148.025,
+     "y": -47
+    }
+   },
+   {
+    "t": 48.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 148,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 148.8,
+     "y": -48
+    }
+   },
+   {
+    "t": 48.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 149,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 149.57500000000002,
+     "y": -49
+    }
+   },
+   {
+    "t": 48.25,
+    "type": "death",
+    "data": {
+     "cause": "saw",
+     "level": "level_2",
+     "scene": "res://game/level_2.tscn",
+     "x": 48.25,
+     "y": 2.5
+    }
+   },
+   {
+    "t": 48.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 150,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 150.35,
+     "y": -50
+    }
+   },
+   {
+    "t": 48.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 151,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 151.125,
+     "y": -51
+    }
+   },
+   {
+    "t": 49.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 152,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 151.9,
+     "y": -52
+    }
+   },
+   {
+    "t": 49.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 153,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 152.675,
+     "y": -53
+    }
+   },
+   {
+    "t": 49.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 154,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 153.45000000000002,
+     "y": -54
+    }
+   },
+   {
+    "t": 49.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 155,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 154.225,
+     "y": -55
+    }
+   },
+   {
+    "t": 50.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 156,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 155.0,
+     "y": -56
+    }
+   },
+   {
+    "t": 50.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 157,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 155.775,
+     "y": -57
+    }
+   },
+   {
+    "t": 50.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 158,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 156.55,
+     "y": -58
+    }
+   },
+   {
+    "t": 50.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 159,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 157.32500000000002,
+     "y": -59
+    }
+   },
+   {
+    "t": 51.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 160,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 158.1,
+     "y": -60
+    }
+   },
+   {
+    "t": 51.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 161,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 158.875,
+     "y": -61
+    }
+   },
+   {
+    "t": 51.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 162,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 159.65,
+     "y": -62
+    }
+   },
+   {
+    "t": 51.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 163,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 160.425,
+     "y": -63
+    }
+   },
+   {
+    "t": 52.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 164,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 161.20000000000002,
+     "y": -64
+    }
+   },
+   {
+    "t": 52.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 165,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 161.975,
+     "y": -65
+    }
+   },
+   {
+    "t": 52.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 166,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 162.75,
+     "y": -66
+    }
+   },
+   {
+    "t": 52.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 167,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 163.525,
+     "y": -67
+    }
+   },
+   {
+    "t": 53.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 168,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 164.3,
+     "y": -68
+    }
+   },
+   {
+    "t": 53.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 169,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 165.07500000000002,
+     "y": -69
+    }
+   },
+   {
+    "t": 53.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 170,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 165.85,
+     "y": -70
+    }
+   },
+   {
+    "t": 53.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 171,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 166.625,
+     "y": -71
+    }
+   },
+   {
+    "t": 54.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 172,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 167.4,
+     "y": -72
+    }
+   },
+   {
+    "t": 54.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 173,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 168.175,
+     "y": -73
+    }
+   },
+   {
+    "t": 54.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 174,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 168.95000000000002,
+     "y": -74
+    }
+   },
+   {
+    "t": 54.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 175,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 169.725,
+     "y": -75
+    }
+   },
+   {
+    "t": 55.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 176,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 170.5,
+     "y": -76
+    }
+   },
+   {
+    "t": 55.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 177,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 171.275,
+     "y": -77
+    }
+   },
+   {
+    "t": 55.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 178,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 172.05,
+     "y": -78
+    }
+   },
+   {
+    "t": 55.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 179,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 172.82500000000002,
+     "y": -79
+    }
+   },
+   {
+    "t": 56.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 180,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 173.6,
+     "y": -80
+    }
+   },
+   {
+    "t": 56.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 181,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 174.375,
+     "y": -81
+    }
+   },
+   {
+    "t": 56.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 182,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 175.15,
+     "y": -82
+    }
+   },
+   {
+    "t": 56.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 183,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 175.925,
+     "y": -83
+    }
+   },
+   {
+    "t": 57.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 184,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 176.70000000000002,
+     "y": -84
+    }
+   },
+   {
+    "t": 57.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 185,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 177.475,
+     "y": -85
+    }
+   },
+   {
+    "t": 57.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 186,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 178.25,
+     "y": -86
+    }
+   },
+   {
+    "t": 57.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 187,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 179.025,
+     "y": -87
+    }
+   },
+   {
+    "t": 58.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 188,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 179.8,
+     "y": -88
+    }
+   },
+   {
+    "t": 58.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 189,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 180.57500000000002,
+     "y": -89
+    }
+   },
+   {
+    "t": 58.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 190,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 181.35,
+     "y": -90
+    }
+   },
+   {
+    "t": 58.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 191,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 182.125,
+     "y": -91
+    }
+   },
+   {
+    "t": 59.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 192,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 182.9,
+     "y": -92
+    }
+   },
+   {
+    "t": 59.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 193,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 183.675,
+     "y": -93
+    }
+   },
+   {
+    "t": 59.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 194,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 184.45000000000002,
+     "y": -94
+    }
+   },
+   {
+    "t": 59.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 195,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 185.225,
+     "y": -95
+    }
+   },
+   {
+    "t": 60.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 196,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 186.0,
+     "y": -96
+    }
+   },
+   {
+    "t": 60.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 197,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 186.775,
+     "y": -97
+    }
+   },
+   {
+    "t": 60.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 198,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 187.55,
+     "y": -98
+    }
+   },
+   {
+    "t": 60.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 199,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 188.32500000000002,
+     "y": -99
+    }
+   },
+   {
+    "t": 60.75,
+    "type": "death",
+    "data": {
+     "cause": "saw",
+     "level": "level_2",
+     "scene": "res://game/level_2.tscn",
+     "x": 60.75,
+     "y": 2.5
+    }
+   },
+   {
+    "t": 61.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 200,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 189.1,
+     "y": -100
+    }
+   },
+   {
+    "t": 61.0,
+    "type": "screen",
+    "data": {
+     "name": "menu_200"
+    }
+   },
+   {
+    "t": 61.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 201,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 189.875,
+     "y": -101
+    }
+   },
+   {
+    "t": 61.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 202,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 190.65,
+     "y": -102
+    }
+   },
+   {
+    "t": 61.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 203,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 191.425,
+     "y": -103
+    }
+   },
+   {
+    "t": 62.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 204,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 192.20000000000002,
+     "y": -104
+    }
+   },
+   {
+    "t": 62.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 205,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 192.975,
+     "y": -105
+    }
+   },
+   {
+    "t": 62.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 206,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 193.75,
+     "y": -106
+    }
+   },
+   {
+    "t": 62.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 207,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 194.525,
+     "y": -107
+    }
+   },
+   {
+    "t": 63.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 208,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 195.3,
+     "y": -108
+    }
+   },
+   {
+    "t": 63.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 209,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 196.07500000000002,
+     "y": -109
+    }
+   },
+   {
+    "t": 63.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 210,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 196.85,
+     "y": -110
+    }
+   },
+   {
+    "t": 63.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 211,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 197.625,
+     "y": -111
+    }
+   },
+   {
+    "t": 64.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 212,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 198.4,
+     "y": -112
+    }
+   },
+   {
+    "t": 64.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 213,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 199.175,
+     "y": -113
+    }
+   },
+   {
+    "t": 64.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 214,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 199.95000000000002,
+     "y": -114
+    }
+   },
+   {
+    "t": 64.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 215,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 200.725,
+     "y": -115
+    }
+   },
+   {
+    "t": 65.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 216,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 201.5,
+     "y": -116
+    }
+   },
+   {
+    "t": 65.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 217,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 202.275,
+     "y": -117
+    }
+   },
+   {
+    "t": 65.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 218,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 203.05,
+     "y": -118
+    }
+   },
+   {
+    "t": 65.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 219,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 203.82500000000002,
+     "y": -119
+    }
+   },
+   {
+    "t": 66.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 220,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 204.6,
+     "y": -120
+    }
+   },
+   {
+    "t": 66.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 221,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 205.375,
+     "y": -121
+    }
+   },
+   {
+    "t": 66.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 222,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 206.15,
+     "y": -122
+    }
+   },
+   {
+    "t": 66.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 223,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 206.925,
+     "y": -123
+    }
+   },
+   {
+    "t": 67.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 224,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 207.70000000000002,
+     "y": -124
+    }
+   },
+   {
+    "t": 67.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 225,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 208.475,
+     "y": -125
+    }
+   },
+   {
+    "t": 67.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 226,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 209.25,
+     "y": -126
+    }
+   },
+   {
+    "t": 67.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 227,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 210.025,
+     "y": -127
+    }
+   },
+   {
+    "t": 68.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 228,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 210.8,
+     "y": -128
+    }
+   },
+   {
+    "t": 68.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 229,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 211.57500000000002,
+     "y": -129
+    }
+   },
+   {
+    "t": 68.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 230,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 212.35,
+     "y": -130
+    }
+   },
+   {
+    "t": 68.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 231,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 213.125,
+     "y": -131
+    }
+   },
+   {
+    "t": 69.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 232,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 213.9,
+     "y": -132
+    }
+   },
+   {
+    "t": 69.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 233,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 214.675,
+     "y": -133
+    }
+   },
+   {
+    "t": 69.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 234,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 215.45000000000002,
+     "y": -134
+    }
+   },
+   {
+    "t": 69.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 235,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 216.225,
+     "y": -135
+    }
+   },
+   {
+    "t": 70.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 236,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 217.0,
+     "y": -136
+    }
+   },
+   {
+    "t": 70.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 237,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 217.775,
+     "y": -137
+    }
+   },
+   {
+    "t": 70.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 238,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 218.55,
+     "y": -138
+    }
+   },
+   {
+    "t": 70.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 239,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 219.32500000000002,
+     "y": -139
+    }
+   },
+   {
+    "t": 71.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 240,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 220.1,
+     "y": -140
+    }
+   },
+   {
+    "t": 71.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 241,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 220.875,
+     "y": -141
+    }
+   },
+   {
+    "t": 71.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 242,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 221.65,
+     "y": -142
+    }
+   },
+   {
+    "t": 71.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 243,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 222.425,
+     "y": -143
+    }
+   },
+   {
+    "t": 72.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 244,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 223.20000000000002,
+     "y": -144
+    }
+   },
+   {
+    "t": 72.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 245,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 223.975,
+     "y": -145
+    }
+   },
+   {
+    "t": 72.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 246,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 224.75,
+     "y": -146
+    }
+   },
+   {
+    "t": 72.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 247,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 225.525,
+     "y": -147
+    }
+   },
+   {
+    "t": 73.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 248,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 226.3,
+     "y": -148
+    }
+   },
+   {
+    "t": 73.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 249,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 227.07500000000002,
+     "y": -149
+    }
+   },
+   {
+    "t": 73.25,
+    "type": "death",
+    "data": {
+     "cause": "saw",
+     "level": "level_2",
+     "scene": "res://game/level_2.tscn",
+     "x": 73.25,
+     "y": 2.5
+    }
+   },
+   {
+    "t": 73.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 250,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 227.85,
+     "y": -150
+    }
+   },
+   {
+    "t": 73.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 251,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 228.625,
+     "y": -151
+    }
+   },
+   {
+    "t": 74.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 252,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 229.4,
+     "y": -152
+    }
+   },
+   {
+    "t": 74.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 253,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 230.175,
+     "y": -153
+    }
+   },
+   {
+    "t": 74.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 254,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 230.95000000000002,
+     "y": -154
+    }
+   },
+   {
+    "t": 74.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 255,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 231.725,
+     "y": -155
+    }
+   },
+   {
+    "t": 75.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 256,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 232.5,
+     "y": -156
+    }
+   },
+   {
+    "t": 75.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 257,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 233.275,
+     "y": -157
+    }
+   },
+   {
+    "t": 75.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 258,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 234.05,
+     "y": -158
+    }
+   },
+   {
+    "t": 75.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 259,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 234.82500000000002,
+     "y": -159
+    }
+   },
+   {
+    "t": 76.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 260,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 235.6,
+     "y": -160
+    }
+   },
+   {
+    "t": 76.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 261,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 236.375,
+     "y": -161
+    }
+   },
+   {
+    "t": 76.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 262,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 237.15,
+     "y": -162
+    }
+   },
+   {
+    "t": 76.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 263,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 237.925,
+     "y": -163
+    }
+   },
+   {
+    "t": 77.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 264,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 238.70000000000002,
+     "y": -164
+    }
+   },
+   {
+    "t": 77.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 265,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 239.475,
+     "y": -165
+    }
+   },
+   {
+    "t": 77.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 266,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 240.25,
+     "y": -166
+    }
+   },
+   {
+    "t": 77.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 267,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 241.025,
+     "y": -167
+    }
+   },
+   {
+    "t": 78.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 268,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 241.8,
+     "y": -168
+    }
+   },
+   {
+    "t": 78.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 269,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 242.57500000000002,
+     "y": -169
+    }
+   },
+   {
+    "t": 78.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 270,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 243.35,
+     "y": -170
+    }
+   },
+   {
+    "t": 78.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 271,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 244.125,
+     "y": -171
+    }
+   },
+   {
+    "t": 79.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 272,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 244.9,
+     "y": -172
+    }
+   },
+   {
+    "t": 79.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 273,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 245.675,
+     "y": -173
+    }
+   },
+   {
+    "t": 79.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 274,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 246.45000000000002,
+     "y": -174
+    }
+   },
+   {
+    "t": 79.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 275,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 247.225,
+     "y": -175
+    }
+   },
+   {
+    "t": 80.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 276,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 248.0,
+     "y": -176
+    }
+   },
+   {
+    "t": 80.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 277,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 248.775,
+     "y": -177
+    }
+   },
+   {
+    "t": 80.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 278,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 249.55,
+     "y": -178
+    }
+   },
+   {
+    "t": 80.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 279,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 250.32500000000002,
+     "y": -179
+    }
+   },
+   {
+    "t": 81.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 280,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 251.1,
+     "y": -180
+    }
+   },
+   {
+    "t": 81.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 281,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 251.875,
+     "y": -181
+    }
+   },
+   {
+    "t": 81.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 282,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 252.65,
+     "y": -182
+    }
+   },
+   {
+    "t": 81.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 283,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 253.425,
+     "y": -183
+    }
+   },
+   {
+    "t": 82.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 284,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 254.20000000000002,
+     "y": -184
+    }
+   },
+   {
+    "t": 82.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 285,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 254.975,
+     "y": -185
+    }
+   },
+   {
+    "t": 82.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 286,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 255.75,
+     "y": -186
+    }
+   },
+   {
+    "t": 82.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 287,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 256.52500000000003,
+     "y": -187
+    }
+   },
+   {
+    "t": 83.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 288,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 257.3,
+     "y": -188
+    }
+   },
+   {
+    "t": 83.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 289,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 258.075,
+     "y": -189
+    }
+   },
+   {
+    "t": 83.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 290,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 258.85,
+     "y": -190
+    }
+   },
+   {
+    "t": 83.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 291,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 259.625,
+     "y": -191
+    }
+   },
+   {
+    "t": 84.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 292,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 260.40000000000003,
+     "y": -192
+    }
+   },
+   {
+    "t": 84.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 293,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 261.175,
+     "y": -193
+    }
+   },
+   {
+    "t": 84.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 294,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 261.95,
+     "y": -194
+    }
+   },
+   {
+    "t": 84.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 295,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 262.725,
+     "y": -195
+    }
+   },
+   {
+    "t": 85.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 296,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 263.5,
+     "y": -196
+    }
+   },
+   {
+    "t": 85.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 297,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 264.27500000000003,
+     "y": -197
+    }
+   },
+   {
+    "t": 85.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 298,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 265.05,
+     "y": -198
+    }
+   },
+   {
+    "t": 85.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 299,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 265.825,
+     "y": -199
+    }
+   },
+   {
+    "t": 85.75,
+    "type": "death",
+    "data": {
+     "cause": "saw",
+     "level": "level_2",
+     "scene": "res://game/level_2.tscn",
+     "x": 85.75,
+     "y": 2.5
+    }
+   },
+   {
+    "t": 86.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 300,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 266.6,
+     "y": -200
+    }
+   },
+   {
+    "t": 86.0,
+    "type": "screen",
+    "data": {
+     "name": "menu_300"
+    }
+   },
+   {
+    "t": 86.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 301,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 267.375,
+     "y": -201
+    }
+   },
+   {
+    "t": 86.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 302,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 268.15000000000003,
+     "y": -202
+    }
+   },
+   {
+    "t": 86.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 303,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 268.925,
+     "y": -203
+    }
+   },
+   {
+    "t": 87.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 304,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 269.7,
+     "y": -204
+    }
+   },
+   {
+    "t": 87.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 305,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 270.475,
+     "y": -205
+    }
+   },
+   {
+    "t": 87.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 306,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 271.25,
+     "y": -206
+    }
+   },
+   {
+    "t": 87.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 307,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 272.02500000000003,
+     "y": -207
+    }
+   },
+   {
+    "t": 88.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 308,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 272.8,
+     "y": -208
+    }
+   },
+   {
+    "t": 88.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 309,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 273.575,
+     "y": -209
+    }
+   },
+   {
+    "t": 88.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 310,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 274.35,
+     "y": -210
+    }
+   },
+   {
+    "t": 88.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 311,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 275.125,
+     "y": -211
+    }
+   },
+   {
+    "t": 89.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 312,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 275.90000000000003,
+     "y": -212
+    }
+   },
+   {
+    "t": 89.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 313,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 276.675,
+     "y": -213
+    }
+   },
+   {
+    "t": 89.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 314,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 277.45,
+     "y": -214
+    }
+   },
+   {
+    "t": 89.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 315,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 278.225,
+     "y": -215
+    }
+   },
+   {
+    "t": 90.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 316,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 279.0,
+     "y": -216
+    }
+   },
+   {
+    "t": 90.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 317,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 279.77500000000003,
+     "y": -217
+    }
+   },
+   {
+    "t": 90.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 318,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 280.55,
+     "y": -218
+    }
+   },
+   {
+    "t": 90.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 319,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 281.325,
+     "y": -219
+    }
+   },
+   {
+    "t": 91.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 320,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 282.1,
+     "y": -220
+    }
+   },
+   {
+    "t": 91.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 321,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 282.875,
+     "y": -221
+    }
+   },
+   {
+    "t": 91.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 322,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 283.65000000000003,
+     "y": -222
+    }
+   },
+   {
+    "t": 91.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 323,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 284.425,
+     "y": -223
+    }
+   },
+   {
+    "t": 92.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 324,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 285.2,
+     "y": -224
+    }
+   },
+   {
+    "t": 92.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 325,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 285.975,
+     "y": -225
+    }
+   },
+   {
+    "t": 92.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 326,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 286.75,
+     "y": -226
+    }
+   },
+   {
+    "t": 92.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 327,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 287.52500000000003,
+     "y": -227
+    }
+   },
+   {
+    "t": 93.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 328,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 288.3,
+     "y": -228
+    }
+   },
+   {
+    "t": 93.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 329,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 289.075,
+     "y": -229
+    }
+   },
+   {
+    "t": 93.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 330,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 289.85,
+     "y": -230
+    }
+   },
+   {
+    "t": 93.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 331,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 290.625,
+     "y": -231
+    }
+   },
+   {
+    "t": 94.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 332,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 291.40000000000003,
+     "y": -232
+    }
+   },
+   {
+    "t": 94.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 333,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 292.175,
+     "y": -233
+    }
+   },
+   {
+    "t": 94.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 334,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 292.95,
+     "y": -234
+    }
+   },
+   {
+    "t": 94.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 335,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 293.725,
+     "y": -235
+    }
+   },
+   {
+    "t": 95.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 336,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 294.5,
+     "y": -236
+    }
+   },
+   {
+    "t": 95.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 337,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 295.27500000000003,
+     "y": -237
+    }
+   },
+   {
+    "t": 95.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 338,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 296.05,
+     "y": -238
+    }
+   },
+   {
+    "t": 95.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 339,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 296.825,
+     "y": -239
+    }
+   },
+   {
+    "t": 96.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 340,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 297.6,
+     "y": -240
+    }
+   },
+   {
+    "t": 96.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 341,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 298.375,
+     "y": -241
+    }
+   },
+   {
+    "t": 96.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 342,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 299.15000000000003,
+     "y": -242
+    }
+   },
+   {
+    "t": 96.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 343,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 299.925,
+     "y": -243
+    }
+   },
+   {
+    "t": 97.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 344,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 300.7,
+     "y": -244
+    }
+   },
+   {
+    "t": 97.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 345,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 301.475,
+     "y": -245
+    }
+   },
+   {
+    "t": 97.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 346,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 302.25,
+     "y": -246
+    }
+   },
+   {
+    "t": 97.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 347,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 303.02500000000003,
+     "y": -247
+    }
+   },
+   {
+    "t": 98.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 348,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 303.8,
+     "y": -248
+    }
+   },
+   {
+    "t": 98.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 349,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 304.575,
+     "y": -249
+    }
+   },
+   {
+    "t": 98.25,
+    "type": "death",
+    "data": {
+     "cause": "saw",
+     "level": "level_2",
+     "scene": "res://game/level_2.tscn",
+     "x": 98.25,
+     "y": 2.5
+    }
+   },
+   {
+    "t": 98.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 350,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 305.35,
+     "y": -250
+    }
+   },
+   {
+    "t": 98.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 351,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 306.125,
+     "y": -251
+    }
+   },
+   {
+    "t": 99.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 352,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 306.90000000000003,
+     "y": -252
+    }
+   },
+   {
+    "t": 99.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 353,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 307.675,
+     "y": -253
+    }
+   },
+   {
+    "t": 99.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 354,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 308.45,
+     "y": -254
+    }
+   },
+   {
+    "t": 99.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 355,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 309.225,
+     "y": -255
+    }
+   },
+   {
+    "t": 100.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 356,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 310.0,
+     "y": -256
+    }
+   },
+   {
+    "t": 100.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 357,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 310.77500000000003,
+     "y": -257
+    }
+   },
+   {
+    "t": 100.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 358,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 311.55,
+     "y": -258
+    }
+   },
+   {
+    "t": 100.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 359,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 312.325,
+     "y": -259
+    }
+   },
+   {
+    "t": 101.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 360,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 313.1,
+     "y": -260
+    }
+   },
+   {
+    "t": 101.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 361,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 313.875,
+     "y": -261
+    }
+   },
+   {
+    "t": 101.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 362,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 314.65000000000003,
+     "y": -262
+    }
+   },
+   {
+    "t": 101.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 363,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 315.425,
+     "y": -263
+    }
+   },
+   {
+    "t": 102.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 364,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 316.2,
+     "y": -264
+    }
+   },
+   {
+    "t": 102.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 365,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 316.975,
+     "y": -265
+    }
+   },
+   {
+    "t": 102.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 366,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 317.75,
+     "y": -266
+    }
+   },
+   {
+    "t": 102.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 367,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 318.52500000000003,
+     "y": -267
+    }
+   },
+   {
+    "t": 103.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 368,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 319.3,
+     "y": -268
+    }
+   },
+   {
+    "t": 103.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 369,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 320.075,
+     "y": -269
+    }
+   },
+   {
+    "t": 103.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 370,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 320.85,
+     "y": -270
+    }
+   },
+   {
+    "t": 103.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 371,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 321.625,
+     "y": -271
+    }
+   },
+   {
+    "t": 104.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 372,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 322.40000000000003,
+     "y": -272
+    }
+   },
+   {
+    "t": 104.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 373,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 323.175,
+     "y": -273
+    }
+   },
+   {
+    "t": 104.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 374,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 323.95,
+     "y": -274
+    }
+   },
+   {
+    "t": 104.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 375,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 324.725,
+     "y": -275
+    }
+   },
+   {
+    "t": 105.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 376,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 325.5,
+     "y": -276
+    }
+   },
+   {
+    "t": 105.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 377,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 326.27500000000003,
+     "y": -277
+    }
+   },
+   {
+    "t": 105.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 378,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 327.05,
+     "y": -278
+    }
+   },
+   {
+    "t": 105.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 379,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 327.825,
+     "y": -279
+    }
+   },
+   {
+    "t": 106.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 380,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 328.6,
+     "y": -280
+    }
+   },
+   {
+    "t": 106.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 381,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 329.375,
+     "y": -281
+    }
+   },
+   {
+    "t": 106.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 382,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 330.15000000000003,
+     "y": -282
+    }
+   },
+   {
+    "t": 106.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 383,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 330.925,
+     "y": -283
+    }
+   },
+   {
+    "t": 107.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 384,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 331.7,
+     "y": -284
+    }
+   },
+   {
+    "t": 107.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 385,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 332.475,
+     "y": -285
+    }
+   },
+   {
+    "t": 107.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 386,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 333.25,
+     "y": -286
+    }
+   },
+   {
+    "t": 107.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 387,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 334.02500000000003,
+     "y": -287
+    }
+   },
+   {
+    "t": 108.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 388,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 334.8,
+     "y": -288
+    }
+   },
+   {
+    "t": 108.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 389,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 335.575,
+     "y": -289
+    }
+   },
+   {
+    "t": 108.5,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 390,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 336.35,
+     "y": -290
+    }
+   },
+   {
+    "t": 108.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 391,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 337.125,
+     "y": -291
+    }
+   },
+   {
+    "t": 109.0,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 392,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 337.90000000000003,
+     "y": -292
+    }
+   },
+   {
+    "t": 109.25,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 393,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 338.675,
+     "y": -293
+    }
+   },
+   {
+    "t": 109.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 394,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 339.45,
+     "y": -294
+    }
+   },
+   {
+    "t": 109.75,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 395,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 340.225,
+     "y": -295
+    }
+   },
+   {
+    "t": 110.0,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 396,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 341.0,
+     "y": -296
+    }
+   },
+   {
+    "t": 110.25,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 397,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 341.77500000000003,
+     "y": -297
+    }
+   },
+   {
+    "t": 110.5,
+    "type": "action",
+    "name": "step",
+    "data": {
+     "level": "level_2",
+     "i": 398,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 342.55,
+     "y": -298
+    }
+   },
+   {
+    "t": 110.75,
+    "type": "snapshot",
+    "name": null,
+    "data": {
+     "level": "level_2",
+     "i": 399,
+     "note": "üüüüüüüüüüüüüüüüüüüü",
+     "x": 343.325,
+     "y": -299
+    }
+   },
+   {
+    "t": 110.75,
+    "type": "death",
+    "data": {
+     "cause": "saw",
+     "level": "level_2",
+     "scene": "res://game/level_2.tscn",
+     "x": 110.75,
+     "y": 2.5
+    }
+   }
+  ],
+  "hardware": {
+   "screen_w": 0,
+   "screen_h": 0,
+   "ram_mb": null,
+   "gpu": ""
+  },
+  "settings": {},
+  "crashes": [],
+  "reported": {}
+ }
+]

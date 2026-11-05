@@ -1,5 +1,5 @@
-"""The test setup: the real app on aiohttp's test server, and a fake Steam (Web API and OpenID) on
-another local one. No network."""
+"""The test setup: the real app on aiohttp's test server, and a fake Steam (Web API and OpenID) and
+a fake GitHub (for the dashboard's proxy) on other local ones. No network."""
 
 from __future__ import annotations
 
@@ -99,6 +99,37 @@ class FakeSteam:
         return [params for call, params in self.calls if call == name]
 
 
+class FakeGitHub:
+    """api.github.com's /repos/... as far as the dashboard's proxy goes: every call is recorded
+    and answered with what `answer` returns (status, body, headers), by default a JSON echo."""
+
+    def __init__(self):
+        self.calls: list[dict] = []
+        self.answer = lambda call: (200, {"path": call["path"], "query": call["query"]},
+                                    {"ETag": '"abc"', "Link": '<https://api.github.com/x?page=2>; rel="next"',
+                                     "X-RateLimit-Remaining": "4999", "X-RateLimit-Reset": "1900000000",
+                                     "Cache-Control": "private, max-age=60, s-maxage=60",
+                                     "Set-Cookie": "gh=1", "X-OAuth-Scopes": "repo"})
+        self.delay = 0.0
+
+    def app(self) -> web.Application:
+        app = web.Application()
+        app.router.add_route("*", "/{path:.*}", self.handle)
+        return app
+
+    async def handle(self, request: web.Request) -> web.StreamResponse:
+        body = await request.read()
+        call = {"method": request.method, "path": request.path, "query": dict(request.query),
+                "headers": dict(request.headers), "body": json.loads(body) if body else None}
+        self.calls.append(call)
+        if self.delay:
+            await asyncio.sleep(self.delay)
+        status, data, headers = self.answer(call)
+        if isinstance(data, bytes):
+            return web.Response(status=status, body=data, headers=headers, content_type="application/json")
+        return web.json_response(data, status=status, headers=headers)
+
+
 @dataclass
 class World:
     client: TestClient
@@ -106,6 +137,7 @@ class World:
     cfg: Config
     app: web.Application
     steam_server: TestServer
+    github: FakeGitHub | None = None
 
     async def steam_server_down(self) -> None:
         await self.steam_server.close()
@@ -211,15 +243,19 @@ def run(tmp_path: Path, steps, limits: Limits | None = None, geo_opener=None, **
         steam_server = TestServer(steam.app())
         await steam_server.start_server()
         base = str(steam_server.make_url("")).rstrip("/")
+        github = FakeGitHub()
+        github_server = TestServer(github.app())
+        await github_server.start_server()
         cfg = config(tmp_path, **env)
         extra = {"geo_opener": geo_opener} if geo_opener else {}
         app = make_app(cfg, steam_api=base, steam_openid=f"{base}/openid/login", run_retention=False,
-                       limits=limits, **extra)
+                       limits=limits, github_api=str(github_server.make_url("")).rstrip("/"), **extra)
         client = TestClient(TestServer(app), cookie_jar=aiohttp.DummyCookieJar())
         await client.start_server()
         try:
-            return await steps(World(client, steam, cfg, app, steam_server))
+            return await steps(World(client, steam, cfg, app, steam_server, github))
         finally:
             await client.close()
             await steam_server.close()
+            await github_server.close()
     return asyncio.run(go())

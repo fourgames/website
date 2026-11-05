@@ -39,6 +39,12 @@ class Config:
     test_app_ids: frozenset[int] = frozenset()
     # The steamid64s allowed to send test sessions. They're ours, but still never shown in a repr.
     test_steamids: frozenset[str] = field(default=frozenset(), repr=False)
+    # The steamid64s whose sign-in opens the owner's endpoints (/v1/admin/*: the feedback dashboard's
+    # GitHub proxy and the sessions). Ours too, and never in a repr either.
+    admin_steamids: frozenset[str] = field(default=frozenset(), repr=False)
+    # The GitHub token the dashboard's proxy sends to api.github.com (GAMEDATA_GITHUB_TOKEN, or the
+    # feedback loop's GH_TOKEN). Empty: the proxy answers 503 github_not_configured.
+    github_token: str = field(default="", repr=False)
     # Demo app id -> its full game's app id (GAMEDATA_DEMO_OF), for "played the demo, owns the game".
     demo_of: dict[int, int]
     data_dir: str
@@ -134,6 +140,13 @@ class Config:
                 raise ConfigError("GAMEDATA_TEST_STEAMIDS must be SteamID64s (17 digits) separated by commas")
             test_steamids.add(steamid)
 
+        admin_steamids: set[str] = set()
+        for part in (p.strip() for p in get("GAMEDATA_ADMIN_STEAMIDS").split(",") if p.strip()):
+            steamid = valid_steamid(part)
+            if steamid is None:
+                raise ConfigError("GAMEDATA_ADMIN_STEAMIDS must be SteamID64s (17 digits) separated by commas")
+            admin_steamids.add(steamid)
+
         raw_demos = get("GAMEDATA_DEMO_OF")
         demo_of: dict[int, int] = {}
         for pair in (p.strip() for p in raw_demos.split(",") if p.strip()):
@@ -165,6 +178,8 @@ class Config:
             app_ids=app_ids,
             test_app_ids=test_app_ids,
             test_steamids=frozenset(test_steamids),
+            admin_steamids=frozenset(admin_steamids),
+            github_token=get("GAMEDATA_GITHUB_TOKEN") or get("GH_TOKEN"),
             demo_of=demo_of,
             data_dir=data_dir,
             geoip_db=get("GEOIP_DB", f"{data_dir}/geo/dbip-city-lite.mmdb"),

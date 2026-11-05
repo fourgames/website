@@ -1,0 +1,77 @@
+Here is a play session of Steam app 3958210, downloaded from fourgames.se/privacy and summarised by the fourgames_data replay viewer.
+
+== Session ==
+id cccccccc-0000-4000-8000-000000000003, app 3958210
+started 2026-11-04T09:30:00Z, length 0:13 (active 0:12, idle 0:01)
+game 1.5 (build 26413834), Godot ?, linux, locale sv
+ended cleanly at 2026-11-04T09:45:00Z on res://maps/cave.level.tscn
+end summary: 22 events, 0 actions, 0 errors, session 2.5 on this install (?)
+
+== Scenes ==
+0:03 res://maps\forest.tscn for 0:04
+0:08 res://maps/cave.level.tscn for 0:05
+0 actions, 2 deaths
+
+== Deaths ==
+0:04 res://maps\forest.tscn, <null> at (13, 0)
+0:05 res://maps\forest.tscn, no cause at (no position)
+
+== Settings ==
+at start: B=capital, aa=msaa_4x, keys={"jump":"space"}, langs=["en","sv"], none=<null>, subtitles=true, whole=3, zoom=1.25, Ä-first=unicode key
+0:06 graphics: {"shadows":2,"aa":"msaa_4x","scale":0.57} -> [1,2.5,null,true]
+0:06 name: a long setting value a long setting value a long setting value a long setting va… -> <null>
+0:06 fov: 59.94 -> 1000000000000000
+0:06 ?: 0.3 -> 12.35
+
+== Performance (per scene and screen) ==
+boot: 1234.5 ms to the first frame, ? ms to playable (first_install)
+forest, <null> screen: 59.2 fps avg, min (1% low) 41.2, worst frame 33.3 ms, 1 stutters (frames over 50 ms), 453 frames
+(no scene), menu screen: 0.0 fps avg, min (1% low) ?, worst frame 0.0 ms, 0 stutters (frames over 50 ms), 10 frames
+
+== Hardware ==
+SteamOS | AMD Custom APU 0405 (4 cores) | 16 GB RAM | GPU unknown, driver Mesa 24 | forward_plus | 1280x800 @ 59.94 Hz | Steam Deck
+
+== Errors and crashes ==
+0:10 error: bad  thing	tab  vt "quoted" back\slash 😀   éxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx (?:12 in ?)
+0:10 <null>: 3.5 (?:? in ?)
+this session crashed: ?, reported ? by session dddddddd-0000-4000-8000-000000000004
+log tail (last 20 lines):
+  line 5: yyyyy
+  line 6: yyyyy
+  line 7: yyyyy
+  line 8: yyyyy
+  line 9: yyyyy
+  line 10: yyyyy
+  line 11: yyyyy
+  line 12: yyyyy
+  line 13: yyyyy
+  line 14: yyyyy
+  line 15: yyyyy
+  line 16: yyyyy
+  line 17: yyyyy
+  line 18: yyyyy
+  line 19: yyyyy
+  line 20: yyyyy
+  line 21: yyyyy
+  line 22: yyyyy
+  line 23: yyyyy
+  line 24: yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+this launch reported a crash of session ? (unclean exit)
+
+== Key events (JSON) ==
+[{"t":0.1,"type":"load","name":"boot","data":{"boot_kind":"first_install","boot_ms":1234.5,"to_play_ms":null}},
+{"t":3.25,"type":"load","name":"scene","data":{"scene":"res://maps\\forest.tscn","ms":0.57}},
+{"t":4.33333333333333,"type":"death","data":{"cause":null,"scene":"res://maps\\forest.tscn","x":12.99999999,"y":-0.6}},
+{"t":5,"type":"death","data":{"scene":"res://maps\\forest.tscn"}},
+{"t":6.5,"type":"setting_changed","data":{"key":"graphics","old":{"shadows":2,"aa":"msaa_4x","scale":0.57},"new":[1,2.5,null,true]}},
+{"t":6.6,"type":"setting_changed","data":{"key":"name","old":"a long setting value a long setting value a long setting value a long setting value a long setting value a long setting value ","new":null}},
+{"t":6.7,"type":"setting_changed","data":{"key":"fov","old":59.94,"new":1000000000000000.0}},
+{"t":6.8,"type":"setting_changed","data":{"old":0.3,"new":12.3456789012346}},
+{"t":8,"type":"load","name":"scene","data":{"scene":"res://maps/cave.level.tscn","ms":101}},
+{"t":10,"type":"error","data":{"message":"bad  thing\ttab \v vt \"quoted\" back\\slash 😀   éxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx","file":null,"line":12}},
+{"t":10.5,"type":"error","name":null,"data":{"message":3.5}},
+{"t":11,"type":"achievement","name":"first_blood","data":{"id":"ACH_1","progress":0.333333333333333}},
+{"t":11.5,"type":"custom","name":"big","data":{"n":123456789012345680.0,"f":0.00000015,"neg":0,"e":250000000000000000000.0}},
+{"t":12,"type":"idle","data":{"away":true}},
+{"t":12,"type":"input","data":{"device":"pad","name":"Xbox"}},
+{"t":13,"type":"steam","name":"overlay","data":{"on":false}}]

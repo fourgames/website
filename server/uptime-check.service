@@ -10,9 +10,12 @@ After=network-online.target
 [Service]
 Type=oneshot
 User=fourgames
+# The staff Discord webhook (DISCORD_WEBHOOK_URL) for server_stats.py's traffic alerts. Optional.
+EnvironmentFile=-/etc/fourgames/feedback.env
 # The system python3: the check needs nothing outside the standard library.
 ExecStart=/usr/bin/python3 /srv/fourgames/own/server/uptime/check.py
-# The server's own load for the status page's Server row (a failure there never fails the checks).
+# The server's own load for the status page's Server row, and the traffic watch with its Discord
+# alerts (a failure there never fails the checks).
 ExecStart=-/usr/bin/python3 /srv/fourgames/own/server/uptime/server_stats.py
 # Each check gives up after 10 seconds; a run normally takes one or two.
 TimeoutStartSec=50s

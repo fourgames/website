@@ -50,3 +50,37 @@ CPU and network as the change since the last run, memory, disk, and the traffic 
 this month (added up in `/srv/fourgames/uptime/server-stats-state.json`, since the kernel's counters
 start over at every reboot). The status page shows it as meters in the *Server* row. One Steam
 broadcast is about 4.7 Mbit/s and 1.5 TB a month of *Sent*.
+
+## The traffic watch
+
+The same run also watches for the server being flooded (an attack) or just busy, and tells the two
+apart: a game going viral brings lots of real requests that get answered, an attack brings what real
+players don't. Each minute `server_stats.py` records the requests a minute (from Caddy's metrics at
+`http://localhost:2019/metrics`, turned on by `metrics { per_host }` in the Caddyfile's global
+options), the share of them that were errors (4xx/5xx, only when `caddy_http_requests_total` has a
+`code` label), the site most of them went to, traffic in and out, CPU, and the open TCP connections
+(established, and half-open `SYN_RECV`, from `/proc/net/tcp` and `tcp6`). The last hour goes into
+`server.json` as `recent`, with the normal level: the median of the last 24 hours of requests and
+traffic in. `watch` in `server.json` is the judgement (the limits are constants at the top of
+`server_stats.py`):
+
+| State | When |
+| --- | --- |
+| attack | 200 or more half-open connections (a SYN flood); requests a minute at 10 × normal and at least 600 for 3 minutes with half or more of them errors (429 from rate limits included); or 50 Mbit/s or more coming in for 3 minutes without a request surge to explain it |
+| busy | a request surge: 4 × normal and at least 200 a minute for 3 minutes, mostly answered or with no error counts (a game going viral looks like this); or CPU at 90% or more for 5 minutes |
+| ok | anything else |
+
+The status page shows busy as *Delayed* and attack as *Down* in the Server row, with the reason,
+and a sparkline of the last hour's requests.
+
+A change into busy or attack posts to the staff Discord (`DISCORD_WEBHOOK_URL` from
+`/etc/fourgames/feedback.env`, which the service unit loads): busy as a note ("📈 Lots of
+traffic: …"), attack as a warning ("⚠️ Unusual traffic on the server: …"), and the way back to
+normal with how long it lasted; at most one message per state per 30 minutes. Try it once with
+`server_stats.py --test-alert` (it reads the webhook from the env file when it isn't in the
+environment, if that file is readable).
+
+Caddy counts a request once for each route or handler it passes, so the requests a minute can be
+higher than the real number of requests; the normal level is counted the same way, so the
+comparison holds. Strato's network may filter large attacks before they reach the server at all;
+the watch only sees what gets through.

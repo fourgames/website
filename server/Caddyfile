@@ -6,6 +6,12 @@
 {
 	# Let's Encrypt writes here if a certificate ever fails to renew.
 	email danny@fourgames.se
+	# Request counts for the status page's traffic watch (server/uptime/server_stats.py), read from
+	# the admin endpoint http://localhost:2019/metrics, which only the server itself can reach.
+	# per_host: a host label, so the watch can say which site the traffic goes to.
+	metrics {
+		per_host
+	}
 }
 
 # Short links. Same targets as SITE.links in src/data/site.js.

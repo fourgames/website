@@ -78,6 +78,7 @@ def test_build(tmp_path, rng):
     shooter = next(t for t in trends["tags"] if t["tag"] == SHOOTER)
     assert cozy["supply"] > 1 > shooter["supply"]
     assert cozy["heat"] > shooter["heat"]
+    assert {"hitRateRaw", "hitGames", "hits", "topReviews"} <= set(cozy)
     kinds = {a["kind"] for a in result["alerts"]}
     assert "breakout" in kinds and any(a.get("appid") == 5000 for a in result["alerts"])
 
@@ -85,6 +86,12 @@ def test_build(tmp_path, rng):
     assert set(godot) == {6000, 7000}
     assert godot[6000]["devGames"] == 1 and godot[6000]["devGodotGames"] == 1 and godot[7000]["comingSoon"]
     assert godot[6000]["signals"][0]["source"] == "store_legal"
+
+    assert not rows[6000]["flags"] & games["flags"]["self"], "published by Pub"
+
+    upcoming = read(out, "upcoming")
+    up = {r[0]: dict(zip(upcoming["columns"], r)) for r in upcoming["rows"]}
+    assert set(up) == {7000} and up[7000]["devGames"] == 1 and up[7000]["devBest"] == 120
 
     growth = read(out, "growth")
     assert sum(growth["total"]["y"]) == 182
@@ -117,6 +124,17 @@ def test_hit_index_compares_games_of_the_same_age():
     assert old[99].hit == 99 and old[0].hit == 0
     # 9 reviews tops the new fortnight even though it's few next to the old games.
     assert new[99].hit >= 90
+
+
+def test_small_tags_are_pulled_toward_steams_hit_rate():
+    """4 hits in 16 games isn't a 25% hit rate yet: it's pulled toward Steam's, more than 40 in 160 is."""
+    def tag_rows(n, hits):
+        gs = [market.Game(appid=i, release_day=900, coming_soon=False, reviews=0, tags=(1 if i < n else 2,),
+                          hit=95 if i < hits or n <= i < n + 10 else 10) for i in range(n + 100)]
+        return {t["tag"]: t for t in market.trends(gs, {}, 960, None, {})["tags"]}
+    small, big = tag_rows(16, 4)[1], tag_rows(160, 40)[1]
+    assert small["hitRateRaw"] == big["hitRateRaw"] == 0.25
+    assert small["hitRate"] < big["hitRate"] < 0.25
 
 
 def test_read_only(tmp_path, rng):

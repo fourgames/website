@@ -13,6 +13,8 @@ JSON files to MARKET_DIR, which the game-data server hands to the signed-in owne
   The dashboard's gap finder, hit list and goal search all work on this in the browser.
 - godot.json: every game in the Godot set (released or not), with everything the Godot finder and the
   leads list score on.
+- upcoming.json: games coming soon with a date in the next UPCOMING_DAYS (or a demo out), one compact
+  row each with the studio's track record, for scouting before release.
 - trends.json: each tag's momentum (supply, hits, reviews), and the alerts.
 - overview.json: when it was built, how much history there is, the counts.
 
@@ -61,6 +63,10 @@ MONTHS = 72                 # growth.json: the last six years month by month
 SUPPLY_WINDOW = 90          # trends: releases in the last 90 days vs the same 90 days a year earlier
 HIT_RATE_WINDOW = (14, 180) # trends: games released 14-180 days ago, for the hit rate
 MIN_TAG_GAMES = 15          # a tag needs this many recent releases to have a trend at all
+PRIOR_GAMES = 30            # hit rates are pulled toward Steam's by this many made-up average games,
+                            # so a tag with 16 games and 4 hits doesn't look like a sure thing
+UPCOMING_DAYS = 540         # upcoming.json: planned within the next year and a half
+TAG_ALERTS = 8              # at most this many "heating up" alerts a day, the hottest
 ALERT_REPEAT_DAYS = 30
 INDIE = 492  # the Indie user tag
 
@@ -143,7 +149,8 @@ def users_by(periods: list[int], period_of, end_of, measured: dict[int, int]) ->
 
 
 # Flags in a games.json row (a bit field, so the rows stay small).
-F_LINUX, F_MAC, F_DECK_OK, F_DECK_VERIFIED, F_EARLY, F_FREE, F_GODOT, F_DEMO = (1 << i for i in range(8))
+# F_SELF: self-published (no publisher besides the developers).
+F_LINUX, F_MAC, F_DECK_OK, F_DECK_VERIFIED, F_EARLY, F_FREE, F_GODOT, F_DEMO, F_SELF = (1 << i for i in range(9))
 
 
 # ---------------------------------------------------------------------------
@@ -345,7 +352,12 @@ def flags(g: Game) -> int:
     if g.is_free: f |= F_FREE
     if g.godot: f |= F_GODOT
     if g.demos: f |= F_DEMO
+    if self_published(g): f |= F_SELF
     return f
+
+
+def self_published(g: Game) -> bool:
+    return not g.publishers or set(g.publishers) <= set(g.developers)
 
 
 GAME_COLUMNS = ["appid", "name", "day", "price", "reviews", "pos", "tags", "flags", "langs", "hit", "gain7", "gain28", "players"]
@@ -361,7 +373,7 @@ def recent_rows(games: list[Game], today: int) -> dict[str, Any]:
     rows.sort(key=lambda r: -r[2])
     return {"columns": GAME_COLUMNS, "rows": rows, "topTags": TOP_TAGS,
             "flags": {"linux": F_LINUX, "mac": F_MAC, "deckOk": F_DECK_OK, "deckVerified": F_DECK_VERIFIED,
-                      "earlyAccess": F_EARLY, "free": F_FREE, "godot": F_GODOT, "demo": F_DEMO}}
+                      "earlyAccess": F_EARLY, "free": F_FREE, "godot": F_GODOT, "demo": F_DEMO, "self": F_SELF}}
 
 
 def godot_rows(db: sqlite3.Connection, games: list[Game]) -> list[dict[str, Any]]:
@@ -370,10 +382,7 @@ def godot_rows(db: sqlite3.Connection, games: list[Game]) -> list[dict[str, Any]
         signals[r["appid"]].append({"source": r["source"], "strength": r["strength"], "evidence": (r["evidence"] or "")[:160]})
     about = {r[0]: r[1] or "" for r in db.execute("SELECT appid, short_description FROM apps WHERE godot = 1")}
     # Each developer's other games: a studio's track record (and whether it self-publishes).
-    by_dev: dict[str, list[Game]] = defaultdict(list)
-    for g in games:
-        for d in g.developers:
-            by_dev[d].append(g)
+    by_dev, by_pub = studios(games)
     out = []
     for g in games:
         if not g.godot:
@@ -388,13 +397,52 @@ def godot_rows(db: sqlite3.Connection, games: list[Game]) -> list[dict[str, Any]
             "linux": g.linux, "mac": g.mac, "deck": g.deck, "achievements": g.achievements,
             "controller": g.controller, "demos": g.demos, "dlc": g.dlc_count, "metacritic": g.metacritic,
             "details": g.details, "developers": list(g.developers), "publishers": list(g.publishers),
-            "selfPublished": not g.publishers or set(g.publishers) <= set(g.developers),
+            "selfPublished": self_published(g),
+            # The biggest outside publisher's catalog size: 1-2 is a friend's label, 50 a real publisher.
+            "publisherGames": max((len(by_pub.get(p, ())) for p in g.publishers if p not in g.developers), default=0),
             "devGames": len(others), "devReviews": sum(o.reviews for o in others.values()),
             "devGodotGames": sum(1 for o in others.values() if o.godot),
             "about": about.get(g.appid, "")[:300], "signals": signals.get(g.appid, [])[:3],
         })
     out.sort(key=lambda r: -(r["reviews"] or 0))
     return out
+
+
+def studios(games: list[Game]) -> tuple[dict[str, list[Game]], dict[str, list[Game]]]:
+    by_dev: dict[str, list[Game]] = defaultdict(list)
+    by_pub: dict[str, list[Game]] = defaultdict(list)
+    for g in games:
+        for d in g.developers:
+            by_dev[d].append(g)
+        for p in g.publishers:
+            by_pub[p].append(g)
+    return by_dev, by_pub
+
+
+UPCOMING_COLUMNS = ["appid", "name", "day", "display", "price", "tags", "flags", "langs", "devs", "pubs",
+                    "devGames", "devBest", "devReviews", "pubGames", "players"]
+
+
+def upcoming_rows(games: list[Game], today: int) -> dict[str, Any]:
+    """Coming soon with a date from a month ago (late, still coming) to UPCOMING_DAYS ahead, or with a
+    demo out: the rest are mostly pages nobody works on. devBest: the studio's best released game's
+    reviews; pubGames: the biggest outside publisher's catalog (0 when self-published)."""
+    by_dev, by_pub = studios(games)
+    rows = []
+    for g in games:
+        if not g.coming_soon:
+            continue
+        dated = g.release_day is not None and today - 30 <= g.release_day <= today + UPCOMING_DAYS
+        if not dated and not g.demos:
+            continue
+        others = {o.appid: o for d in g.developers for o in by_dev.get(d, ()) if o.appid != g.appid and not o.coming_soon}
+        rows.append([g.appid, g.name, g.release_day, g.release_display, g.price, list(g.tags[:ROW_TAGS]), flags(g),
+                     g.languages, list(g.developers)[:3], list(g.publishers)[:3], len(others),
+                     max((o.reviews for o in others.values()), default=0), sum(o.reviews for o in others.values()),
+                     max((len(by_pub.get(p, ())) for p in g.publishers if p not in g.developers), default=0),
+                     g.players_max])
+    rows.sort(key=lambda r: (r[2] is None, r[2] or 0))
+    return {"columns": UPCOMING_COLUMNS, "rows": rows}
 
 
 def _median(values: list[float]) -> float | None:
@@ -452,7 +500,10 @@ def trends(games: list[Game], tag_names: dict[int, str], today: int, first: int 
             # +1 on both sides, so a tag that barely existed a year ago gets a big but finite number.
             supply = ((n + 1) / len(now_set)) / ((n_ago.get(t, 0) + 1) / len(year_ago))
         hs = hits.get(t, [])
-        hit_rate = sum(1 for x in hs if x >= 90) / len(hs) if len(hs) >= MIN_TAG_GAMES else None
+        n_hits = sum(1 for x in hs if x >= 90)
+        raw_rate = n_hits / len(hs) if len(hs) >= MIN_TAG_GAMES else None
+        # The rate pulled toward Steam's (PRIOR_GAMES average games added): few games, little pull away.
+        hit_rate = (n_hits + PRIOR_GAMES * base_hit_rate) / (len(hs) + PRIOR_GAMES) if raw_rate is not None else None
         hit_lift = hit_rate / base_hit_rate if hit_rate is not None and base_hit_rate else None
         demand = None
         if window and total_now and total_before and gains_before.get(t, 0) >= 20:
@@ -460,13 +511,24 @@ def trends(games: list[Game], tag_names: dict[int, str], today: int, first: int 
         parts = [x for x in (supply, hit_lift, demand) if x is not None]
         heat = math.exp(sum(math.log(max(x, 0.05)) for x in parts) / len(parts)) if parts else None
         rows.append({"tag": t, "name": tag_names.get(t, f"Tag {t}"), "releases": n, "releasesYearAgo": n_ago.get(t, 0),
-                     "supply": _r(supply), "hitRate": _r(hit_rate), "hitLift": _r(hit_lift), "demand": _r(demand),
+                     "supply": _r(supply), "hitRate": _r(hit_rate), "hitRateRaw": _r(raw_rate), "hitGames": len(hs),
+                     "hits": n_hits, "hitLift": _r(hit_lift), "demand": _r(demand),
                      "gainsNow": gains_now.get(t), "heat": _r(heat),
-                     "medianReviews": _median([g.reviews for g in hit_set if t in g.tags[:TOP_TAGS]])})
+                     "medianReviews": _median([g.reviews for g in hit_set if t in g.tags[:TOP_TAGS]]),
+                     # The 90th percentile: what a game in the top tenth of the tag got.
+                     "topReviews": _quantile([g.reviews for g in hit_set if t in g.tags[:TOP_TAGS]], 0.9)})
     rows.sort(key=lambda r: -(r["heat"] or 0))
     return {"window": window, "supplyWindow": w, "hitRateWindow": list(HIT_RATE_WINDOW), "baseHitRate": _r(base_hit_rate),
+            "priorGames": PRIOR_GAMES, "baseMedianReviews": _median([g.reviews for g in hit_set]),
             "releasesNow": len(now_set), "releasesYearAgo": len(year_ago), "tags": rows,
             "historyDays": (today - first + 1) if first is not None else 0}
+
+
+def _quantile(values: list[int], q: float) -> int | None:
+    if not values:
+        return None
+    s = sorted(values)
+    return s[min(len(s) - 1, int(q * len(s)))]
 
 
 def _r(x: float | None, digits: int = 3) -> float | None:
@@ -479,7 +541,10 @@ def _r(x: float | None, digits: int = 3) -> float | None:
 
 def find_alerts(games: list[Game], trend: dict[str, Any], today: int) -> list[dict[str, Any]]:
     alerts = []
-    for t in trend["tags"]:
+    tag_alerts = 0
+    for t in trend["tags"]:  # hottest first
+        if tag_alerts >= TAG_ALERTS:
+            break
         heat = t["heat"] or 0
         signals = [x for x in (t["supply"], t["hitLift"], t["demand"]) if x is not None]
         if heat >= 2 and len(signals) >= 2 and t["releases"] >= 20 and (t["hitLift"] or 0) >= 1.5:
@@ -490,6 +555,7 @@ def find_alerts(games: list[Game], trend: dict[str, Any], today: int) -> list[di
             alerts.append({"key": f"tag:{t['tag']}", "kind": "tag", "tag": t["tag"], "title": f"{t['name']} is heating up",
                            "detail": "; ".join(why) + f". {t['releases']} releases in the last {trend['supplyWindow']} days.",
                            "score": heat})
+            tag_alerts += 1
     for g in games:
         if g.release_day is None or g.coming_soon or g.hit is None:
             continue
@@ -503,13 +569,14 @@ def find_alerts(games: list[Game], trend: dict[str, Any], today: int) -> list[di
                            "detail": f"{g.reviews:,} reviews ({g.positive_pct or '?'}% positive) {age} days after release; hit index {g.hit}"
                                      + (f"; +{g.gain7:,} reviews this week" if g.gain7 else "") + ".",
                            "score": g.reviews})
-        if g.godot and (g.hit >= 90 and age <= 90 and g.reviews >= 30 or (g.gain7 or 0) >= 30):
+        # Self-published only: a Godot hit that already has a publisher isn't ours to sign.
+        if g.godot and self_published(g) and (g.hit >= 90 and age <= 90 and g.reviews >= 30 or (g.gain7 or 0) >= 30):
             alerts.append({"key": f"godot:{g.appid}", "kind": "godot", "appid": g.appid,
                            "title": f"Godot game taking off: {g.name}",
                            "detail": f"{g.reviews:,} reviews ({g.positive_pct or '?'}% positive), hit index {g.hit}"
                                      + (f", +{g.gain7:,} this week" if g.gain7 else "") + f"; by {', '.join(g.developers) or '?'}.",
                            "score": g.reviews})
-    alerts.sort(key=lambda a: ({"godot": 0, "tag": 1, "breakout": 2}[a["kind"]], -a["score"]))
+    alerts.sort(key=lambda a: ({"tag": 0, "godot": 1, "breakout": 2}[a["kind"]], -a["score"]))
     return alerts
 
 
@@ -575,7 +642,7 @@ def write_json(path: str, data: Any, gz: bool = True) -> int:
     return len(body)
 
 
-FILES = ("overview", "growth", "games", "godot", "trends")
+FILES = ("overview", "growth", "games", "godot", "trends", "upcoming")
 
 
 def build(db_path: str, out_dir: str, now: float | None = None, webhook: str = "", post: bool = True,
@@ -615,6 +682,7 @@ def build(db_path: str, out_dir: str, now: float | None = None, webhook: str = "
         "growth": write_json(os.path.join(out_dir, "growth.json.gz"), growth(games, tag_names, genre_names, today, measured)),
         "games": write_json(os.path.join(out_dir, "games.json.gz"), recent_rows(games, today)),
         "godot": write_json(os.path.join(out_dir, "godot.json.gz"), {"games": godot}),
+        "upcoming": write_json(os.path.join(out_dir, "upcoming.json.gz"), upcoming_rows(games, today)),
         "trends": write_json(os.path.join(out_dir, "trends.json.gz"), trend),
     }
     overview["seconds"] = round(time.time() - started, 1)

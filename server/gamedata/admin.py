@@ -413,7 +413,7 @@ def github_context(base: str):
 # The Steam market files (server/steamdata/market.py writes them; this only reads).
 
 
-MARKET_FILES = frozenset({"overview", "growth", "games", "godot", "trends"})
+MARKET_FILES = frozenset({"overview", "growth", "games", "godot", "trends", "upcoming"})
 MARKET_DIR = "/srv/fourgames/steamdata/market"
 
 

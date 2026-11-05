@@ -276,6 +276,11 @@ class KeyBot(discord.Client):
         return "Sent for review", "The team will take a look, and you'll get a DM either way."
 
 
+def plural(count: int | None, word: str) -> str:
+    count = count or 0
+    return f"{count} {word}" if count == 1 else f"{count} {word}s"
+
+
 def redeem_url(value: str) -> str:
     """Steam's activation page with the key filled in."""
     return f"{REDEEM_URL}?key={quote(value, safe='-')}"
@@ -284,7 +289,7 @@ def redeem_url(value: str) -> str:
 def key_message(game: sqlite3.Row, value: str) -> str:
     """The DM: the key itself, or (after /claim) the receipt."""
     lines = [f"Here's your Steam key for **{escape_markdown(game['name'])}**:", f"`{value}`",
-             f"Redeem it: {redeem_url(value)}", "(or in Steam: Games → Activate a Product on Steam)"]
+             f"[Redeem on Steam](<{redeem_url(value)}>) (or in Steam: Games → Activate a Product on Steam)"]
     if game["steam_app_id"]:
         lines.append(f"https://store.steampowered.com/app/{game['steam_app_id']}")
     lines.append("You can see your keys again any time with /claim.")
@@ -294,7 +299,7 @@ def key_message(game: sqlite3.Row, value: str) -> str:
 def claim_message(game: sqlite3.Row, value: str, dm_sent: bool) -> str:
     """The /claim reply (ephemeral: only they see it)."""
     lines = [f"Here's your Steam key for **{escape_markdown(game['name'])}**:", f"`{value}`",
-             f"Redeem it: {redeem_url(value)}", "(or in Steam: Games → Activate a Product on Steam)"]
+             f"[Redeem on Steam](<{redeem_url(value)}>) (or in Steam: Games → Activate a Product on Steam)"]
     if dm_sent:
         lines.append("A copy is in your DMs, and /claim shows it again any time.")
     else:
@@ -504,7 +509,7 @@ def nothing_to_claim_text(bot: "KeyBot", user: discord.abc.User) -> str:
 def pool_line(game: sqlite3.Row, config: Config, guild: discord.Guild | None) -> str:
     """A public game in the /claim overview: keys per person, keys left, who can claim it."""
     return (f"**{escape_markdown(game['name'])}** · {limit_text(game['per_user_limit'])} · "
-            f"{game['available']} key(s) left · for {roles_text(game, config, guild)}")
+            f"{plural(game['available'], 'key')} left · for {roles_text(game, config, guild)}")
 
 
 def own_key_lines(store: Store, user_id: int) -> list[str]:
@@ -513,9 +518,9 @@ def own_key_lines(store: Store, user_id: int) -> list[str]:
     prior = store.prior_claims(user_id)
     lines = [f"**{escape_markdown(k['game'])}**: `{k['value']}` · [Redeem on Steam]({redeem_url(k['value'])})"
              for k in keys]
-    lines += [f"**{escape_markdown(p['game'])}**: claimed with the old KeyBot (it sent you that key)" for p in prior]
     if keys:
-        lines.append("(or in Steam: Games → Activate a Product on Steam)")
+        lines.append("-# Or in Steam: Games → Activate a Product on Steam")
+    lines += [f"**{escape_markdown(p['game'])}**: claimed with the old KeyBot (it sent you that key)" for p in prior]
     return lines or ["You haven't been given any keys yet."]
 
 
@@ -716,7 +721,8 @@ class PressForm(discord.ui.Modal):
                                  min_length=3, max_length=254)
 
     def __init__(self, game_name: str):
-        super().__init__(title=f"Press key: {game_name}"[:45])
+        title = f"Press key: {game_name}"
+        super().__init__(title=title if len(title) <= 45 else title[:44].rstrip() + "…")
         self.game_name = game_name
 
     async def on_submit(self, interaction: discord.Interaction) -> None:
@@ -910,9 +916,10 @@ async def optional_game(interaction: discord.Interaction, name: str | None) -> t
 def status_line(row: sqlite3.Row) -> str:
     prior = f", {row['prior']} with the old KeyBot" if row["prior"] else ""
     app = f"Steam app {row['steam_app_id']}" if row["steam_app_id"] else "no Steam app id"
-    return (f"**{escape_markdown(row['name'])}**: {row['available'] or 0} available · given "
-            f"{row['member'] or 0} member, {row['creator'] or 0} creator, {row['press'] or 0} press, "
-            f"{row['manual'] or 0} manual{prior} · {row['open_requests']} open request(s) · "
+    given = ", ".join(f"{row[r]} {r}" for r in ("member", "creator", "press", "manual") if row[r])
+    given = f"given {given}{prior}" if given else f"none given yet{prior}"
+    waiting = f" · **{plural(row['open_requests'], 'open request')}**" if row["open_requests"] else ""
+    return (f"**{escape_markdown(row['name'])}**: {row['available'] or 0} left · {given}{waiting} · "
             f"{'public' if row['public'] else 'private'}, {limit_text(row['per_user_limit'])} · {app}")
 
 
@@ -1100,7 +1107,7 @@ GRANTROLE_OFF_TEXT = ("Granting to a role is turned off: it needs Discord's Serv
 
 @keys_group.command(name="grant", description="Send one key by DM to someone, or to everyone with a role")
 @app_commands.describe(game="Which game", user="Who gets it",
-                       role="Everyone with this role, after a confirmation (only when GRANTROLE_ENABLED is on)")
+                       role="Everyone with this role, after a confirmation (turned off for now)")
 @app_commands.autocomplete(game=all_games_autocomplete)
 async def keys_grant(interaction: discord.Interaction, game: str, user: discord.User | None = None,
                      role: discord.Role | None = None) -> None:

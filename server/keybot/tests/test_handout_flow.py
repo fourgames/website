@@ -360,7 +360,7 @@ def test_pool_lines_and_pages(bot):
     store = bot.store
     row = store.games()[0]
     line = pool_line(row, bot.config, None)
-    assert "**Hidden Ones** · 1 per person · 3 key(s) left · for **YouTube Member**" == line
+    assert "**Hidden Ones** · 1 per person · 3 keys left · for **YouTube Member**" == line
     store.update_game_settings(game["id"], per_user_limit=0)
     assert "no limit per person" in pool_line(store.games()[0], bot.config, None)
     store.update_game_settings(game["id"], required_role_ids=[600, 601])

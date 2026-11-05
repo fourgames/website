@@ -115,7 +115,7 @@ def test_claim_without_game_shows_games_and_own_keys(bot):
     (text, kwargs), = interaction.response.sent
     assert kwargs["ephemeral"] and kwargs["suppress_embeds"]
     # Public games with keys left, with keys per person, stock and roles; not private or empty ones.
-    assert "**Hidden Ones** · 1 per person · 3 key(s) left · for **YouTube Member**" in text
+    assert "**Hidden Ones** · 1 per person · 3 keys left · for **YouTube Member**" in text
     assert "**Secret** ·" not in text and "Empty" not in text and "**Old Game** ·" not in text
     # Their own keys, with the Steam link that fills each in, and the old KeyBot claims.
     assert (f"**Secret**: `{given.value}` · [Redeem on Steam]"
@@ -355,9 +355,9 @@ def test_status_shows_games_then_the_latest_handouts(admin):
 
     text, _ = ask(admin, "status")
     lines = text.split("\n")
-    assert lines[0] == ("**Hidden Ones**: 2 available · given 1 member, 0 creator, 0 press, 0 manual, 1 with the "
-                        "old KeyBot · 1 open request(s) · public, 1 per person · Steam app 123")
-    assert lines[1].startswith("**Other**: 1 available · given 0 member, 0 creator, 0 press, 1 manual · ")
+    assert lines[0] == ("**Hidden Ones**: 2 left · given 1 member, 1 with the old KeyBot · **1 open request** · "
+                        "public, 1 per person · Steam app 123")
+    assert lines[1].startswith("**Other**: 1 left · given 1 manual · ")
     assert lines[1].endswith("private, no limit per person · no Steam app id")
     assert lines[2] == "**Latest handouts** (key ids only)"
     assert f"**Other** → <@9> (manual), key #{second.key_id}" in lines[3]

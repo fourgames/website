@@ -59,6 +59,11 @@ def boot_id() -> str:
         return ""
 
 
+def uptime_seconds() -> float:
+    with open("/proc/uptime") as f:
+        return float(f.read().split()[0])
+
+
 def load_state() -> dict:
     try:
         with open(STATE) as f:
@@ -95,7 +100,15 @@ def step(state: dict, now: float, cpu: tuple[int, int], net: tuple[int, int], bo
 def main() -> None:
     now = time.time()
     month = time.strftime("%Y-%m", time.localtime(now))
-    state, measured = step(load_state(), now, cpu_times(), net_bytes(), boot_id(), month)
+    boot = boot_id()
+    state = load_state()
+    if not state:
+        # First run ever: when the server booted this month, everything it sent since boot is this
+        # month's, so count from boot instead of from now.
+        booted = now - uptime_seconds()
+        if time.strftime("%Y-%m", time.localtime(booted)) == month:
+            state = {"boot": boot, "at": booted, "cpu": [0, 0], "net": [0, 0], "month": month, "monthIn": 0, "monthOut": 0}
+    state, measured = step(state, now, cpu_times(), net_bytes(), boot, month)
     disk = shutil.disk_usage("/")
     load1 = os.getloadavg()[0]
     report = {

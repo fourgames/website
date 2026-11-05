@@ -32,7 +32,8 @@ export const NAV_LEFT = [
 		to: "/#community",
 		children: [
 			{ label: "nav.discord", href: SITE.links.discord },
-			{ label: "nav.membership", to: "/#membership" },
+			{ label: "nav.youtubeShort", href: SITE.links.youtube },
+			{ label: "nav.steamShort", href: SITE.links.steam },
 		],
 	},
 ];

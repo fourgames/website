@@ -92,6 +92,14 @@ def memory_used_pct() -> float:
     return round(100 * (total - available) / total, 1)
 
 
+def memory_total_gb() -> float:
+    with open("/proc/meminfo") as f:
+        for line in f:
+            if line.startswith("MemTotal:"):
+                return round(int(line.split()[1]) / 1e6, 1)  # kB → GB
+    return 0.0
+
+
 def boot_id() -> str:
     try:
         with open("/proc/sys/kernel/random/boot_id") as f:
@@ -543,6 +551,8 @@ def main() -> None:
         "cpuPct": measured["cpuPct"],
         "load1": round(load1, 2),
         "memoryPct": memory_used_pct(),
+        "memoryTotalGB": memory_total_gb(),
+        "diskTotalGB": round(shutil.disk_usage("/").total / 1e9),
         "diskPct": round(100 * disk.used / disk.total, 1),
         "diskFreeGB": round(disk.free / 1e9, 1),
         "inMbit": measured["inMbit"],

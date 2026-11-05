@@ -184,9 +184,9 @@ function showMeters(data) {
 	const load = document.createElement("div");
 	load.className = "meters";
 	load.append(
-		meter("CPU used", fmtPct(data.cpuPct), data.cpuPct),
-		meter("Memory used", fmtPct(data.memoryPct), data.memoryPct),
-		meter("Disk used", `${fmtPct(data.diskPct)} · ${data.diskFreeGB} GB free`, data.diskPct),
+		meter(`CPU used${data.cores ? ` · ${data.cores} ${data.cores === 1 ? "core" : "cores"}` : ""}`, fmtPct(data.cpuPct), data.cpuPct),
+		meter(`Memory used${data.memoryTotalGB ? ` · of ${data.memoryTotalGB} GB` : ""}`, fmtPct(data.memoryPct), data.memoryPct),
+		meter(`Disk used${data.diskTotalGB ? ` · of ${data.diskTotalGB} GB` : ""}`, `${fmtPct(data.diskPct)} · ${data.diskFreeGB} GB free`, data.diskPct),
 	);
 	const traffic = document.createElement("div");
 	traffic.className = "traffic";

@@ -1,0 +1,12 @@
+# Writes the broadcasts' state for status.fourgames.se (server/broadcast/status.sh).
+# Started every minute by steam-broadcast-status.timer.
+[Unit]
+Description=Four Games Steam broadcasts: status for the status page
+
+[Service]
+Type=oneshot
+User=fourgames
+ExecStart=/srv/fourgames/own/server/broadcast/status.sh
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full

@@ -20,6 +20,7 @@ something does, like the player data API's database.
 | `alerts/`, `alerts.service` | Push notifications from YouTube and Twitch that start the loop's announce check at once, so new videos and streams reach Discord within a minute: [alerts/README.md](alerts/README.md) |
 | `steamdata/`, `steamdata.service` | The Steam market-data collector: a daily snapshot of every game (reviews, price, discount, tags, release), player counts, metadata and which games are Godot, into one SQLite file: [steamdata/README.md](steamdata/README.md) |
 | `gamedata/`, `gamedata.service`, `gamedata-geo.service`, `gamedata-geo.timer` | The player game-data API at `api.fourgames.se/gamedata`: sessions, game actions, hardware, settings and crash reports from the games under a pseudonym, and the privacy page's sign-in, download, opt-out and anonymise; plus the monthly update of its country/region database: [gamedata/README.md](gamedata/README.md) |
+| `broadcast/`, `steam-broadcast@.service`, `steam-broadcast-status.*` | Looping videos as 24/7 broadcasts on the games' Steam store pages, one service per stream, plus their status for the status page: [broadcast/README.md](broadcast/README.md) |
 | `Caddyfile` | The subdomains: `discord`, `youtube`, `steam`, `github` (short links) and `api` (status, key bot) |
 | `status-page/` | The public status page at `status.fourgames.se`: static files Caddy serves from `/srv/fourgames/own/server/status-page` |
 

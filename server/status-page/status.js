@@ -99,6 +99,30 @@ function judgeGamedata(data) {
 	return null;
 }
 
+// Steam broadcasts (server/broadcast/status.sh writes this every minute). The row stays hidden
+// until a stream is set up; HIDDEN tells refresh() to leave it out.
+const HIDDEN = "hidden";
+async function checkBroadcast() {
+	let data;
+	try {
+		const response = await fetchWithTimeout(`${API}/status/broadcast.json`);
+		if (!response.ok) return HIDDEN;
+		data = await response.json();
+	} catch {
+		return { state: "unknown", detail: "Couldn't read its report right now." };
+	}
+	const streams = Array.isArray(data.streams) ? data.streams : [];
+	if (streams.length === 0) return HIDDEN;
+	if (now() - Number(data.checkedAt) > 10 * 60) {
+		return { state: "unknown", detail: `Last checked ${ago(now() - Number(data.checkedAt))}` };
+	}
+	const down = streams.filter((s) => !s.sending).map((s) => s.name);
+	const n = streams.length;
+	if (down.length === 0) return { state: "running", detail: n === 1 ? "Sending to Steam" : `All ${n} sending to Steam` };
+	if (down.length === n) return { state: "down", detail: "Not sending right now; it keeps trying" };
+	return { state: "delayed", detail: `${down.join(", ")} not sending right now; it keeps trying` };
+}
+
 function checkLinks() {
 	// The short links run on the same server and Caddy as this page, so this page loading means
 	// that server is up. Each link isn't opened one by one.
@@ -113,6 +137,7 @@ const CHECKS = {
 	contact: () => checkHealth("/contact/health"),
 	alerts: () => checkHealth("/alerts/health", judgeAlerts),
 	gamedata: () => checkHealth("/gamedata/health", judgeGamedata),
+	broadcast: checkBroadcast,
 	links: checkLinks,
 };
 
@@ -149,7 +174,7 @@ async function refresh() {
 			return result;
 		}),
 	);
-	showSummary(results);
+	showSummary(results.filter(Boolean));
 	lastChecked = now();
 	showUpdated();
 }

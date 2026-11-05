@@ -1,0 +1,26 @@
+# One looping Steam store-page broadcast (server/broadcast). One instance per stream, named after
+# /etc/fourgames/broadcast/<name>.env. Setup: server/broadcast/README.md.
+# Start: sudo systemctl enable --now steam-broadcast@pomo-valley   Logs: journalctl -u steam-broadcast@pomo-valley -f
+[Unit]
+Description=Four Games Steam broadcast: %i
+Wants=network-online.target
+After=network-online.target
+# Steam dropping the connection is normal now and then: keep trying, forever.
+StartLimitIntervalSec=0
+
+[Service]
+User=fourgames
+EnvironmentFile=/etc/fourgames/broadcast/%i.env
+ExecStart=/srv/fourgames/own/server/broadcast/stream.sh
+Restart=always
+RestartSec=15
+# Copying a file to the network: behind everything else on the server.
+Nice=10
+CPUWeight=30
+MemoryMax=150M
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

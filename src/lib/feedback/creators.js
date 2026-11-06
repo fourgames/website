@@ -349,8 +349,8 @@ function pressView(d) {
 // through the game-data server's /admin/outreach routes). Nothing is sent before a batch is approved.
 const TEMPLATES = {
   creators: {
-    subject: "{game} - for your channel?",
-    body: "Hi {name},\n\nI'm Danny, the solo dev behind {game}. I saw you've played {their_game}, so I think it could fit your channel: [one sentence about the game].\n\nSteam: {steam}\nFree key: https://discord.fourgames.se (type /request there, it checks your channel and sends the key right away)\n\nThanks for reading,\nDanny",
+    subject: "{game} for your channel?",
+    body: "Hi {name},\n\nI make {game}: [what you do in it, in a few words]. Since you played {their_game}, I think it could fit your channel.\n\nSteam: {steam}\nFree key: https://discord.fourgames.se (type /request)\n\nThanks,\nDanny",
   },
   press: {
     subject: "{game}: [the news, in a few words]",
@@ -479,7 +479,7 @@ function formView(d, contacted) {
     h("p.cr-muted", "The from address must be your Strato mailbox or one of its aliases (add a game address as an alias in Strato's mail settings first)."),
     input("Subject", "subject"),
     area("Message", "body", 14),
-    h("p.cr-muted", "{name} = the channel or outlet, {game}, {steam} = the store link, {their_game} = a game the creator made a video of. Replace the [bracketed] parts. Keep it short and true. The game's GIF goes in after the second paragraph, and an opt-out line at the end."),
+    h("p.cr-muted", "{name} = the channel or outlet, {game}, {steam} = the store link, {their_game} = a game the creator made a video of. Replace the [bracketed] parts. Keep it short (creators skim) and true. The game's GIF goes in after the second paragraph, and an opt-out line at the end."),
     h("div.cr-row", h("button.btn.primary", { type: "button", disabled: ot.busy || !people.length, onclick: create }, ot.busy ? "Saving…" : `Save draft for ${people.length === 1 ? "1 person" : `${num(people.length)} people`}`),
       h("span.cr-muted", "Nothing is sent until you approve the draft.")),
     people.length ? h("details", h("summary.cr-muted", `Who's in (${people.length})`), h("p.cr-muted", people.slice(0, 200).map((p) => p.label).join(", "))) : null);

@@ -176,7 +176,7 @@ def test_designed_email(store):
     assert mail.is_multipart() and mail.get_body(("plain",)) and mail.get_body(("html",))
     html = mail.get_body(("html",)).get_content()
     assert "https://store.steampowered.com/app/1/" in html and "header.jpg" in html
-    assert "email you again" in html and "<script" not in html
+    assert "email again" in html and "<script" not in html
     designed = outreach.html_body("Hi A,\n\nSteam: https://store.steampowered.com/app/9/\n\nKey: https://discord.gg/x\n\nBest,\nDanny\nFour Games\n\n--\nreply no",
                                   image="https://x/y.gif", steam="https://store.steampowered.com/app/9/", from_name="D")
     assert designed.index("https://x/y.gif") < designed.index("Key:")  # the GIF after the second paragraph

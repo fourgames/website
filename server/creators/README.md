@@ -70,6 +70,15 @@ variety, one game, a few games) and a genre profile from those games' Steam tags
 activity (newest upload, read for every channel every 14 days at 1 unit each), filters, and the best
 creators for each of our games.
 
+## The press list
+
+Games press, aggregators (sites and newsletters that repost trailers and press releases) and YouTube
+trailer channels worldwide, for launch announcements: the `press` table, shown on the Creators
+page under **Press & trailers**. Each contact comes from the outlet's own contact page (kept as
+`source`). The list isn't in this public repository; it's imported on the server from a JSON array
+(`python -m creators.press import < press.json`, format in `press.py`); importing again updates by
+address. `python -m creators.press stats` counts it.
+
 ## The tables
 
 One SQLite file, `/srv/fourgames/creators/creators.db`:
@@ -81,6 +90,7 @@ One SQLite file, `/srv/fourgames/creators/creators.db`:
 | `channel_games` (view) | Per channel and game: videos, the latest, total views. What matching will score on |
 | `channel_links` | The web pages each channel links to, from its description or About panel |
 | `sites` | Each followed link: when, status, emails found. View `site_emails`: per channel |
+| `press` | The press list: outlet, kind, country, language, email or contact page, reach, focus, notes, source |
 | `searches` | Each game searched: when, when it's due again, results and kept |
 | `quota` | Units spent per Pacific day |
 

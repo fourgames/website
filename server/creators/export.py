@@ -9,6 +9,7 @@ Per creator (short keys, the file grows to thousands): id, t title, h handle, s 
 on the channel, c country, l language, e [[email, source]] (source: description, revealed, links),
 k links {twitch, x, ...}, b hidden-email button (1/0/null), lu newest upload, lv newest video of a
 game we searched, g [[appid, videos, newest, views]], cat category, p genre profile [[tagid, weight]].
+Also "press": the press list (press.py), one object per outlet.
 """
 
 from __future__ import annotations
@@ -24,6 +25,7 @@ from collections import Counter, defaultdict
 from .config import Config, ConfigError
 from .db import Store
 from .games import _json, connect, own_appids
+from .press import rows as press_rows
 
 DEFAULT_DIR = "/srv/fourgames/creators/export"
 # Tags that say how a game is sold or felt about, not what it is: left out of genre profiles.
@@ -118,6 +120,7 @@ def build(store: Store, steam_db: str, own: set[int], now: float) -> dict:
         "games": games,
         "creators": creators,
         "searched": db.execute("SELECT COUNT(*) FROM searches").fetchone()[0],
+        "press": press_rows(store),
     }
 
 

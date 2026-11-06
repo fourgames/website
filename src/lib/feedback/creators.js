@@ -33,7 +33,7 @@ const SOURCES = { description: "in their channel description", links: "on a page
 const LANGS = { en: "English", ru: "Russian", de: "German", fr: "French", pt: "Portuguese", es: "Spanish", ja: "Japanese", tr: "Turkish", it: "Italian", pl: "Polish", ko: "Korean", zh: "Chinese", nl: "Dutch", sv: "Swedish", uk: "Ukrainian", ar: "Arabic", id: "Indonesian", vi: "Vietnamese", th: "Thai", cs: "Czech", hu: "Hungarian", fi: "Finnish", da: "Danish", no: "Norwegian", ro: "Romanian", el: "Greek", he: "Hebrew", hi: "Hindi" };
 
 let C = null;
-const st = { data: null, error: null, loading: false, root: null, f: { q: "", email: "any", active: "all", size: "all", type: "all", lang: "all", genre: "all", game: "all", sort: "best" }, shown: PAGE, open: new Set() };
+const st = { view: "creators", pf: { q: "", kind: "all", lang: "all", country: "all", reach: "all", email: "any" }, pshown: PAGE, data: null, error: null, loading: false, root: null, f: { q: "", email: "any", active: "all", size: "all", type: "all", lang: "all", genre: "all", game: "all", sort: "best" }, shown: PAGE, open: new Set() };
 
 const now = () => Math.floor(Date.now() / 1000);
 const num = (n) => (n == null ? "–" : C.fmtNum(n));
@@ -137,6 +137,12 @@ function draw() {
     return;
   }
   const d = st.data;
+  const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`]],
+    st.view, (v) => { st.view = v; draw(); }, "Show"));
+  if (st.view === "press") {
+    root.replaceChildren(switcher, pressView(d));
+    return;
+  }
   const today = now();
   const all = d.creators;
   const ownGames = Object.entries(d.games).filter(([, g]) => g.own).map(([id, g]) => [Number(id), g]).sort((a, b) => a[1].n.localeCompare(b[1].n));
@@ -250,15 +256,94 @@ function draw() {
   }
 
   drawList();
-  root.replaceChildren(cards, gamePick, filters, list,
+  root.replaceChildren(switcher, cards, gamePick, filters, list,
     h("details.about", h("summary", "How this works"),
       h("p", "The server searches YouTube every hour for videos of Steam games (ours every week, then games with 30 to 50,000 reviews, those like ours first) and keeps the channels that made them. Emails come from the channel description, from pages they link to (Linktree, their website; the server follows those), or from YouTube's hidden View email button, which needs a captcha (the creator-emails skill)."),
       h("p", "Last upload is the channel's newest upload of any kind, read every 14 days. Type comes from the games they covered: indie variety plays 4+ different, mostly small games; one game is mostly one title. Genres are the Steam tags of those games."),
       h("p", "Best for a game ranks creators by how much their genres overlap the game's tags (its first tags count most), how active they are, and size: 1k–300k subscribers is the sweet spot for a small studio. Anyone who already made a video of the game is first. Contact status (emailed, replied, made a video) comes with sending.")));
 }
 
+// Press, aggregators and trailer channels (server/creators/press.py), worldwide.
+const KINDS = { press: "Press", aggregator: "Aggregator", "trailer-channel": "Trailer channel" };
+const COUNTRY_NAMES = { INT: "International", US: "USA", GB: "UK", CA: "Canada", AU: "Australia", JP: "Japan", KR: "Korea", CN: "China", TW: "Taiwan", HK: "Hong Kong", DE: "Germany", AT: "Austria", CH: "Switzerland", FR: "France", BE: "Belgium", ES: "Spain", IT: "Italy", PL: "Poland", NL: "Netherlands", SE: "Sweden", NO: "Norway", DK: "Denmark", FI: "Finland", CZ: "Czechia", PT: "Portugal", BR: "Brazil", MX: "Mexico", AR: "Argentina", CL: "Chile", CO: "Colombia", RU: "Russia", UA: "Ukraine", TR: "Turkey", SA: "Saudi Arabia", AE: "UAE", EG: "Egypt", TH: "Thailand", VN: "Vietnam", ID: "Indonesia", PH: "Philippines", MY: "Malaysia", SG: "Singapore", IN: "India" };
+export function filterPress(list, f) {
+  const q = f.q.trim().toLowerCase();
+  return list.filter((p) => {
+    if (q && !`${p.name} ${p.url} ${p.email || ""} ${p.notes || ""} ${p.focus || ""}`.toLowerCase().includes(q)) return false;
+    if (f.kind !== "all" && p.kind !== f.kind) return false;
+    if (f.lang !== "all" && (p.language || "?") !== f.lang) return false;
+    if (f.country !== "all" && (p.country || "?") !== f.country) return false;
+    if (f.reach !== "all" && p.reach !== f.reach) return false;
+    if (f.email === "yes" && !p.email) return false;
+    if (f.email === "form" && p.email) return false;
+    return true;
+  });
+}
+
+function pressView(d) {
+  const { h } = C;
+  const all = d.press || [];
+  const wrap = h("div");
+  if (!all.length) {
+    wrap.append(h("p.empty", "No press list yet: it's imported on the server with python -m creators.press import."));
+    return wrap;
+  }
+  const setP = (patch) => { Object.assign(st.pf, patch); st.pshown = PAGE; draw(); };
+  const count = (fn) => all.filter(fn).length;
+  const card = (label, value, sub, onclick) => h(onclick ? "button.cr-card.is-link" : "div.cr-card", onclick ? { type: "button", onclick } : null,
+    h("div.cr-card-v", value), h("div.cr-card-l", label), sub ? h("div.cr-card-s", sub) : null);
+  const countries = new Set(all.map((p) => p.country).filter(Boolean));
+  const langs = Object.entries(all.reduce((m, p) => { const l = p.language || "?"; m[l] = (m[l] || 0) + 1; return m; }, {})).sort((a, b) => b[1] - a[1]);
+  const byCountry = Object.entries(all.reduce((m, p) => { const c = p.country || "?"; m[c] = (m[c] || 0) + 1; return m; }, {})).sort((a, b) => b[1] - a[1]);
+  const cards = h("div.cr-cards",
+    card("Outlets", num(all.length), `${num(countries.size)} countries, ${num(langs.length)} languages`),
+    card("Press", num(count((p) => p.kind === "press")), `${num(count((p) => p.kind === "press" && p.focus === "indie"))} indie-focused`, () => setP({ kind: "press" })),
+    card("Trailer channels", num(count((p) => p.kind === "trailer-channel")), "post trailers and showcases", () => setP({ kind: "trailer-channel" })),
+    card("With an email", num(count((p) => p.email)), `${num(count((p) => !p.email))} by contact form only`, () => setP({ email: "yes" })));
+  const select = (label, value, options, k) => h("label.cr-select", h("span", label),
+    h("select", { onchange: (e) => setP({ [k]: e.currentTarget.value }) }, ...options.map(([v, text]) => h("option", { value: v, selected: v === value }, text))));
+  const search = h("input.cr-input", { type: "search", placeholder: "Search outlet, email or notes", value: st.pf.q, "aria-label": "Search outlets" });
+  search.addEventListener("input", () => { st.pf.q = search.value; st.pshown = PAGE; drawList(); });
+  const filters = h("div.cr-filters",
+    h("div.cr-row", search,
+      select("Country", st.pf.country, [["all", "Any"], ...byCountry.map(([c, n]) => [c, `${COUNTRY_NAMES[c] || c} (${n})`])], "country"),
+      select("Language", st.pf.lang, [["all", "Any"], ...langs.map(([l, n]) => [l, `${LANGS[l] || l.toUpperCase()} (${n})`])], "lang"),
+      select("Contact", st.pf.email, [["any", "Any"], ["yes", "Has an email"], ["form", "Form only"]], "email")),
+    h("div.cr-row", C.chips([["all", "Any kind"], ...Object.entries(KINDS)], st.pf.kind, (v) => setP({ kind: v }), "Kind"),
+      C.chips([["all", "Any reach"], ["big", "Big"], ["mid", "Mid"], ["small", "Small"]], st.pf.reach, (v) => setP({ reach: v }), "Reach")));
+  const list = h("div.cr-list");
+  const REACH_ORDER = { big: 0, mid: 1, small: 2 };
+  function drawList() {
+    const rows = filterPress(all, st.pf).sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "press" ? -1 : b.kind === "press" ? 1 : a.kind.localeCompare(b.kind))
+      || (REACH_ORDER[a.reach] ?? 3) - (REACH_ORDER[b.reach] ?? 3) || a.name.localeCompare(b.name));
+    const emails = [...new Set(rows.map((p) => p.email).filter(Boolean))];
+    const head = h("div.cr-listhead", h("span", `${C.plural(rows.length, "outlet")}${rows.length !== all.length ? ` of ${num(all.length)}` : ""}, ${num(emails.length)} with an email`),
+      h("button.btn", { type: "button", disabled: !emails.length, onclick: (e) => C.copy(emails.join("\n"), e.currentTarget) }, `Copy ${C.plural(emails.length, "email")}`));
+    const table = h("table.cr-table", h("thead", h("tr", h("th", "Outlet"), h("th", "Kind"), h("th", "Where"), h("th", "Reach"), h("th", "Focus"), h("th", "Contact"), h("th", "Notes"))),
+      h("tbody", ...rows.slice(0, st.pshown).map((p) => h("tr",
+        h("td.cr-chan", h("a", { href: p.url, target: "_blank", rel: "noopener" }, p.name), h("div.cr-muted", p.url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))),
+        h("td", h("span.cr-type", KINDS[p.kind] || p.kind)),
+        h("td", { title: COUNTRY_NAMES[p.country] || "" }, p.country || "–", h("span.cr-muted", ` ${(p.language || "").toUpperCase()}`)),
+        h("td", p.reach || "–"),
+        h("td", p.focus || "–"),
+        h("td", p.email
+          ? h("span.cr-email", h("a", { href: `mailto:${p.email}` }, p.email), h("button.cr-copy", { type: "button", onclick: (e) => C.copy(p.email, e.currentTarget) }, "Copy"),
+              p.contact_url ? h("div", h("a.cr-muted", { href: p.contact_url, target: "_blank", rel: "noopener" }, "form ↗")) : null)
+          : p.contact_url ? h("a", { href: p.contact_url, target: "_blank", rel: "noopener" }, "Contact form ↗") : "–"),
+        h("td.cr-genres", p.notes || "", p.source ? h("div", h("a.cr-muted", { href: p.source, target: "_blank", rel: "noopener", title: "Where the contact was found" }, "source ↗")) : null)))));
+    const more = rows.length > st.pshown ? h("button.btn.cr-more", { type: "button", onclick: () => { st.pshown += PAGE; drawList(); } }, `Show ${Math.min(PAGE, rows.length - st.pshown)} more`) : null;
+    list.replaceChildren(head, rows.length ? h("div.cr-scroll", table) : h("p.empty", "No outlets match these filters."), more);
+  }
+  drawList();
+  wrap.append(cards, filters, list, h("details.about", h("summary", "How this works"),
+    h("p", "Games press, aggregators (sites and newsletters that repost trailers and press releases) and YouTube trailer channels, worldwide, for launch announcements. Each contact was taken from the outlet's own contact or about page (source); none are guessed. Kept on the server, not in the public repository."),
+    h("p", "Send one short, personal email per outlet in its language where you can, with the press release, trailer link and a key or Steam page; no mass mail. Many big sites prefer their tips address; trailer channels usually want an unlisted video link. Steam Curator Connect (in Steamworks) reaches curators separately.")));
+  return wrap;
+}
+
 const CSS = `
 .crv { min-width: 0; color: var(--fb-ink); }
+.crv .cr-switch { margin-bottom: 14px; }
 .crv .cr-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 0 0 16px; }
 .crv .cr-card { background: var(--fb-card); border: 1px solid var(--fb-line); border-radius: 12px; padding: 10px 14px; text-align: left; font: inherit; color: var(--fb-ink); }
 .crv .cr-card.is-link { cursor: pointer; }

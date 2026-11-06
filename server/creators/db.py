@@ -91,6 +91,24 @@ CREATE VIEW IF NOT EXISTS site_emails AS
     FROM channel_links l JOIN sites s ON s.url = l.url, json_each(s.emails) e
     WHERE s.emails IS NOT NULL AND s.emails != '[]';
 
+-- The press list (press.py): games press, aggregators and trailer channels, worldwide.
+CREATE TABLE IF NOT EXISTS press (
+    key         TEXT PRIMARY KEY,       -- host + path, no www or trailing slash
+    name        TEXT NOT NULL,
+    url         TEXT NOT NULL,
+    kind        TEXT NOT NULL,          -- press, aggregator, trailer-channel
+    country     TEXT,                   -- ISO alpha-2, or INT
+    language    TEXT,
+    email       TEXT,
+    contact_url TEXT,                   -- a form or contact page, when there's no email (or as well)
+    focus       TEXT,                   -- indie, pc, general, cozy, console, mobile...
+    reach       TEXT,                   -- big, mid, small
+    notes       TEXT,
+    source      TEXT,                   -- the page the contact was found on
+    added_at    INTEGER NOT NULL,
+    updated_at  INTEGER NOT NULL
+);
+
 -- Per channel and game: how many videos, the latest, their views.
 CREATE VIEW IF NOT EXISTS channel_games AS
     SELECT channel_id, appid, COUNT(*) AS videos, MAX(published) AS last_video, SUM(views) AS views

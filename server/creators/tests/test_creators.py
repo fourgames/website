@@ -300,5 +300,27 @@ def test_export(tmp_path, steam_db, monkeypatch):
     tags = [t for t, _ in by["UCb"]["p"]]
     assert 1 not in tags and tags[0] == 2  # Indie left out; Fishing weighs most
     assert data["tags"]["2"] == "Fishing" and data["games"]["1"]["own"]
+    assert data["press"] == []
     assert export.category([(1, 5)], {}) == "one-game"
     assert export.category([(1, 1), (2, 1), (3, 1), (4, 1)], {1: 10, 2: 10, 3: 90000, 4: 20}) == "indie-variety"
+
+
+def test_press_import(tmp_path):
+    from creators import press
+    store = Store(str(tmp_path / "c.db"))
+    items = [
+        {"name": "Big Site", "url": "https://www.bigsite.com/", "kind": "press", "country": "us", "language": "EN",
+         "email": "Tips@BigSite.com", "contact_url": None, "reach": "big", "source": "https://bigsite.com/contact"},
+        {"name": "Form Only", "url": "https://formonly.jp", "kind": "trailer-channel", "email": None,
+         "contact_url": "https://formonly.jp/contact"},
+        {"name": "Nothing", "url": "https://nothing.de", "email": "not-an-email"},
+        {"name": "No URL", "email": "a@b.com"},
+        "junk",
+    ]
+    assert press.import_list(store, items, NOW) == {"added": 2, "updated": 0, "skipped": 3}
+    again = press.import_list(store, [{**items[0], "url": "https://bigsite.com", "notes": "reviews too"}], NOW + 5)
+    assert again == {"added": 0, "updated": 1, "skipped": 0}
+    rows = {r["name"]: r for r in press.rows(store)}
+    assert rows["Big Site"]["email"] == "tips@bigsite.com" and rows["Big Site"]["country"] == "US"
+    assert rows["Big Site"]["notes"] == "reviews too" and rows["Big Site"]["added_at"] == int(NOW)
+    assert rows["Form Only"]["kind"] == "trailer-channel" and rows["Form Only"]["email"] is None

@@ -60,6 +60,16 @@ requested from Google (the YouTube API audit form) once the list proves useful.
 
 Logs: `journalctl -u creators`. Numbers: `python -m creators.stats` (as above).
 
+## The dashboard page
+
+After every hourly run `export.py` writes `/srv/fourgames/creators/export/creators.json.gz`, which the
+dashboard's **Creators** page (fourgames.se/fb-dash, `src/lib/feedback/creators.js`) reads through the
+game-data server, signed in as the owner only (`GET /gamedata/v1/admin/creators`). It holds each
+channel's emails and where they came from, numbers, the games it covered, a type (indie variety,
+variety, one game, a few games) and a genre profile from those games' Steam tags. The page works out
+activity (newest upload, read for every channel every 14 days at 1 unit each), filters, and the best
+creators for each of our games.
+
 ## The tables
 
 One SQLite file, `/srv/fourgames/creators/creators.db`:

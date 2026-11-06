@@ -1041,29 +1041,60 @@ function scatterCard(rows, base) {
     dots.append(g);
   }
   svg.append(dots);
-  // Labels: as many as fit, right of the dot (left near the edge), skipped where they'd cover a dot or
-  // another label. The picked tag first, then by score.
+  // Labels: as many as fit, beside, above or below the dot, skipped where they'd cover another label
+  // or a dot. Dots that sit almost on top of each other share one label ("FMV + Psychological Horror").
+  // Order: the picked tag, then the most attractive corner (shared labels first; these may cover small
+  // dots, on a halo), then the rest by score.
   const CH = 5.9, LH = 11;
+  const inZone = (r) => r.releases <= xSplit && r.hitRate >= ySplit;
+  const lead = new Map(), members = new Map();
+  for (const r of order0) {
+    const a = geo.get(r);
+    const host = [...members.keys()].find((l) => { const b = geo.get(l); return Math.hypot(a.cx - b.cx, a.cy - b.cy) < 0.6 * Math.max(a.r, b.r); });
+    if (host) { members.get(host).push(r); lead.set(r, host); } else { members.set(r, [r]); lead.set(r, r); }
+  }
+  // The label's wordings, longest first: a shared label falls back to "FMV + 1 more" where the full one won't fit.
+  const labelTexts = (r) => {
+    const g = members.get(r) || [r];
+    if (g.length === 1) return [r.name];
+    const rest = g.filter((m) => m !== r);
+    return [rest.length === 1 ? `${r.name} + ${rest[0].name}` : `${r.name} + ${rest[0].name} + ${rest.length - 1} more`, `${r.name} + ${rest.length} more`];
+  };
   const dotBoxes = rows.map((r) => { const { cx, cy, r: R } = geo.get(r); const e = R + 3; return [cx - e, cy - e, cx + e, cy + e, r]; });
-  const hits = (b, boxes, own) => boxes.some((p) => p[4] !== own && b[0] < p[2] && b[2] > p[0] && b[1] < p[3] && b[3] > p[1]);
+  const bigBoxes = dotBoxes.filter((p) => geo.get(p[4]).r > 5);
+  const hits = (b, boxes, own) => boxes.some((p) => !(own && own.includes(p[4])) && b[0] < p[2] && b[2] > p[0] && b[1] < p[3] && b[3] > p[1]);
   const placed = [];
-  const order = [...(sel ? [sel] : []), ...[...rows].filter((r) => r !== sel).sort((a, b) => b.score - a.score)];
+  const leaders = rows.filter((r) => lead.get(r) === r);
+  const selLead = sel ? lead.get(sel) : null;
+  const order = [...(selLead ? [selLead] : []),
+    ...leaders.filter((r) => r !== selLead && inZone(r)).sort((a, b) => members.get(b).length - members.get(a).length || b.score - a.score),
+    ...leaders.filter((r) => r !== selLead && !inZone(r)).sort((a, b) => b.score - a.score)];
   for (const r of order) {
-    const { cx, cy, r: R } = geo.get(r), on = r === sel;
-    const w = r.name.length * (on ? CH * 1.15 : CH) + 2;
-    let box = null;
-    for (const left of [cx + R + 4, cx - R - 4 - w]) {
-      const b = [left, cy - LH / 2 - 1, left + w, cy + LH / 2, r];
-      if (b[0] < M.left + 1 || b[2] > W - M.right - 1 || b[1] < M.top || b[3] > H - M.bottom) continue;
-      if (!on && (hits(b, dotBoxes, r) || hits(b, placed, null))) continue;
-      box = b; break;
+    const { cx, cy, r: R } = geo.get(r), on = r === selLead, zone = inZone(r), own = members.get(r);
+    // Tries each wording in each spot, first keeping clear of dots; in the corner, then over any dot
+    // (the halo keeps it readable), never over another label.
+    let box = null, name = null;
+    for (const avoid of zone ? [bigBoxes, []] : [dotBoxes]) {
+      for (const t of labelTexts(r)) {
+        const w = t.length * (on ? CH * 1.15 : CH) + 2;
+        const spots = [[cx + R + 4, cy - LH / 2 - 1], [cx - R - 4 - w, cy - LH / 2 - 1], [cx - w / 2, cy - R - 3 - LH], [cx - w / 2, cy + R + 3]];
+        for (const [left, top_] of spots) {
+          const b = [left, top_, left + w, top_ + LH + 1, r];
+          if (b[0] < M.left + 1 || b[2] > W - M.right - 1 || b[1] < M.top || b[3] > H - M.bottom) continue;
+          if (!on && (hits(b, avoid, own) || hits(b, placed, null))) continue;
+          box = b; break;
+        }
+        if (box) { name = t; break; }
+      }
+      if (box) break;
     }
     if (!box) continue;
     placed.push(box);
-    const label = text({ x: box[0], y: cy + 3.8, class: `mm-dl${on ? " mm-dl-sel" : ""}` }, r.name);
+    const label = text({ x: box[0], y: box[1] + LH - 1.6, class: `mm-dl${on ? " mm-dl-sel" : ""}${zone ? " mm-dl-zone" : ""}` }, name);
     label.__row = r;
-    const gl = glossary(r.name);
-    if (gl) { const tt = svgEl("title"); tt.textContent = `${r.name}: ${gl}`; label.append(tt); }
+    const tt = svgEl("title");
+    tt.textContent = own.map((m) => { const gl = glossary(m.name); return gl ? `${m.name}: ${gl}` : m.name; }).join("\n");
+    label.append(tt);
   }
   // Keys: three example sizes, and the pace brightness at its levels, drawn with the same functions as the chart.
   const keySvg = (items) => {
@@ -1528,7 +1559,8 @@ const CSS = `
 .mkv-merged .mm-gapzone { fill: var(--sw-3); opacity: .11; }
 .mkv-merged .mm-axis { fill: var(--fb-muted); font-size: 12px; }
 .mkv-merged .mm-axis-title { fill: var(--fb-ink-2); font-weight: 600; }
-.mkv-merged .mm-dl { fill: var(--fb-ink-2); font-size: 10.5px; font-weight: 500; cursor: pointer; }
+.mkv-merged .mm-dl { fill: var(--fb-ink-2); font-size: 10.5px; font-weight: 500; cursor: pointer; paint-order: stroke; stroke: var(--fb-card); stroke-width: 2.5px; stroke-linejoin: round; }
+.mkv-merged .mm-dl-zone { fill: var(--fb-ink); }
 .mkv-merged .mm-dl-sel { fill: var(--fb-title); font-size: 12px; font-weight: 750; paint-order: stroke; stroke: var(--fb-card); stroke-width: 3px; stroke-linejoin: round; }
 .mkv-merged .mm-dot { cursor: pointer; outline: none; }
 .mkv-merged .mm-endlabel { fill: var(--fb-ink); font-size: 14px; font-weight: 700; }

@@ -649,6 +649,7 @@ async function init() {
   if (wanted === "gamedata") pickGameData();
   else if (wanted === "status") pickUptime();
   else if (wanted === "market") pickMarket();
+  else if (wanted === "creators") pickCreators();
   else if (games.some((g) => g.appId === Number(wanted))) pickGame(Number(wanted));
   else if (games.length) pickHome(wanted === "all" && hash.get("tab") === "sales");
 }
@@ -1013,6 +1014,8 @@ function renderGames() {
     h("span.g-thumb.g-all", "Up"), h("span.g-name", "Status", h("span.g-sub", "whether the site, server and bots run")));
   const market = () => h("button.g-item", { type: "button", "aria-current": String(!!state.market), onclick: pickMarket },
     h("span.g-thumb.g-all", "Mkt"), h("span.g-name", "Market", h("span.g-sub", "all of Steam: trends, gaps, Godot games")));
+  const creators = () => h("button.g-item", { type: "button", "aria-current": String(!!state.creators), onclick: pickCreators },
+    h("span.g-thumb.g-all", "YT"), h("span.g-name", "Creators", h("span.g-sub", "YouTubers who play games like ours, with emails")));
   const researchItem = (g) => h("button.g-item", { type: "button", title: g.name, "aria-current": String(!state.home && state.game?.appId === g.appId), onclick: () => pickGame(g.appId) },
     g.capsule ? h("img.g-thumb", { src: g.capsule, alt: "", loading: "lazy" }) : h("span.g-thumb"),
     h("span.g-name", g.name, h("span.g-sub", researchStatus(g))));
@@ -1020,13 +1023,13 @@ function renderGames() {
   // Ungrouped research games under "Research", then each group under its own heading.
   const groups = [...new Set(research.map((g) => g.group))].sort((a, b) => (a || "").localeCompare(b || ""));
   // Status and Market aren't about one of your games, so they get their own card above the games.
-  document.getElementById("fb-studio-side").replaceChildren(h("div.side-label", "Studio"), uptime(), market());
+  document.getElementById("fb-studio-side").replaceChildren(h("div.side-label", "Studio"), uptime(), market(), creators());
   document.getElementById("fb-games-side").replaceChildren(h("div.side-label", "Games"), home(), data(), ...games.map(item));
   // Research games go in their own card at the bottom, under the views.
   document.getElementById("fb-research-side").replaceChildren(
     ...groups.flatMap((name) => [h("div.side-label", name ? `Research · ${name}` : "Research"), ...research.filter((g) => g.group === name).map(researchItem)]),
     add());
-  document.getElementById("fb-games-strip").replaceChildren(uptime(), market(), home(), data(), ...games.map(item), ...research.map(researchItem), add());
+  document.getElementById("fb-games-strip").replaceChildren(uptime(), market(), creators(), home(), data(), ...games.map(item), ...research.map(researchItem), add());
 }
 
 async function pickGame(appId) {
@@ -1036,6 +1039,7 @@ async function pickGame(appId) {
   state.gameData = false;
   state.uptime = false;
   state.market = false;
+  state.creators = false;
   const meta = metaOf(appId);
   if (!state.games[appId]) {
     // A research game's file can be tens of MB: say which game is coming instead of leaving the last
@@ -1070,6 +1074,7 @@ function pickUptime() {
   state.picked = null;
   state.uptime = true;
   state.market = false;
+  state.creators = false;
   render();
 }
 
@@ -1087,8 +1092,24 @@ async function pickMarket() {
   state.game = null;
   state.picked = null;
   state.market = true;
+  state.creators = false;
   await loadMarketModule();
   if (state.market) render();
+}
+// Creators: the YouTube creators the server found (server/creators), with emails and the best ones
+// for each of our games; its own file, creators.js, loaded the first time it opens.
+let creatorsModule = null;
+async function pickCreators() {
+  store.set("app", "creators");
+  state.home = false;
+  state.gameData = false;
+  state.uptime = false;
+  state.market = false;
+  state.game = null;
+  state.picked = null;
+  state.creators = true;
+  creatorsModule ??= await import("./creators.js");
+  if (state.creators) render();
 }
 const marketHelpers = () => ({ h, svgEl, chips, about, adminGet, adminSend, fmtNum, fmtDate, fmtDateTime, plural, copy, store, dataOverride: DATA_OVERRIDE });
 function renderUptimeTop() {
@@ -1102,7 +1123,7 @@ const uptimeView = () => h("iframe.uptime-frame", { src: STATUS_PAGE, title: "Fo
 
 function setHash() {
   // Keep vue-router's history state; only the hash changes.
-  history.replaceState(history.state, "", `${location.pathname}${location.search}${state.market ? "#app=market" : state.uptime ? "#app=status" : state.gameData ? "#app=gamedata" : state.home ? `#app=all${state.homeSales ? "&tab=sales" : ""}` : `#app=${state.game.appId}&tab=${state.tab}`}`);
+  history.replaceState(history.state, "", `${location.pathname}${location.search}${state.market ? "#app=market" : state.creators ? "#app=creators" : state.uptime ? "#app=status" : state.gameData ? "#app=gamedata" : state.home ? `#app=all${state.homeSales ? "&tab=sales" : ""}` : `#app=${state.game.appId}&tab=${state.tab}`}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -1357,8 +1378,15 @@ function render() {
   state.drawn = drawnKey(); // what's on screen, so a refresh only redraws for new data
   renderGames();
   // On All games (and Game data) the views are one game's, so they're hidden.
-  document.querySelector(".fb .side-views").hidden = state.home || state.gameData || state.uptime || state.market;
-  document.getElementById("fb-nav-top").hidden = state.home || state.gameData || state.uptime || state.market;
+  document.querySelector(".fb .side-views").hidden = state.home || state.gameData || state.uptime || state.market || state.creators;
+  document.getElementById("fb-nav-top").hidden = state.home || state.gameData || state.uptime || state.market || state.creators;
+  if (state.creators) {
+    creatorsModule.creatorsTop(marketHelpers());
+    setHash();
+    // Kept while it's open, so a refresh of the feedback data doesn't reset its filters or scroll.
+    if (!document.querySelector("#fb-view .crv")) document.getElementById("fb-view").replaceChildren(creatorsModule.creatorsView(marketHelpers()));
+    return;
+  }
   if (state.market) {
     marketModule.marketTop(marketHelpers());
     setHash();
@@ -2824,6 +2852,7 @@ async function pickHome(sales) {
   state.gameData = false;
   state.uptime = false;
   state.market = false;
+  state.creators = false;
   state.game = null;
   document.getElementById("fb-view").replaceChildren(h("p.empty", "Loading…"));
   await Promise.all(state.index.games.filter((g) => !state.games[g.appId])
@@ -3656,6 +3685,7 @@ function pickGameData() {
   state.gameData = true;
   state.uptime = false;
   state.market = false;
+  state.creators = false;
   render();
   if (!gd.list && !gd.loading) loadSessions();
 }

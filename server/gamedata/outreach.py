@@ -53,7 +53,11 @@ For each language you get facts about the game there:
 - its name on Steam in that language: put it in the "game" field (the email keeps the {game}
   placeholder, which will be filled with that name);
 - whether the game itself is available in that language: if it is, add one very short, natural
-  sentence saying so (like "It's in German too."); if not, don't mention languages.
+  sentence with "the game" as its subject (like "Das Spiel gibt es auch auf Deutsch." or
+  "日本語でも遊べます。"); if not, don't mention languages.
+
+Reread each version as a native speaker before answering: the grammar must be perfect and it must
+sound like a person, not a translation.
 
 Keep exactly as they are, character for character: every {placeholder} in curly braces ({name}, {game},
 {steam}, {press}, {their_game}), every URL, "Danny", "/request" and "fourgames.se". Keep the line breaks

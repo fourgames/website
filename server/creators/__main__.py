@@ -3,6 +3,7 @@
   python -m creators                     spends the units due by now (creators.timer, hourly)
   python -m creators --searches 3        a short trial: at most 3 game searches
   python -m creators --all               spends the whole day's units now
+  python -m creators --all --appids 1,2,3  search just these games now (a game's look-alikes)
   python -m creators --links 0           no link following after the YouTube part (default 150 links)
 """
 
@@ -24,6 +25,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m creators", description="Finds YouTube creators.")
     parser.add_argument("--searches", type=int, help="stop after this many game searches")
     parser.add_argument("--all", action="store_true", help="spend the whole day's units, not just what's due")
+    parser.add_argument("--appids", help="search just these games now, comma-separated (e.g. a game's look-alikes)")
     parser.add_argument("--links", type=int, default=150,
                         help="then follow up to this many creators' links for emails (0: none)")
     args = parser.parse_args(argv)
@@ -39,7 +41,8 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=config.log_level, format="%(levelname)s %(name)s: %(message)s")
     store = Store(config.db_path)
     try:
-        Collector(config, store).run(spend_all=args.all, max_searches=args.searches)
+        only = {int(x) for x in args.appids.split(",") if x.strip().isdigit()} if args.appids else None
+        Collector(config, store).run(spend_all=args.all, max_searches=args.searches, only=only)
         if args.links:
             try:
                 Follower(store).run(own_appids(config.steam_db, config.own_appids, config.own_studio), args.links)

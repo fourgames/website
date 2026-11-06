@@ -324,3 +324,12 @@ def test_press_import(tmp_path):
     assert rows["Big Site"]["email"] == "tips@bigsite.com" and rows["Big Site"]["country"] == "US"
     assert rows["Big Site"]["notes"] == "reviews too" and rows["Big Site"]["added_at"] == int(NOW)
     assert rows["Form Only"]["kind"] == "trailer-channel" and rows["Form Only"]["email"] is None
+
+
+def test_search_only_some_games(tmp_path, steam_db):
+    collector, store = make(tmp_path, steam_db, FakeYouTube())
+    collector.run(spend_all=True)
+    again = make(tmp_path, steam_db, FakeYouTube())[0]
+    assert again.run(spend_all=True)["searches"] == 0  # nothing due
+    forced = make(tmp_path, steam_db, FakeYouTube())[0]
+    assert forced.run(spend_all=True, only={2})["searches"] == 1  # searched again on request

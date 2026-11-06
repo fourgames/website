@@ -52,7 +52,10 @@ class Collector:
         # Up to the end of the coming hour, so hourly runs spend it all by midnight.
         return day, min(self.config.daily_units, math.ceil(self.config.daily_units * (part + 1 / 24)))
 
-    def run(self, spend_all: bool = False, max_searches: int | None = None) -> dict:
+    def run(self, spend_all: bool = False, max_searches: int | None = None,
+            only: set[int] | None = None) -> dict:
+        """only: search just these games now (due or not), e.g. the look-alikes of a game to promote."""
+        self.only = only
         day, allowed = self.allowed(spend_all)
         spent, exhausted = self.store.units_spent(day)
         if exhausted or spent >= allowed:
@@ -89,7 +92,10 @@ class Collector:
             if max_searches is not None and self.summary["searches"] >= max_searches:
                 return
             prior = done.get(game.appid)
-            if prior and prior["due_at"] > now or not games_mod.searchable(game.name):
+            if getattr(self, "only", None) is not None:
+                if game.appid not in self.only:
+                    continue
+            elif prior and prior["due_at"] > now or not games_mod.searchable(game.name):
                 continue
             # A search, up to one videos call, and the new channels' details.
             if not self._can(SEARCH_COST + 2 * LIST_COST):

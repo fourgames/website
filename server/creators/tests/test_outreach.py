@@ -53,7 +53,7 @@ def test_draft_fills_in_each_message_and_skips_the_unusable(store):
     a = msgs["UCa"]
     assert a["subject"] == "Pomo Valley for Alpha Plays?"
     assert "I saw your Our Old Game video" in a["body"]  # ours first
-    assert "https://store.steampowered.com/app/1/" in a["body"] and a["body"].endswith(outreach.OPT_OUT_LINE)
+    assert "https://store.steampowered.com/app/1/" in a["body"] and a["body"].endswith(outreach.OPT_OUT_LINE + "\n\nDanny") is False and outreach.OPT_OUT_LINE in a["body"]
     with pytest.raises(outreach.OutreachError):
         make(store, {**SPEC, "from_email": "nope"})
     with pytest.raises(outreach.OutreachError):
@@ -176,7 +176,7 @@ def test_designed_email(store):
     assert mail.is_multipart() and mail.get_body(("plain",)) and mail.get_body(("html",))
     html = mail.get_body(("html",)).get_content()
     assert "https://store.steampowered.com/app/1/" in html and "header.jpg" in html
-    assert "Not your kind of game?" in html and "<script" not in html
+    assert "email you again" in html and "<script" not in html
     designed = outreach.html_body("Hi A,\n\nSteam: https://store.steampowered.com/app/9/\n\nKey: https://discord.gg/x\n\nBest,\nDanny\nFour Games\n\n--\nreply no",
                                   image="https://x/y.gif", steam="https://store.steampowered.com/app/9/", from_name="D")
     assert designed.index("https://x/y.gif") < designed.index("Key:")  # the GIF after the second paragraph
@@ -187,7 +187,15 @@ def test_designed_email(store):
 
 def test_what_counts_as_no():
     from creators.send import OPT_OUT
-    for text in ("no", "No.", "nope!", "No thanks, not my genre", "Not interested", "Please remove me", "unsubscribe"):
+    for text in ("no", "No.", "nope!", "No thanks, not my genre", "Not interested", "Please remove me", "unsubscribe",
+                 "Please don't email me again", "No more emails please", "I'd rather not, thanks"):
         assert OPT_OUT.search(text), text
     for text in ("No problem, send me a key!", "Nope, I'd love to try it", "Sounds fun", "Now that looks cool"):
         assert not OPT_OUT.search(text), text
+
+
+def test_opt_out_goes_above_the_sign_off():
+    body = outreach.with_opt_out("Hi A,\n\nAbout the game.\n\nThanks for reading,\nDanny")
+    assert body.endswith(outreach.OPT_OUT_LINE + "\n\nThanks for reading,\nDanny")
+    assert outreach.with_opt_out(body) == body  # not twice
+    assert outreach.with_opt_out("One line only").endswith(outreach.OPT_OUT_LINE)

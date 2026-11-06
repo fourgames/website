@@ -44,8 +44,9 @@ log = logging.getLogger("creators.send")
 RUNS_PER_HOUR = 4
 # A reply that says no: a bare "no" (the whole reply), or a clear phrase at its start. "No problem,
 # send me a key!" is a yes.
-OPT_OUT = re.compile(r"^\s*(?:(?:no|nope|nah)\s*[.!]*\s*$|no,? thanks|no thank you|not interested|unsubscribe|"
-                     r"stop emailing|please stop|remove me|please remove|take me off|don'?t (?:contact|email|write))",
+OPT_OUT = re.compile(r"^\s*(?:no|nope|nah)\s*[.!]*\s*$|^\s*no,? thanks|^\s*no thank you|not interested|unsubscribe|"
+                     r"stop emailing|please stop|remove me|take me off|no more emails?|don'?t (?:contact|email|write|send)|"
+                     r"(?:don'?t|do not) want (?:any )?(?:more |future )?emails?|i'?d rather not",
                      re.IGNORECASE)
 QUOTE_START = re.compile(r"^(>|On .{5,200} wrote:|Am .{5,200} schrieb|Le .{5,200} a écrit|El .{5,200} escribió|-{2,}\s*Original)",
                          re.IGNORECASE | re.MULTILINE)

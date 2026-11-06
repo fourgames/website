@@ -350,7 +350,7 @@ function pressView(d) {
 const TEMPLATES = {
   creators: {
     subject: "{game} - for your channel?",
-    body: "Hi {name},\n\nI'm Danny, the solo dev behind {game}. I saw you've played {their_game}, so I think it could fit your channel: [one sentence about the game].\n\nSteam: {steam}\nFree key: https://discord.fourgames.se (type /request there, it checks your channel and sends the key right away)\n\nThanks,\nDanny",
+    body: "Hi {name},\n\nI'm Danny, the solo dev behind {game}. I saw you've played {their_game}, so I think it could fit your channel: [one sentence about the game].\n\nSteam: {steam}\nFree key: https://discord.fourgames.se (type /request there, it checks your channel and sends the key right away)\n\nThanks for reading,\nDanny",
   },
   press: {
     subject: "{game}: [the news, in a few words]",

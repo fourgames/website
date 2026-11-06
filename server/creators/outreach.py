@@ -12,7 +12,7 @@ How it works:
 Rules that always hold, whatever a campaign says:
   - Never to an address that opted out or bounced (the suppress table), ever again.
   - Never twice to the same address within RECONTACT_DAYS, across all campaigns.
-  - Every email says how to opt out (a P.S.: reply "no"), and carries a List-Unsubscribe header.
+  - Every email says how to opt out (a line before the sign-off: reply and say so), and carries a List-Unsubscribe header.
 
 Placeholders in the subject and body: {name} (the channel or outlet), {game}, {steam} (the store
 link), {their_game} (for a creator: a game they made a video of, ours first, else one like ours;
@@ -38,7 +38,8 @@ MAX_BODY = 5000
 STATUSES = ("draft", "approved", "paused", "done")
 EMAIL = re.compile(r"^[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$")
 FIELD = re.compile(r"\{(name|game|steam|their_game)\}")
-OPT_OUT_LINE = 'P.S. Not your kind of game? No worries, just reply "no" and I won\'t email again.'
+OPT_OUT_LINE = ("If you'd rather not get emails about games I think could fit your channel, just reply and say so "
+                "and I won't email you again.")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS outreach_campaigns (
@@ -167,9 +168,17 @@ def render(template: str, fields: dict[str, str]) -> str:
 
 
 def with_opt_out(body: str) -> str:
+    """Adds the opt-out line in the sender's own words, before the sign-off ("Thanks,\nDanny"), unless
+    the body already says how to opt out. Required (an easy way to say no) without reading like a mass mailing."""
     body = body.rstrip()
-    # In the sender's own words, as a P.S.: required (an easy way to say no), without looking like a mass mailing.
-    return body if "reply \"no\"" in body.lower() or "unsubscribe" in body.lower() else f"{body}\n\n{OPT_OUT_LINE}"
+    low = body.lower()
+    if "email you again" in low or "reply \"no\"" in low or "unsubscribe" in low:
+        return body
+    paragraphs = body.split("\n\n")
+    last = paragraphs[-1]
+    if len(paragraphs) > 1 and "\n" in last and len(last) < 80:  # a sign-off: put the line above it
+        return "\n\n".join(paragraphs[:-1] + [OPT_OUT_LINE, last])
+    return f"{body}\n\n{OPT_OUT_LINE}"
 
 
 def blocked(store: Store, email: str, now: float, exclude: int | None = None, sent_only: bool = False) -> str | None:

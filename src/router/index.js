@@ -7,7 +7,8 @@ export function createAppRouter() {
 		routes,
 		scrollBehavior(to, from, savedPosition) {
 			if (savedPosition) return savedPosition;
-			if (to.hash) {
+			// Only a plain #id is an element to scroll to; the dashboard's #app=market&tab=… is its own state.
+			if (/^#[\w-]+$/.test(to.hash)) {
 				const smooth = !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 				// scroll-padding-top in CSS keeps the target clear of the floating header.
 				return { el: to.hash, behavior: smooth && to.path === from.path ? "smooth" : "auto" };

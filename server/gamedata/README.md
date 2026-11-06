@@ -39,7 +39,7 @@ work. Errors are JSON, `{"ok": false, "error": "<code>", "message": "…"}`, wit
 | `GET /v1/admin/ideas` | the dashboard | The owner's game ideas, newest first, each with its latest Claude analysis, every earlier score and its daily market score (below). |
 | `POST /v1/admin/ideas` | the dashboard | `{"text", "notes"?}`: saves the idea and scores it with Claude (30-60 s). `201 {"idea"}`; when the scoring fails nothing is kept. |
 | `POST /v1/admin/ideas/<id>/score` | the dashboard | Asks Claude again, with today's market data; the earlier analyses stay. |
-| `PUT /v1/admin/ideas/<id>` | the dashboard | `{"text"?, "notes"?, "archived"?}`. |
+| `PUT /v1/admin/ideas/<id>` | the dashboard | `{"text"?, "notes"?, "archived"?, "pinned"?, "stars"?}`: `pinned` true/false, `stars` 0 (not rated) to 5, the owner's own ranking. |
 | `DELETE /v1/admin/ideas/<id>` | the dashboard | The idea and its history (send `{}`: admin writes need a JSON body). |
 | `GET /health` (or `/v1/health`) | anyone, the status page | `{"ok": true, "time", "disk": {"used_bytes", "free_bytes", "total_bytes", "low_space"}}` |
 
@@ -165,9 +165,13 @@ days, the three biggest games of three years) and each tag's three biggest games
 Claude weighs those pairs and games above single tags, and small-team fit moves the overall score only a
 little (scope is the owner's call). The answer: the Steam tags
 it maps to (unknown ids are dropped; listed tags it left out are kept), a score 0-100, five sub-scores with a reason each (`demand`,
-`competition`, `hit_odds`, `small_team_fit`, `timing`), a verdict, risks, 2-4 pivots, 2-3 alternatives and
-timing advice (`now`/`soon`/`wait`, why, and the signal to watch). Every analysis is kept with its date,
-the market day and the idea's text as it was. Errors: `503 claude_not_configured` (no
+`competition`, `hit_odds`, `small_team_fit`, `timing`), the idea's `hook` (what makes it interesting, which
+pivots keep) and `has` (what it already is: setting, genres, mechanics), a verdict, risks, 2-4 pivots (a
+pivot that only proposes something in `has` or its tags, like "Add Post-apocalyptic" for a post-apocalyptic
+game, is dropped), 2-3 alternatives and timing advice (`now`/`soon`/`wait`, why, and the signal to watch). Every analysis is kept with its date,
+the market day and the idea's text as it was. The owner pins ideas and stars them (1-5): the dashboard's
+"Your order" puts pinned ideas first, then Claude's score moved 8 points per star above or below 3; Claude
+hears the stars as taste only (keep pivots closer to a loved idea, don't move the score). Errors: `503 claude_not_configured` (no
 `ANTHROPIC_API_KEY`), `503 market_not_built`, `502 claude_refused` / `claude_error` / `claude_bad_answer`,
 `503 claude_key_refused`, `429 claude_busy`, `504 claude_timeout`. At most two Claude calls run at once.
 

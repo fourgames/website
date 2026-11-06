@@ -1,7 +1,9 @@
 // The Market page's "My game ideas": the owner types a game idea, the server asks Claude to score it
 // against the real Steam market data, and keeps it. Each idea shows Claude's score and a sparkline of
 // its daily market score (worked out by the server from that day's market files, no Claude), the Steam
-// tags it maps to, the sub-scores with their reasons, the verdict, pivots, alternatives and timing.
+// tags it maps to, its hook and what it already has, the sub-scores with their reasons, the verdict,
+// pivots, alternatives and timing. The owner pins ideas and gives them 1-5 stars; "Your order" sorts
+// pinned first, then by Claude's score moved by the stars (myRank).
 //
 // Contract: ideasView(ctx, files, redraw) returns one element (.mkv-ideas), kept and handed back on
 // later calls (so a page redraw keeps the typed text and the open forms). files = { overview, trends,
@@ -73,6 +75,20 @@ const SUBSCORES = [
 const TIMING = { now: "Make it now", soon: "Soon: prepare, watch the signal", wait: "Wait" };
 const BIG = ["Massively Multiplayer", "MMORPG", "Open World", "Open World Survival Craft", "Multiplayer", "Online Co-Op", "PvP", "Online PvP", "Souls-like", "Realistic", "Photorealistic", "Story Rich"];
 const ADULT = ["Nudity", "Sexual Content", "NSFW", "Hentai", "Mature", "Gore", "Violent"];
+// Stars move an idea in "Your order": 3 stars leave Claude's score as it is, each star more or less ±8.
+const STAR_STEP = 8;
+export const myRank = (idea) => (idea.analysis?.score ?? 40) + (idea.stars ? (idea.stars - 3) * STAR_STEP : 0);
+const SORTS = {
+  mine: ["Your order", "Pinned first, then Claude's score moved by your stars (5★ +16, 4★ +8, 3★ ±0, 2★ −8, 1★ −16)"],
+  claude: ["Claude's score", "Claude's latest score only"],
+  market: ["Market score", "Today's market score for its tags"],
+  newest: ["Newest", "The most recently added first"],
+};
+export function sortIdeas(ideas, by = "mine") {
+  const market = (i) => i.points?.length ? i.points[i.points.length - 1].score : -1;
+  const key = { mine: myRank, claude: (i) => i.analysis?.score ?? -1, market, newest: (i) => i.created }[by] || myRank;
+  return [...ideas].sort((x, y) => (by === "mine" ? Number(!!y.pinned) - Number(!!x.pinned) : 0) || key(y) - key(x) || y.created - x.created);
+}
 const META = ["Indie", "Singleplayer", "Casual", "2D", "3D", "Free to Play", "Early Access", "Great Soundtrack", "Addictive", "Replay Value", "Classic", "Beautiful", "Masterpiece"];
 
 // ---------------------------------------------------------------------------
@@ -216,6 +232,8 @@ export function cannedAnalysis(text, files, at = Math.floor(Date.now() / 1000)) 
   return {
     id: at, at, day: dayOf(files), model: FAKE_MODEL,
     tags: ids.map((id) => ({ id, name: names.get(id) || `Tag ${id}`, why: "keyword in the idea" })),
+    hook: `Test mode: the hook would be named here (${ideaTitle(text)})`,
+    has: ids.map((id) => names.get(id) || `Tag ${id}`),
     score,
     subscores: SUBSCORES.map(([key]) => ({ key, score: sub[key], reason: reasons[key] })),
     verdict: `Test mode, not Claude: a canned summary from today's numbers. ${core ? `The core tag ${core.r.name} scores ${Math.round(core.s.score)} on the market (50 is an average tag).` : "No tag in the data matched the idea's words."}`,
@@ -267,7 +285,7 @@ export function fakeApi(files, delay = 1500) {
     async create(text, notes = "") {
       await wait();
       const now = Math.floor(Date.now() / 1000);
-      const idea = { id: next++, text: text.trim(), notes, archived: false, tags: [], created: now, updated: now, analysis: null, analyses: [], points: [] };
+      const idea = { id: next++, text: text.trim(), notes, archived: false, pinned: false, stars: 0, tags: [], created: now, updated: now, analysis: null, analyses: [], points: [] };
       analyse(idea);
       ideas.push(idea);
       return copy(idea);
@@ -307,7 +325,7 @@ export function ideasView(ctx, files, redraw) {
   }
   const v = { mode, ctx, files, redraw, api: ctx.dataOverride ? fakeApi(files) : serverApi(ctx),
     ideas: null, error: null, loading: false, claude: null, market: null,
-    submitting: null, submitError: null, open: new Set(), busy: new Map(), editing: new Set(), noteDrafts: new Map(), focusNotes: null, showArchived: false, flash: null };
+    submitting: null, submitError: null, open: new Set(), busy: new Map(), editing: new Set(), noteDrafts: new Map(), focusNotes: null, showArchived: false, flash: null, sort: "mine" };
   kept = v;
   const { h } = ctx;
   v.root = h("section.mkv-ideas", { "aria-label": "My game ideas" });
@@ -315,6 +333,7 @@ export function ideasView(ctx, files, redraw) {
     "aria-label": "Your game idea", oninput: () => { store(v, "draft", v.box.value); paintComposer(v); } });
   v.box.value = load(v, "draft") || "";
   try { v.open = new Set(JSON.parse(load(v, "open") || "[]")); } catch {}
+  if (SORTS[load(v, "sort")]) v.sort = load(v, "sort");
   v.box.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { if (splitIdeas(v.box.value).length) submitAll(v); else submit(v); } });
   v.composer = h("div.mki-composer");
   v.list = h("div.mki-list");
@@ -491,6 +510,12 @@ function paintList(v) {
     h("h3", all.length ? `${live.length} idea${live.length === 1 ? "" : "s"}` : "No ideas yet"),
     v.market?.day ? h("span.mki-muted", `Market data of ${v.market.day}`) : null,
     archived ? h("button.mki-link", { type: "button", onclick: () => { v.showArchived = !v.showArchived; paintList(v); } }, v.showArchived ? "Hide archived" : `Show ${archived} archived`) : null,
+    all.length > 1 ? h("label.mki-sort", { title: SORTS[v.sort][1] }, "Sort ", (() => {
+      const select = h("select", { "aria-label": "Sort the ideas", onchange: (e) => { v.sort = e.target.value; store(v, "sort", v.sort); paintList(v); } },
+        Object.entries(SORTS).map(([k, [label, tip]]) => h("option", { value: k, title: tip }, label)));
+      select.value = v.sort;
+      return select;
+    })()) : null,
     live.length > 1 ? (() => {
       const left = pendingIds(v, live).length;
       const label = v.rescoringAll ? `Re-scoring ${v.rescoringAll.i} of ${v.rescoringAll.n}… (keep this page open)`
@@ -500,8 +525,7 @@ function paintList(v) {
         onclick: () => rescoreAll(v) }, label);
     })() : null);
   if (!all.length) { v.list.replaceChildren(head, h("p.mki-muted", "Your scored ideas show up here, best score first.")); return; }
-  // Best first: Claude's score, then the newest.
-  const ranked = [...shown].sort((x, y) => (y.analysis?.score ?? -1) - (x.analysis?.score ?? -1) || y.created - x.created);
+  const ranked = sortIdeas(shown, v.sort);
   v.list.replaceChildren(head, ...ranked.map((idea) => card(v, idea)));
   if (v.flash) {
     const el = v.list.querySelector(`[data-idea="${v.flash}"]`);
@@ -538,6 +562,8 @@ function card(v, idea) {
       return h("span.mki-chip", { title: `${t.why || ""}${r ? `\n${pct(r.hitRate)} of its games hit · typical ${r.medianReviews} reviews · ${r.releases} releases in 90 days` : "\nToo few recent games to rate"}` },
         t.name, r ? h("small", ` ${pct(r.hitRate)} hit`) : null);
     })));
+    if (a.hook) body.push(h("p.mki-hook", h("b", "The hook: "), a.hook));
+    if (a.has?.length) body.push(h("p.mki-has", h("b", "Already has: "), a.has.join(" · ")));
     body.push(h("p.mki-verdict", a.verdict));
     body.push(h("div.mki-subs", (a.subscores || []).map((s) => {
       const meta = SUBSCORES.find(([k]) => k === s.key) || [s.key, s.key, ""];
@@ -575,10 +601,12 @@ function card(v, idea) {
         ...(a?.tags || []).slice(0, 3).map((t) => t.name)].filter(Boolean).join(" · "))),
     busy?.started ? h("span.mki-s-busy", "scoring…") : null,
     h("span.mki-s-chev", { "aria-hidden": "true" }, open ? "▾" : "▸"));
-  if (!open) return h("article.mki-card.mki-folded", { "data-idea": idea.id, class: idea.archived ? "mki-archived" : null }, summary,
+  const headRow = h("div.mki-headrow", summary, mine(v, idea));
+  const cls2 = [idea.archived ? "mki-archived" : "", idea.pinned ? "mki-pinned" : ""].filter(Boolean).join(" ") || null;
+  if (!open) return h("article.mki-card.mki-folded", { "data-idea": idea.id, class: cls2 }, headRow,
     busy?.error ? h("p.mki-error", { role: "alert" }, busy.error) : null);
-  return h("article.mki-card", { "data-idea": idea.id, class: idea.archived ? "mki-archived" : null },
-    summary,
+  return h("article.mki-card", { "data-idea": idea.id, class: cls2 },
+    headRow,
     h("div.mki-top", scoreBox, marketBox),
     h("p.mki-idea", idea.text),
     idea.archived ? h("p.mki-muted", "Archived: no new market points.") : null,
@@ -587,6 +615,25 @@ function card(v, idea) {
     busy?.error ? h("p.mki-error", { role: "alert" }, busy.error) : null,
     actions,
     h("p.mki-muted.mki-meta", `Added ${new Date(idea.created * 1000).toLocaleDateString()}${a ? ` · ${a.model}` : ""}`));
+}
+
+// The owner's own ranking, beside the summary: a pin and 1-5 stars (a click on the current star clears it).
+function mine(v, idea) {
+  const { h } = v.ctx;
+  const set = (changes) => {
+    const before = Object.fromEntries(Object.keys(changes).map((k) => [k, idea[k]]));
+    Object.assign(idea, changes); // shown at once; the server's answer replaces it, a failure undoes it
+    paintList(v);
+    act(v, idea, () => v.api.update(idea.id, changes).catch((e) => { Object.assign(idea, before); throw e; }));
+  };
+  const stars = idea.stars || 0;
+  return h("div.mki-mine",
+    h("button.mki-pin", { type: "button", "aria-pressed": String(!!idea.pinned), title: idea.pinned ? "Unpin" : "Pin to the top of your order",
+      onclick: () => set({ pinned: !idea.pinned }) }, h("span", { "aria-hidden": "true" }, "📌"), h("span.mki-sr", idea.pinned ? "Pinned" : "Pin")),
+    h("span.mki-stars", { role: "group", "aria-label": `Your rating: ${stars ? `${stars} of 5` : "not rated"}` },
+      [1, 2, 3, 4, 5].map((n) => h("button.mki-star", { type: "button", class: n <= stars ? "mki-on" : null, "aria-pressed": String(n === stars),
+        title: n === stars ? "Clear your rating" : `${n} star${n > 1 ? "s" : ""}: ${n === 3 ? "keeps Claude's score" : `${n > 3 ? "+" : "−"}${Math.abs(n - 3) * STAR_STEP} in your order`}`,
+        onclick: () => set({ stars: n === stars ? 0 : n }) }, n <= stars ? "★" : "☆"))));
 }
 
 // "Working title: (crab fishing)" → "crab fishing"; otherwise the first line, cut short.
@@ -800,6 +847,24 @@ const CSS = `
 .mkv-ideas .mki-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
 .mkv-ideas .mki-chip { border: 1px solid var(--fb-line); background: var(--fb-card-2); border-radius: 999px; padding: 2px 10px; font-size: 0.82rem; color: var(--fb-ink); cursor: help; }
 .mkv-ideas .mki-chip small { color: var(--fb-muted); }
+.mkv-ideas .mki-headrow { display: flex; align-items: center; gap: 8px; }
+.mkv-ideas .mki-headrow .mki-summary { flex: 1; min-width: 0; }
+.mkv-ideas .mki-mine { flex: 0 0 auto; display: inline-flex; align-items: center; gap: 2px; }
+.mkv-ideas .mki-pin, .mkv-ideas .mki-star { appearance: none; border: 0; background: none; padding: 4px 3px; font: inherit; cursor: pointer; line-height: 1; border-radius: 6px; }
+.mkv-ideas .mki-pin { filter: grayscale(1); opacity: 0.35; font-size: 1rem; }
+.mkv-ideas .mki-pin[aria-pressed="true"] { filter: none; opacity: 1; }
+.mkv-ideas .mki-pin:hover { opacity: 0.8; }
+.mkv-ideas .mki-star { color: var(--fb-muted); font-size: 1.05rem; }
+.mkv-ideas .mki-star.mki-on { color: var(--fb-warning); }
+.mkv-ideas .mki-stars:hover .mki-star { color: var(--fb-warning); }
+.mkv-ideas .mki-stars .mki-star:hover ~ .mki-star { color: var(--fb-muted); }
+.mkv-ideas .mki-pin:focus-visible, .mkv-ideas .mki-star:focus-visible { outline: 2px solid var(--fb-accent); }
+.mkv-ideas .mki-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.mkv-ideas .mki-card.mki-pinned { border-color: var(--fb-accent); }
+.mkv-ideas .mki-sort { font-size: 0.85rem; color: var(--fb-ink-2); }
+.mkv-ideas .mki-sort select { font: inherit; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 6px; padding: 2px 6px; }
+.mkv-ideas .mki-hook, .mkv-ideas .mki-has { margin: 6px 0; font-size: 0.9rem; color: var(--fb-ink-2); max-width: 80ch; }
+.mkv-ideas .mki-hook b, .mkv-ideas .mki-has b { color: var(--fb-ink); }
 .mkv-ideas .mki-verdict { margin: 8px 0; line-height: 1.5; color: var(--fb-ink); max-width: 80ch; }
 .mkv-ideas .mki-subs { display: grid; grid-template-columns: max-content minmax(60px, 140px) 2.5ch minmax(0, 1fr); gap: 6px 10px; align-items: center; margin: 10px 0; font-size: 0.85rem; }
 .mkv-ideas .mki-sub { display: contents; }
@@ -841,4 +906,4 @@ function injectCss() {
   document.head.append(el);
 }
 
-export const _test = { splitIdeas, joinIdeas, submitAll, marketScore, mapTags, cannedAnalysis, fakeApi, tagScore, marketOf, words };
+export const _test = { sortIdeas, myRank, splitIdeas, joinIdeas, submitAll, marketScore, mapTags, cannedAnalysis, fakeApi, tagScore, marketOf, words };

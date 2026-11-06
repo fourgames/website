@@ -306,3 +306,57 @@ def test_the_listed_tags_their_pairs_and_the_biggest_games_reach_claude(tmp_path
     kept = ideas.tidy(answer(tags=[{"id": 1, "name": "Extraction Shooter", "why": "core"}]), m, [2, 1])
     assert [t["id"] for t in kept["tags"]] == [1, 2] and kept["tags"][1]["why"] == "listed by you"
     assert ideas.user_prompt({"text": "no template here"}, [], m).count("Tag pairs") == 0
+
+
+def test_pivots_that_only_restate_the_idea_are_dropped(tmp_path, monkeypatch):
+    """A post-apocalyptic zombie driving game isn't told to "pivot to post-apocalyptic": Claude names the
+    hook and what the idea already has first, and a pivot that only adds one of those is left out."""
+    write_market(tmp_path)
+    monkeypatch.setenv("MARKET_DIR", str(tmp_path))
+    m = ideas.Market.load()
+    kept = ideas.tidy(answer(
+        hook="Physics-driven car crashes through zombie hordes",
+        has=["Post-apocalyptic setting", "Zombies", "Driving", " "],
+        pivots=[{"change": "Pivot to a post-apocalyptic setting", "why": "x"},
+                {"change": "Add Roguelite", "why": "already a tag"},
+                {"change": "Add zombies", "why": "x"},
+                {"change": "Add roguelite runs between safe houses", "why": "a real change"},
+                {"change": "Cut the open world to short arena levels", "why": "scope"}]), m)
+    assert kept["hook"].startswith("Physics-driven") and kept["has"] == ["Post-apocalyptic setting", "Zombies", "Driving"]
+    assert [p["change"] for p in kept["pivots"]] == ["Add roguelite runs between safe houses", "Cut the open world to short arena levels"]
+    assert ideas.SCHEMA["required"].index("has") < ideas.SCHEMA["required"].index("pivots")
+    assert "already" in ideas.SYSTEM and "hook" in ideas.SYSTEM
+    prompt = ideas.user_prompt({"text": "zombie cars", "stars": 5}, [], m)
+    assert "5 of 5 stars" in prompt and "must not move the scores" in prompt
+    assert "stars" not in ideas.user_prompt({"text": "zombie cars", "stars": 0}, [], m)
+
+
+def test_pinning_and_stars(tmp_path, market):
+    async def steps(w):
+        cookie = await w.sign_in(back="/fb-dash")
+        claude_of(w).reply()
+        idea = (await (await send(w, cookie, "POST", BASE, {"text": "zombie cars"})).json())["idea"]
+        assert idea["pinned"] is False and idea["stars"] == 0
+        response = await send(w, cookie, "PUT", f"{BASE}/{idea['id']}", {"pinned": True, "stars": 4})
+        changed = (await response.json())["idea"]
+        assert changed["pinned"] is True and changed["stars"] == 4
+        for body in ({"pinned": "yes"}, {"stars": 6}, {"stars": -1}, {"stars": 2.5}, {"stars": True}):
+            response = await send(w, cookie, "PUT", f"{BASE}/{idea['id']}", body)
+            assert response.status == 400, body
+    run(tmp_path, steps, **ADMIN)
+
+
+def test_an_older_database_gets_the_ranking_columns(tmp_path):
+    import sqlite3
+    path = tmp_path / "old.db"
+    db = sqlite3.connect(path)
+    db.execute("CREATE TABLE ideas (id INTEGER PRIMARY KEY, text TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '', "
+               "archived INTEGER NOT NULL DEFAULT 0, tags TEXT NOT NULL DEFAULT '[]', created INTEGER NOT NULL, updated INTEGER NOT NULL)")
+    db.execute("INSERT INTO ideas (text, created, updated) VALUES ('old one', 1, 1)")
+    db.commit()
+    db.close()
+    store = ideas.Ideas(str(path))
+    assert store.get(1)["pinned"] is False and store.get(1)["stars"] == 0
+    store.update(1, {"pinned": True, "stars": 3})
+    assert store.get(1)["pinned"] is True and store.get(1)["stars"] == 3
+    store.close()

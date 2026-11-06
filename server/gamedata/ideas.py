@@ -8,7 +8,7 @@ can flop early and hit a year later.
 - GET    /v1/admin/ideas               every idea, newest first, with its analyses and daily market score
 - POST   /v1/admin/ideas               {text, notes?}: saves the idea and scores it with Claude
 - POST   /v1/admin/ideas/<id>/score    asks Claude again (today's market data)
-- PUT    /v1/admin/ideas/<id>          {text?, notes?, archived?}
+- PUT    /v1/admin/ideas/<id>          {text?, notes?, archived?, pinned?, stars?}
 - DELETE /v1/admin/ideas/<id>          the idea and its history
 
 All behind admin.require_admin (Steam sign-in, Origin, a JSON body on writes).
@@ -17,6 +17,9 @@ The daily market score (no Claude): Claude maps an idea to Steam tags; those ids
 GET, an idea without a point for the market files' day gets one, worked out from that day's
 trends.json (and games.json for the best pair of its tags), so the history builds up as the market
 moves. See market_score() for the formula.
+
+The owner's own ranking: pinned (kept on top of the list) and stars (0 = not rated, 1-5). The
+dashboard sorts by them with Claude's score; Claude hears the stars as taste, not as evidence.
 
 Storage: SQLite at IDEAS_DB (default DATA_DIR/ideas.db). The key is ANTHROPIC_API_KEY in the
 service's environment; without it, scoring answers 503 claude_not_configured (the list still works).
@@ -30,6 +33,7 @@ import json
 import logging
 import math
 import os
+import re
 import sqlite3
 import threading
 import time
@@ -368,8 +372,17 @@ Map the idea to 2-6 Steam tags from the data, the core one first, using the ids 
 every tag the owner listed that fits the idea (you may reorder them or add better ones). \
 Scores are 0-100, where 50 is an average Steam idea for a team like this. Sub-scores, in this order: \
 demand, competition (high = little competition), hit_odds, small_team_fit (scope, art, multiplayer and \
-content load for 1-3 people in Godot), timing. Each reason is one line. Pivots are concrete changes to this \
-idea (a tag, a mechanic, a scope cut, a platform or a price) with the data behind them. Alternatives are \
+content load for 1-3 people in Godot), timing. Each reason is one line.
+
+Before the pivots, read the idea closely. "hook" is what makes this idea interesting, in the owner's terms (a \
+mechanic, a feel, a twist: e.g. "physics-driven car crashes"), and the tags should cover it too where Steam has \
+a tag for it (Physics, Destruction, Driving...). "has" lists what the idea already is: its setting, genres, \
+camera, mode, players and key mechanics, each a few words. Pivots are concrete changes to this idea (a tag, a \
+mechanic, a scope cut, a platform or a price) with the data behind them. A pivot must change something: never \
+suggest a setting, genre, tag or mechanic that is already in "has" or among the idea's tags (if a post-apocalyptic \
+game should stay post-apocalyptic, that is not a pivot; at most say what to do differently within it). Pivots \
+keep the hook and build on it; drop or swap the hook only when the data says the hook itself is the problem, \
+and then say so plainly. Alternatives are \
 different small ideas the data favours. Timing says now, soon or wait, why, and which signal in this data to \
 watch (a tag's supply, hit rate or demand moving past a level).
 
@@ -383,6 +396,8 @@ SCHEMA: dict[str, Any] = {
         "tags": {"type": "array", "items": {"type": "object", "properties": {
             "id": {"type": "integer"}, "name": {"type": "string"}, "why": {"type": "string"}},
             "required": ["id", "name", "why"], "additionalProperties": False}},
+        "hook": {"type": "string"},
+        "has": {"type": "array", "items": {"type": "string"}},
         "score": {"type": "integer"},
         "subscores": {"type": "array", "items": {"type": "object", "properties": {
             "key": {"type": "string", "enum": SUBSCORES}, "score": {"type": "integer"}, "reason": {"type": "string"}},
@@ -400,7 +415,7 @@ SCHEMA: dict[str, Any] = {
             "detail": {"type": "string"}, "watch": {"type": "string"}},
             "required": ["advice", "detail", "watch"], "additionalProperties": False},
     },
-    "required": ["tags", "score", "subscores", "verdict", "risks", "pivots", "alternatives", "timing"],
+    "required": ["tags", "hook", "has", "score", "subscores", "verdict", "risks", "pivots", "alternatives", "timing"],
     "additionalProperties": False,
 }
 
@@ -412,6 +427,9 @@ def user_prompt(idea: dict[str, Any], history: list[dict[str, Any]], m: Market |
         parts.append(proof)
     if idea.get("notes"):
         parts.append(f"The owner's notes:\n{idea['notes']}")
+    if idea.get("stars"):
+        parts.append(f"The owner rates this idea {idea['stars']} of 5 stars. That is their taste, not market evidence: "
+                     "it must not move the scores. The higher it is, the closer the pivots should stay to the idea.")
     # No earlier score here: told its last number, the model anchors on it ("the 52 stands") instead of
     # judging the evidence afresh. The dashboard shows the score history itself.
     parts.append("Score it from scratch on the evidence here.")
@@ -437,6 +455,7 @@ def tidy(result: dict[str, Any], m: Market, listed: list[int] | None = None) -> 
         if t not in seen and t in m.names:
             seen.add(t)
             tags.append({"id": t, "name": m.name(t), "why": "listed by you"})
+    has = [str(x) for x in (result.get("has") or []) if str(x).strip()][:12]
     by_key = {s.get("key"): s for s in result.get("subscores") or []}
     subscores = [{"key": k, "score": score(by_key[k].get("score")), "reason": str(by_key[k].get("reason", ""))}
                  for k in SUBSCORES if k in by_key]
@@ -445,13 +464,33 @@ def tidy(result: dict[str, Any], m: Market, listed: list[int] | None = None) -> 
         "tags": tags[:MAX_TAGS + 2],
         "score": score(result.get("score")),
         "subscores": subscores,
+        "hook": str(result.get("hook", "")),
+        "has": has,
         "verdict": str(result.get("verdict", "")),
         "risks": [str(r) for r in (result.get("risks") or [])][:6],
-        "pivots": [{"change": str(p.get("change", "")), "why": str(p.get("why", ""))} for p in result.get("pivots") or []][:5],
+        "pivots": [{"change": str(p.get("change", "")), "why": str(p.get("why", ""))} for p in result.get("pivots") or []
+                   if not already_there(str(p.get("change", "")), [t["name"] for t in tags] + has)][:5],
         "alternatives": [{"idea": str(a.get("idea", "")), "why": str(a.get("why", ""))} for a in result.get("alternatives") or []][:4],
         "timing": {"advice": timing.get("advice") if timing.get("advice") in ("now", "soon", "wait") else "soon",
                    "detail": str(timing.get("detail", "")), "watch": str(timing.get("watch", ""))},
     }
+
+
+# "Add Post-apocalyptic", "Pivot to a post-apocalyptic setting": a pivot that names, right after its verb,
+# something the idea already is.
+PIVOT_VERB = r"(?:add(?:ing)?|pivot(?:ing)?\s+(?:in)?to|switch(?:ing)?\s+to|chang(?:e|ing)\s+(?:it\s+)?to|turn(?:ing)?\s+it\s+into|make\s+it|go(?:ing)?)"
+
+
+def already_there(change: str, have: list[str]) -> bool:
+    """True when the pivot only proposes a tag or trait the idea already has (Claude sometimes does)."""
+    text = " ".join(change.lower().replace("-", " ").split())
+    for name in have:
+        name = " ".join(name.lower().replace("-", " ").split())
+        if len(name) < 3:
+            continue
+        if re.search(rf"^\s*{PIVOT_VERB}\s+(?:an?\s+|the\s+|more\s+)?{re.escape(name)}(?:\s+(?:setting|theme|tag|genre|world|style|game))?\s*$", text):
+            return True
+    return False
 
 
 def make_client():
@@ -543,6 +582,12 @@ class Ideas:
                     score INTEGER NOT NULL, detail TEXT NOT NULL, PRIMARY KEY (idea_id, day));
                 CREATE INDEX IF NOT EXISTS analyses_idea ON analyses (idea_id, at);
             """)
+            # The owner's ranking, added later: older databases get the columns here.
+            have = {r[1] for r in db.execute("PRAGMA table_info(ideas)")}
+            for column in ("pinned", "stars"):
+                if column not in have:
+                    db.execute(f"ALTER TABLE ideas ADD COLUMN {column} INTEGER NOT NULL DEFAULT 0")
+            db.commit()
             self._db = db
         return self._db
 
@@ -564,10 +609,11 @@ class Ideas:
 
     def _idea(self, row: sqlite3.Row) -> dict[str, Any]:
         return {"id": row["id"], "text": row["text"], "notes": row["notes"], "archived": bool(row["archived"]),
+                "pinned": bool(row["pinned"]), "stars": row["stars"],
                 "tags": json.loads(row["tags"]), "created": row["created"], "updated": row["updated"]}
 
     def update(self, idea_id: int, changes: dict[str, Any]) -> None:
-        sets = {k: (int(v) if k == "archived" else v) for k, v in changes.items()}
+        sets = {k: (int(v) if k in ("archived", "pinned") else v) for k, v in changes.items()}
         sets["updated"] = utc_now()
         with self.lock, self.db:
             self.db.execute(f"UPDATE ideas SET {', '.join(f'{k} = ?' for k in sets)} WHERE id = ?",
@@ -743,8 +789,8 @@ async def update_idea(request: web.Request) -> web.Response:
     store = ideas_of(request)
     idea = found(store, request)
     body = await read_json(request, *BODY_CAPS, require_json_type=True)
-    if not body or not set(body) <= {"text", "notes", "archived"}:
-        raise Refused(400, "bad_request", "send {text?, notes?, archived?}")
+    if not body or not set(body) <= {"text", "notes", "archived", "pinned", "stars"}:
+        raise Refused(400, "bad_request", "send {text?, notes?, archived?, pinned?, stars?}")
     changes: dict[str, Any] = {}
     if "text" in body:
         changes["text"] = text_field(body, "text", MAX_TEXT, True)
@@ -754,6 +800,14 @@ async def update_idea(request: web.Request) -> web.Response:
         if not isinstance(body["archived"], bool):
             raise Refused(400, "bad_request", "archived must be true or false")
         changes["archived"] = body["archived"]
+    if "pinned" in body:
+        if not isinstance(body["pinned"], bool):
+            raise Refused(400, "bad_request", "pinned must be true or false")
+        changes["pinned"] = body["pinned"]
+    if "stars" in body:
+        if type(body["stars"]) is not int or not 0 <= body["stars"] <= 5:
+            raise Refused(400, "bad_request", "stars must be a whole number from 0 (not rated) to 5")
+        changes["stars"] = body["stars"]
     await asyncio.to_thread(store.update, idea["id"], changes)
     return W.ok({"idea": await asyncio.to_thread(one, store, idea["id"])})
 

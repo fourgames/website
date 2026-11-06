@@ -130,15 +130,41 @@ def check(state):
     return repr(state) != before
 
 
-def check_youtube(seen, first, state):
-    feed = ET.fromstring(media.request(f"https://www.youtube.com/feeds/videos.xml?channel_id={YOUTUBE_CHANNEL}", as_json=False))
-    entries = {}
-    for entry in feed.findall("a:entry", NS):
-        published = entry.findtext("a:published", "", NS)
-        entries[entry.findtext("yt:videoId", "", NS)] = {
-            "title": entry.findtext("a:title", "", NS),
-            "published": calendar.timegm(time.strptime(published[:19], "%Y-%m-%dT%H:%M:%S")) if published else 0,
+def _stamp(text):
+    return calendar.timegm(time.strptime(text[:19], "%Y-%m-%dT%H:%M:%S")) if text else 0
+
+
+def _feed_entries():
+    """The channel's latest uploads, newest first, as {video id: {title, published}}. The RSS feed
+    costs no API quota but YouTube often answers it with 404 for a while; then the uploads playlist
+    from the Data API (1 quota unit) stands in, so the check keeps working."""
+    try:
+        feed = ET.fromstring(media.request(f"https://www.youtube.com/feeds/videos.xml?channel_id={YOUTUBE_CHANNEL}", as_json=False))
+        return {
+            entry.findtext("yt:videoId", "", NS): {
+                "title": entry.findtext("a:title", "", NS),
+                "published": _stamp(entry.findtext("a:published", "", NS)),
+            }
+            for entry in feed.findall("a:entry", NS)
         }
+    except (media.HttpError, ET.ParseError) as error:
+        if not media.YOUTUBE_KEY:
+            raise
+        print(f"[announce] YouTube feed: {error}, using the Data API instead")
+    res = media.youtube("playlistItems", {"part": "snippet,contentDetails", "playlistId": "UU" + YOUTUBE_CHANNEL[2:], "maxResults": 15})
+    entries = {}
+    for item in res.get("items", []):
+        details, snippet = item.get("contentDetails") or {}, item.get("snippet") or {}
+        if details.get("videoId"):
+            entries[details["videoId"]] = {
+                "title": snippet.get("title", ""),
+                "published": _stamp(details.get("videoPublishedAt") or snippet.get("publishedAt", "")),
+            }
+    return entries
+
+
+def check_youtube(seen, first, state):
+    entries = _feed_entries()
     if first:
         for video_id in entries:
             seen[video_id] = "old"

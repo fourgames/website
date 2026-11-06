@@ -168,8 +168,16 @@ def test_status_changes(store):
         Settings.from_env({"SEND_HOURS": "20-8"})
 
 
-def test_designed_email(store):
+def test_plain_text_by_default(store):
     out = make(store)
+    outreach.set_status(store, out["id"], "approved", NOW)
+    smtp = FakeSMTP()
+    sender(store, smtp).send_due()
+    assert not smtp.sent[0].is_multipart() and smtp.sent[0].get_content_type() == "text/plain"
+
+
+def test_designed_email(store):
+    out = make(store, {**SPEC, "gif": True})
     outreach.set_status(store, out["id"], "approved", NOW)
     smtp = FakeSMTP()
     sender(store, smtp).send_due()

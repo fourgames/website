@@ -95,7 +95,8 @@ def build(msg: dict, campaign: dict, now: float) -> EmailMessage:
     mail["Message-ID"] = make_msgid(domain=sender.rpartition("@")[2])
     mail["List-Unsubscribe"] = f"<mailto:{sender}?subject=unsubscribe>"
     mail.set_content(msg["body"])
-    mail.add_alternative(outreach.html_for(campaign, msg["body"]), subtype="html")
+    if campaign.get("gif"):  # plain text only unless the campaign asked for the GIF version
+        mail.add_alternative(outreach.html_for(campaign, msg["body"]), subtype="html")
     return mail
 
 

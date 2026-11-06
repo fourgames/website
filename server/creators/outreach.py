@@ -51,6 +51,7 @@ CREATE TABLE IF NOT EXISTS outreach_campaigns (
     subject     TEXT NOT NULL,
     body        TEXT NOT NULL,
     daily_limit INTEGER NOT NULL,       -- this campaign's share of the day (the global cap still holds)
+    gif         INTEGER NOT NULL DEFAULT 0,  -- 1: also an HTML version with the game's GIF; 0: plain text only (least spam risk)
     status      TEXT NOT NULL,          -- draft, approved, paused, done
     created_at  INTEGER NOT NULL,
     approved_at INTEGER
@@ -85,9 +86,9 @@ CREATE TABLE IF NOT EXISTS outreach_state (
 """
 
 
-# Every email also has an HTML version that looks like a normal email from a person, with the game's
-# GIF (or header image) dropped in; the plain text stays in the same email as the fallback. One image,
-# no buttons, no tracking pixels.
+# Emails are plain text by default: the least spam risk. A campaign can add an HTML version (gif=1)
+# that looks like a normal email from a person with the game's GIF (or header image) dropped in; the
+# plain text stays in the same email as the fallback. One image, no buttons, no tracking pixels.
 SITE = "https://fourgames.se"
 GIF_DIR = "/images/outreach"
 _URL = re.compile(r"https?://[^\s<>()\"']+[^\s<>()\"'.,;:!?]")
@@ -159,6 +160,9 @@ class OutreachError(ValueError):
 def open_store(path: str) -> Store:
     store = Store(path)
     store.db.executescript(SCHEMA)
+    columns = {r[1] for r in store.db.execute("PRAGMA table_info(outreach_campaigns)")}
+    if "gif" not in columns:  # added later: 1 = also send the HTML version with the game's GIF
+        store.db.execute("ALTER TABLE outreach_campaigns ADD COLUMN gif INTEGER NOT NULL DEFAULT 0")
     return store
 
 
@@ -249,9 +253,9 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
     with store.db:
         cur = store.db.execute(
             """INSERT INTO outreach_campaigns (appid, game, audience, from_name, from_email, subject, body,
-                                               daily_limit, status, created_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?)""",
-            (appid, game, audience, from_name, from_email, subject, body, daily, int(now)))
+                                               daily_limit, gif, status, created_at)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?)""",
+            (appid, game, audience, from_name, from_email, subject, body, daily, int(bool(spec.get("gif"))), int(now)))
         campaign = cur.lastrowid
         seen: set[str] = set()
         for target in dict.fromkeys(ids):

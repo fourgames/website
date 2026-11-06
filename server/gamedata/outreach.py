@@ -79,8 +79,9 @@ async def one(request: web.Request) -> web.Response:
     def work(o, s, _):
         out = {**o.summary(s, cid), "messages": o.messages(s, cid)}
         # The designed version of each message, as the dashboard preview shows it.
-        for m in out["messages"]:
-            m["html"] = o.html_for(out["campaign"], m["body"])
+        if out["campaign"].get("gif"):
+            for m in out["messages"]:
+                m["html"] = o.html_for(out["campaign"], m["body"])
         return out
     return W.ok(await asyncio.to_thread(_with_store, work))
 
@@ -89,7 +90,7 @@ async def create(request: web.Request) -> web.Response:
     from .admin import require_admin
     require_admin(request)
     body = await read_json(request, *BODY_CAPS, require_json_type=True)
-    allowed = {"appid", "game", "audience", "from_name", "from_email", "subject", "body", "daily_limit", "recipients"}
+    allowed = {"appid", "game", "audience", "from_name", "from_email", "subject", "body", "daily_limit", "recipients", "gif"}
     if not isinstance(body, dict) or not set(body) <= allowed:
         raise Refused(400, "bad_request", "send {" + ", ".join(sorted(allowed)) + "}")
 

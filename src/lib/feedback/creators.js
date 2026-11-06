@@ -350,7 +350,7 @@ function pressView(d) {
 const TEMPLATES = {
   creators: {
     subject: "{game} for your channel?",
-    body: "Hi {name},\n\nI made a game called {game}. [What you do in it, in one simple sentence.] You played {their_game}, so I think you might like it.\n\nSteam: {steam}\nFree key: join https://discord.fourgames.se and type /request, the bot sends it right away\nPress kit: {press}\n\nThanks,\nDanny",
+    body: "Hi {name},\n\nI made a game called {game}. [What you do in it, in one simple sentence.] You played {their_game}, so I think you might like it.\n\nSteam: {steam}\nFree key: join https://discord.fourgames.se and type /request, the bot sends it right away\n\nThere's a press kit with screenshots and the trailer on fourgames.se too.\n\nThanks,\nDanny",
   },
   press: {
     subject: "{game}: [the news, in a few words]",
@@ -433,7 +433,7 @@ function outreachView(d) {
 function newForm(d) {
   const own = Object.entries(d.games).filter(([, g]) => g.own).map(([id, g]) => [Number(id), g.n]);
   const [appid, game] = own[0] || [null, ""];
-  return { appid, game, audience: "creators", n: 30, activeOnly: true, from_name: `Danny from ${game}`, from_email: `${slug(game)}@fourgames.se`, daily_limit: 20, ...TEMPLATES.creators };
+  return { appid, game, audience: "creators", n: 30, activeOnly: true, gif: false, from_name: `Danny from ${game}`, from_email: `${slug(game)}@fourgames.se`, daily_limit: 20, ...TEMPLATES.creators };
 }
 
 function recipientsFor(d, f, contacted) {
@@ -464,7 +464,7 @@ function formView(d, contacted) {
   const create = () => {
     if (leftover) { ot.msg = "Fill in the [bracketed] parts of the subject and message first."; draw(); return; }
     outreachSend("outreach", { appid: f.appid, game: f.game, audience: f.audience, from_name: f.from_name, from_email: f.from_email,
-      subject: f.subject, body: f.body, daily_limit: f.daily_limit, recipients: people.map((p) => p.id) },
+      subject: f.subject, body: f.body, daily_limit: f.daily_limit, gif: f.gif, recipients: people.map((p) => p.id) },
       (out) => { ot.form = null; ot.open = out.id; });
   };
   return h("div.cr-filters.cr-form",
@@ -477,6 +477,8 @@ function formView(d, contacted) {
       : `The ${C.plural(people.length, "creator")} who fit ${f.game} best, with an email, not emailed before. Change "How many" to pick more or fewer.`),
     h("div.cr-row", input("From name", "from_name"), input("From address", "from_email", { type: "email" }), input("Per day", "daily_limit", { type: "number", min: 1, max: 200, style: "max-width:6em" })),
     h("p.cr-muted", "The from address must be your Strato mailbox or one of its aliases (add a game address as an alias in Strato's mail settings first)."),
+    h("label.cr-select", h("input", { type: "checkbox", checked: f.gif, onchange: (e) => set({ gif: e.currentTarget.checked }, false) }),
+      h("span", "Add the game's GIF (makes it an HTML email; plain text has the lowest spam risk)")),
     input("Subject", "subject"),
     area("Message", "body", 14),
     h("p.cr-muted", "{name} = the channel or outlet, {game}, {steam} = the store link, {press} = the game's press page, {their_game} = a game the creator made a video of. Replace the [bracketed] parts. Keep it short and simple (creators skim, and many read English as a second language), and true. The game's GIF goes in after the second paragraph, and an opt-out line at the end."),

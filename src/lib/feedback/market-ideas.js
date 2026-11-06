@@ -342,8 +342,9 @@ function serverApi(ctx) {
   return {
     test: false,
     list: async () => json(await ctx.adminGet("ideas")),
-    create: async (text, notes) => (await json(await ctx.adminSend("ideas", "POST", notes ? { text, notes } : { text }))).idea,
-    rescore: async (id) => (await json(await ctx.adminSend(`ideas/${id}/score`, "POST", {}))).idea,
+    // A long answer can take a few minutes: wait as long as the server waits for Claude (5 minutes).
+    create: async (text, notes) => (await json(await ctx.adminSend("ideas", "POST", notes ? { text, notes } : { text }, 310000))).idea,
+    rescore: async (id) => (await json(await ctx.adminSend(`ideas/${id}/score`, "POST", {}, 310000))).idea,
     // One Claude call for all eight drafts: give it as long as the server gives Claude (5 minutes).
     generate: async (direction) => json(await ctx.adminSend("ideas/generate", "POST", direction ? { direction } : {}, 310000)),
     // One Claude call that rewrites the idea; the dashboard then scores it like a new idea.

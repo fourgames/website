@@ -57,7 +57,9 @@ log = logging.getLogger("gamedata.ideas")
 MODEL = "claude-haiku-5-5"
 # Haiku 5.5's default is medium; high costs a little more output and judges the market data more carefully.
 EFFORT = "high"
-MAX_TOKENS = 16000
+# One analysis or one rewrite: usually about 5,000 tokens, but high effort sometimes thinks far longer, and
+# 16,000 cut some off. The cap only limits; only what is used is paid for.
+MAX_TOKENS = 32000
 # Eight drafted ideas (and the thinking behind them) need far more room than one analysis.
 GEN_MAX_TOKENS = 48000
 CLAUDE_TIMEOUT = 300.0

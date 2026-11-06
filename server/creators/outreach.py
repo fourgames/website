@@ -85,12 +85,10 @@ CREATE TABLE IF NOT EXISTS outreach_state (
 """
 
 
-# The designed (HTML) version of every email: the game's GIF or header image on top, the text, a
-# button for the Steam page and one for a key, and a signature with the logo. The plain text stays in
-# the same email as the fallback. Kept light (one image, no tracking pixels) so it reads as a personal
-# email, not a newsletter.
+# Every email also has an HTML version that looks like a normal email from a person, with the game's
+# GIF (or header image) dropped in; the plain text stays in the same email as the fallback. One image,
+# no buttons, no tracking pixels.
 SITE = "https://fourgames.se"
-LOGO = f"{SITE}/logo-512.png"
 GIF_DIR = "/images/outreach"
 _URL = re.compile(r"https?://[^\s<>()\"']+[^\s<>()\"'.,;:!?]")
 
@@ -122,56 +120,36 @@ def html_for(campaign: dict, body: str) -> str:
 
 
 def html_body(text: str, *, image: str, steam: str, from_name: str) -> str:
-    """The designed email, from the filled-in plain text."""
+    """The email as a person would write it in a mail app: plain paragraphs, links as text, and the
+    game's GIF dropped in after the first paragraph that says what the game is (the second one, or
+    the first if there is only one). No card, buttons or logo: cold emails that look designed read
+    like marketing, land in spam or promotions more often and get fewer replies."""
     import html as h
     paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text.strip()) if p.strip()]
     foot = ""
     if paragraphs and paragraphs[-1].startswith("--"):
         foot = paragraphs.pop()[2:].strip()
-    sign = []
-    if paragraphs and len(paragraphs[-1]) < 120 and "\n" in paragraphs[-1]:
-        sign = paragraphs.pop().split("\n")
 
-    def link(m):
-        url = m.group(0)
-        return f'<a href="{h.escape(url)}" style="color:#2f7fc1">{h.escape(url)}</a>'
+    def para(p: str) -> str:
+        out = []
+        last = 0
+        for m in _URL.finditer(p):
+            out.append(h.escape(p[last:m.start()]))
+            out.append(f'<a href="{h.escape(m.group(0))}">{h.escape(m.group(0))}</a>')
+            last = m.end()
+        out.append(h.escape(p[last:]))
+        return f'<p style="margin:0 0 14px">{"".join(out).replace(chr(10), "<br>")}</p>'
 
-    def button(url: str, label: str, color: str) -> str:
-        return (f'<a href="{h.escape(url)}" style="display:inline-block;background:{color};color:#ffffff;text-decoration:none;'
-                f'font-weight:600;font-size:15px;padding:11px 20px;border-radius:8px;margin:4px 8px 4px 0">{h.escape(label)}</a>')
-
-    parts = []
-    for p in paragraphs:
-        urls = _URL.findall(p)
-        if urls and "store.steampowered.com" in urls[0] and len(p) - len(urls[0]) < 60:
-            parts.append(f'<p style="margin:0 0 18px">{button(urls[0], "Watch the trailer on Steam", "#1b6fb3")}</p>')
-            continue
-        body = _URL.sub(link, h.escape(p).replace("&amp;", "&")).replace("\n", "<br>")
-        parts.append(f'<p style="margin:0 0 16px">{body}</p>')
-        discord = next((u for u in urls if "discord" in u), None)
-        if discord:
-            parts.append(f'<p style="margin:-4px 0 18px">{button(discord, "Get a free key", "#5865f2")}</p>')
-    top = (f'<a href="{h.escape(steam or SITE)}"><img src="{h.escape(image)}" width="560" alt="" '
-           f'style="display:block;width:100%;max-width:560px;height:auto;border:0;border-radius:10px 10px 0 0"></a>') if image else ""
-    closing = ""
-    if sign and sign[0].rstrip().endswith((",", "!")) and len(sign) > 1:  # "Thanks for reading," / "Best,"
-        closing = f'<p style="margin:0 0 6px">{h.escape(sign.pop(0))}</p>'
-    name = h.escape(sign[0]) if sign else h.escape(from_name)
-    rest = "<br>".join(h.escape(x) for x in sign[1:]) if len(sign) > 1 else "Four Games"
-    signature = (f'<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px"><tr>'
-                 f'<td style="padding-right:12px;vertical-align:middle"><img src="{LOGO}" width="44" height="44" alt="Four Games" '
-                 f'style="display:block;border-radius:10px"></td><td style="vertical-align:middle;font-size:14px;line-height:1.4">'
-                 f'<b>{name}</b><br><span style="color:#5b6470">{rest}</span><br>'
-                 f'<a href="{SITE}" style="color:#2f7fc1;text-decoration:none">fourgames.se</a></td></tr></table>')
-    footer = f'<p style="margin:18px 0 0;font-size:12px;color:#8a929c">{h.escape(foot)}</p>' if foot else ""
-    return ('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
-            '<meta name="color-scheme" content="light"></head>'
-            '<body style="margin:0;padding:0;background:#f3f5f8">'
-            '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f5f8"><tr><td align="center" style="padding:24px 12px">'
-            '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:10px;'
-            'font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1d2329;font-size:15px;line-height:1.55">'
-            f'<tr><td>{top}</td></tr><tr><td style="padding:24px 28px 26px">{"".join(parts)}{closing}{signature}{footer}</td></tr>'
-            '</table></td></tr></table></body></html>')
+    parts = [para(p) for p in paragraphs]
+    if image:
+        gif = (f'<p style="margin:0 0 14px"><a href="{h.escape(steam or SITE)}"><img src="{h.escape(image)}" width="460" alt="" '
+               f'style="display:block;width:100%;max-width:460px;height:auto;border:0;border-radius:6px"></a></p>')
+        parts.insert(min(2, len(parts)), gif)
+    if foot:
+        parts.append(f'<p style="margin:18px 0 0;color:#888;font-size:12px">{h.escape(foot)}</p>')
+    return ('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>'
+            '<body style="margin:0;padding:12px;font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;'
+            f'font-size:15px;line-height:1.5;color:#222;background:#fff"><div style="max-width:560px">{"".join(parts)}</div></body></html>')
 
 
 class OutreachError(ValueError):

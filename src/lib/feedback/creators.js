@@ -349,8 +349,8 @@ function pressView(d) {
 // through the game-data server's /admin/outreach routes). Nothing is sent before a batch is approved.
 const TEMPLATES = {
   creators: {
-    subject: "{game} - might fit your channel?",
-    body: "Hi {name},\n\nI'm Danny, the developer of {game}. I enjoyed your video on {their_game}, so I thought {game} might be a good fit for your channel.\n\n[One or two lines about the game.]\n\nSteam: {steam}\nTrailer: [trailer link]\n\nIf you'd like a key, you can get one right away in our Discord: [Discord link] (it checks your channel, no waiting). You're welcome to use the trailer on your channel too.\n\nThanks for reading,\nDanny\nFour Games",
+    subject: "{game} - for your channel?",
+    body: "Hi {name},\n\nI'm Danny, the solo dev behind {game}. I saw you've played {their_game}, so I think it could fit your channel: [one sentence about the game].\n\nSteam: {steam}\nFree key: https://discord.fourgames.se (type /request there, it checks your channel and sends the key right away)\n\nThanks,\nDanny",
   },
   press: {
     subject: "{game}: [the news, in a few words]",
@@ -479,7 +479,7 @@ function formView(d, contacted) {
     h("p.cr-muted", "The from address must be your Strato mailbox or one of its aliases (add a game address as an alias in Strato's mail settings first)."),
     input("Subject", "subject"),
     area("Message", "body", 14),
-    h("p.cr-muted", "{name} = the channel or outlet, {game}, {steam} = the store link, {their_game} = a game the creator made a video of. Replace the [bracketed] parts. An opt-out line is added at the end."),
+    h("p.cr-muted", "{name} = the channel or outlet, {game}, {steam} = the store link, {their_game} = a game the creator made a video of. Replace the [bracketed] parts. Keep it short and true. The game's GIF goes in after the second paragraph, and an opt-out line at the end."),
     h("div.cr-row", h("button.btn.primary", { type: "button", disabled: ot.busy || !people.length, onclick: create }, ot.busy ? "Saving…" : `Save draft for ${people.length === 1 ? "1 person" : `${num(people.length)} people`}`),
       h("span.cr-muted", "Nothing is sent until you approve the draft.")),
     people.length ? h("details", h("summary.cr-muted", `Who's in (${people.length})`), h("p.cr-muted", people.slice(0, 200).map((p) => p.label).join(", "))) : null);
@@ -500,7 +500,7 @@ function campaignView(d) {
     h("p.cr-muted", `From ${c.from_name} <${c.from_email}> · up to ${c.daily_limit} a day · ${Object.entries(n).map(([k, v]) => `${MSG_STATUS[k] || k} ${v}`).join(" · ")}`),
     preview ? h("div.cr-preview", h("div.cr-muted", `To ${preview.name || ""} <${preview.email}> · from ${c.from_name}`), h("div", h("b", preview.subject)),
       preview.html ? h("iframe.cr-frame", { title: "Email preview", sandbox: "", srcdoc: preview.html }) : h("pre.cr-body", preview.body),
-      preview.html ? h("details", h("summary.cr-muted", "Plain-text version (sent along with it)"), h("pre.cr-body", preview.body)) : null) : null,
+      preview.html ? h("details", h("summary.cr-muted", "Plain-text version (sent inside the same email)"), h("pre.cr-body", preview.body)) : null) : null,
     h("div.cr-scroll", h("table.cr-table", h("thead", h("tr", h("th", "To"), h("th", "Subject"), h("th", "Status"), h("th", "When"), h("th", ""))),
       h("tbody", ...msgs.map((m) => h("tr.cr-main", { class: m.id === preview?.id ? "is-open" : null, onclick: () => { ot.shownMsg = m.id; draw(); } },
         h("td.cr-chan", h("b", m.name || m.email), h("div.cr-muted", m.email)),
@@ -567,7 +567,7 @@ const CSS = `
 .crv .cr-area { font: inherit; font-size: 0.9rem; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 8px; padding: 8px 10px; resize: vertical; }
 .crv .cr-h { margin: 12px 0 2px; color: var(--fb-title); font-size: 1.05rem; }
 .crv .cr-preview { background: var(--fb-card); border: 1px solid var(--fb-line); border-left: 3px solid var(--fb-accent); border-radius: 8px; padding: 10px 14px; margin: 10px 0 14px; }
-.crv .cr-frame { display: block; width: 100%; height: 720px; border: 0; border-radius: 8px; margin-top: 10px; background: #f3f5f8; }
+.crv .cr-frame { display: block; width: 100%; height: 560px; border: 1px solid var(--fb-line); border-radius: 8px; margin-top: 10px; background: #fff; }
 .crv .cr-body { white-space: pre-wrap; font: inherit; font-size: 0.88rem; margin: 8px 0 0; color: var(--fb-ink); }
 @media (max-width: 640px) {
   .crv .cr-input { max-width: none; flex-basis: 100%; }

@@ -96,13 +96,14 @@ Short one-to-one emails to the creators and press on the lists, in small daily d
    interested", "unsubscribe"... mark it opted out and the address is never emailed again; bounces
    too. The dashboard shows each campaign's counts and every message's status.
 
-Each email is sent designed (HTML) with the plain text inside as the fallback: the game's gameplay
-GIF on top (`public/images/outreach/<game-name-slug>.gif`, served from fourgames.se; under ~2 MB, a
-good first frame since Outlook shows only that), else its Steam header image; the text; a "Watch the
-trailer on Steam" button for the Steam link and a "Get a free key" button after a Discord link; and a
-signature with the logo. No tracking pixels. To make a GIF from a Steam trailer, on the server:
-`ffmpeg -ss 7.6 -t 3.6 -i trailer.mp4 -vf "fps=12,scale=520:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" -loop 0 out.gif`
-(get the trailer with `ffmpeg -i <the hls_h264 address from Steam's appdetails movies> -c copy trailer.mp4`).
+Each email has a plain-text part and an HTML part that looks like a normal email from a person
+(no card, buttons or logo: designed cold emails read like marketing and land in spam more often),
+with the game's gameplay GIF dropped in after the second paragraph:
+`public/images/outreach/<game-name-slug>.gif`, served from fourgames.se, under ~2 MB, with a good
+first frame since Outlook shows only that. Without one, the Steam header image. No tracking pixels.
+To make a GIF from a Steam trailer, on the server: get the trailer with
+`ffmpeg -i <the hls_h264 address from Steam's appdetails movies> -c copy trailer.mp4`, then
+`ffmpeg -ss 7.6 -t 3.6 -i trailer.mp4 -vf "fps=12,scale=520:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" -loop 0 out.gif`.
 
 The from address can be the game's (e.g. "Danny from Pomo Valley" <pomovalley@fourgames.se>): add it
 in Strato as an **alias** of the sending mailbox, so Strato lets the mailbox send as it and replies land

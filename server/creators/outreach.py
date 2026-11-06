@@ -30,6 +30,7 @@ import time
 from typing import Any
 
 from .db import Store
+from .dmarc import summary as dmarc_summary
 
 RECONTACT_DAYS = 90
 MAX_RECIPIENTS = 500
@@ -161,9 +162,52 @@ def open_store(path: str) -> Store:
     store = Store(path)
     store.db.executescript(SCHEMA)
     columns = {r[1] for r in store.db.execute("PRAGMA table_info(outreach_campaigns)")}
-    if "gif" not in columns:  # added later: 1 = also send the HTML version with the game's GIF
-        store.db.execute("ALTER TABLE outreach_campaigns ADD COLUMN gif INTEGER NOT NULL DEFAULT 0")
+    for name, kind in (("gif", "INTEGER NOT NULL DEFAULT 0"),   # 1 = also the HTML version with the game's GIF
+                       ("paused_reason", "TEXT"),               # why the safety brake paused it
+                       ("resumed_at", "INTEGER")):              # the brake only counts sends after this
+        if name not in columns:  # added after the first databases were made
+            store.db.execute(f"ALTER TABLE outreach_campaigns ADD COLUMN {name} {kind}")
     return store
+
+
+# The safety brake: a campaign pauses itself when too many of its emails bounce (a stale or bad list)
+# or too many people say no (the wrong people or the wrong message), before it can hurt the domain's
+# reputation. Counted over its sent emails since it was last resumed, once there are BRAKE_MIN_SENT.
+BRAKE_MIN_SENT = 10
+BRAKE_BOUNCES = 0.05
+BRAKE_NOS = 0.08
+
+
+def brake_reason(store: Store, campaign: dict) -> str | None:
+    since = campaign.get("resumed_at") or 0
+    row = store.db.execute(
+        """SELECT COUNT(*), SUM(status IN ('bounced', 'failed')), SUM(status = 'opted_out')
+           FROM outreach_messages WHERE campaign_id = ? AND sent_at IS NOT NULL AND sent_at >= ?""",
+        (campaign["id"], since)).fetchone()
+    sent, bounced, nos = row[0], row[1] or 0, row[2] or 0
+    if sent < BRAKE_MIN_SENT:
+        return None
+    if bounced / sent > BRAKE_BOUNCES:
+        return (f"{bounced} of {sent} emails bounced ({bounced / sent:.0%}, the limit is {BRAKE_BOUNCES:.0%}): "
+                "the list may have old or wrong addresses.")
+    if nos / sent > BRAKE_NOS:
+        return (f"{nos} of {sent} people said no ({nos / sent:.0%}, the limit is {BRAKE_NOS:.0%}): "
+                "the message or the match may be off.")
+    return None
+
+
+def apply_brake(store: Store, now: float) -> list[str]:
+    """Pauses every sending campaign over the brake's limits. Returns what it paused, in words."""
+    paused = []
+    for c in store.db.execute("SELECT * FROM outreach_campaigns WHERE status = 'approved'").fetchall():
+        c = dict(c)
+        reason = brake_reason(store, c)
+        if reason:
+            with store.db:
+                store.db.execute("UPDATE outreach_campaigns SET status = 'paused', paused_reason = ? WHERE id = ?",
+                                 (reason, c["id"]))
+            paused.append(f"{c['game']}: {reason}")
+    return paused
 
 
 def render(template: str, fields: dict[str, str]) -> str:
@@ -312,8 +356,10 @@ def set_status(store: Store, campaign: int, status: str, now: float) -> dict[str
             store.db.execute("DELETE FROM outreach_messages WHERE campaign_id = ?", (campaign,))
             store.db.execute("DELETE FROM outreach_campaigns WHERE id = ?", (campaign,))
             return {"deleted": campaign}
-        store.db.execute("UPDATE outreach_campaigns SET status = ?, approved_at = COALESCE(approved_at, ?) WHERE id = ?",
-                         (status, int(now) if status == "approved" else None, campaign))
+        resumed = int(now) if status == "approved" and c["status"] == "paused" else c.get("resumed_at")
+        store.db.execute("""UPDATE outreach_campaigns SET status = ?, approved_at = COALESCE(approved_at, ?),
+                                   paused_reason = NULL, resumed_at = ? WHERE id = ?""",
+                         (status, int(now) if status == "approved" else None, resumed, campaign))
     return summary(store, campaign)
 
 
@@ -343,5 +389,7 @@ def overview(store: Store) -> dict[str, Any]:
         "contacted": [r[0] for r in store.db.execute(
             "SELECT DISTINCT email FROM outreach_messages WHERE status NOT IN ('skipped', 'failed')")],
         "state": dict(store.db.execute("SELECT key, value FROM outreach_state").fetchall()),
+        "dmarc": dmarc_summary(store, time.time()),
+        "brake": {"min_sent": BRAKE_MIN_SENT, "bounces": BRAKE_BOUNCES, "nos": BRAKE_NOS},
     }
 

@@ -412,13 +412,14 @@ function outreachView(d) {
       card("Replied", num(sum("replied")), `${num(sum("opted_out"))} said no`),
       card("Never email again", num(o.suppressed), "opted out or bounced")),
     ot.msg ? h("p.cr-alert", ot.msg) : null);
+  add(healthBox(o));
   if (ot.open && ot.openData) { add(campaignView(d)); return wrap; }
   add(h("div.cr-listhead", h("b", "Campaigns"), h("button.btn.primary", { type: "button", onclick: () => { ot.form = ot.form ? null : newForm(d); draw(); } }, ot.form ? "Close" : "New campaign")));
   if (ot.form) wrap.append(formView(d, contacted));
   wrap.append(o.campaigns.length ? h("div.cr-scroll", h("table.cr-table", h("thead", h("tr", h("th", "Campaign"), h("th", "Status"), h("th.cr-num", "Waiting"), h("th.cr-num", "Sent"), h("th.cr-num", "Replied"), h("th.cr-num", "No / bounced"), h("th", ""))),
     h("tbody", ...o.campaigns.map(({ campaign: c, counts: n }) => h("tr.cr-main", { onclick: () => { ot.open = c.id; ot.openData = null; loadOutreach(); } },
       h("td.cr-chan", h("b", c.game), h("div.cr-muted", `${c.audience === "press" ? "Press" : "Creators"} · from ${c.from_name} · ${C.fmtDate(c.created_at)}`)),
-      h("td", h("span.cr-type", CAMPAIGN_STATUS[c.status] || c.status)),
+      h("td", h("span.cr-type", { title: c.paused_reason || "" }, c.paused_reason ? "Paused by the safety brake" : CAMPAIGN_STATUS[c.status] || c.status)),
       h("td.cr-num", num(n.queued || 0)), h("td.cr-num", num((n.sent || 0) + (n.replied || 0) + (n.opted_out || 0) + (n.bounced || 0))),
       h("td.cr-num", num(n.replied || 0)), h("td.cr-num", `${num(n.opted_out || 0)} / ${num(n.bounced || 0)}`),
       h("td", h("span.cr-muted", "Open ›")))))))
@@ -428,6 +429,28 @@ function outreachView(d) {
     h("p", "Read the previews, then Approve. The server sends slowly on weekdays during the day, at most DAILY_MAX a day in all, through your Strato mailbox, and reads the inbox: replies show here, and anyone who answers \"no\" is never emailed again."),
     h("p", "To send from the game's address (e.g. pomovalley@fourgames.se), add it in Strato as an alias of your mailbox first, so replies land in your inbox.")));
   return wrap;
+}
+
+// Mail health: what Gmail, Outlook, Yahoo... reported about mail from fourgames.se (DMARC aggregate
+// reports, read by the server), and the safety brake's limits.
+function healthBox(o) {
+  const { h } = C;
+  const dm = o.dmarc || { by: [], ever: 0, failed_from: {} };
+  const b = o.brake || {};
+  const pct = (x) => `${Math.round(x * 100)}%`;
+  const fails = Object.entries(dm.failed_from || {});
+  const bad = dm.by.some((r) => r.passed < r.messages);
+  return h("details.cr-filters.cr-health", { open: bad || undefined },
+    h("summary", h("b", "Mail health "), h("span.cr-muted", !dm.ever ? "· waiting for the first DMARC reports"
+      : bad ? "· some mail failed checks: look inside" : `· all mail passed in the last ${dm.days} days`)),
+    !dm.ever
+      ? h("p.cr-muted", "Once the DMARC record at Strato points to dmarc@fourgames.se, Gmail, Outlook, Yahoo and others report every day how many emails from fourgames.se they got and whether they passed. The server reads those reports and files them into a DMARC folder, so they never fill your inbox.")
+      : h("table.cr-table", h("thead", h("tr", h("th", "Reported by"), h("th.cr-num", "Emails"), h("th.cr-num", "Passed"), h("th", "Latest"))),
+          h("tbody", ...dm.by.map((r) => h("tr", h("td", r.org), h("td.cr-num", num(r.messages)),
+            h("td.cr-num", h("span", { class: r.passed < r.messages ? "cr-bad" : "cr-good" }, r.messages ? pct(r.passed / r.messages) : "–")),
+            h("td.cr-muted", r.last ? C.fmtDate(r.last) : "–"))))),
+    fails.length ? h("p.cr-alert", `Mail that failed came from: ${fails.map(([ip, n]) => `${ip} (${n})`).join(", ")}. If that isn't Strato, someone may be sending as fourgames.se (p=reject blocks it); if it is, the signing broke.`) : null,
+    h("p.cr-muted", `Safety brake: a campaign pauses itself once ${b.min_sent || 10}+ emails are sent and more than ${pct(b.bounces || 0.05)} bounce or more than ${pct(b.nos || 0.08)} say no. Gmail's own view: postmaster.google.com.`));
 }
 
 function newForm(d) {
@@ -498,6 +521,7 @@ function campaignView(d) {
       h("span", c.status === "draft" ? action("Approve and start sending", "approved", true) : null, " ",
         c.status === "paused" ? action("Resume", "approved", true) : null, c.status === "approved" ? action("Pause", "paused") : null, " ",
         c.status === "draft" ? action("Delete draft", "deleted") : null)),
+    c.paused_reason ? h("p.cr-alert", h("b", "Paused by the safety brake: "), c.paused_reason, " Fix the list or the message before resuming; resuming counts afresh.") : null,
     h("h3.cr-h", `${c.game} · ${c.audience === "press" ? "press" : "creators"} · ${CAMPAIGN_STATUS[c.status] || c.status}`),
     h("p.cr-muted", `From ${c.from_name} <${c.from_email}> · up to ${c.daily_limit} a day · ${Object.entries(n).map(([k, v]) => `${MSG_STATUS[k] || k} ${v}`).join(" · ")}`),
     preview ? h("div.cr-preview", h("div.cr-muted", `To ${preview.name || ""} <${preview.email}> · from ${c.from_name}`), h("div", h("b", preview.subject)),
@@ -561,6 +585,10 @@ const CSS = `
 .crv .cr-dh { font-weight: 650; font-size: 0.8rem; color: var(--fb-ink-2); margin-top: 4px; }
 .crv .cr-more { margin: 12px auto 0; display: block; }
 .crv details.about { margin-top: 18px; }
+.crv .cr-health summary { cursor: pointer; padding: 2px 0 10px; }
+.crv .cr-health .cr-table { margin-bottom: 8px; }
+.crv .cr-good { color: var(--fb-good-text); font-weight: 600; }
+.crv .cr-bad { color: var(--fb-negative); font-weight: 600; }
 .crv .cr-alert { background: var(--fb-card); border: 1px solid var(--fb-negative); border-left-width: 3px; border-radius: 8px; padding: 8px 12px; color: var(--fb-ink); }
 .crv .cr-note { background: var(--fb-card); border: 1px solid var(--fb-line); border-left: 3px solid var(--fb-warning); border-radius: 8px; padding: 8px 12px; color: var(--fb-ink-2); font-size: 0.88rem; }
 .crv .cr-form { padding-bottom: 12px; }

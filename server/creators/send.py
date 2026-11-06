@@ -36,7 +36,7 @@ from email.utils import formataddr, formatdate, make_msgid, parseaddr
 from typing import Callable
 from zoneinfo import ZoneInfo
 
-from . import outreach
+from . import dmarc, outreach
 from .config import DEFAULT_DB_PATH
 
 log = logging.getLogger("creators.send")
@@ -152,9 +152,7 @@ class Sender:
 
     def check_inbox(self) -> dict[str, int]:
         counts = {"replied": 0, "opted_out": 0, "bounced": 0}
-        sent = self.store.db.execute("SELECT COUNT(*) FROM outreach_messages WHERE sent_at IS NOT NULL").fetchone()[0]
-        if not sent:
-            return counts
+        # Reports come whether or not outreach has sent anything (the domain's other mail counts too).
         imap = self.imap_factory()
         try:
             imap.select("INBOX", readonly=True)
@@ -167,13 +165,22 @@ class Sender:
                 since = (datetime.utcfromtimestamp(self.clock()) - timedelta(days=14)).strftime("%d-%b-%Y")
                 typ, data = imap.uid("SEARCH", None, f"SINCE {since}")
             uids = [int(u) for u in (data[0] or b"").split() if int(u) > last] if typ == "OK" else []
+            reports: list[str] = []
             for uid in uids[-500:]:
                 typ, parts = imap.uid("FETCH", str(uid), "(BODY.PEEK[])")
                 raw = next((p[1] for p in parts or [] if isinstance(p, tuple) and len(p) > 1), None)
-                if raw:
-                    kind = self.handle(email.message_from_bytes(raw, policy=email.policy.default))
-                    if kind:
-                        counts[kind] += 1
+                if not raw:
+                    continue
+                message = email.message_from_bytes(raw, policy=email.policy.default)
+                if self.dmarc_report(message):
+                    reports.append(str(uid))
+                    continue
+                kind = self.handle(message)
+                if kind:
+                    counts[kind] += 1
+            if reports:
+                counts["dmarc"] = len(reports)
+                self.file_away(imap, reports)
             if uids:
                 self._set_state("imap_uid", str(max(uids)))
             self._set_state("imap_validity", validity)
@@ -183,6 +190,32 @@ class Sender:
             except Exception:  # noqa: BLE001
                 pass
         return counts
+
+    def dmarc_report(self, message) -> bool:
+        """Saves a DMARC aggregate report sent to dmarc@ (True), else False. Only mail to dmarc@ counts."""
+        to = " ".join(str(message.get(h, "")) for h in ("To", "Delivered-To", "X-Original-To")).lower()
+        if "dmarc@" not in to:
+            return False
+        reports = dmarc.from_email(message)
+        if reports:
+            dmarc.save(self.store, reports, self.clock())
+        return bool(reports)
+
+    def file_away(self, imap, uids: list[str]) -> None:
+        """Moves the read DMARC report emails into a DMARC folder (only those), so the inbox stays clean."""
+        try:
+            imap.select("INBOX")
+            imap.create("DMARC")  # an error if it exists: fine
+            uidset = ",".join(uids)
+            typ, _ = imap.uid("MOVE", uidset, "DMARC")
+            if typ != "OK":
+                typ, _ = imap.uid("COPY", uidset, "DMARC")
+                caps = b" ".join(imap.capabilities) if isinstance(imap.capabilities, tuple) else b""
+                if typ == "OK" and b"UIDPLUS" in caps.upper():
+                    imap.uid("STORE", uidset, "+FLAGS", "(\\Deleted)")
+                    imap.uid("EXPUNGE", uidset)
+        except imaplib.IMAP4.error as error:
+            log.warning("couldn't move DMARC reports into their folder: %s", error)
 
     def handle(self, message) -> str | None:
         """Marks what this incoming mail says about our emails: 'replied', 'opted_out', 'bounced' or None."""
@@ -306,6 +339,10 @@ class Sender:
             result.update(self.check_inbox())
         except (imaplib.IMAP4.error, OSError) as error:
             log.warning("reading the inbox failed: %s", type(error).__name__)
+        # The safety brake first (bounces and no's arrive through the inbox), then sending.
+        for what in outreach.apply_brake(self.store, self.clock()):
+            log.warning("safety brake paused %s", what)
+            result["paused"] = result.get("paused", 0) + 1
         result.update(self.send_due())
         return result
 

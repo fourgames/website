@@ -208,3 +208,53 @@ def test_opt_out_goes_above_the_sign_off():
     assert body.endswith(outreach.OPT_OUT_LINE + "\n\nThanks for reading,\nDanny")
     assert outreach.with_opt_out(body) == body  # not twice
     assert outreach.with_opt_out("One line only").endswith(outreach.OPT_OUT_LINE)
+
+
+def test_safety_brake(store):
+    for i in range(12):
+        store.db.execute("INSERT INTO youtube_channels (channel_id, title, emails, first_seen) VALUES (?, ?, ?, 0)",
+                         (f"UCx{i}", f"X{i}", f'["x{i}@mail.com"]'))
+    store.db.commit()
+    out = make(store, {**SPEC, "recipients": [f"UCx{i}" for i in range(12)]})
+    outreach.set_status(store, out["id"], "approved", NOW)
+    ids = [m["id"] for m in outreach.messages(store, out["id"])]
+    sent = lambda n, at: store.db.executemany("UPDATE outreach_messages SET status = 'sent', sent_at = ? WHERE id = ?",
+                                              [(at, i) for i in ids[:n]])
+    sent(9, NOW)
+    store.db.execute("UPDATE outreach_messages SET status = 'bounced' WHERE id = ?", (ids[0],))
+    store.db.commit()
+    assert outreach.apply_brake(store, NOW) == []  # under 10 sent: too few to judge
+    sent(10, NOW)
+    store.db.execute("UPDATE outreach_messages SET status = 'bounced' WHERE id IN (?, ?)", (ids[0], ids[1]))
+    store.db.commit()
+    paused = outreach.apply_brake(store, NOW)
+    c = outreach.summary(store, out["id"])["campaign"]
+    assert len(paused) == 1 and c["status"] == "paused" and "2 of 10 emails bounced" in c["paused_reason"]
+    assert sender(store, FakeSMTP()).send_due()["sent"] == 0  # paused: nothing goes out
+    outreach.set_status(store, out["id"], "approved", NOW + 60)  # resumed: the brake counts afresh
+    c = outreach.summary(store, out["id"])["campaign"]
+    assert c["paused_reason"] is None and outreach.apply_brake(store, NOW + 120) == []
+
+
+def test_dmarc_reports(store, tmp_path):
+    import gzip as gz
+    from email.message import EmailMessage
+    from creators import dmarc
+    xml = b"""<?xml version="1.0"?><feedback><report_metadata><org_name>google.com</org_name><report_id>123</report_id>
+      <date_range><begin>1794000000</begin><end>1794086399</end></date_range></report_metadata>
+      <record><row><source_ip>81.169.146.161</source_ip><count>14</count><policy_evaluated><disposition>none</disposition>
+      <dkim>pass</dkim><spf>pass</spf></policy_evaluated></row></record>
+      <record><row><source_ip>6.6.6.6</source_ip><count>2</count><policy_evaluated><disposition>reject</disposition>
+      <dkim>fail</dkim><spf>fail</spf></policy_evaluated></row></record></feedback>"""
+    m = EmailMessage()
+    m["From"], m["To"], m["Subject"] = "noreply-dmarc-support@google.com", "dmarc@fourgames.se", "Report domain: fourgames.se"
+    m.set_content("report attached")
+    m.add_attachment(gz.compress(xml), maintype="application", subtype="gzip", filename="google.com!fourgames.se!1!2.xml.gz")
+    s = sender(store, FakeSMTP())
+    assert s.dmarc_report(m)
+    assert s.dmarc_report(m)  # the same report twice: saved once
+    other = EmailMessage(); other["To"] = "danny@fourgames.se"; other.set_content("hi")
+    assert not s.dmarc_report(other)  # only mail to dmarc@ is touched
+    sm = dmarc.summary(store, 1794100000)
+    assert sm["by"] == [{"org": "google.com", "messages": 16, "passed": 14, "reports": 1, "last": 1794086399}]
+    assert sm["failed_from"] == {"6.6.6.6": 2} and outreach.overview(store)["dmarc"]["ever"] == 1

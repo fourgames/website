@@ -105,6 +105,14 @@ To make a GIF from a Steam trailer, on the server: get the trailer with
 `ffmpeg -i <the hls_h264 address from Steam's appdetails movies> -c copy trailer.mp4`, then
 `ffmpeg -ss 7.8 -t 3 -i trailer.mp4 -vf "fps=8,scale=360:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=32:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -loop 0 out.gif`.
 
+**Safety brake:** a campaign pauses itself (with the reason on the dashboard) once 10+ of its emails
+are sent and more than 5% bounce or more than 8% say no, counted since it was last resumed.
+
+**DMARC reports** (`dmarc.py`): with `_dmarc.fourgames.se` TXT `v=DMARC1;p=reject;rua=mailto:dmarc@fourgames.se`
+and dmarc@ as an alias of the sending mailbox, receivers (Gmail, Outlook, Yahoo...) send a daily report of
+mail they got from the domain and whether it passed. `send.py` saves them (`dmarc_reports`), moves those
+emails (only mail to dmarc@) into a DMARC folder, and the Outreach tab's Mail health box shows 30 days.
+
 The from address can be the game's (e.g. "Danny from Pomo Valley" <pomovalley@fourgames.se>): add it
 in Strato as an **alias** of the sending mailbox, so Strato lets the mailbox send as it and replies land
 in the same inbox. If Strato refuses the from address, sending stops and the log says so.

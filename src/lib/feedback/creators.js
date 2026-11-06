@@ -553,7 +553,7 @@ function translateView(f, people, leftover) {
       return h("details.cr-lang", h("summary", `${LANG_LABEL[l] || l} (${counts[l] || 0})${tr.game ? ` · ${tr.game}` : ""}`),
         h("label.cr-field", h("span", "Game name in this language (fills {game}; from your Steam page)"), game),
         h("label.cr-field", h("span", "Subject"), sub), h("label.cr-field", h("span", "Message"), bod), h("label.cr-field", h("span", "Opt-out line"), opt));
-    }), h("p.cr-muted", "Each uses your game\'s Steam name in that language, a Steam link that opens in it, and says the game is in their language when it is. Open one to read or fix it. Changing the English clears these; localize again after.")) : h("p.cr-muted", "Optional: without localizing, everyone gets the English."));
+    }), h("p.cr-muted", "Each uses your game\'s Steam name in that language and says the game is in their language when it is (Steam opens in their language by itself). Open one to read or fix it. Changing the English clears these; localize again after.")) : h("p.cr-muted", "Optional: without localizing, everyone gets the English."));
 }
 
 function campaignView(d) {

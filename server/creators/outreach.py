@@ -237,8 +237,8 @@ def short_lang(code: str | None) -> str | None:
 
 def check_translations(spec_translations, subject: str, body: str) -> dict[str, dict[str, str]]:
     """{lang: {subject, body, opt_out, game?, steam_l?}}, checked: the same placeholders and links as the
-    English. game: the game's own name in that language (fills {game}); steam_l: Steam's language code,
-    added to {steam} so the store opens in it."""
+    English. game: the game's own name in that language (fills {game}). The Steam link stays the same:
+    Steam shows the store in the reader's own language (account or browser), and forcing one would override it."""
     if not spec_translations:
         return {}
     if not isinstance(spec_translations, dict) or len(spec_translations) > 40:
@@ -361,9 +361,8 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
             t = translations.get(who.get("lang") or "")
             lang = who.get("lang") if t else "en"
             sub, bod, opt = (t["subject"], t["body"], t["opt_out"]) if t else (subject, body, OPT_OUT_LINE)
-            if t:  # localized: the game's own name in that language, and Steam opening in it
-                fields = {**fields, "game": t.get("game") or game,
-                          "steam": f"{steam}?l={t['steam_l']}" if steam and t.get("steam_l") else steam}
+            if t:  # localized: the game's own name in that language (Steam itself opens in the reader's language)
+                fields = {**fields, "game": t.get("game") or game}
             store.db.execute(
                 """INSERT INTO outreach_messages (campaign_id, target_kind, target_id, name, email, subject, body,
                                                   status, queued_at, language)

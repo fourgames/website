@@ -269,7 +269,7 @@ def test_each_person_gets_their_language(store):
     out = make(store, {**SPEC, "body": SPEC["body"].replace("{steam}", "{steam} {press}"), "translations": {"de": de}})
     msgs = {m["target_id"]: m for m in outreach.messages(store, out["id"])}
     assert msgs["UCa"]["language"] == "de" and msgs["UCa"]["subject"] == "Pomo-Tal für Alpha Plays?"
-    assert "https://store.steampowered.com/app/1/?l=german" in msgs["UCa"]["body"]
+    assert "https://store.steampowered.com/app/1/" in msgs["UCa"]["body"] and "?l=" not in msgs["UCa"]["body"]
     assert msgs["UCa"]["body"].startswith("Hallo Alpha Plays") and "Wenn du solche E-Mails" in msgs["UCa"]["body"]
     assert outreach.OPT_OUT_LINE not in msgs["UCa"]["body"]
     assert msgs["UCc"]["language"] == "en" and outreach.OPT_OUT_LINE in msgs["UCc"]["body"]  # no Japanese: English

@@ -2,7 +2,7 @@
 // sentences, then three big question tabs) with the best parts of the other designs:
 //   1. What should I make next?  one small-team filter for the whole tab; "Rising now" (tags whose
 //      share of releases climbs fastest, with sparklines, a stage and an action); the top 25 by score
-//      as bars; every tag as a dot (rivals vs hit chance, sized by reviews, ringed by review pace); a niche table whose
+//      as bars; every tag as a dot (rivals vs hit chance, sized by reviews, brightness by review pace); a niche table whose
 //      rows open a line in plain words; and the gap finder from market-gaps.js.
 //   2. Who should I sign?        market-sign.js (its own state and CSS).
 //   3. How is Steam doing?       games released vs Steam's peak players (this year as a dashed pace),
@@ -277,27 +277,17 @@ export function tagReviewPace(list, today, { from = 14, to = 90 } = {}) {
   for (const [t, e] of acc) if (e.n >= PACE_MIN) { const rate = Math.expm1(e.s / e.n); out.set(t, { rate, n: e.n, ratio: base > 0 ? rate / base : null }); }
   return { base, tags: out };
 }
-// The ring around a dot: 0 = no ring (slower than Steam's typical new game) up to 3 (2.5× or faster).
+// A dot's pace level: 0 (slower than Steam's typical new game) up to 3 (2.5× or faster).
 export const paceLevel = (ratio) => ratio == null ? 0 : ratio >= 2.5 ? 3 : ratio >= 1.5 ? 2 : ratio >= 0.9 ? 1 : 0;
-// Ring widths by level: a yellow ring outside the dot with a small gap, on a thin dark casing so it reads
-// on light and dark cards and over other dots (rings are drawn above every dot).
-const PACE_RING = [null, { w: 1.5 }, { w: 2.5 }, { w: 3.5 }];
+// How solid a dot is by pace level: slow tags fade back, the fastest are fully lit. No outline, so a
+// crowded corner stays readable (the earlier yellow rings turned it into one blob).
+export const PACE_OPACITY = [0.2, 0.45, 0.75, 1];
 const PACE_WORDS = [
-  "No ring: reviews come in slower than for a typical new Steam game",
-  "Thin ring: about as fast as a typical new Steam game",
-  "Medium ring: 1.5 to 2.5 times as fast",
-  "Thick ring: 2.5 times as fast or faster",
+  "Faint: reviews come in slower than for a typical new Steam game",
+  "Light: about as fast as a typical new Steam game",
+  "Strong: 1.5 to 2.5 times as fast",
+  "Solid: 2.5 times as fast or faster",
 ];
-// Draws the review-pace ring of level `lv` around a dot of radius R into `parent` (nothing for level 0).
-function paceRing(svgEl, parent, cx, cy, R, lv) {
-  const ring = PACE_RING[lv];
-  if (!ring) return;
-  const rr = R + 2 + ring.w / 2;
-  const g = svgEl("g", { class: "mm-pace-ring" });
-  g.append(svgEl("circle", { cx, cy, r: rr, fill: "none", class: "mm-pace-case", "stroke-width": ring.w + 2 }),
-    svgEl("circle", { cx, cy, r: rr, fill: "none", class: "mm-pace-band", "stroke-width": ring.w }));
-  parent.append(g);
-}
 
 // --- 1c. Rising now: trends to get into early, from growth.json's monthly counts -----------
 
@@ -960,7 +950,7 @@ function wireChart(svg, box, sel) {
   svg.addEventListener("keydown", (ev) => { if (ev.key === "Enter" || ev.key === " ") { const r = find(ev); if (r) { ev.preventDefault(); selectTag(r.tag); } } });
 }
 
-// --- The scatter: every tag as a dot sized by a typical game's reviews, ringed by review pace ---
+// --- The scatter: every tag as a dot sized by a typical game's reviews, brightness by review pace ---
 
 // Dot radius: area grows with a typical game's reviews (sqrt scale), with a floor so 0 still shows.
 const R_MIN = 3, R_MAX = 13;
@@ -978,7 +968,7 @@ function scatterCard(rows, base) {
   const x = (v) => M.left + ((Math.log10(Math.max(1, v)) - lx0) / (lx1 - lx0)) * (W - M.left - M.right);
   const y = (v) => H - M.bottom - (v / ymax) * (H - M.top - M.bottom);
   const xSplit = median(xs), ySplit = base * 1.5;
-  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "mm-svg", role: "img", "aria-label": "Every tag: new games in 90 days against hit chance; dot size is a typical game's reviews, the ring how fast new games collect reviews" });
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "mm-svg", role: "img", "aria-label": "Every tag: new games in 90 days against hit chance; dot size is a typical game's reviews, how solid a dot is shows how fast new games collect reviews" });
   const text = (attrs, s) => { const el = svgEl("text", attrs); el.textContent = s; svg.append(el); return el; };
   // The most attractive corner: few rivals, high hit chance. Named in the legend, never written on.
   svg.append(svgEl("rect", { x: M.left, y: M.top, width: x(xSplit) - M.left, height: y(ySplit) - M.top, rx: 8, class: "mm-gapzone" }));
@@ -1002,20 +992,19 @@ function scatterCard(rows, base) {
   text({ x: W - M.right + 6, y: y(base) - 2, class: "mm-axis" }, "All Steam");
   text({ x: W - M.right + 6, y: y(base) + 11, class: "mm-axis" }, pct(base));
   // Dots: big ones first so small ones stay on top and clickable; the picked one last.
-  const geo = new Map(rows.map((r) => [r, { cx: x(r.releases), cy: y(r.hitRate), r: dotR(r.medianReviews, vmax), lv: paceLevel(pace?.tags.get(r.tag)?.ratio) }]));
-  const dots = svgEl("g"), rings = svgEl("g", { class: "mm-pace-rings" });
+  const geo = new Map(rows.map((r) => [r, { cx: x(r.releases), cy: y(r.hitRate), r: dotR(r.medianReviews, vmax), lv: pace ? paceLevel(pace.tags.get(r.tag)?.ratio) : null }]));
+  const dots = svgEl("g");
   const order0 = [...rows].sort((a, b) => geo.get(b).r - geo.get(a).r);
   for (const r of [...order0.filter((r) => r !== sel), ...(sel ? [sel] : [])]) {
     const { cx, cy, r: R, lv } = geo.get(r), on = r === sel;
     const g = svgEl("g", { class: `mm-dot${on ? " is-sel" : ""}`, "data-tag": r.tag, tabindex: "0", role: "button", "aria-label": `${r.name}: hit chance ${pct(r.hitRate)}, ${r.releases} new games in 90 days, typical game ${fmtK(r.medianReviews)} reviews. Pick it.` });
     if (on) g.append(svgEl("circle", { cx, cy, r: R + 7, class: "mm-sel-ring" }));
-    g.append(svgEl("circle", { cx, cy, r: R, fill: on ? "var(--fb-accent)" : DIR_COLOR(r), class: "mm-dot-c" }));
-    paceRing(svgEl, rings, cx, cy, R, lv);
+    g.append(svgEl("circle", { cx, cy, r: R, fill: on ? "var(--fb-accent)" : DIR_COLOR(r), class: "mm-dot-c", style: lv == null || on ? null : `--op:${PACE_OPACITY[lv]}` }));
     g.append(svgEl("circle", { cx, cy, r: Math.max(R + 3, 9), fill: "transparent" }));
     g.__row = r;
     dots.append(g);
   }
-  svg.append(dots, rings);
+  svg.append(dots);
   // Labels: as many as fit, right of the dot (left near the edge), skipped where they'd cover a dot or
   // another label. The picked tag first, then by score.
   const CH = 5.9, LH = 11;
@@ -1040,7 +1029,7 @@ function scatterCard(rows, base) {
     const gl = glossary(r.name);
     if (gl) { const tt = svgEl("title"); tt.textContent = `${r.name}: ${gl}`; label.append(tt); }
   }
-  // Keys: three example sizes, and the ring at its levels, drawn with the same functions as the chart.
+  // Keys: three example sizes, and the pace brightness at its levels, drawn with the same functions as the chart.
   const keySvg = (items) => {
     const k = svgEl("svg", { class: "mm-keysvg", viewBox: `0 0 ${items.length * 34} 34`, width: items.length * 34, height: 34, "aria-hidden": "true" });
     items.forEach((draw, i) => draw(k, 17 + i * 34, 17));
@@ -1049,12 +1038,11 @@ function scatterCard(rows, base) {
   const sizes = [...new Set([5, 20, Math.max(40, Math.round(vmax / 10) * 10)].filter((v) => v <= vmax * 1.2))];
   const sizeKey = h("span.mm-keygroup", h("span", h("b", "Dot size"), ": reviews a typical (median) game in the tag gets"),
     ...sizes.map((v) => h("span.mm-keyitem", keySvg([(k, cx, cy) => k.append(svgEl("circle", { cx, cy, r: dotR(v, vmax), class: "mm-key-dot" }))]), fmtK(v))));
-  const ringKey = pace ? h("span.mm-keygroup", h("span", h("b", "Yellow ring"), `: how fast the tag's newest games (out 2 weeks to 3 months) are collecting reviews, against a typical new Steam game (${pace.base.toFixed(1)} reviews a month). Thicker ring = reviews coming in faster.`),
+  const ringKey = pace ? h("span.mm-keygroup", h("span", h("b", "Brightness"), `: how fast the tag's newest games (out 2 weeks to 3 months) are collecting reviews, against a typical new Steam game (${pace.base.toFixed(1)} reviews a month). More solid dot = reviews coming in faster.`),
     ...[0, 1, 2, 3].map((lv) => h("span.mm-keyitem", keySvg([(k, cx, cy) => {
-      k.append(svgEl("circle", { cx, cy, r: 7, class: "mm-key-dot" }));
-      paceRing(svgEl, k, cx, cy, 7, lv);
+      k.append(svgEl("circle", { cx, cy, r: 7, class: "mm-key-dot mm-key-pace", style: `--op:${PACE_OPACITY[lv]}` }));
     }]), PACE_WORDS[lv])))
-    : h("span.mm-keygroup.mm-dim", "Rings (review pace) appear once the release list has loaded.");
+    : h("span.mm-keygroup.mm-dim", "Brightness (review pace) appears once the release list has loaded.");
   const box = h("div.mm-chart",
     h("div.mm-legend",
       h("span", h("i.mm-key.mm-key-zone"), h("b", "Most attractive corner"), `: fewer new games than half the tags, and ${times(1.5)} Steam's hit chance or better`)),
@@ -1439,10 +1427,7 @@ const CSS = `
 .mkv-merged .mm-barname.is-sel { fill: var(--fb-title); font-weight: 700; }
 
 .mkv-merged .mm-dot { cursor: pointer; outline: none; }
-.mkv-merged .mm-dot-c { stroke: var(--fb-card); stroke-width: 1; fill-opacity: .72; }
-.mkv-merged .mm-pace-case { stroke: var(--fb-ink); stroke-opacity: .55; }
-.mkv-merged .mm-pace-band { stroke: var(--fb-warning); }
-.mkv-merged .mm-pace-ring { pointer-events: none; }
+.mkv-merged .mm-dot-c { stroke: none; fill-opacity: var(--op, .72); }
 .mkv-merged .mm-dot:hover .mm-dot-c, .mkv-merged .mm-dot:focus .mm-dot-c { stroke: var(--fb-ink); stroke-width: 1.5; fill-opacity: 1; }
 .mkv-merged .mm-sel-ring { fill: var(--fb-accent); fill-opacity: .22; stroke: var(--fb-accent); stroke-width: 2; }
 .mkv-merged .mm-axis-end { fill: var(--fb-muted); font-style: italic; }
@@ -1515,6 +1500,7 @@ const CSS = `
 .mkv-merged .mm-keyitem { display: inline-flex; align-items: center; gap: 2px; color: var(--fb-muted); font-size: 0.8rem; }
 .mkv-merged .mm-keysvg { display: block; overflow: visible; }
 .mkv-merged .mm-key-dot { fill: var(--fb-muted); fill-opacity: .55; }
+.mkv-merged .mm-key-pace { fill: var(--fb-ink-2); fill-opacity: var(--op); }
 .mkv-merged .mm-key-zone { background: var(--sw-3); opacity: .3; border-radius: 2px; width: 12px; height: 12px; }
 .mkv-merged .mm-line-key { display: inline-block; width: 12px; height: 3px; border-radius: 2px; margin-right: 6px; vertical-align: middle; }
 .mkv-merged .mm-dash-key { background: repeating-linear-gradient(90deg, var(--fb-ink-2) 0 4px, transparent 4px 7px); }

@@ -8,8 +8,9 @@ can flop early and hit a year later.
 - GET    /v1/admin/ideas               every idea, newest first, with its analyses and daily market score
 - POST   /v1/admin/ideas               {text, notes?}: saves the idea and scores it with Claude
 - POST   /v1/admin/ideas/<id>/score    asks Claude again (today's market data)
-- POST   /v1/admin/ideas/generate      {direction?}: five new ideas aimed at a high score, not saved (see
-                                       candidate_pairs; the dashboard scores each through POST /ideas)
+- POST   /v1/admin/ideas/generate      {direction?}: eight new ideas aimed at a high score, not saved (see
+                                       candidate_pairs; the dashboard scores each through POST /ideas
+                                       and keeps the best five)
 - PUT    /v1/admin/ideas/<id>          {text?, notes?, archived?, pinned?, stars?}
 - DELETE /v1/admin/ideas/<id>          the idea and its history
 
@@ -557,8 +558,17 @@ async def ask_claude(client, idea: dict[str, Any], history: list[dict[str, Any]]
 
 # Generate: new ideas aimed at a high score, built on the strongest tag pairs in the data
 
-GEN_COUNT = 5
+# Drafts per run: the dashboard scores them all and keeps the best GEN_KEEP (the rest are archived),
+# because the scorer's number can only be known by asking it.
+GEN_COUNT = 8
+GEN_KEEP = 5
 GEN_CANDIDATES = 14
+# A candidate pair needs this many rated games: thinner pairs make the scorer doubt the hit odds.
+GEN_PAIR_MIN = 20
+# The scorer marks competition and timing down hard for a tag whose share of releases is climbing, so a
+# candidate's rank loses this much per doubling of its most crowded tag's supply (at most GEN_CROWD_CAP).
+GEN_CROWD = 8
+GEN_CROWD_CAP = 20
 MAX_DIRECTION = 300
 # A tag can be in at most this many of the candidate pairs, so the candidates aren't all one genre.
 GEN_TAG_REPEAT = 2
@@ -570,6 +580,9 @@ NOT_A_BASE = {
     "Software", "Utilities", "Design & Illustration", "Animation & Modeling",
     "Game Development", "Video Production", "Audio Production", "Web Publishing", "Education", "Movie",
     "Documentary", "Episodic", "Short", "Memes", "Mod", "Benchmark", "VR", "360 Video",
+    # What the scorer marks down on small-team fit: big worlds, netcode, live action, big story.
+    "Open World", "Open World Survival Craft", "Online Co-Op", "PvP", "Online PvP", "Souls-like", "Story Rich",
+    "FMV", "Cinematic", "MOBA", "Battle Royale", "Team-Based", "eSports", "Competitive", "Looter Shooter",
 }
 # The template's lines, as the fields Claude fills in.
 TEMPLATE_FIELDS = [
@@ -607,8 +620,9 @@ def game_link(appid: int, name: str, reviews: int, day: int | None) -> dict[str,
 
 
 def candidate_pairs(m: Market, limit: int = GEN_CANDIDATES) -> list[dict[str, Any]]:
-    """The tag pairs with the best market score (market_score of the two tags, the stronger first), with
-    PAIR_MIN_GAMES rated games behind them, no tag in more than GEN_TAG_REPEAT of them."""
+    """The tag pairs most likely to score high: their market score (market_score of the two tags, the
+    stronger first) less a penalty when a tag is getting crowded fast, with GEN_PAIR_MIN rated games
+    behind them, no tag in more than GEN_TAG_REPEAT of them."""
     if not isinstance(m.today, int):
         return []
     games = market_file("games", gen_games)
@@ -640,18 +654,21 @@ def candidate_pairs(m: Market, limit: int = GEN_CANDIDATES) -> list[dict[str, An
                     s["reviews"].append(revs)
     ranked = []
     for (a, b), s in stats.items():
-        if s["n"] < PAIR_MIN_GAMES:
+        if s["n"] < GEN_PAIR_MIN:
             continue
         first, second = sorted((pool[a], pool[b]), key=lambda p: -p["score"])
         rate = (s["hits"] + m.prior * m.base_hit) / (s["n"] + m.prior)
         pair_score = clamp(50 + 25 * math.log2(max(rate, 1e-3) / m.base_hit))
         tags = (first["score"] + 0.8 * second["score"]) / 1.8
+        score = 0.7 * tags + 0.3 * pair_score
+        crowd = max(first.get("supply") or 1, second.get("supply") or 1, 1)
+        aim = score - min(GEN_CROWD_CAP, GEN_CROWD * math.log2(crowd))
         ranked.append({"tags": [first["id"], second["id"]], "names": [first["name"], second["name"]],
-                       "score": round(0.7 * tags + 0.3 * pair_score), "games": s["n"], "hits": s["hits"],
+                       "score": round(score), "aim": round(aim), "games": s["n"], "hits": s["hits"],
                        "hitRate": round(rate, 3), "median": _median(s["reviews"]), "recent": s["recent"],
                        "top": s["top"], "parts": [first, second],
                        "similar": [game_link(appid, n, r, d) for r, n, d, appid in s["similar"]]})
-    ranked.sort(key=lambda c: (-c["score"], -c["games"]))
+    ranked.sort(key=lambda c: (-c["aim"], -c["games"]))
     used: dict[int, int] = {}
     picked = []
     for c in ranked:
@@ -672,7 +689,7 @@ def candidate_line(i: int, c: dict[str, Any], m: Market) -> str:
                 f"demand {num(p['demand'], 2)}, {p['releases']} releases in 90 days")
     biggest = "; ".join(f"{n} ({r:,} reviews, {iso_day(d)[:4]})" for r, n, d in c["top"]) or "none"
     return (f"{i}. {c['names'][0]} + {c['names'][1]} (ids {c['tags'][0]}, {c['tags'][1]}): market score {c['score']} "
-            f"(50 = average). {c['hits']} hits of {c['games']} games released 2 weeks to 6 months ago "
+            f"(50 = average), {c['aim']} after allowing for crowding. {c['hits']} hits of {c['games']} games released 2 weeks to 6 months ago "
             f"({pct(c['hitRate'])} allowing for chance; Steam {pct(m.base_hit)}), median {c['median']} reviews, "
             f"{c['recent']} new in the last 90 days. {tag(a)}. {tag(b)}. Biggest in 3 years: {biggest}. "
             f"Biggest in the last year: " + ("; ".join(f"{g['name']} ({g['reviews']:,} reviews)" for g in c["similar"]) or "none") + ".")
@@ -701,9 +718,20 @@ def owner_taste(ideas_: list[dict[str, Any]]) -> str:
             bits.append("pinned")
         hook = f"; hook: {a['hook'][:120]}" if a.get("hook") else ""
         lines.append(f"- {idea_title(i['text'])} ({', '.join(bits)}){hook}")
-    return ("The owner's ideas so far (don't repeat them; their stars and pins show their taste, which may "
-            "shape one or two of the new ideas but never at the cost of the score):\n" + "\n".join(lines))
+    out = ("The owner's ideas so far (don't repeat them; their stars and pins show their taste, which may "
+           "shape one or two of the new ideas but never at the cost of the score):\n" + "\n".join(lines))
+    scored = sorted((i for i in live if (i.get("analysis") or {}).get("score") is not None), key=lambda i: -i["analysis"]["score"])
+    if len(scored) >= 3:
+        def told(i):
+            a = i["analysis"]
+            subs = "; ".join(f"{x['key']} {x['score']}: {x['reason'][:160]}" for x in a.get("subscores") or [])
+            return f"- {idea_title(i['text'])}, {a['score']}: {subs}"
+        out += ("\n\nWhat the analyst said about the owner's best and worst scored ideas (learn what it rewards and "
+                "what it marks down, and beat the best one):\n" + "\n".join(told(i) for i in scored[:3] + scored[-2:]))
+    return out
 
+
+GEN_RUBRIC_INTRO = "\n\nThe analyst's own instructions, word for word (this is exactly how your ideas will be judged):\n\n"
 
 GEN_SYSTEM = """You come up with new game ideas for a small indie studio: one to three people, making small PC \
 games in Godot for Steam, fast (months, not years), self-published, using AI tools heavily for art, code and \
@@ -714,12 +742,17 @@ Each idea will then be scored, on its own, by an analyst who reads the same Stea
 small-team fit and timing. Tag pairs with real hits behind them weigh most; tag numbers are a modest signal \
 and the idea's own strength (a clear, specific hook that fits what players of those tags want) counts as \
 much. Scope is judged by the hard systems (netcode, physics, AI, procedural generation), not by art volume. \
-Your goal: ideas that analyst would score as high as possible, honestly. That means a strong market base AND a \
-sharp hook AND a scope 1-3 people can finish in 3-9 months.
+Your goal: the highest score this data allows, honestly. Not "good enough": every idea should be the \
+highest-scoring idea you can find on its pair, and better than the owner's best so far. That means a strong \
+market base AND a sharp hook AND a scope 1-3 people can finish in 3-9 months. What it marks down most: tags whose \
+supply is climbing (competition and timing fall: prefer pairs with supply near or below 1), online play, physics, \
+AI or procedural generation as core systems, live action or a big story, many hand-made levels, and pairs with \
+few games. What it rewards: a pair with many hits and few new rivals, demand rising, and a hook that is the \
+reason players of those tags would pick this game.
 
 Build every idea on one of the candidate tag pairs given, each idea on a different pair and a different first \
 tag, so the ideas are clearly different from each other: different genres, loops, camera, mood and players. \
-Not five variations of one game. Make each one concrete: a hook a player understands in one line, a minute-to-\
+Not variations of one game. Make each one concrete: a hook a player understands in one line, a minute-to-\
 minute loop, real comparable games. No generic "X but with Y" without saying what you actually do. Prefer \
 solo or simple co-op; avoid online PvP and big open worlds unless the data clearly pays for them.
 
@@ -750,7 +783,7 @@ def generate_prompt(candidates: list[dict[str, Any]], m: Market, taste: str, dir
     if direction:
         parts.append(f"The owner's direction for this batch (follow it; still aim for the highest score within it):\n{direction}")
     parts.append(f"Give exactly {count} ideas, each on a different candidate pair, as different from each other as the "
-                 "data allows. Best expected score first.")
+                 "data allows, each aimed at the highest score it can get. Best expected score first.")
     return "\n\n".join(parts)
 
 
@@ -1093,14 +1126,14 @@ async def generate_ideas(request: web.Request) -> web.Response:
     taste = owner_taste(await asyncio.to_thread(store.everything))
     started = time.monotonic()
     async with store.parallel:
-        raw, model, usage = await call_claude(store.client, GEN_SYSTEM + market_brief(m),
+        raw, model, usage = await call_claude(store.client, GEN_SYSTEM + GEN_RUBRIC_INTRO + SYSTEM + market_brief(m),
                                               generate_prompt(candidates, m, taste, direction, count), GEN_SCHEMA,
                                               "come up with ideas")
     drafts = tidy_drafts(raw, m, candidates, count)
     log.info("generated %d ideas by %s in %.0fs (%s)", len(drafts), model, time.monotonic() - started, usage)
     if not drafts:
         raise Refused(502, "claude_bad_answer", "Claude's ideas didn't use the candidate tag pairs; try again")
-    return W.ok({"drafts": drafts, "day": m.day, "model": model})
+    return W.ok({"drafts": drafts, "keep": min(GEN_KEEP, len(drafts)), "day": m.day, "model": model})
 
 
 async def delete_idea(request: web.Request) -> web.Response:

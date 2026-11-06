@@ -382,16 +382,34 @@ def test_candidate_pairs_rank_by_market_score_and_spread_the_tags(market):
     assert (c["games"], c["hits"]) == (20, 8) and c["recent"] == 21 and c["top"][0][0] == 10
 
 
+def test_crowded_tags_rank_lower(market):
+    m = ideas.Market.load()
+    [c] = ideas.candidate_pairs(m)
+    # Roguelite's supply is 2.0: one doubling, GEN_CROWD points off.
+    assert abs(c["aim"] - (c["score"] - ideas.GEN_CROWD)) <= 1
+
+
+def test_the_generator_hears_what_the_scorer_said():
+    def idea(n, score):
+        return {"text": f"Working title: Idea {n}", "archived": False, "pinned": False, "stars": 0,
+                "analysis": {"score": score, "hook": "", "subscores": [{"key": "competition", "score": score, "reason": f"reason {n}"}]}}
+    taste = ideas.owner_taste([idea(1, 40), idea(2, 66), idea(3, 58), idea(4, 52)])
+    told = taste.split("What the analyst said")[1]
+    assert told.index("Idea 2, 66") < told.index("Idea 3, 58") and "competition 40: reason 1" in told
+    assert "What the analyst said" not in ideas.owner_taste([idea(1, 40), idea(2, 66)]), "needs a few scored ideas"
+
+
 def test_candidate_pairs_spread_the_tags(tmp_path, monkeypatch):
     rows = [[100 * k + i, f"g{k}{i}", TODAY - 30, 999, 10, 90, tags, 0, 1, 50, None, None, None]
-            for k, tags in enumerate(([1, 2], [1, 3], [2, 3])) for i in range(12)]
+            for k, tags in enumerate(([1, 2], [1, 3], [2, 3])) for i in range(20)]
     write_market(tmp_path, rows=rows)
     monkeypatch.setenv("MARKET_DIR", str(tmp_path))
     m = ideas.Market.load()
     assert len(ideas.candidate_pairs(m)) == 3
     monkeypatch.setattr(ideas, "GEN_TAG_REPEAT", 1)
     assert len(ideas.candidate_pairs(m)) == 1, "every pair shares a tag with the best one"
-    assert ideas.candidate_pairs(m, limit=1)[0]["tags"] == [1, 2], "the best: the two strongest tags"
+    best = ideas.candidate_pairs(m, limit=1)[0]
+    assert best["tags"] == [1, 3], "Roguelite is getting crowded (supply 2.0), so the pair without it ranks first"
 
 
 def test_generating_ideas(tmp_path, market):
@@ -408,7 +426,7 @@ def test_generating_ideas(tmp_path, market):
         assert response.status == 200, await response.text()
         body = await response.json()
         [draft] = body["drafts"]
-        assert body["day"] == "2026-11-05" and body["model"] == ideas.MODEL
+        assert body["day"] == "2026-11-05" and body["model"] == ideas.MODEL and body["keep"] == 1
         assert draft["title"] == "Ore Rush" and draft["pair"]["names"] == ["Extraction Shooter", "Roguelite"]
         lines = draft["text"].split("\n")
         assert lines[0] == "Working title: Ore Rush" and len(lines) == len(ideas.TEMPLATE_FIELDS)
@@ -422,6 +440,7 @@ def test_generating_ideas(tmp_path, market):
         call = fake.calls[-1]
         assert call["output_config"]["format"]["schema"] is ideas.GEN_SCHEMA
         assert "1|Extraction Shooter|" in call["system"][0]["text"]
+        assert ideas.SYSTEM in call["system"][0]["text"], "the scorer's own rubric, word for word"
         prompt = call["messages"][0]["content"]
         assert "Extraction Shooter + Roguelite (ids 1, 2)" in prompt and "8 hits of 20 games" in prompt
         assert "cozy, solo" in prompt and "Dwarf Extraction (Claude 72, 5 of 5 stars)" in prompt

@@ -402,7 +402,8 @@ function outreachView(d) {
   const lastRun = o.state?.last_run ? Number(o.state.last_run) : null;
   const card = (label, value, sub) => h("div.cr-card", h("div.cr-card-v", value), h("div.cr-card-l", label), sub ? h("div.cr-card-s", sub) : null);
   const sum = (k) => o.campaigns.reduce((a, c) => a + (c.counts[k] || 0), 0);
-  wrap.append(
+  const add = (...els) => wrap.append(...els.filter(Boolean));
+  add(
     err ? h("p.cr-alert", err) : null,
     !lastRun ? h("p.cr-note", "The sender hasn't run yet: it needs the mailbox login in /etc/fourgames/outreach.env and creators-send.timer on the server (server/creators/README.md, Outreach). Drafts can be made already.") : null,
     h("div.cr-cards",
@@ -411,8 +412,8 @@ function outreachView(d) {
       card("Replied", num(sum("replied")), `${num(sum("opted_out"))} said no`),
       card("Never email again", num(o.suppressed), "opted out or bounced")),
     ot.msg ? h("p.cr-alert", ot.msg) : null);
-  if (ot.open && ot.openData) { wrap.append(campaignView(d)); return wrap; }
-  wrap.append(h("div.cr-listhead", h("b", "Campaigns"), h("button.btn.primary", { type: "button", onclick: () => { ot.form = ot.form ? null : newForm(d); draw(); } }, ot.form ? "Close" : "New campaign")));
+  if (ot.open && ot.openData) { add(campaignView(d)); return wrap; }
+  add(h("div.cr-listhead", h("b", "Campaigns"), h("button.btn.primary", { type: "button", onclick: () => { ot.form = ot.form ? null : newForm(d); draw(); } }, ot.form ? "Close" : "New campaign")));
   if (ot.form) wrap.append(formView(d, contacted));
   wrap.append(o.campaigns.length ? h("div.cr-scroll", h("table.cr-table", h("thead", h("tr", h("th", "Campaign"), h("th", "Status"), h("th.cr-num", "Waiting"), h("th.cr-num", "Sent"), h("th.cr-num", "Replied"), h("th.cr-num", "No / bounced"), h("th", ""))),
     h("tbody", ...o.campaigns.map(({ campaign: c, counts: n }) => h("tr.cr-main", { onclick: () => { ot.open = c.id; ot.openData = null; loadOutreach(); } },
@@ -560,7 +561,7 @@ const CSS = `
 .crv .cr-note { background: var(--fb-card); border: 1px solid var(--fb-line); border-left: 3px solid var(--fb-warning); border-radius: 8px; padding: 8px 12px; color: var(--fb-ink-2); font-size: 0.88rem; }
 .crv .cr-form { padding-bottom: 12px; }
 .crv .cr-field { display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--fb-ink-2); margin: 0 0 10px; flex: 1 1 220px; }
-.crv .cr-field .cr-input { max-width: none; }
+.crv .cr-field .cr-input { max-width: none; flex: none; }
 .crv .cr-area { font: inherit; font-size: 0.9rem; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 8px; padding: 8px 10px; resize: vertical; }
 .crv .cr-h { margin: 12px 0 2px; color: var(--fb-title); font-size: 1.05rem; }
 .crv .cr-preview { background: var(--fb-card); border: 1px solid var(--fb-line); border-left: 3px solid var(--fb-accent); border-radius: 8px; padding: 10px 14px; margin: 10px 0 14px; }

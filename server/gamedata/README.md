@@ -41,6 +41,7 @@ work. Errors are JSON, `{"ok": false, "error": "<code>", "message": "…"}`, wit
 | `POST /v1/admin/ideas/<id>/score` | the dashboard | Asks Claude again, with today's market data; the earlier analyses stay. |
 | `PUT /v1/admin/ideas/<id>` | the dashboard | `{"text"?, "notes"?, "archived"?, "pinned"?, "stars"?}`: `pinned` true/false, `stars` 0 (not rated) to 5, the owner's own ranking. |
 | `DELETE /v1/admin/ideas/<id>` | the dashboard | The idea and its history (send `{}`: admin writes need a JSON body). |
+| `POST /v1/admin/tagcheck` | the dashboard | `{"appid"?, "name", "about"?, "tags", "candidates"}`: Claude marks each tag fits / maybe / no for the game (Market, Tag my game; tagcheck.py). Without `about` it reads the store page's description. Nothing is stored. |
 | `GET /health` (or `/v1/health`) | anyone, the status page | `{"ok": true, "time", "disk": {"used_bytes", "free_bytes", "total_bytes", "low_space"}}` |
 
 Each entry of `games` (in `/v1/me` and the lookup) is one app id, so a player's demo and full game show

@@ -8,12 +8,14 @@
 //   3. How is Steam doing?       games released vs Steam's peak players (this year as a dashed pace),
 //      what's doing well right now (releases by hit index), and all of today's alerts, folded.
 //   4. My game ideas             market-ideas.js: score an idea against the market.
+//   5. Tag my game               market-tags.js: a game's tags against the games most like it.
 // Same contract as market.js: marketTop(ctx) fills the header, marketView(ctx) returns one root that
 // redraws itself. The data files come from server/steamdata/market.py.
 
 import { signView } from "./market-sign.js";
 import { gapView, topPairsWith } from "./market-gaps.js";
 import { ideasView } from "./market-ideas.js";
+import { tagsView } from "./market-tags.js";
 
 const DAY = 86400;
 const PREFIX = "mkv-merged-";
@@ -33,6 +35,7 @@ const TABS = [
   ["sign", "Who should I sign?", "Self-published games worth a message"],
   ["steam", "How is Steam doing?", "Games vs players, what's working now"],
   ["ideas", "My game ideas", "Score an idea against the market"],
+  ["tags", "Tag my game", "Better tags, from games like yours"],
 ];
 const SEEN_DAYS = 30;      // the Today box forgets a seen item after this long
 const F = { linux: 1, mac: 2, deckOk: 4, godot: 64, demo: 128, self: 256 };
@@ -547,7 +550,7 @@ const st = {
   tab: "make", small: true, sort: "best", shown: 15, q: "", sel: null, qMin: 10,
   rel: { days: 30, indie: true, self: false, godot: false, adult: false }, relShown: 25,
 };
-const NEEDS = { make: ["trends", "games", "growth"], sign: ["trends", "upcoming", "godot"], steam: ["growth", "trends", "games", "godot"], ideas: ["trends", "games", "growth"] };
+const NEEDS = { make: ["trends", "games", "growth"], sign: ["trends", "upcoming", "godot"], steam: ["growth", "trends", "games", "godot"], ideas: ["trends", "games", "growth"], tags: ["trends", "games", "upcoming", "godot"] };
 const today = () => st.files.overview?.today ?? Math.floor(Date.now() / 1000 / DAY);
 const tagNames = () => st.files.overview?.tags || {};
 const storeUrl = (appid) => `https://store.steampowered.com/app/${appid}/`;
@@ -644,6 +647,7 @@ function draw() {
     sign: () => waitFor(sign, "Loading the games still to come out…", signTab),
     steam: () => waitFor(["overview", "growth"], "Loading Steam's history…", steamView),
     ideas: () => waitFor(["overview", ...NEEDS.ideas], "Loading the market data to score your ideas…", ideasTab),
+    tags: () => waitFor(["overview", ...NEEDS.tags], "Loading every game's tags…", tagsTab),
   }[st.tab]();
   st.root.replaceChildren(
     waitFor(["overview", "trends"], "Loading today's briefing…", todayView),
@@ -661,6 +665,12 @@ function signTab() {
 function ideasTab() {
   try { return ideasView(C, { overview: st.files.overview, trends: st.files.trends, games: st.files.games, growth: st.files.growth }, draw); }
   catch (e) { console.error(e); return C.h("p.mm-note", `The ideas view couldn't draw: ${e.message}. The rest of the page still works.`); }
+}
+
+// Tab 5 lives in market-tags.js; same guard.
+function tagsTab() {
+  try { return tagsView(C, { overview: st.files.overview, trends: st.files.trends, games: st.files.games, upcoming: st.files.upcoming, godot: st.files.godot }, draw); }
+  catch (e) { console.error(e); return C.h("p.mm-note", `The tag view couldn't draw: ${e.message}. The rest of the page still works.`); }
 }
 
 function waitFor(names, text, fn) {
@@ -1444,7 +1454,7 @@ const CSS = `
 .mkv-merged .mm-today-fold[open] > summary::after { content: " ▾"; }
 .mkv-merged .mm-today-fold > summary:hover { color: var(--fb-link); }
 
-.mkv-merged .mm-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; margin: 0 0 16px; }
+.mkv-merged .mm-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 0 0 16px; }
 .mkv-merged .mm-tab { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; text-align: left; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--fb-line); background: var(--fb-card); color: var(--fb-ink); font: inherit; cursor: pointer; }
 .mkv-merged .mm-tab:hover { background: var(--fb-hover); }
 .mkv-merged .mm-tab[aria-selected="true"] { border-color: var(--fb-accent); box-shadow: inset 0 0 0 1px var(--fb-accent); }

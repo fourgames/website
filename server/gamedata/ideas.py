@@ -226,6 +226,111 @@ def market_score(tag_ids: list[int], m: Market) -> dict[str, Any] | None:
     return {"score": round(score), "tagsScore": round(tags, 1), "tags": parts, "pair": pair}
 
 
+# Rising tags: the dashboard's "Rising now" stages (market-merged.js, risingNow), so the scorer and
+# the generator read a rise the way the dashboard does
+
+RISE_MIN_GAMES = 12
+RISE_EARLY_SHARE = 0.005   # under 0.5% of releases...
+RISE_EARLY_STARTED = 2.5   # ...and it wasn't already rising the year before: early
+RISE_LATE_SHARE = 0.015    # 1.5%+ of releases: late
+RISE_K = 4
+RISE_FEW_BIG = 0.7         # the two biggest new games hold 70%+ of the tag's new reviews: a big-release story
+# The dashboard's big-build tags (HUGE and BIG): never "early" for a small team.
+BIG_BUILD = {"Massively Multiplayer", "MMORPG", "Open World", "Open World Survival Craft", "Realistic", "Photorealistic",
+             "Multiplayer", "Online Co-Op", "PvP", "Online PvP", "Co-op", "Third-Person Shooter", "Souls-like", "Sandbox",
+             "Story Rich", "3D", "First-Person"}
+
+
+def rising_tags(m: Market) -> dict[int, dict[str, Any]]:
+    """Each tag whose share of releases rose 1.5x or more (the last 3 full months against the 12 before,
+    from under 1.5% of releases) and whose games still hit at least as often as Steam's, with its stage:
+    early (small and only just started), late (1.5%+ of releases) or crowded (between). As the
+    dashboard's risingNow: a rise carried by one or two big releases is left out."""
+    growth = market_file("growth")
+    if not growth or not growth.get("tags") or not (growth.get("total") or {}).get("m"):
+        return {}
+    total = growth["total"]["m"]
+    n = len(total)
+    done = growth.get("monthDone") or 0
+    full = n - 1 if 0 < done < 1 else n
+    def span(a, i, j):
+        return sum(a[k] or 0 for k in range(max(0, i), min(j, len(a))))
+    now, before, prior = (full - 3, full), (full - 15, full - 3), (full - 27, full - 15)
+    t_now, t_before, t_prior = span(total, *now), span(total, *before), span(total, *prior)
+    if not t_now or not t_before:
+        return {}
+    few_big = big_release_tags(growth, full)
+    out = {}
+    for key, g in growth["tags"].items():
+        tag = int(key)
+        tr = m.tags.get(tag)
+        name = (tr or {}).get("name") or g.get("name") or m.name(tag)
+        # Like the dashboard's small-team view: no store words, adult or big-build tags.
+        if not tr or tr.get("hitRate") is None or tr["hitRate"] < m.base_hit or name in NOT_A_BASE or name in BIG_BUILD:
+            continue
+        counts = g.get("m") or []
+        c_now, c_before, c_prior = span(counts, *now), span(counts, *before), span(counts, *prior)
+        if c_now < RISE_MIN_GAMES:
+            continue
+        share_now, share_before = c_now / t_now, c_before / t_before
+        share_prior = c_prior / t_prior if t_prior else 0
+        if share_before >= RISE_LATE_SHARE:
+            continue
+        mult = (c_now + RISE_K) / (share_before * t_now + RISE_K)
+        if mult < 1.5:
+            continue
+        started = (c_before + RISE_K) / (share_prior * t_before + RISE_K)
+        if tag in few_big:
+            continue
+        stage = ("late" if share_now >= RISE_LATE_SHARE
+                 else "early" if share_now < RISE_EARLY_SHARE and started < RISE_EARLY_STARTED and name not in BIG_BUILD
+                 else "crowded")
+        out[tag] = {"tag": tag, "name": name, "stage": stage, "mult": round(mult, 1), "share": share_now,
+                    "hitRate": tr["hitRate"], "releases": tr.get("releases")}
+    return out
+
+
+def big_release_tags(growth: dict[str, Any], full: int) -> set[int]:
+    """The tags whose new games (released in the 3 full months) got 50+ reviews in all, 70%+ of them
+    to their two biggest (newGameReviews in market-merged.js)."""
+    months = growth.get("months") or []
+    games = market_file("games", gen_games)
+    if not games or full - 3 < 0 or full - 3 >= len(months):
+        return set()
+    def day_of(ym):
+        y, mo = map(int, str(ym).split("-")[:2])
+        return date(y, mo, 1).toordinal() - date(1970, 1, 1).toordinal()
+    first = day_of(months[full - 3])
+    last = day_of(months[full]) if full < len(months) else 10 ** 9
+    per: dict[int, list] = {}
+    for tags, day, hit, revs, name, appid in games["rows"]:
+        if not first <= day < last:
+            continue
+        for t in tags:
+            e = per.setdefault(t, [0, 0, 0])  # total, biggest, second
+            e[0] += revs
+            if revs > e[1]:
+                e[1], e[2] = revs, e[1]
+            elif revs > e[2]:
+                e[2] = revs
+    return {t for t, (total, a, b) in per.items() if total >= 50 and (a + b) / total >= RISE_FEW_BIG}
+
+
+RISE_WORDS = {"early": "Early (small and only just started: an opening, few rivals yet)",
+              "crowded": "Getting crowded (others got there first: move fast or find an angle)",
+              "late": "Late (1.5%+ of all new games: the rush has arrived)"}
+
+
+def rising_brief(m: Market) -> str:
+    rising = sorted(rising_tags(m).values(), key=lambda r: (["early", "crowded", "late"].index(r["stage"]), -r["mult"]))
+    if not rising:
+        return ""
+    return ("Rising tags (share of new releases, the last 3 months against the 12 before), by stage, as the owner's "
+            "dashboard shows them:\n" + "\n".join(
+                f"- {r['name']}: {RISE_WORDS[r['stage']]}; {r['mult']}x its share a year before, {100 * r['share']:.1f}% of new "
+                f"games now, {pct(r['hitRate'])} hit" for r in rising))
+
+
 # The evidence for one idea: the tags the owner listed, how their pairs did, the biggest similar games
 
 EVIDENCE_DAYS = 365   # pairs: games released 14 days to a year before the market day
@@ -354,6 +459,9 @@ def market_brief(m: Market) -> str:
                      + ", ".join(map(str, released)) + "; peak concurrent users "
                      + ", ".join("-" if u is None else f"{u / 1e6:.1f}M" for u in users)
                      + f" (the last year is {pct(growth.get('yearDone'))} done).")
+    rising = rising_brief(m)
+    if rising:
+        lines.append(rising)
     return "\n".join(lines)
 
 
@@ -378,8 +486,16 @@ because it sells; a pivot that adds a tag must change the game itself.
 
 Judge with the market data below, not general hype. Quote its numbers in your reasons (hit rates, median and \
 top-10% reviews, releases, supply, demand) in plain words a non-analyst understands. Small tags have few games: \
-say how sure the data is. A rising supply means more competition arriving; strong demand with modest supply is \
-the opening to look for. Being early can mean no audience yet; being late means a crowded tag.
+say how sure the data is. Strong demand with modest supply is the opening to look for.
+
+A rising supply is not the same as a crowded tag: read it by the stage in the "Rising tags" list at the end of \
+the data, as the owner's dashboard does. Early (a small tag, under 0.5% of new games, whose rise only just \
+started, with games that still hit) is an opening: few rivals have arrived yet and players are clearly \
+interested, so it counts FOR competition and timing (say "get in now"), not against them. Getting crowded \
+means others got there first: competition and timing drop, more the faster it rises, unless the idea has a \
+clear angle within it. Late (1.5%+ of all new games) means the rush has arrived: score competition low. For a \
+tag not in that list, a supply above 1 means more rivals arriving, and well below 1 means fewer. A small early \
+tag has few games, so say how sure the hit odds are, but don't count its small size as weak demand.
 
 Map the idea to 2-6 Steam tags from the data, the core one first, using the ids exactly as listed. Include \
 every tag the owner listed that fits the idea (you may reorder them or add better ones). \
@@ -567,12 +683,15 @@ async def ask_claude(client, idea: dict[str, Any], history: list[dict[str, Any]]
 GEN_COUNT = 8
 GEN_KEEP = 5
 GEN_CANDIDATES = 14
-# A candidate pair needs this many rated games: thinner pairs make the scorer doubt the hit odds.
+# A candidate pair needs this many rated games: thinner pairs make the scorer doubt the hit odds. A pair
+# with an early rising tag (small by nature) needs only PAIR_MIN_GAMES, its tag GEN_EARLY_MIN_GAMES.
 GEN_PAIR_MIN = 20
-# The scorer marks competition and timing down hard for a tag whose share of releases is climbing, so a
-# candidate's rank loses this much per doubling of its most crowded tag's supply (at most GEN_CROWD_CAP).
-GEN_CROWD = 8
-GEN_CROWD_CAP = 20
+GEN_EARLY_MIN_GAMES = 20
+# A candidate's rank moves by its tags' rising stage, as the scorer reads it (rising_tags): an early rise
+# is an opening, a crowded or late one costs competition and timing.
+GEN_STAGE = {"early": 6, "crowded": -5, "late": -10}
+# Up to this many candidates are each early rising tag's best pair, if they didn't make the list anyway.
+GEN_EARLY_SLOTS = 4
 MAX_DIRECTION = 300
 # A tag can be in at most this many of the candidate pairs, so the candidates aren't all one genre.
 GEN_TAG_REPEAT = 2
@@ -625,15 +744,17 @@ def game_link(appid: int, name: str, reviews: int, day: int | None) -> dict[str,
 
 def candidate_pairs(m: Market, limit: int = GEN_CANDIDATES) -> list[dict[str, Any]]:
     """The tag pairs most likely to score high: their market score (market_score of the two tags, the
-    stronger first) less a penalty when a tag is getting crowded fast, with GEN_PAIR_MIN rated games
-    behind them, no tag in more than GEN_TAG_REPEAT of them."""
+    stronger first) moved by their tags' rising stage (GEN_STAGE), with GEN_PAIR_MIN rated games behind
+    them, no tag in more than GEN_TAG_REPEAT of them; plus each early rising tag's best pair."""
     if not isinstance(m.today, int):
         return []
     games = market_file("games", gen_games)
     if not games:
         return []
-    pool = {t: tag_score(r, m) for t, r in m.tags.items()
-            if r.get("name") not in NOT_A_BASE and (r.get("hitGames") or 0) >= 30}
+    rising = rising_tags(m)
+    early = {t for t, r in rising.items() if r["stage"] == "early"}
+    pool = {t: tag_score(r, m) for t, r in m.tags.items() if r.get("name") not in NOT_A_BASE
+            and (r.get("hitGames") or 0) >= (GEN_EARLY_MIN_GAMES if t in early else 30)}
     lo, hi = m.trends.get("hitRateWindow") or [14, 180]
     stats: dict[tuple[int, int], dict[str, Any]] = {}
     for tags, day, hit, revs, name, appid in games["rows"]:
@@ -658,31 +779,41 @@ def candidate_pairs(m: Market, limit: int = GEN_CANDIDATES) -> list[dict[str, An
                     s["reviews"].append(revs)
     ranked = []
     for (a, b), s in stats.items():
-        if s["n"] < GEN_PAIR_MIN:
+        if s["n"] < (PAIR_MIN_GAMES if early & {a, b} else GEN_PAIR_MIN):
             continue
         first, second = sorted((pool[a], pool[b]), key=lambda p: -p["score"])
         rate = (s["hits"] + m.prior * m.base_hit) / (s["n"] + m.prior)
         pair_score = clamp(50 + 25 * math.log2(max(rate, 1e-3) / m.base_hit))
         tags = (first["score"] + 0.8 * second["score"]) / 1.8
         score = 0.7 * tags + 0.3 * pair_score
-        crowd = max(first.get("supply") or 1, second.get("supply") or 1, 1)
-        aim = score - min(GEN_CROWD_CAP, GEN_CROWD * math.log2(crowd))
+        stages = [rising[t]["stage"] for t in (a, b) if t in rising]
+        aim = score + sum(GEN_STAGE[x] for x in stages)
         ranked.append({"tags": [first["id"], second["id"]], "names": [first["name"], second["name"]],
                        "score": round(score), "aim": round(aim), "games": s["n"], "hits": s["hits"],
                        "hitRate": round(rate, 3), "median": _median(s["reviews"]), "recent": s["recent"],
                        "top": s["top"], "parts": [first, second],
+                       "stages": {rising[t]["name"]: rising[t]["stage"] for t in (a, b) if t in rising},
                        "similar": [game_link(appid, n, r, d) for r, n, d, appid in s["similar"]]})
     ranked.sort(key=lambda c: (-c["aim"], -c["games"]))
     used: dict[int, int] = {}
     picked = []
-    for c in ranked:
-        if any(used.get(t, 0) >= GEN_TAG_REPEAT for t in c["tags"]):
-            continue
+    def take(c):
         for t in c["tags"]:
             used[t] = used.get(t, 0) + 1
         picked.append(c)
+    # Each early rising tag's best pair first (the dashboard's "get in now"), then the best of the rest.
+    for t in sorted(early, key=lambda t: -rising[t]["mult"]):
+        best = next((c for c in ranked if t in c["tags"] and c not in picked
+                     and all(used.get(x, 0) < GEN_TAG_REPEAT for x in c["tags"])), None)
+        if best and len(picked) < min(GEN_EARLY_SLOTS, limit):
+            take(best)
+    for c in ranked:
         if len(picked) >= limit:
             break
+        if c in picked or any(used.get(t, 0) >= GEN_TAG_REPEAT for t in c["tags"]):
+            continue
+        take(c)
+    picked.sort(key=lambda c: (-c["aim"], -c["games"]))
     return picked
 
 
@@ -693,10 +824,16 @@ def candidate_line(i: int, c: dict[str, Any], m: Market) -> str:
                 f"demand {num(p['demand'], 2)}, {p['releases']} releases in 90 days")
     biggest = "; ".join(f"{n} ({r:,} reviews, {iso_day(d)[:4]})" for r, n, d in c["top"]) or "none"
     return (f"{i}. {c['names'][0]} + {c['names'][1]} (ids {c['tags'][0]}, {c['tags'][1]}): market score {c['score']} "
-            f"(50 = average), {c['aim']} after allowing for crowding. {c['hits']} hits of {c['games']} games released 2 weeks to 6 months ago "
+            f"(50 = average){stage_words(c)}. {c['hits']} hits of {c['games']} games released 2 weeks to 6 months ago "
             f"({pct(c['hitRate'])} allowing for chance; Steam {pct(m.base_hit)}), median {c['median']} reviews, "
             f"{c['recent']} new in the last 90 days. {tag(a)}. {tag(b)}. Biggest in 3 years: {biggest}. "
             f"Biggest in the last year: " + ("; ".join(f"{g['name']} ({g['reviews']:,} reviews)" for g in c["similar"]) or "none") + ".")
+
+
+def stage_words(c: dict[str, Any]) -> str:
+    if not c.get("stages"):
+        return ""
+    return "; rising: " + ", ".join(f"{n} {RISE_WORDS[st].split(' (')[0].lower()}" for n, st in c["stages"].items())
 
 
 def idea_title(text: str) -> str:
@@ -748,11 +885,12 @@ and the idea's own strength (a clear, specific hook that fits what players of th
 much. Scope is judged by the hard systems (netcode, physics, AI, procedural generation), not by art volume. \
 Your goal: the highest score this data allows, honestly. Not "good enough": every idea should be the \
 highest-scoring idea you can find on its pair, and better than the owner's best so far. That means a strong \
-market base AND a sharp hook AND a scope 1-3 people can finish in 3-9 months. What it marks down most: tags whose \
-supply is climbing (competition and timing fall: prefer pairs with supply near or below 1), online play, physics, \
-AI or procedural generation as core systems, live action or a big story, many hand-made levels, and pairs with \
-few games. What it rewards: a pair with many hits and few new rivals, demand rising, and a hook that is the \
-reason players of those tags would pick this game.
+market base AND a sharp hook AND a scope 1-3 people can finish in 3-9 months. What it marks down most: tags that are \
+getting crowded or late in the Rising tags list (unless the idea has a clear angle within them), online play, \
+physics, AI or procedural generation as core systems, live action or a big story, many hand-made levels, and \
+pairs with few games. What it rewards: a pair with many hits and few rivals, an early rising tag (an opening the \
+owner's dashboard says to get into now), demand rising, and a hook that is the reason players of those tags \
+would pick this game. Use at least one or two candidates with an early rising tag when the list has them.
 
 Build every idea on one of the candidate tag pairs given, each idea on a different pair and a different first \
 tag, so the ideas are clearly different from each other: different genres, loops, camera, mood and players. \

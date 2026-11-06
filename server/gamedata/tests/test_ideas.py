@@ -41,11 +41,24 @@ def games(rows):
     return {"columns": COLUMNS, "topTags": 5, "flags": {}, "rows": rows}
 
 
-def write_market(path, trends=TRENDS, overview=OVERVIEW, rows=()):
+GROWTH = {"years": [2025, 2026], "yearDone": 0.85, "total": {"y": [20155, 25484]}, "users": {"y": [41666455, 41816052]}}
+
+
+def rising_growth():
+    """30 months to Nov 2026 (a fifth done), 1,000 releases a month. Extraction Shooter: 1 a month, then 10
+    in the last 3 full months (1% of releases: getting crowded). Roguelite: 1 a month, then 4 (0.4%, and it
+    wasn't rising before: early). Visual Novel rises too, but its games hit less than Steam's: left out."""
+    months = [f"{2024 + (i + 5) // 12}-{(i + 5) % 12 + 1:02d}" for i in range(30)]
+    def rise(late):
+        return [1] * 26 + [late] * 3 + [0]
+    return {**GROWTH, "months": months, "monthDone": 0.2, "total": {**GROWTH["total"], "m": [1000] * 30},
+            "tags": {"1": {"name": "Extraction Shooter", "m": rise(10)}, "2": {"name": "Roguelite", "m": rise(4)},
+                     "3": {"name": "Visual Novel", "m": rise(10)}}}
+
+
+def write_market(path, trends=TRENDS, overview=OVERVIEW, rows=(), growth=GROWTH):
     path.mkdir(exist_ok=True)
-    for name, data in (("trends", trends), ("overview", overview), ("games", games(list(rows))),
-                       ("growth", {"years": [2025, 2026], "yearDone": 0.85, "total": {"y": [20155, 25484]},
-                                   "users": {"y": [41666455, 41816052]}})):
+    for name, data in (("trends", trends), ("overview", overview), ("games", games(list(rows))), ("growth", growth)):
         (path / f"{name}.json.gz").write_bytes(gzip.compress(json.dumps(data).encode()))
     ideas._cache.clear()
 
@@ -382,11 +395,27 @@ def test_candidate_pairs_rank_by_market_score_and_spread_the_tags(market):
     assert (c["games"], c["hits"]) == (20, 8) and c["recent"] == 21 and c["top"][0][0] == 10
 
 
-def test_crowded_tags_rank_lower(market):
+def test_rising_stages_as_the_dashboard_reads_them(market):
+    write_market(market, rows=[[i, f"g{i}", TODAY - 30, 999, 10, 90, [1, 2], 0, 1, 95 if i < 8 else 50, None, None, None]
+                               for i in range(20)], growth=rising_growth())
     m = ideas.Market.load()
+    rising = ideas.rising_tags(m)
+    assert {t: r["stage"] for t, r in rising.items()} == {1: "crowded", 2: "early"}
+    assert rising[2]["mult"] == 2.3, "(12 + 4) / (0.1% of 3,000 + 4): the pseudo-count pulls 4x toward 1"
+    brief = ideas.market_brief(m)
+    assert "- Roguelite: Early (small and only just started" in brief and "- Extraction Shooter: Getting crowded" in brief
     [c] = ideas.candidate_pairs(m)
-    # Roguelite's supply is 2.0: one doubling, GEN_CROWD points off.
-    assert abs(c["aim"] - (c["score"] - ideas.GEN_CROWD)) <= 1
+    assert c["stages"] == {"Extraction Shooter": "crowded", "Roguelite": "early"}
+    assert c["aim"] == c["score"] + ideas.GEN_STAGE["early"] + ideas.GEN_STAGE["crowded"]
+    assert "rising: Extraction Shooter getting crowded, Roguelite early" in ideas.candidate_line(1, c, m)
+    assert "Early (a small tag" in ideas.SYSTEM, "the scorer reads a rise by its stage"
+
+
+def test_a_rise_carried_by_one_or_two_big_games_is_left_out(market):
+    rows = [[i, f"g{i}", TODAY - 30, 999, 10000 if i < 2 else 10, 90, [1, 2], 0, 1, 95 if i < 8 else 50, None, None, None]
+            for i in range(20)]
+    write_market(market, rows=rows, growth=rising_growth())
+    assert ideas.rising_tags(ideas.Market.load()) == {}
 
 
 def test_the_generator_hears_what_the_scorer_said():
@@ -409,7 +438,7 @@ def test_candidate_pairs_spread_the_tags(tmp_path, monkeypatch):
     monkeypatch.setattr(ideas, "GEN_TAG_REPEAT", 1)
     assert len(ideas.candidate_pairs(m)) == 1, "every pair shares a tag with the best one"
     best = ideas.candidate_pairs(m, limit=1)[0]
-    assert best["tags"] == [1, 3], "Roguelite is getting crowded (supply 2.0), so the pair without it ranks first"
+    assert best["tags"] == [1, 2], "no tag is rising here: the two strongest tags"
 
 
 def test_generating_ideas(tmp_path, market):

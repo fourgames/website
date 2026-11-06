@@ -1019,12 +1019,14 @@ function renderGames() {
   const add = () => h("button.g-item.g-add", { type: "button", onclick: askResearch }, h("span.g-thumb.g-all", "+"), h("span.g-name", "Add a research game", h("span.g-sub", "another studio's game, to learn from")));
   // Ungrouped research games under "Research", then each group under its own heading.
   const groups = [...new Set(research.map((g) => g.group))].sort((a, b) => (a || "").localeCompare(b || ""));
-  document.getElementById("fb-games-side").replaceChildren(h("div.side-label", "Games"), home(), data(), uptime(), market(), ...games.map(item));
+  // Status and Market aren't about one of your games, so they get their own card above the games.
+  document.getElementById("fb-studio-side").replaceChildren(h("div.side-label", "Studio"), uptime(), market());
+  document.getElementById("fb-games-side").replaceChildren(h("div.side-label", "Games"), home(), data(), ...games.map(item));
   // Research games go in their own card at the bottom, under the views.
   document.getElementById("fb-research-side").replaceChildren(
     ...groups.flatMap((name) => [h("div.side-label", name ? `Research · ${name}` : "Research"), ...research.filter((g) => g.group === name).map(researchItem)]),
     add());
-  document.getElementById("fb-games-strip").replaceChildren(home(), data(), uptime(), market(), ...games.map(item), ...research.map(researchItem), add());
+  document.getElementById("fb-games-strip").replaceChildren(uptime(), market(), home(), data(), ...games.map(item), ...research.map(researchItem), add());
 }
 
 async function pickGame(appId) {
@@ -3935,6 +3937,7 @@ function fillSlot(slot, p) {
 const SHELL = `
 <div class="fb-layout">
   <aside class="fb-side" aria-label="Games and views">
+    <div class="side-card" id="fb-studio-side"></div>
     <div class="side-card" id="fb-games-side"></div>
     <div class="side-card side-views">
       <div class="side-label">Views</div>

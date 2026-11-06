@@ -69,6 +69,8 @@ One SQLite file, `/srv/fourgames/creators/creators.db`:
 | `youtube_channels` | One row per channel: title, handle, description, country, language, subscribers (NULL when hidden), videos, views, when it was made, `emails` and `links` (JSON) from the description, and `revealed_email` / `revealed_at` for the email behind YouTube's "View email address" button, saved by the creator-emails skill, and `email_button` (1/0, NULL not checked) / `button_checked_at` |
 | `youtube_videos` | Every kept video, per game it names: channel, title, published, views, likes, comments, length, language |
 | `channel_games` (view) | Per channel and game: videos, the latest, total views. What matching will score on |
+| `channel_links` | The web pages each channel links to, from its description or About panel |
+| `sites` | Each followed link: when, status, emails found. View `site_emails`: per channel |
 | `searches` | Each game searched: when, when it's due again, results and kept |
 | `quota` | Units spent per Pacific day |
 
@@ -86,7 +88,23 @@ plus a captcha). The `creator-emails` Claude skill gets them in the user's own C
 
 Best first, until per-game matching exists: a video of one of our games, then 1k–300k subscribers,
 then a video in the last 30 days, then more games, then more subscribers. Nobody but the user
-solves the captcha.
+solves the captcha, so revealing is kept for the best few.
+
+## Emails from creators' links
+
+Many creators without a public email on YouTube have one on their Linktree, Beacons or Carrd page or
+their own website. After the YouTube part, every hourly run follows up to 150 links
+(`python -m creators --links N`, or `python -m creators.sites N` alone), best channels first, from
+channels without an email yet:
+
+- links in the description (any `https://` address, and bare link-in-bio addresses like `linktr.ee/name`),
+- the About panel's link list, which the API doesn't give; the skill's check reads it and saves it.
+
+Big platforms (YouTube, Twitch, X, Instagram, Discord, Patreon, Ko-fi, shops...) are skipped: they
+don't show emails to visitors. On their own website, if the first page has no email, up to two
+contact/about pages on the same site are tried. Emails of the host or web tools (privacy@,
+wixpress...) are dropped. Each link is followed again after 90 days. Results: `sites` (per link) and
+the `site_emails` view (per channel); channels with one are left out of the captcha queue.
 
 ## About the emails
 

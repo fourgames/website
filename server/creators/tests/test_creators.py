@@ -207,7 +207,7 @@ def test_reveal_queue_and_save(tmp_path):
     assert reveal.to_check(store, {99}, NOW, 10) == ["UCours", "UCactive", "UCmid", "UCbig"]
     lines = ['{"channel_id": "UCours", "button": true}', '{"channel_id": "UCactive", "button": true}',
              '{"channel_id": "UCmid", "button": false}', 'junk', '{"channel_id": "UCnope", "button": true}']
-    assert reveal.save(store, lines, NOW) == {"button": 2, "no button": 1, "revealed": 0, "nothing shown": 0, "skipped": 2}
+    assert reveal.save(store, lines, NOW) == {"button": 2, "no button": 1, "revealed": 0, "nothing shown": 0, "links": 0, "skipped": 2}
     assert reveal.to_check(store, {99}, NOW, 10) == ["UCbig"]
     queue = reveal.to_reveal(store, {99}, NOW, 10)
     assert [r["channel_id"] for r in queue] == ["UCours", "UCactive"] and queue[0]["own"]
@@ -219,3 +219,51 @@ def test_reveal_queue_and_save(tmp_path):
     assert [r["channel_id"] for r in reveal.to_reveal(store, {99}, NOW, 10)] == ["UCactive"]
     reveal.save(store, ['{"channel_id": "UCactive", "email": null}'], NOW)
     assert reveal.to_reveal(store, {99}, NOW, 10) == []
+
+
+def test_urls_and_followable():
+    from creators.sites import followable
+    text = "Biz: https://mysite.com/contact. Links: linktr.ee/somebody, (https://twitch.tv/x) www.beacons.ai/me!"
+    assert contacts.urls(text) == ["https://mysite.com/contact", "https://twitch.tv/x",
+                                   "https://linktr.ee/somebody", "https://www.beacons.ai/me"]
+    assert followable("https://linktr.ee/somebody") and followable("https://sarahsunstone.store")
+    for url in ("https://twitch.tv/x", "https://www.youtube.com/@a", "https://amazon.de/dp/1", "https://smile.amazon.com",
+                "https://discord.gg/abc", "https://bit.ly/m/x", "ftp://a.com", "https://localhost/"):
+        assert not followable(url), url
+
+
+def test_page_emails():
+    from creators.sites import page_emails
+    page = ('<a href="mailto:Biz%40Creator.com?subject=hi">mail</a> privacy@linktr.ee me@linktr.ee '
+            'your@email.com 123@sentry.wixpress.com other [at] gmail [dot] com')
+    assert page_emails(page, "linktr.ee") == ["biz@creator.com", "other@gmail.com"]
+
+
+def test_follower(tmp_path):
+    from creators import reveal
+    from creators.sites import Follower
+    store = Store(str(tmp_path / "c.db"))
+    t = int(NOW)
+    for cid, desc in (("UCa", "Find me: linktr.ee/aaa and https://twitch.tv/aaa"), ("UCb", "My site https://bbb.com"),
+                      ("UCc", "mail: c@c.com https://ccc.com")):
+        store.db.execute("INSERT INTO youtube_channels (channel_id, description, emails, first_seen, email_button) "
+                         "VALUES (?, ?, ?, ?, 1)", (cid, desc, '["c@c.com"]' if cid == "UCc" else "[]", t))
+    store.db.commit()
+    assert reveal.save(store, ['{"channel_id": "UCb", "links": ["bbb.com", "throne.com/b"]}'], NOW)["links"] == 2
+    pages = {"https://linktr.ee/aaa": '<a href="mailto:aaa@gmail.com">x</a>',
+             "https://bbb.com": '<a href="/contact-us">Contact</a><a href="https://other.com/contact">x</a>',
+             "https://bbb.com/contact-us": "Business: hello@bbb.com"}
+    asked = []
+
+    def transport(url, headers, timeout):
+        asked.append(url)
+        return (200, {"content-type": "text/html; charset=utf-8"}, pages[url].encode(), url) if url in pages \
+            else (404, {}, b"", url)
+
+    counts = Follower(store, transport, pause=0).run(set(), 50, NOW)
+    assert counts["with email"] == 2 and counts["skipped"] >= 2  # twitch and throne
+    assert "https://ccc.com" not in asked and "https://other.com/contact" not in asked  # UCc has an email; other site
+    found = dict(store.db.execute("SELECT channel_id, email FROM site_emails").fetchall())
+    assert found == {"UCa": "aaa@gmail.com", "UCb": "hello@bbb.com"}
+    assert reveal.to_reveal(store, set(), NOW, 10) == []  # no captcha needed for them
+    assert Follower(store, transport, pause=0).run(set(), 50, NOW)["followed"] == 0  # nothing due again

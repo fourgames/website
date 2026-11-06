@@ -3,6 +3,7 @@
   python -m creators                     spends the units due by now (creators.timer, hourly)
   python -m creators --searches 3        a short trial: at most 3 game searches
   python -m creators --all               spends the whole day's units now
+  python -m creators --links 0           no link following after the YouTube part (default 150 links)
 """
 
 from __future__ import annotations
@@ -14,12 +15,16 @@ import sys
 from .collector import Collector
 from .config import Config, ConfigError
 from .db import Store
+from .games import own_appids
+from .sites import Follower
 
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m creators", description="Finds YouTube creators.")
     parser.add_argument("--searches", type=int, help="stop after this many game searches")
     parser.add_argument("--all", action="store_true", help="spend the whole day's units, not just what's due")
+    parser.add_argument("--links", type=int, default=150,
+                        help="then follow up to this many creators' links for emails (0: none)")
     args = parser.parse_args(argv)
     try:
         config = Config.from_env()
@@ -34,6 +39,11 @@ def main(argv: list[str] | None = None) -> int:
     store = Store(config.db_path)
     try:
         Collector(config, store).run(spend_all=args.all, max_searches=args.searches)
+        if args.links:
+            try:
+                Follower(store).run(own_appids(config.steam_db, config.own_appids, config.own_studio), args.links)
+            except Exception:  # never let the link follower break the YouTube runs
+                logging.getLogger("creators").exception("following links failed")
     finally:
         store.close()
     return 0

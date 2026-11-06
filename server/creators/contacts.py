@@ -24,6 +24,13 @@ LINKS = {
     "tiktok": re.compile(r"tiktok\.com/@([A-Za-z0-9_.]{2,24})", re.IGNORECASE),
     "discord": re.compile(r"(?:discord\.gg|discord\.com/invite)/([A-Za-z0-9-]{2,32})", re.IGNORECASE),
 }
+# Web addresses in a description: with http(s)://, or a bare address on a link-in-bio host.
+_URL = re.compile(r"https?://[^\s<>\"'()\[\]]+", re.IGNORECASE)
+BIO_HOSTS = ("linktr.ee", "beacons.ai", "carrd.co", "solo.to", "bio.link", "lnk.bio", "allmylinks.com",
+             "campsite.bio", "linkin.bio", "msha.ke", "taplink.cc", "flow.page", "hoo.be", "snipfeed.co",
+             "bento.me", "withkoji.com", "direct.me", "stan.store", "linkbio.co", "about.me", "linkr.bio")
+_BARE = re.compile(r"(?<![\w./])((?:www\.)?(?:" + "|".join(re.escape(h) for h in BIO_HOSTS)
+                   + r")/[^\s<>\"'()\[\]]+)", re.IGNORECASE)
 _NOT_HANDLES = {"intent", "share", "home", "hashtag", "i", "p", "reel", "explore", "videos", "directory"}
 
 
@@ -51,3 +58,13 @@ def links(text: str | None) -> dict[str, str]:
                 out[platform] = handle
                 break
     return out
+
+
+def urls(text: str | None) -> list[str]:
+    """Every web address in the text, https:// added where missing, trailing punctuation dropped."""
+    found: list[str] = []
+    for url in [*_URL.findall(text or ""), *("https://" + u for u in _BARE.findall(text or ""))]:
+        url = url.rstrip(".,;:!?*")
+        if url not in found:
+            found.append(url)
+    return found

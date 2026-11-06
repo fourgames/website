@@ -66,6 +66,29 @@ CREATE TABLE IF NOT EXISTS quota (
     exhausted  INTEGER NOT NULL DEFAULT 0       -- YouTube said the quota is used up
 );
 
+-- Web pages a channel links to (its description and its About panel's links), followed for emails.
+CREATE TABLE IF NOT EXISTS channel_links (
+    channel_id  TEXT NOT NULL,
+    url         TEXT NOT NULL,
+    source      TEXT NOT NULL,          -- 'description' or 'about'
+    PRIMARY KEY (channel_id, url)
+);
+CREATE INDEX IF NOT EXISTS channel_links_url ON channel_links (url);
+
+-- Each followed page: when, how it went, and the emails on it (and on its contact page).
+CREATE TABLE IF NOT EXISTS sites (
+    url         TEXT PRIMARY KEY,
+    fetched_at  INTEGER NOT NULL,
+    status      TEXT NOT NULL,          -- 'ok', 'skipped' (not a page that could have an email), or the error
+    emails      TEXT                    -- JSON list
+);
+
+-- Emails found by following a channel's links.
+CREATE VIEW IF NOT EXISTS site_emails AS
+    SELECT DISTINCT l.channel_id, e.value AS email, l.url
+    FROM channel_links l JOIN sites s ON s.url = l.url, json_each(s.emails) e
+    WHERE s.emails IS NOT NULL AND s.emails != '[]';
+
 -- Per channel and game: how many videos, the latest, their views.
 CREATE VIEW IF NOT EXISTS channel_games AS
     SELECT channel_id, appid, COUNT(*) AS videos, MAX(published) AS last_video, SUM(views) AS views

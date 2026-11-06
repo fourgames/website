@@ -11,6 +11,7 @@ and saves what's revealed. This module is its side on the server (from the serve
         {"channel_id": "UC...", "button": true|false}       the button is there or not
         {"channel_id": "UC...", "email": "a@b.com"}          revealed
         {"channel_id": "UC...", "email": null}               the button was there but showed nothing
+        {"channel_id": "UC...", "links": ["throne.com/x"]}   the About panel's links (with or without the above)
 
 Best first, until per-game matching exists: channels with a video of one of our games, then 1k-300k
 subscribers (big enough to sell, small enough to answer), then a video in the last 30 days, then
@@ -61,13 +62,14 @@ def to_reveal(store: Store, own: set[int], now: float, limit: int) -> list[dict]
     sql, order, a, b = _order(own, now)
     rows = store.db.execute(
         f"""SELECT c.channel_id, c.handle, c.title, c.subscribers, COALESCE(v.own, 0) AS own
-            {sql} AND c.email_button = 1 AND c.revealed_at IS NULL {order} LIMIT ?""", (*a, *b, limit))
+            {sql} AND c.email_button = 1 AND c.revealed_at IS NULL
+                AND c.channel_id NOT IN (SELECT channel_id FROM site_emails) {order} LIMIT ?""", (*a, *b, limit))
     return [{**dict(r), "own": bool(r["own"]),
              "url": f"https://www.youtube.com/{r['handle'] or 'channel/' + r['channel_id']}/about"} for r in rows]
 
 
 def save(store: Store, lines, now: float) -> dict[str, int]:
-    counts = {"button": 0, "no button": 0, "revealed": 0, "nothing shown": 0, "skipped": 0}
+    counts = {"button": 0, "no button": 0, "revealed": 0, "nothing shown": 0, "links": 0, "skipped": 0}
     with store.db:
         for line in lines:
             line = line.strip()
@@ -79,25 +81,39 @@ def save(store: Store, lines, now: float) -> dict[str, int]:
             except (ValueError, KeyError, TypeError):
                 counts["skipped"] += 1
                 continue
+            if not store.db.execute("SELECT 1 FROM youtube_channels WHERE channel_id = ?", (channel,)).fetchone():
+                counts["skipped"] += 1
+                continue
+            known = False
             if "email" in item:
                 email = (item["email"] or "").strip().lower() or None
                 if email and not EMAIL.match(email):
                     counts["skipped"] += 1
                     continue
-                cur = store.db.execute(
+                store.db.execute(
                     """UPDATE youtube_channels SET revealed_email = ?, revealed_at = ?, email_button = 1,
                            button_checked_at = COALESCE(button_checked_at, ?) WHERE channel_id = ?""",
                     (email, int(now), int(now), channel))
-                key = "revealed" if email else "nothing shown"
+                counts["revealed" if email else "nothing shown"] += 1
+                known = True
             elif "button" in item:
-                cur = store.db.execute(
+                store.db.execute(
                     "UPDATE youtube_channels SET email_button = ?, button_checked_at = ? WHERE channel_id = ?",
                     (int(bool(item["button"])), int(now), channel))
-                key = "button" if item["button"] else "no button"
-            else:
+                counts["button" if item["button"] else "no button"] += 1
+                known = True
+            for url in item.get("links") or []:
+                url = str(url).strip()
+                if not url:
+                    continue
+                if not url.lower().startswith(("http://", "https://")):
+                    url = "https://" + url
+                counts["links"] += store.db.execute(
+                    "INSERT OR IGNORE INTO channel_links (channel_id, url, source) VALUES (?, ?, 'about')",
+                    (channel, url)).rowcount
+                known = True
+            if not known:
                 counts["skipped"] += 1
-                continue
-            counts[key if cur.rowcount else "skipped"] += 1
     return counts
 
 

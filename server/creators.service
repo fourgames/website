@@ -1,0 +1,25 @@
+# The creator collector (server/creators): searches YouTube for videos of Steam games and saves the
+# channels that made them, with any public email, into /srv/fourgames/creators/creators.db.
+# Started every hour by creators.timer; by hand: sudo systemctl start creators
+# Setup: server/creators/README.md. Logs: journalctl -u creators
+[Unit]
+Description=Four Games creator collector (hourly)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=fourgames
+WorkingDirectory=/srv/fourgames/own/server
+EnvironmentFile=/etc/fourgames/creators.env
+Environment=PYTHONUNBUFFERED=1
+# Standard library only, like the Steam data collector, so it shares that venv.
+ExecStart=/srv/fourgames/steamdata-venv/bin/python -m creators
+Nice=10
+CPUWeight=20
+IOSchedulingClass=idle
+MemoryMax=300M
+TimeoutStartSec=30min
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full

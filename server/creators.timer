@@ -1,0 +1,12 @@
+# Runs creators.service every hour; each run spends about 1/24th of the day's YouTube units.
+# Install: sudo systemctl enable --now creators.timer   Check: systemctl list-timers creators
+[Unit]
+Description=Hourly creator collector
+
+[Timer]
+OnCalendar=hourly
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

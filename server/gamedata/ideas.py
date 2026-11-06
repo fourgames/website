@@ -55,6 +55,8 @@ MODEL = "claude-haiku-5-5"
 # Haiku 5.5's default is medium; high costs a little more output and judges the market data more carefully.
 EFFORT = "high"
 MAX_TOKENS = 16000
+# Eight drafted ideas (and the thinking behind them) need far more room than one analysis.
+GEN_MAX_TOKENS = 48000
 CLAUDE_TIMEOUT = 300.0
 # The dashboard waits up to two minutes per call; at most two Claude calls at once.
 CLAUDE_PARALLEL = 2
@@ -510,13 +512,14 @@ def make_client():
     return anthropic.AsyncAnthropic(timeout=CLAUDE_TIMEOUT, max_retries=1)
 
 
-async def call_claude(client, system: str, content: str, schema: dict[str, Any], what: str = "score this idea") -> tuple[dict[str, Any], str, dict]:
+async def call_claude(client, system: str, content: str, schema: dict[str, Any], what: str = "score this idea",
+                      max_tokens: int = MAX_TOKENS) -> tuple[dict[str, Any], str, dict]:
     """(Claude's JSON answer, the model that answered, usage). Refused on any failure, with a message for the owner."""
     import anthropic
     try:
         async with client.messages.stream(
             model=MODEL,
-            max_tokens=MAX_TOKENS,
+            max_tokens=max_tokens,
             output_config={"effort": EFFORT, "format": {"type": "json_schema", "schema": schema}},
             # The brief changes once a day: several calls the same day share the cached prefix.
             system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
@@ -538,6 +541,7 @@ async def call_claude(client, system: str, content: str, schema: dict[str, Any],
     if message.stop_reason == "refusal":
         raise Refused(502, "claude_refused", f"Claude declined to {what}; reword it and try again")
     if message.stop_reason == "max_tokens":
+        log.warning("claude cut off at %s tokens (%s)", max_tokens, getattr(getattr(message, "usage", None), "output_tokens", "?"))
         raise Refused(502, "claude_cut_off", "Claude's answer was cut off; try again")
     text = next((b.text for b in message.content if b.type == "text"), "")
     try:
@@ -756,7 +760,7 @@ Not variations of one game. Make each one concrete: a hook a player understands 
 minute loop, real comparable games. No generic "X but with Y" without saying what you actually do. Prefer \
 solo or simple co-op; avoid online PvP and big open worlds unless the data clearly pays for them.
 
-Fill the template fields with short, concrete phrases. genre_tags lists Steam tag names exactly as in the data, \
+Fill the template fields with short, concrete phrases (each under 25 words; "why" under 50). genre_tags lists Steam tag names exactly as in the data, \
 comma separated: the pair first, then any other tags the game truly has (no more than 6 in all). \
 "pair" is the two tag ids of the candidate it is built on. "why" says in one or two plain sentences why it \
 should score high, quoting the pair's numbers.
@@ -1128,7 +1132,7 @@ async def generate_ideas(request: web.Request) -> web.Response:
     async with store.parallel:
         raw, model, usage = await call_claude(store.client, GEN_SYSTEM + GEN_RUBRIC_INTRO + SYSTEM + market_brief(m),
                                               generate_prompt(candidates, m, taste, direction, count), GEN_SCHEMA,
-                                              "come up with ideas")
+                                              "come up with ideas", GEN_MAX_TOKENS)
     drafts = tidy_drafts(raw, m, candidates, count)
     log.info("generated %d ideas by %s in %.0fs (%s)", len(drafts), model, time.monotonic() - started, usage)
     if not drafts:

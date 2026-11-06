@@ -334,8 +334,8 @@ function serverApi(ctx) {
     list: async () => json(await ctx.adminGet("ideas")),
     create: async (text, notes) => (await json(await ctx.adminSend("ideas", "POST", notes ? { text, notes } : { text }))).idea,
     rescore: async (id) => (await json(await ctx.adminSend(`ideas/${id}/score`, "POST", {}))).idea,
-    // One Claude call for all five drafts: give it longer than a single score.
-    generate: async (direction) => json(await ctx.adminSend("ideas/generate", "POST", direction ? { direction } : {}, 180000)),
+    // One Claude call for all eight drafts: give it as long as the server gives Claude (5 minutes).
+    generate: async (direction) => json(await ctx.adminSend("ideas/generate", "POST", direction ? { direction } : {}, 310000)),
     update: async (id, changes) => (await json(await ctx.adminSend(`ideas/${id}`, "PUT", changes))).idea,
     remove: async (id) => { await ctx.adminSend(`ideas/${id}`, "DELETE", {}); },
   };
@@ -602,7 +602,7 @@ function paintMade(v) {
 }
 
 const STAGES = [[0, "Sending the idea and today's market data…"], [4, "Claude is mapping it to Steam tags…"], [15, "Claude is weighing demand, competition and hit odds…"], [35, "Writing pivots, alternatives and timing…"], [70, "Taking longer than usual, still waiting…"]];
-const GEN_STAGES = [[0, "Picking the strongest tag pairs in today's data…"], [5, "Claude is drafting different ideas on them…"], [35, "Filling in the templates…"], [90, "Taking longer than usual, still waiting…"]];
+const GEN_STAGES = [[0, "Picking the strongest tag pairs in today's data…"], [5, "Claude is drafting different ideas on them…"], [35, "Filling in the templates…"], [150, "Still writing (8 ideas take a while)…"]];
 const stage = (s, stages = STAGES) => stages.filter(([at]) => s >= at).pop()[1];
 
 // A progress bar that eases toward 95% (the real call has no progress to report) and names a stage.

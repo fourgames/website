@@ -441,6 +441,7 @@ def test_generating_ideas(tmp_path, market):
         assert call["output_config"]["format"]["schema"] is ideas.GEN_SCHEMA
         assert "1|Extraction Shooter|" in call["system"][0]["text"]
         assert ideas.SYSTEM in call["system"][0]["text"], "the scorer's own rubric, word for word"
+        assert call["max_tokens"] == ideas.GEN_MAX_TOKENS > ideas.MAX_TOKENS, "eight ideas need room"
         prompt = call["messages"][0]["content"]
         assert "Extraction Shooter + Roguelite (ids 1, 2)" in prompt and "8 hits of 20 games" in prompt
         assert "cozy, solo" in prompt and "Dwarf Extraction (Claude 72, 5 of 5 stars)" in prompt

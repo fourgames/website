@@ -226,7 +226,7 @@ function draw() {
       h("td.cr-num", subs(c.s)),
       h("td", { title: LANGS[c.l] || "" }, (c.l || "–").toUpperCase(), c.c ? h("span.cr-muted", ` ${c.c}`) : null),
       h("td", h("span.cr-act", { class: `is-${act}`, title: c.lu ? "Newest upload of any kind" : c.lv ? "Newest video of a game we searched (the newest upload isn't read yet)" : "" }, ago(lastActive(c)))),
-      h("td", { title: games.join(", ") }, h("b", c.g.length), " ", h("span.cr-muted", games.slice(0, 2).join(", ") + (games.length > 2 ? "…" : ""))),
+      h("td.cr-gamescol", { title: games.join(", ") }, h("b", c.g.length), " ", h("span.cr-muted", games.slice(0, 2).join(", "))),
       h("td", h("span.cr-type", { title: TYPE_HELP[c.cat] }, TYPES[c.cat] || c.cat)),
       h("td.cr-genres", c.p.slice(0, 3).map(([t]) => d.tags[t]).filter(Boolean).join(", ")),
       h("td", email));
@@ -284,6 +284,7 @@ const CSS = `
 .crv .cr-chan a:hover { text-decoration: underline; }
 .crv .cr-chan { min-width: 12em; max-width: 20em; }
 .crv .cr-muted { color: var(--fb-muted); font-size: 0.8rem; }
+.crv .cr-gamescol { max-width: 16em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .crv .cr-genres { color: var(--fb-ink-2); min-width: 10em; }
 .crv .cr-badge { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; color: var(--fb-good-text); border: 1px solid var(--fb-positive); vertical-align: 1px; }
 .crv .cr-type { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.75rem; font-weight: 600; white-space: nowrap; background: var(--fb-card-2); border: 1px solid var(--fb-line); color: var(--fb-ink-2); }

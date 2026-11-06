@@ -921,8 +921,8 @@ function scoreBars(rows) {
   const h = C.h, svgEl = C.svgEl;
   const top = [...rows].sort((a, b) => b.score - a.score).slice(0, 25);
   if (!top.length) return h("p.mm-note", "No niche to show.");
-  const W = 760, H = 300, M = { top: 8, right: 6, bottom: 104, left: 30 };
-  const base = H - M.bottom, ymax = 100;
+  const W = 760, H = 300, M = { top: 8, right: 52, bottom: 104, left: 30 };
+  const base = H - M.bottom, ymax = 100, mid = median(rows.map((r) => r.score));
   const bw = (W - M.left - M.right) / top.length;
   const y = (v) => base - (v / ymax) * (base - M.top);
   const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "mm-svg mm-bars-svg", role: "img", "aria-label": "The 25 best niches by opportunity score" });
@@ -959,13 +959,19 @@ function scoreBars(rows) {
     g.__row = r;
     svg.append(g);
   });
+  // The median score of every listed tag, drawn over the bars, named in the right margin.
+  if (mid != null) {
+    svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: y(mid), y2: y(mid), class: "mm-ref mm-ref-bars" }));
+    text({ x: W - M.right + 6, y: y(mid) - 2, class: "mm-axis" }, "Median");
+    text({ x: W - M.right + 6, y: y(mid) + 11, class: "mm-axis" }, String(Math.round(mid)));
+  }
   const box = h("div.mm-chart",
     h("div.mm-legend", h("span", h("i.mm-key", { style: "background:var(--sw-1)" }), h("b", "Opportunity"), ": hit chance, reviews per game and few rivals"),
       h("span", h("b", "Growth"), " on top, colored by where the niche is heading:")),
     h("div.mm-legend", ...dirLegend("Growth"),
       h("span", h("i.mm-key.mm-key-selbox"), "The tag you picked (click a bar, dot or row to pick one)")),
     h("div.mm-hscroll", svg),
-    h("p.mm-small.mm-tight", h("b", "Opportunity score. "), SCORE_TEXT, " Hover a bar for the full breakdown. Click a bar to pick that tag."));
+    h("p.mm-small.mm-tight", h("b", "Opportunity score. "), SCORE_TEXT, ` The dashed line is the median score of all ${rows.length} listed tags. Hover a bar for the full breakdown. Click a bar to pick that tag.`));
   wireChart(svg, box, ".mm-barg");
   return box;
 }
@@ -1518,6 +1524,7 @@ const CSS = `
 .mkv-merged .mm-base { stroke: var(--fb-muted); stroke-width: 1; }
 .mkv-merged .mm-cross { stroke: var(--fb-muted); stroke-width: 1; stroke-dasharray: 3 3; }
 .mkv-merged .mm-ref { stroke: var(--fb-muted); stroke-width: 1; stroke-dasharray: 4 3; }
+.mkv-merged .mm-ref-bars { stroke: var(--fb-ink); stroke-opacity: .7; stroke-width: 1.2; pointer-events: none; }
 .mkv-merged .mm-gapzone { fill: var(--sw-3); opacity: .11; }
 .mkv-merged .mm-axis { fill: var(--fb-muted); font-size: 12px; }
 .mkv-merged .mm-axis-title { fill: var(--fb-ink-2); font-weight: 600; }

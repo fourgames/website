@@ -9,8 +9,9 @@ checks the owner's sign-in and the request. Sending is creators/send.py's (creat
 - POST /v1/admin/outreach/<id>/status        {status: approved | paused | deleted (drafts only)}
 - POST /v1/admin/outreach/messages/<id>/skip  leave one message out
 - POST /v1/admin/outreach/suppress           {email}: never email this address
-- POST /v1/admin/outreach/translate          {subject, body, languages}: Claude translates the email into
-                                             each language in the same short, plain style (the owner checks them)
+- POST /v1/admin/outreach/translate          {subject, body, languages, appid?}: Claude localizes the email
+                                             for each language (the game's local Steam name, "it's in your
+                                             language too" when it is, local tone), short and plain; the owner checks them
 """
 
 from __future__ import annotations
@@ -39,23 +40,70 @@ LANG_NAMES = {"de": "German", "fr": "French", "es": "Spanish", "pt": "Portuguese
               "zh": "Simplified Chinese", "nl": "Dutch", "sv": "Swedish", "da": "Danish", "no": "Norwegian",
               "fi": "Finnish", "cs": "Czech", "hu": "Hungarian", "ro": "Romanian", "id": "Indonesian",
               "vi": "Vietnamese", "th": "Thai", "ar": "Arabic", "hi": "Hindi", "el": "Greek", "he": "Hebrew"}
-TRANSLATE_SYSTEM = """You translate short outreach emails from a solo indie game developer to YouTubers,
-streamers and games press. For each requested language, write the email the way a native speaker would
-write a short, friendly personal email to a stranger: simple everyday words, short sentences, the same
-meaning and the same length or shorter as the English. Not more formal, not salesy, no exclamation marks
-the English doesn't have, nothing added or left out. Use the informal "you" where that is normal for
-talking to content creators in that language (du, tu, tú...), formal only where informal would be rude
-(e.g. Japanese: polite です/ます).
+TRANSLATE_SYSTEM = """You localize short outreach emails from a solo indie game developer to YouTubers,
+streamers and games press. Localize, don't translate word for word: for each requested language, write
+the email the way a native speaker would naturally write a short, friendly personal email to a creator in
+that country, using that culture's normal greeting, tone and sign-off. Simple everyday words, short
+sentences, the same meaning, the same length or shorter. Not more formal, not salesy, no exclamation
+marks the English doesn't have, nothing invented. Use the informal "you" where that is normal for talking
+to content creators (du, tu, tú...), formal only where informal would be rude (e.g. Japanese: polite
+です/ます, address as {name}さん).
+
+For each language you get facts about the game there:
+- its name on Steam in that language: put it in the "game" field (the email keeps the {game}
+  placeholder, which will be filled with that name);
+- whether the game itself is available in that language: if it is, add one very short, natural
+  sentence saying so (like "It's in German too."); if not, don't mention languages.
 
 Keep exactly as they are, character for character: every {placeholder} in curly braces ({name}, {game},
-{steam}, {press}, {their_game}), every URL, the game's name, "Danny", "/request" and "fourgames.se".
-Keep the line breaks and blank lines where the English has them. Also translate the separate opt-out line."""
+{steam}, {press}, {their_game}), every URL, "Danny", "/request" and "fourgames.se". Keep the line breaks
+and blank lines where the English has them. Also localize the separate opt-out line."""
 TRANSLATE_SCHEMA = {
     "type": "object", "additionalProperties": False, "required": ["translations"],
     "properties": {"translations": {"type": "array", "items": {
-        "type": "object", "additionalProperties": False, "required": ["language", "subject", "body", "opt_out"],
+        "type": "object", "additionalProperties": False, "required": ["language", "subject", "body", "opt_out", "game"],
         "properties": {"language": {"type": "string"}, "subject": {"type": "string"}, "body": {"type": "string"},
-                       "opt_out": {"type": "string"}}}}}}
+                       "opt_out": {"type": "string"}, "game": {"type": "string"}}}}}}
+# Steam's store language codes (?l=) and the names it lists in supported_languages (in English).
+STEAM_LANG = {"de": ("german", ["German"]), "fr": ("french", ["French"]), "es": ("spanish", ["Spanish - Spain", "Spanish - Latin America"]),
+              "pt": ("brazilian", ["Portuguese - Brazil", "Portuguese - Portugal"]), "it": ("italian", ["Italian"]),
+              "pl": ("polish", ["Polish"]), "ru": ("russian", ["Russian"]), "uk": ("ukrainian", ["Ukrainian"]),
+              "tr": ("turkish", ["Turkish"]), "ja": ("japanese", ["Japanese"]), "ko": ("koreana", ["Korean"]),
+              "zh": ("schinese", ["Simplified Chinese"]), "nl": ("dutch", ["Dutch"]), "sv": ("swedish", ["Swedish"]),
+              "da": ("danish", ["Danish"]), "no": ("norwegian", ["Norwegian"]), "fi": ("finnish", ["Finnish"]),
+              "cs": ("czech", ["Czech"]), "hu": ("hungarian", ["Hungarian"]), "ro": ("romanian", ["Romanian"]),
+              "id": ("indonesian", ["Indonesian"]), "vi": ("vietnamese", ["Vietnamese"]), "th": ("thai", ["Thai"]),
+              "ar": ("arabic", ["Arabic"]), "el": ("greek", ["Greek"])}
+
+
+def steam_facts(appid: int | None, langs: list[str]) -> dict[str, dict]:
+    """Per language: the game's Steam name in it and whether the game supports it (blocking; best effort)."""
+    import re
+    import urllib.request
+    if not appid:
+        return {}
+
+    def get(l: str) -> dict:
+        url = f"https://store.steampowered.com/api/appdetails?appids={appid}&l={l}&filters=basic"
+        req = urllib.request.Request(url, headers={"User-Agent": "FourGamesOutreach/1.0 (+https://fourgames.se)"})
+        with urllib.request.urlopen(req, timeout=10) as res:
+            return (json.loads(res.read()).get(str(appid)) or {}).get("data") or {}
+    facts = {}
+    try:
+        english = get("english")
+    except Exception:  # noqa: BLE001 - localizing still works without Steam's facts
+        return {}
+    supported = re.sub(r"<[^>]+>", "", english.get("supported_languages") or "")
+    for code in langs:
+        steam_l, names = STEAM_LANG.get(code, (None, []))
+        if not steam_l:
+            continue
+        try:
+            name = get(steam_l).get("name") or english.get("name")
+        except Exception:  # noqa: BLE001
+            name = english.get("name")
+        facts[code] = {"game": name, "steam_l": steam_l, "supported": any(n in supported for n in names)}
+    return facts
 
 
 CLIENT = None  # the Anthropic client, made on first use (a test sets a fake)
@@ -176,8 +224,9 @@ async def translate(request: web.Request) -> web.Response:
     from .admin import require_admin
     require_admin(request)
     body = await read_json(request, 64 * 1024, 64 * 1024, require_json_type=True)
-    if not isinstance(body, dict) or not set(body) <= {"subject", "body", "languages"}:
-        raise Refused(400, "bad_request", "send {subject, body, languages}")
+    if not isinstance(body, dict) or not set(body) <= {"subject", "body", "languages", "appid"}:
+        raise Refused(400, "bad_request", "send {subject, body, languages, appid?}")
+    appid = body.get("appid") if type(body.get("appid")) is int else None
     subject, text = str(body.get("subject") or "").strip(), str(body.get("body") or "").strip()
     langs = [outreach.short_lang(str(x)) for x in body.get("languages") or [] if isinstance(x, str)]
     langs = [x for x in dict.fromkeys(langs) if x in LANG_NAMES][:20]
@@ -190,8 +239,15 @@ async def translate(request: web.Request) -> web.Response:
         raise Refused(503, "claude_not_configured", "the server has no ANTHROPIC_API_KEY in its environment")
     CLIENT = CLIENT or make_client()
     client = CLIENT
-    ask = (f"Languages: {', '.join(f'{c} ({LANG_NAMES[c]})' for c in langs)}\n\n"
-           f"Subject:\n{subject}\n\nBody:\n{text}\n\nOpt-out line:\n{outreach.OPT_OUT_LINE}")
+    facts = await asyncio.to_thread(steam_facts, appid, langs)
+    lines = []
+    for c in langs:
+        f = facts.get(c)
+        about = (f"; the game's Steam name in it: {f['game']!r}; the game itself "
+                 f"{'IS' if f['supported'] else 'is NOT'} available in {LANG_NAMES[c]}") if f else ""
+        lines.append(f"- {c} ({LANG_NAMES[c]}){about}")
+    ask = ("Languages:\n" + "\n".join(lines) +
+           f"\n\nSubject:\n{subject}\n\nBody:\n{text}\n\nOpt-out line:\n{outreach.OPT_OUT_LINE}")
     import anthropic
     try:
         message = await client.messages.create(
@@ -213,6 +269,8 @@ async def translate(request: web.Request) -> web.Response:
         code = outreach.short_lang(str(item.get("language") or ""))
         if code not in langs:
             continue
+        if facts.get(code):
+            item = {**item, "steam_l": facts[code]["steam_l"], "game": item.get("game") or facts[code]["game"]}
         try:
             good.update(outreach.check_translations({code: item}, subject, text))
         except outreach.OutreachError:

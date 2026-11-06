@@ -265,10 +265,11 @@ def test_each_person_gets_their_language(store):
     store.db.execute("UPDATE youtube_channels SET language = 'ja-JP' WHERE channel_id = 'UCc'")
     store.db.commit()
     de = {"subject": "{game} für {name}?", "body": "Hallo {name},\nich habe dein {their_game}-Video gesehen. {game}: {steam} {press}\nDanny",
-          "opt_out": "Wenn du solche E-Mails nicht willst, sag es einfach."}
+          "opt_out": "Wenn du solche E-Mails nicht willst, sag es einfach.", "game": "Pomo-Tal", "steam_l": "german"}
     out = make(store, {**SPEC, "body": SPEC["body"].replace("{steam}", "{steam} {press}"), "translations": {"de": de}})
     msgs = {m["target_id"]: m for m in outreach.messages(store, out["id"])}
-    assert msgs["UCa"]["language"] == "de" and msgs["UCa"]["subject"] == "Pomo Valley für Alpha Plays?"
+    assert msgs["UCa"]["language"] == "de" and msgs["UCa"]["subject"] == "Pomo-Tal für Alpha Plays?"
+    assert "https://store.steampowered.com/app/1/?l=german" in msgs["UCa"]["body"]
     assert msgs["UCa"]["body"].startswith("Hallo Alpha Plays") and "Wenn du solche E-Mails" in msgs["UCa"]["body"]
     assert outreach.OPT_OUT_LINE not in msgs["UCa"]["body"]
     assert msgs["UCc"]["language"] == "en" and outreach.OPT_OUT_LINE in msgs["UCc"]["body"]  # no Japanese: English

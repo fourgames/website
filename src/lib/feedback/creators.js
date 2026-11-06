@@ -531,27 +531,29 @@ function translateView(f, people, leftover) {
   if (!langs.length) return h("p.cr-muted", "Everyone here gets the English email (no other languages among them).");
   const english = people.length - langs.reduce((a, [, n]) => a + n, 0);
   const go = async (e) => {
-    if (leftover) { ot.msg = "Fill in the [bracketed] parts first, then translate."; draw(); return; }
-    e.currentTarget.disabled = true; e.currentTarget.textContent = "Translating…";
+    if (leftover) { ot.msg = "Fill in the [bracketed] parts first, then localize."; draw(); return; }
+    e.currentTarget.disabled = true; e.currentTarget.textContent = "Localizing…";
     try {
-      const out = await (await C.adminSend("outreach/translate", "POST", { subject: f.subject, body: f.body, languages: langs.map(([l]) => l) }, 200000)).json();
+      const out = await (await C.adminSend("outreach/translate", "POST", { subject: f.subject, body: f.body, languages: langs.map(([l]) => l), appid: f.appid }, 200000)).json();
       f.translations = out.translations;
       ot.msg = out.skipped?.length ? `Left in English (the translation changed a link or placeholder): ${out.skipped.map((l) => LANG_LABEL[l] || l).join(", ")}.` : null;
-    } catch (err) { if (!err.signedOut) ot.msg = `Translating failed: ${err.message}`; }
+    } catch (err) { if (!err.signedOut) ot.msg = `Localizing failed: ${err.message}`; }
     draw();
   };
   const t = f.translations;
   return h("div.cr-translate",
     h("div.cr-row", h("span.cr-label", "Languages"),
       h("span.cr-muted", `${langs.map(([l, n]) => `${LANG_LABEL[l]} ${n}`).join(" · ")}${english ? ` · English ${english}` : ""}`),
-      h("button.btn", { type: "button", onclick: go }, t ? "Translate again" : `Translate into ${C.plural(langs.length, "language")}`)),
+      h("button.btn", { type: "button", onclick: go }, t ? "Localize again" : `Localize for ${C.plural(langs.length, "language")}`)),
     t ? h("div", ...Object.entries(t).map(([l, tr]) => {
       const sub = h("input.cr-input", { value: tr.subject }); sub.addEventListener("input", () => { tr.subject = sub.value; });
       const bod = h("textarea.cr-area", { rows: 9 }, tr.body); bod.addEventListener("input", () => { tr.body = bod.value; });
       const opt = h("input.cr-input", { value: tr.opt_out }); opt.addEventListener("input", () => { tr.opt_out = opt.value; });
-      return h("details.cr-lang", h("summary", `${LANG_LABEL[l] || l} (${counts[l] || 0})`),
+      const game = h("input.cr-input", { value: tr.game || "" }); game.addEventListener("input", () => { tr.game = game.value; });
+      return h("details.cr-lang", h("summary", `${LANG_LABEL[l] || l} (${counts[l] || 0})${tr.game ? ` · ${tr.game}` : ""}`),
+        h("label.cr-field", h("span", "Game name in this language (fills {game}; from your Steam page)"), game),
         h("label.cr-field", h("span", "Subject"), sub), h("label.cr-field", h("span", "Message"), bod), h("label.cr-field", h("span", "Opt-out line"), opt));
-    }), h("p.cr-muted", "Open a language to read or fix it. Changing the English clears these; translate again after.")) : h("p.cr-muted", "Optional: without translating, everyone gets the English."));
+    }), h("p.cr-muted", "Each uses your game\'s Steam name in that language, a Steam link that opens in it, and says the game is in their language when it is. Open one to read or fix it. Changing the English clears these; localize again after.")) : h("p.cr-muted", "Optional: without localizing, everyone gets the English."));
 }
 
 function campaignView(d) {

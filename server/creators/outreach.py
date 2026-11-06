@@ -236,7 +236,9 @@ def short_lang(code: str | None) -> str | None:
 
 
 def check_translations(spec_translations, subject: str, body: str) -> dict[str, dict[str, str]]:
-    """{lang: {subject, body, opt_out}}, checked: the same placeholders and links as the English."""
+    """{lang: {subject, body, opt_out, game?, steam_l?}}, checked: the same placeholders and links as the
+    English. game: the game's own name in that language (fills {game}); steam_l: Steam's language code,
+    added to {steam} so the store opens in it."""
     if not spec_translations:
         return {}
     if not isinstance(spec_translations, dict) or len(spec_translations) > 40:
@@ -248,12 +250,16 @@ def check_translations(spec_translations, subject: str, body: str) -> dict[str, 
         if not code or not isinstance(t, dict):
             raise OutreachError(f"bad translation for {lang!r}")
         sub, bod, opt = (str(t.get(k) or "").strip() for k in ("subject", "body", "opt_out"))
+        game_local = str(t.get("game") or "").strip()[:150]
+        steam_l = str(t.get("steam_l") or "").strip()
+        if steam_l and not re.fullmatch(r"[a-z]{2,12}", steam_l):
+            steam_l = ""
         if not sub or not bod or len(sub) > MAX_SUBJECT * 2 or len(bod) > MAX_BODY:
             raise OutreachError(f"the {lang} translation needs a subject and a body")
         have = sorted(set(FIELD.findall(sub + bod)) | set(_URL.findall(bod)))
         if have != want:
             raise OutreachError(f"the {lang} translation must keep the same placeholders and links as the English")
-        out[code] = {"subject": sub, "body": bod, "opt_out": opt or OPT_OUT_LINE}
+        out[code] = {"subject": sub, "body": bod, "opt_out": opt or OPT_OUT_LINE, "game": game_local, "steam_l": steam_l}
     return out
 
 
@@ -355,6 +361,9 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
             t = translations.get(who.get("lang") or "")
             lang = who.get("lang") if t else "en"
             sub, bod, opt = (t["subject"], t["body"], t["opt_out"]) if t else (subject, body, OPT_OUT_LINE)
+            if t:  # localized: the game's own name in that language, and Steam opening in it
+                fields = {**fields, "game": t.get("game") or game,
+                          "steam": f"{steam}?l={t['steam_l']}" if steam and t.get("steam_l") else steam}
             store.db.execute(
                 """INSERT INTO outreach_messages (campaign_id, target_kind, target_id, name, email, subject, body,
                                                   status, queued_at, language)

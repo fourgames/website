@@ -824,18 +824,21 @@ def test_outreach_translate(tmp_path, monkeypatch):
         async def create(self, **kw):
             self.asked = kw
             answer = {"translations": [
-                {"language": "de", "subject": "{game} für dich?", "body": "Hallo {name}, {steam}", "opt_out": "Sag einfach nein."},
-                {"language": "fr", "subject": "{game} ?", "body": "Salut", "opt_out": "x"}]}  # lost {name} and {steam}
+                {"language": "de", "subject": "{game} für dich?", "body": "Hallo {name}, {steam}", "opt_out": "Sag einfach nein.", "game": "Spiel"},
+                {"language": "fr", "subject": "{game} ?", "body": "Salut", "opt_out": "x", "game": "Jeu"}]}  # lost {name} and {steam}
             return types.SimpleNamespace(content=[types.SimpleNamespace(type="text", text=__import__("json").dumps(answer))],
                                          model="claude-sonnet-5-5")
     fake = Fake()
     monkeypatch.setattr(routes, "CLIENT", fake)
+    monkeypatch.setattr(routes, "steam_facts", lambda appid, langs: {"de": {"game": "Spiel", "steam_l": "german", "supported": True}})
 
     async def steps(w):
         cookie = await w.sign_in(back="/fb-dash")
         r = await w.client.post("/gamedata/v1/admin/outreach/translate", headers=w.page(cookie),
-                                json={"subject": "{game} for you?", "body": "Hi {name}, {steam}", "languages": ["de", "fr", "xx"]})
+                                json={"subject": "{game} for you?", "body": "Hi {name}, {steam}", "languages": ["de", "fr", "xx"], "appid": 1})
         out = await r.json()
         assert r.status == 200 and set(out["translations"]) == {"de"} and out["skipped"] == ["fr"]
-        assert "German" in fake.asked["messages"][0]["content"] and "xx" not in fake.asked["messages"][0]["content"]
+        assert out["translations"]["de"]["steam_l"] == "german" and out["translations"]["de"]["game"] == "Spiel"
+        asked = fake.asked["messages"][0]["content"]
+        assert "German" in asked and "IS available in German" in asked and "xx" not in asked
     run(tmp_path, steps, **ADMIN)

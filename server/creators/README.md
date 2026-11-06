@@ -107,9 +107,11 @@ To make a GIF from a Steam trailer, on the server: get the trailer with
 
 **Audiences and languages:** a campaign goes to YouTubers (best fit for the game), streamers (the
 same, only creators with a Twitch channel) or press (the Press tab's filters), each with its own short
-template. On the dashboard, Translate asks Claude (`POST /admin/outreach/translate`, Sonnet) to write the
-English email in each recipient language in the same short, plain style, keeping every placeholder and
-link (a translation that changes one is refused). The owner reads and can edit each; each person gets
+template. On the dashboard, Localize asks Claude (`POST /admin/outreach/translate`, Sonnet) to write the
+English email for each recipient language the way a native would, short and plain, keeping every
+placeholder and link (one that changes them is refused). It uses the game's Steam name in that
+language (fills {game}), a Steam link with `?l=<language>`, and says the game is in their language
+when Steam lists it. The owner reads and can edit each; each person gets
 their channel's or outlet's language, English otherwise. Replies saying no are recognized in those
 languages too.
 

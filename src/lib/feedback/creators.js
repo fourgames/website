@@ -137,10 +137,14 @@ function draw() {
     return;
   }
   const d = st.data;
-  const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`]],
+  const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`], ["outreach", "Outreach"]],
     st.view, (v) => { st.view = v; draw(); }, "Show"));
   if (st.view === "press") {
     root.replaceChildren(switcher, pressView(d));
+    return;
+  }
+  if (st.view === "outreach") {
+    root.replaceChildren(switcher, outreachView(d));
     return;
   }
   const today = now();
@@ -341,6 +345,168 @@ function pressView(d) {
   return wrap;
 }
 
+// Outreach: drafts, approvals and status of the emails (server/creators/outreach.py and send.py,
+// through the game-data server's /admin/outreach routes). Nothing is sent before a batch is approved.
+const TEMPLATES = {
+  creators: {
+    subject: "{game} - might fit your channel?",
+    body: "Hi {name},\n\nI'm Danny, the developer of {game}. I enjoyed your video on {their_game}, so I thought {game} might be a good fit for your channel.\n\n[One or two lines about the game.]\n\nSteam: {steam}\nTrailer: [trailer link]\n\nIf you'd like a key, you can get one right away in our Discord: [Discord link] (it checks your channel, no waiting). You're welcome to use the trailer on your channel too.\n\nThanks for reading,\nDanny\nFour Games",
+  },
+  press: {
+    subject: "{game}: [the news, in a few words]",
+    body: "Hi {name} team,\n\n[The news in one sentence, with the date.]\n\n[Two or three lines about {game}.]\n\nSteam: {steam}\nTrailer: [trailer link]\nPress kit: [press kit link]\n\nHappy to send a key for coverage.\n\nBest,\nDanny\nFour Games",
+  },
+};
+const MSG_STATUS = { queued: "Waiting", sent: "Sent", replied: "Replied", opted_out: "Said no", bounced: "Bounced", failed: "Failed", skipped: "Skipped" };
+const CAMPAIGN_STATUS = { draft: "Draft: not approved", approved: "Sending", paused: "Paused", done: "Done" };
+const ot = { data: null, error: null, loading: false, open: null, openData: null, form: null, busy: false, msg: null, shownMsg: null };
+const slug = (s) => (s || "").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "");
+
+async function loadOutreach() {
+  if (ot.loading) return;
+  ot.loading = true;
+  try {
+    ot.data = await (await C.adminGet("outreach")).json();
+    ot.error = null;
+    if (ot.open) ot.openData = await (await C.adminGet(`outreach/${ot.open}`)).json();
+  } catch (e) {
+    if (!e.signedOut) ot.error = `Couldn't load outreach: ${e.message}`;
+  } finally {
+    ot.loading = false;
+  }
+  draw();
+}
+async function outreachSend(path, body, ok) {
+  ot.busy = true; ot.msg = null; draw();
+  try {
+    const res = await C.adminSend(path, "POST", body, 60000);
+    const out = await res.json();
+    ok?.(out);
+  } catch (e) {
+    if (!e.signedOut) ot.msg = e.message;
+  } finally {
+    ot.busy = false;
+    await loadOutreach();
+  }
+}
+
+function outreachView(d) {
+  const { h } = C;
+  const wrap = h("div");
+  if (C.dataOverride) { wrap.append(h("p.empty", "Outreach needs the server (not available with ?data=).")); return wrap; }
+  if (!ot.data && !ot.loading && !ot.error) loadOutreach();
+  if (!ot.data) { wrap.append(h("p.empty", ot.error || "Loading outreach…")); return wrap; }
+  const o = ot.data;
+  const contacted = new Set(o.contacted || []);
+  const err = o.state?.last_error;
+  const lastRun = o.state?.last_run ? Number(o.state.last_run) : null;
+  const card = (label, value, sub) => h("div.cr-card", h("div.cr-card-v", value), h("div.cr-card-l", label), sub ? h("div.cr-card-s", sub) : null);
+  const sum = (k) => o.campaigns.reduce((a, c) => a + (c.counts[k] || 0), 0);
+  wrap.append(
+    err ? h("p.cr-alert", err) : null,
+    !lastRun ? h("p.cr-note", "The sender hasn't run yet: it needs the mailbox login in /etc/fourgames/outreach.env and creators-send.timer on the server (server/creators/README.md, Outreach). Drafts can be made already.") : null,
+    h("div.cr-cards",
+      card("Sent", num(sum("sent") + sum("replied") + sum("opted_out") + sum("bounced")), `${num(o.sent_24h)} in the last 24 hours`),
+      card("Waiting", num(sum("queued")), "approved or draft, not sent yet"),
+      card("Replied", num(sum("replied")), `${num(sum("opted_out"))} said no`),
+      card("Never email again", num(o.suppressed), "opted out or bounced")),
+    ot.msg ? h("p.cr-alert", ot.msg) : null);
+  if (ot.open && ot.openData) { wrap.append(campaignView(d)); return wrap; }
+  wrap.append(h("div.cr-listhead", h("b", "Campaigns"), h("button.btn.primary", { type: "button", onclick: () => { ot.form = ot.form ? null : newForm(d); draw(); } }, ot.form ? "Close" : "New campaign")));
+  if (ot.form) wrap.append(formView(d, contacted));
+  wrap.append(o.campaigns.length ? h("div.cr-scroll", h("table.cr-table", h("thead", h("tr", h("th", "Campaign"), h("th", "Status"), h("th.cr-num", "Waiting"), h("th.cr-num", "Sent"), h("th.cr-num", "Replied"), h("th.cr-num", "No / bounced"), h("th", ""))),
+    h("tbody", ...o.campaigns.map(({ campaign: c, counts: n }) => h("tr.cr-main", { onclick: () => { ot.open = c.id; ot.openData = null; loadOutreach(); } },
+      h("td.cr-chan", h("b", c.game), h("div.cr-muted", `${c.audience === "press" ? "Press" : "Creators"} · from ${c.from_name} · ${C.fmtDate(c.created_at)}`)),
+      h("td", h("span.cr-type", CAMPAIGN_STATUS[c.status] || c.status)),
+      h("td.cr-num", num(n.queued || 0)), h("td.cr-num", num((n.sent || 0) + (n.replied || 0) + (n.opted_out || 0) + (n.bounced || 0))),
+      h("td.cr-num", num(n.replied || 0)), h("td.cr-num", `${num(n.opted_out || 0)} / ${num(n.bounced || 0)}`),
+      h("td", h("span.cr-muted", "Open ›")))))))
+    : h("p.empty", "No campaigns yet."));
+  wrap.append(h("details.about", h("summary", "How this works"),
+    h("p", "Make a draft: a game, who to email (the best creators for it, or the press list with the Press tab's filters), and a short message. Each person gets their own copy with their name filled in. People who said no, bounced or were emailed in the last 90 days are left out, and every email ends with how to say no."),
+    h("p", "Read the previews, then Approve. The server sends slowly on weekdays during the day, at most DAILY_MAX a day in all, through your Strato mailbox, and reads the inbox: replies show here, and anyone who answers \"no\" is never emailed again."),
+    h("p", "To send from the game's address (e.g. pomovalley@fourgames.se), add it in Strato as an alias of your mailbox first, so replies land in your inbox.")));
+  return wrap;
+}
+
+function newForm(d) {
+  const own = Object.entries(d.games).filter(([, g]) => g.own).map(([id, g]) => [Number(id), g.n]);
+  const [appid, game] = own[0] || [null, ""];
+  return { appid, game, audience: "creators", n: 30, activeOnly: true, from_name: `Danny from ${game}`, from_email: `${slug(game)}@fourgames.se`, daily_limit: 20, ...TEMPLATES.creators };
+}
+
+function recipientsFor(d, f, contacted) {
+  if (f.audience === "press") {
+    return filterPress(d.press || [], st.pf).filter((p) => p.email && !contacted.has(p.email.toLowerCase()))
+      .map((p) => ({ id: pressKey(p.url), label: p.name, email: p.email }));
+  }
+  const weights = gameWeights(d.games[f.appid], d.metaSet);
+  const today = now();
+  return d.creators.filter((c) => c.e.length && !contacted.has(c.e[0][0]) && (!f.activeOnly || activity(c, today) !== "inactive"))
+    .map((c) => [fit(c, f.appid, weights, today).score, c]).sort((a, b) => b[0] - a[0]).slice(0, f.n)
+    .map(([, c]) => ({ id: c.id, label: c.t, email: c.e[0][0] }));
+}
+export function pressKey(url) {
+  const u = new URL(url);
+  return u.host.toLowerCase().replace(/^www\./, "") + u.pathname.replace(/\/+$/, "").toLowerCase();
+}
+
+function formView(d, contacted) {
+  const { h } = C;
+  const f = ot.form;
+  const own = Object.entries(d.games).filter(([, g]) => g.own).map(([id, g]) => [String(id), g.n]);
+  const set = (patch, redraw = true) => { Object.assign(f, patch); if (redraw) draw(); };
+  const input = (label, key, attrs = {}) => { const el = h("input.cr-input", { value: f[key], ...attrs }); el.addEventListener("input", () => set({ [key]: attrs.type === "number" ? Number(el.value) : el.value }, false)); if (key === "n") el.addEventListener("change", () => draw()); return h("label.cr-field", h("span", label), el); };
+  const area = (label, key, rows) => { const el = h("textarea.cr-area", { rows }, f[key]); el.addEventListener("input", () => set({ [key]: el.value }, false)); return h("label.cr-field", h("span", label), el); };
+  const people = recipientsFor(d, f, contacted);
+  const leftover = /\[[^\]]{3,}\]/.test(f.subject + f.body);
+  const create = () => {
+    if (leftover) { ot.msg = "Fill in the [bracketed] parts of the subject and message first."; draw(); return; }
+    outreachSend("outreach", { appid: f.appid, game: f.game, audience: f.audience, from_name: f.from_name, from_email: f.from_email,
+      subject: f.subject, body: f.body, daily_limit: f.daily_limit, recipients: people.map((p) => p.id) },
+      (out) => { ot.form = null; ot.open = out.id; });
+  };
+  return h("div.cr-filters.cr-form",
+    h("div.cr-row", h("span.cr-label", "Game"), C.chips(own, String(f.appid), (v) => { const g = d.games[v]?.n || ""; set({ appid: Number(v), game: g, from_name: `Danny from ${g}`, from_email: `${slug(g)}@fourgames.se` }); }, "Game")),
+    h("div.cr-row", h("span.cr-label", "Who"), C.chips([["creators", "Best creators for the game"], ["press", "Press list"]], f.audience, (v) => set({ audience: v, ...TEMPLATES[v] }), "Audience"),
+      f.audience === "creators" ? input("How many", "n", { type: "number", min: 1, max: 500, style: "max-width:6em" }) : null,
+      f.audience === "creators" ? h("label.cr-select", h("input", { type: "checkbox", checked: f.activeOnly, onchange: (e) => set({ activeOnly: e.currentTarget.checked }) }), h("span", "Skip inactive channels")) : null),
+    h("p.cr-muted", f.audience === "press"
+      ? `${C.plural(people.length, "outlet")} with an email from the Press tab's current filters (country, language, kind, reach), not emailed before. Change the filters there to change who's in.`
+      : `The ${C.plural(people.length, "creator")} who fit ${f.game} best, with an email, not emailed before. Change "How many" to pick more or fewer.`),
+    h("div.cr-row", input("From name", "from_name"), input("From address", "from_email", { type: "email" }), input("Per day", "daily_limit", { type: "number", min: 1, max: 200, style: "max-width:6em" })),
+    h("p.cr-muted", "The from address must be your Strato mailbox or one of its aliases (add a game address as an alias in Strato's mail settings first)."),
+    input("Subject", "subject"),
+    area("Message", "body", 14),
+    h("p.cr-muted", "{name} = the channel or outlet, {game}, {steam} = the store link, {their_game} = a game the creator made a video of. Replace the [bracketed] parts. An opt-out line is added at the end."),
+    h("div.cr-row", h("button.btn.primary", { type: "button", disabled: ot.busy || !people.length, onclick: create }, ot.busy ? "Saving…" : `Save draft for ${people.length === 1 ? "1 person" : `${num(people.length)} people`}`),
+      h("span.cr-muted", "Nothing is sent until you approve the draft.")),
+    people.length ? h("details", h("summary.cr-muted", `Who's in (${people.length})`), h("p.cr-muted", people.slice(0, 200).map((p) => p.label).join(", "))) : null);
+}
+
+function campaignView(d) {
+  const { h } = C;
+  const { campaign: c, counts: n, messages: msgs } = ot.openData;
+  const action = (label, status, primary) => h(primary ? "button.btn.primary" : "button.btn", { type: "button", disabled: ot.busy,
+    onclick: () => outreachSend(`outreach/${c.id}/status`, { status }, status === "deleted" ? () => { ot.open = null; ot.openData = null; } : null) }, label);
+  const preview = msgs.find((m) => m.id === ot.shownMsg) || msgs[0];
+  return h("div",
+    h("div.cr-listhead", h("button.btn", { type: "button", onclick: () => { ot.open = null; ot.openData = null; draw(); } }, "‹ All campaigns"),
+      h("span", c.status === "draft" ? action("Approve and start sending", "approved", true) : null, " ",
+        c.status === "paused" ? action("Resume", "approved", true) : null, c.status === "approved" ? action("Pause", "paused") : null, " ",
+        c.status === "draft" ? action("Delete draft", "deleted") : null)),
+    h("h3.cr-h", `${c.game} · ${c.audience === "press" ? "press" : "creators"} · ${CAMPAIGN_STATUS[c.status] || c.status}`),
+    h("p.cr-muted", `From ${c.from_name} <${c.from_email}> · up to ${c.daily_limit} a day · ${Object.entries(n).map(([k, v]) => `${MSG_STATUS[k] || k} ${v}`).join(" · ")}`),
+    preview ? h("div.cr-preview", h("div.cr-muted", `To ${preview.name || ""} <${preview.email}>`), h("div", h("b", preview.subject)), h("pre.cr-body", preview.body)) : null,
+    h("div.cr-scroll", h("table.cr-table", h("thead", h("tr", h("th", "To"), h("th", "Subject"), h("th", "Status"), h("th", "When"), h("th", ""))),
+      h("tbody", ...msgs.map((m) => h("tr.cr-main", { class: m.id === preview?.id ? "is-open" : null, onclick: () => { ot.shownMsg = m.id; draw(); } },
+        h("td.cr-chan", h("b", m.name || m.email), h("div.cr-muted", m.email)),
+        h("td.cr-genres", m.subject),
+        h("td", h("span.cr-type", { title: m.error || "" }, MSG_STATUS[m.status] || m.status)),
+        h("td.cr-muted", m.replied_at ? `replied ${C.fmtDate(m.replied_at)}` : m.sent_at ? C.fmtDateTime(m.sent_at) : "–"),
+        h("td", m.status === "queued" ? h("button.cr-copy", { type: "button", onclick: (e) => { e.stopPropagation(); outreachSend(`outreach/messages/${m.id}/skip`, undefined); } }, "Leave out") : null)))))));
+}
+
 const CSS = `
 .crv { min-width: 0; color: var(--fb-ink); }
 .crv .cr-switch { margin-bottom: 14px; }
@@ -390,6 +556,15 @@ const CSS = `
 .crv .cr-dh { font-weight: 650; font-size: 0.8rem; color: var(--fb-ink-2); margin-top: 4px; }
 .crv .cr-more { margin: 12px auto 0; display: block; }
 .crv details.about { margin-top: 18px; }
+.crv .cr-alert { background: var(--fb-card); border: 1px solid var(--fb-negative); border-left-width: 3px; border-radius: 8px; padding: 8px 12px; color: var(--fb-ink); }
+.crv .cr-note { background: var(--fb-card); border: 1px solid var(--fb-line); border-left: 3px solid var(--fb-warning); border-radius: 8px; padding: 8px 12px; color: var(--fb-ink-2); font-size: 0.88rem; }
+.crv .cr-form { padding-bottom: 12px; }
+.crv .cr-field { display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--fb-ink-2); margin: 0 0 10px; flex: 1 1 220px; }
+.crv .cr-field .cr-input { max-width: none; }
+.crv .cr-area { font: inherit; font-size: 0.9rem; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 8px; padding: 8px 10px; resize: vertical; }
+.crv .cr-h { margin: 12px 0 2px; color: var(--fb-title); font-size: 1.05rem; }
+.crv .cr-preview { background: var(--fb-card); border: 1px solid var(--fb-line); border-left: 3px solid var(--fb-accent); border-radius: 8px; padding: 10px 14px; margin: 10px 0 14px; }
+.crv .cr-body { white-space: pre-wrap; font: inherit; font-size: 0.88rem; margin: 8px 0 0; color: var(--fb-ink); }
 @media (max-width: 640px) {
   .crv .cr-input { max-width: none; flex-basis: 100%; }
 }

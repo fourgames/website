@@ -772,3 +772,39 @@ def test_creators_file(tmp_path, monkeypatch):
         response = await w.client.get("/gamedata/v1/admin/creators", headers=w.page())
         assert response.status == 401
     run(tmp_path, steps, **ADMIN)
+
+
+def test_outreach_routes(tmp_path, monkeypatch):
+    from creators import outreach as o
+    db = tmp_path / "creators.db"
+    store = o.open_store(str(db))
+    store.db.execute("INSERT INTO youtube_channels (channel_id, title, emails, first_seen) VALUES ('UCa', 'Alpha', '[\"a@a.com\"]', 0)")
+    store.db.commit()
+    store.close()
+    monkeypatch.setenv("CREATORS_DB", str(db))
+    monkeypatch.setenv("STEAM_DB", str(tmp_path / "missing.db"))
+    spec = {"appid": 1, "game": "Pomo Valley", "audience": "creators", "from_name": "Danny", "from_email": "d@fourgames.se",
+            "subject": "Hi {name}", "body": "About {game}", "daily_limit": 5, "recipients": ["UCa"]}
+
+    async def steps(w):
+        cookie = await w.sign_in(back="/fb-dash")
+        h = w.page(cookie)
+        r = await w.client.get("/gamedata/v1/admin/outreach", headers=h)
+        assert r.status == 200 and (await r.json())["campaigns"] == []
+        r = await w.client.post("/gamedata/v1/admin/outreach", headers=h, json=spec)
+        made = await r.json()
+        assert r.status == 201 and made["counts"] == {"queued": 1} and made["messages"][0]["subject"] == "Hi Alpha"
+        cid = made["id"]
+        r = await w.client.post(f"/gamedata/v1/admin/outreach/{cid}/status", headers=h, json={"status": "approved"})
+        assert r.status == 200 and (await r.json())["campaign"]["status"] == "approved"
+        r = await w.client.post(f"/gamedata/v1/admin/outreach/{cid}/status", headers=h, json={"status": "deleted"})
+        assert r.status == 400  # only drafts
+        r = await w.client.post("/gamedata/v1/admin/outreach", headers=h, json={**spec, "from_email": "bad"})
+        assert r.status == 400
+        r = await w.client.post("/gamedata/v1/admin/outreach/suppress", headers=h, json={"email": "x@y.com"})
+        assert r.status == 200
+        r = await w.client.get(f"/gamedata/v1/admin/outreach/{cid}", headers=h)
+        assert r.status == 200 and len((await r.json())["messages"]) == 1
+        r = await w.client.get("/gamedata/v1/admin/outreach", headers=w.page())
+        assert r.status == 401
+    run(tmp_path, steps, **ADMIN)

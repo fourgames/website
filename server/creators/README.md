@@ -79,6 +79,38 @@ page under **Press & trailers**. Each contact comes from the outlet's own contac
 (`python -m creators.press import < press.json`, format in `press.py`); importing again updates by
 address. `python -m creators.press stats` counts it.
 
+## Outreach (sending)
+
+Short one-to-one emails to the creators and press on the lists, in small daily drips:
+
+1. **Draft** on the dashboard (Creators page, **Outreach**): a game, recipients (the best creators
+   for it, or press filtered by country/language), a from name and address, a subject and a short
+   body with `{name}`, `{game}`, `{steam}`, `{their_game}`. Each recipient gets their own filled-in
+   message (`outreach.py`); addresses that opted out, bounced or were emailed in the last 90 days are
+   left out, and an opt-out line is added if the body has none.
+2. **Approve** after reading the previews. Nothing is sent before that.
+3. **Sending** (`send.py`, `creators-send.timer` every 15 minutes): weekdays in `SEND_HOURS`, at most
+   `DAILY_MAX` a day across campaigns (and each campaign's own limit), spread over the day, through
+   the Strato mailbox with SMTP. Each email has a `List-Unsubscribe` header.
+4. **Replies** (same run, IMAP, read only): a reply marks the message replied; "no", "not
+   interested", "unsubscribe"... mark it opted out and the address is never emailed again; bounces
+   too. The dashboard shows each campaign's counts and every message's status.
+
+The from address can be the game's (e.g. "Danny from Pomo Valley" <pomovalley@fourgames.se>): add it
+in Strato as an **alias** of the sending mailbox, so Strato lets the mailbox send as it and replies land
+in the same inbox. If Strato refuses the from address, sending stops and the log says so.
+
+Setup on the server:
+
+```bash
+sudo install -m 640 -o root -g fourgames /srv/fourgames/own/server/creators/outreach.env.example /etc/fourgames/outreach.env
+sudo nano /etc/fourgames/outreach.env      # MAIL_USER and MAIL_PASSWORD (yours to type in)
+sudo cp /srv/fourgames/own/server/creators-send.service /srv/fourgames/own/server/creators-send.timer /etc/systemd/system/
+sudo systemctl daemon-reload && sudo systemctl enable --now creators-send.timer
+```
+
+Logs: `journalctl -u creators-send`.
+
 ## The tables
 
 One SQLite file, `/srv/fourgames/creators/creators.db`:
@@ -91,6 +123,7 @@ One SQLite file, `/srv/fourgames/creators/creators.db`:
 | `channel_links` | The web pages each channel links to, from its description or About panel |
 | `sites` | Each followed link: when, status, emails found. View `site_emails`: per channel |
 | `press` | The press list: outlet, kind, country, language, email or contact page, reach, focus, notes, source |
+| `outreach_campaigns`, `outreach_messages`, `outreach_suppress` | Outreach: each campaign, each filled-in message and its status, and addresses never to email again |
 | `searches` | Each game searched: when, when it's due again, results and kept |
 | `quota` | Units spent per Pacific day |
 

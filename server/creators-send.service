@@ -1,0 +1,22 @@
+# Outreach sending (server/creators/send.py): sends approved creator and press emails slowly through
+# the Strato mailbox and reads its inbox for replies, opt-outs and bounces. Started every 15 minutes
+# by creators-send.timer. Nothing goes out unless a campaign was approved on the dashboard.
+# Setup: server/creators/README.md (Outreach). Logs: journalctl -u creators-send
+[Unit]
+Description=Four Games outreach sending (every 15 min)
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+User=fourgames
+WorkingDirectory=/srv/fourgames/own/server
+EnvironmentFile=/etc/fourgames/outreach.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/fourgames/steamdata-venv/bin/python -m creators.send
+Nice=10
+MemoryMax=200M
+TimeoutStartSec=14min
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full

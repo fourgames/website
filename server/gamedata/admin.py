@@ -21,6 +21,7 @@ request, GET included, must come from the site (Origin: SITE_ORIGIN); a PUT or P
   that server/steamdata/market.py builds daily into MARKET_DIR, gzipped as they are on disk.
 - GET /v1/admin/creators: the creator list (server/creators/export.py, hourly), gzipped.
 - /v1/admin/ideas*: the owner's game ideas, scored by Claude against the market files (ideas.py).
+- /v1/admin/outreach*: the creator and press emails: drafts, approvals, status (outreach.py).
 - /v1/admin/tagcheck: Claude says which of a game's tags (and suggested ones) really fit it (tagcheck.py).
 - POST /v1/admin/players: the game data of the players behind a game's Steam posts, for the chips
   on the dashboard's post cards. The steamids the dashboard sends are only turned into pids, never
@@ -43,7 +44,7 @@ from urllib.parse import urlencode
 import aiohttp
 from aiohttp import web
 
-from . import export, ideas, summary, tagcheck
+from . import export, ideas, outreach, summary, tagcheck
 from . import web as W
 from .limits import Refused, read_json
 from .signing import make_pid, short, valid_steamid
@@ -468,4 +469,5 @@ def add_routes(app: web.Application, prefix: str) -> None:
     add("GET", f"{v1}/creators", creators)
     ideas.add_routes(app, v1)
     tagcheck.add_routes(app, v1)
+    outreach.add_routes(app, v1)
     add("OPTIONS", f"{v1}/{{rest:.*}}", W.preflight)

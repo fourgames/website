@@ -1,0 +1,12 @@
+# Runs creators-send.service every 15 minutes (it only sends in SEND_HOURS on weekdays).
+# Install: sudo systemctl enable --now creators-send.timer   Check: systemctl list-timers creators-send
+[Unit]
+Description=Outreach sending every 15 minutes
+
+[Timer]
+OnCalendar=*:0/15
+RandomizedDelaySec=2min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

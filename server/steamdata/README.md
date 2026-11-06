@@ -189,7 +189,7 @@ Ideas for more, not built (none downloads game files):
 the snapshot) reads steam.db read-only and writes five gzipped JSON files to `MARKET_DIR`
 (`/srv/fourgames/steamdata/market`). The game-data API hands them to the signed-in owner
 (`GET /v1/admin/market/<name>`, server/gamedata/admin.py), and the dashboard's **Market** entry
-(src/lib/feedback/market.js) does the rest in the browser. Nothing here is public. About 10 seconds
+(src/lib/feedback/market-merged.js) does the rest in the browser. Nothing here is public. About 10 seconds
 and 250 MB, once a day.
 
 | File | What | Used by |

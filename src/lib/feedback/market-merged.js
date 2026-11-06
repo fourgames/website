@@ -912,30 +912,41 @@ const monthName = (ym) => { const [y, m] = String(ym).split("-"); return `${MONT
 
 // --- Score bars (top 25) ---
 
-// A bar in two parts: opportunity (hit chance, reviews per game and few rivals together) in blue, and
-// growth on top in the niche's direction, so "growing" no longer paints the whole bar. The exact
+// A bar in two parts, bottom to top: growth in the niche's direction, then opportunity (hit chance,
+// reviews per game and few rivals together) in blue, so "growing" no longer paints the whole bar. The exact
 // split is in the tooltip.
-const BAR_PARTS = [["opp", ["hit", "typical", "quiet"]], ["growth", ["growth"]]];
+const BAR_PARTS = [["growth", ["growth"]], ["opp", ["hit", "typical", "quiet"]]];
 
 function scoreBars(rows) {
   const h = C.h, svgEl = C.svgEl;
-  const top = [...rows].sort((a, b) => b.score - a.score).slice(0, 25);
-  if (!top.length) return h("p.mm-note", "No niche to show.");
-  const W = 760, H = 300, M = { top: 8, right: 52, bottom: 104, left: 30 };
+  // Every tag, best first. The first 25 fill the card as before; the rest scroll in from the right,
+  // down to the worst. So the scroll can't be mistaken for picks, every tag below the median is
+  // checkered (named in the legend).
+  const list = [...rows].sort((a, b) => b.score - a.score);
+  if (!list.length) return h("p.mm-note", "No niche to show.");
+  const VIS = 25, W0 = 760, H = 300, M = { top: 8, right: 52, bottom: 104, left: 30 };
+  const bw = (W0 - M.left - M.right) / VIS, W = M.left + list.length * bw + M.right;
   const base = H - M.bottom, ymax = 100, mid = median(rows.map((r) => r.score));
-  const bw = (W - M.left - M.right) / top.length;
+  const firstLow = mid == null ? -1 : list.findIndex((r) => r.score < mid);
   const y = (v) => base - (v / ymax) * (base - M.top);
-  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "mm-svg mm-bars-svg", role: "img", "aria-label": "The 25 best niches by opportunity score" });
+  const xAt = (i) => M.left + i * bw;
+  const scale = W / W0;
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "mm-svg mm-bars-svg", role: "img", style: `width:${scale * 100}%;min-width:${Math.round(620 * scale)}px`,
+    "aria-label": `Every niche by opportunity score, best first: the top ${Math.min(VIS, list.length)} first, the rest to the right` });
+  const pat = svgEl("pattern", { id: "mm-low-hatch", width: 8, height: 8, patternUnits: "userSpaceOnUse" });
+  pat.append(svgEl("rect", { x: 0, y: 0, width: 4, height: 4, class: "mm-low-sq" }), svgEl("rect", { x: 4, y: 4, width: 4, height: 4, class: "mm-low-sq" }));
+  const defs = svgEl("defs"); defs.append(pat); svg.append(defs);
   const text = (attrs, s, parent = svg) => { const el = svgEl("text", attrs); el.textContent = s; parent.append(el); return el; };
   for (const v of [0, 25, 50, 75, 100]) {
-    svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: y(v), y2: y(v), class: v ? "mm-grid" : "mm-base" }));
-    text({ x: M.left - 5, y: y(v) + 4, "text-anchor": "end", class: "mm-axis" }, String(v));
+    if (v) svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: y(v), y2: y(v), class: "mm-grid" }));
+    // A tick label that would touch the median's own label on the axis gives way.
+    if (mid == null || Math.abs(v - mid) >= 7) text({ x: M.left - 5, y: y(v) + 4, "text-anchor": "end", class: "mm-axis" }, String(v));
   }
-  top.forEach((r, i) => {
-    const on = r.tag === st.sel, cx = M.left + (i + 0.5) * bw, w = bw * 0.74, top_ = y(r.score);
-    const g = svgEl("g", { class: `mm-barg${on ? " is-sel" : ""}`, "data-tag": r.tag, tabindex: "0", role: "button", "aria-label": `${r.name}: score ${r.score}. Pick it.` });
-    // The bar as a stack of its score parts, scaled so they add up to the score; the growth part on
-    // top, colored by where the niche is heading.
+  list.forEach((r, i) => {
+    const on = r.tag === st.sel, low = firstLow >= 0 && i >= firstLow, cx = xAt(i) + bw / 2, w = bw * 0.74, top_ = y(r.score);
+    const g = svgEl("g", { class: `mm-barg${on ? " is-sel" : ""}${low ? " is-low" : ""}`, "data-tag": r.tag, tabindex: "0", role: "button", "aria-label": `#${i + 1} ${r.name}: score ${r.score}${low ? ", below the median" : ""}. Pick it.` });
+    // The bar as a stack of its score parts, scaled so they add up to the score; the growth part at
+    // the bottom, colored by where the niche is heading.
     const pts = BAR_PARTS.map(([, ks]) => ks.reduce((a, k) => a + SCORE_WEIGHTS[k] * (r.parts?.[k] ?? 0), 0));
     const sum = pts.reduce((a, b) => a + b, 0) || 1;
     const clip = `mm-bc-${i}`;
@@ -943,13 +954,19 @@ function scoreBars(rows) {
     cp.append(svgEl("rect", { x: cx - w / 2, y: top_, width: w, height: base - top_, rx: 3 }));
     g.append(cp);
     const stack = svgEl("g", { "clip-path": `url(#${clip})` });
+    // The growth strip is never thinner than GROWTH_MIN px, so a shrinking niche (few growth points)
+    // still shows its green; the blue part above gives up those pixels and the bar keeps its height.
+    const GROWTH_MIN = 9, full = base - top_;
+    const gh = Math.min(full, Math.max(GROWTH_MIN, base - y((pts[0] / sum) * r.score)));
     let at = base;
     BAR_PARTS.forEach(([k], j) => {
-      const v = (pts[j] / sum) * r.score, hgt = base - y(v);
+      const hgt = j === 0 ? gh : full - gh;
       if (hgt <= 0) return;
       stack.append(svgEl("rect", { x: cx - w / 2, y: at - hgt, width: w, height: hgt, fill: k === "growth" ? DIR_COLOR(r) : "var(--sw-1)", class: "mm-bar-seg" }));
       at -= hgt;
     });
+    // Below the median: the same colors under a checkerboard.
+    if (low) stack.append(svgEl("rect", { x: cx - w / 2, y: top_, width: w, height: full, fill: "url(#mm-low-hatch)", "pointer-events": "none" }));
     g.append(stack);
     if (on) g.append(svgEl("rect", { x: cx - w / 2 - 2, y: top_ - 2, width: w + 4, height: base - top_ + 2, rx: 4, class: "mm-bar-selbox" }));
     text({ x: cx, y: top_ - 5, "text-anchor": "middle", class: "mm-barval-out" }, String(r.score), g);
@@ -959,19 +976,20 @@ function scoreBars(rows) {
     g.__row = r;
     svg.append(g);
   });
-  // The median score of every listed tag, drawn over the bars, named in the right margin.
+  // The median line across everything; its value sits on the y-axis, "median" at the far end.
   if (mid != null) {
     svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: y(mid), y2: y(mid), class: "mm-ref mm-ref-bars" }));
-    text({ x: W - M.right + 6, y: y(mid) - 2, class: "mm-axis" }, "Median");
-    text({ x: W - M.right + 6, y: y(mid) + 11, class: "mm-axis" }, String(Math.round(mid)));
+    text({ x: M.left - 5, y: y(mid) + 4, "text-anchor": "end", class: "mm-axis mm-med-tick" }, String(Math.round(mid)));
+    text({ x: W - M.right + 6, y: y(mid) + 4, class: "mm-axis mm-med-tick" }, "median");
   }
   const box = h("div.mm-chart",
     h("div.mm-legend", h("span", h("i.mm-key", { style: "background:var(--sw-1)" }), h("b", "Opportunity"), ": hit chance, reviews per game and few rivals"),
-      h("span", h("b", "Growth"), " on top, colored by where the niche is heading:")),
+      h("span", h("b", "Growth"), " at the bottom, colored by where the niche is heading:")),
     h("div.mm-legend", ...dirLegend("Growth"),
+      h("span", h("i.mm-key.mm-key-low"), "Below the median (scroll right): not picks"),
       h("span", h("i.mm-key.mm-key-selbox"), "The tag you picked (click a bar, dot or row to pick one)")),
     h("div.mm-hscroll", svg),
-    h("p.mm-small.mm-tight", h("b", "Opportunity score. "), SCORE_TEXT, ` The dashed line is the median score of all ${rows.length} listed tags. Hover a bar for the full breakdown. Click a bar to pick that tag.`));
+    h("p.mm-small.mm-tight", h("b", "Opportunity score. "), SCORE_TEXT, ` The dashed line is the median score of all ${rows.length} listed tags. Scroll the chart sideways for every tag after the top ${VIS}, down to the worst. Hover a bar for the full breakdown. Click a bar to pick that tag.`));
   wireChart(svg, box, ".mm-barg");
   return box;
 }
@@ -1496,7 +1514,10 @@ const CSS = `
 .mkv-merged .mm-barg { cursor: pointer; outline: none; }
 .mkv-merged .mm-barval { fill: #fff; font-size: 11.5px; font-weight: 700; pointer-events: none; }
 .mkv-merged .mm-barval-out { fill: var(--fb-ink); font-size: 11.5px; font-weight: 700; }
-.mkv-merged .mm-bar-seg { stroke: var(--fb-card); stroke-width: 1; }
+.mkv-merged .mm-low-sq { fill: var(--fb-card); fill-opacity: .4; }
+.mkv-merged .mm-barg.is-low .mm-barval-out, .mkv-merged .mm-barg.is-low .mm-barname { fill: var(--fb-muted); }
+.mkv-merged .mm-halo { paint-order: stroke; stroke: var(--fb-card); stroke-width: 3px; stroke-linejoin: round; }
+.mkv-merged .mm-key-low { background: repeating-conic-gradient(color-mix(in srgb, var(--sw-1) 60%, var(--fb-card)) 0 25%, var(--sw-1) 0 50%) 0 0 / 5px 5px; }
 .mkv-merged .mm-bar-selbox { fill: none; stroke: var(--fb-title); stroke-width: 2; pointer-events: none; }
 .mkv-merged .mm-barg:hover .mm-bar-seg, .mkv-merged .mm-barg:focus .mm-bar-seg { filter: brightness(1.12); }
 .mkv-merged .mm-key-selbox { background: none; box-shadow: inset 0 0 0 2px var(--fb-title); }
@@ -1562,7 +1583,8 @@ const CSS = `
 .mkv-merged .mm-base { stroke: var(--fb-muted); stroke-width: 1; }
 .mkv-merged .mm-cross { stroke: var(--fb-muted); stroke-width: 1; stroke-dasharray: 3 3; }
 .mkv-merged .mm-ref { stroke: var(--fb-muted); stroke-width: 1; stroke-dasharray: 4 3; }
-.mkv-merged .mm-ref-bars { stroke: var(--fb-ink); stroke-opacity: .7; stroke-width: 1.2; pointer-events: none; }
+.mkv-merged .mm-ref-bars { stroke: var(--fb-ink); stroke-opacity: .4; stroke-width: 1; stroke-dasharray: 2 4; pointer-events: none; }
+.mkv-merged .mm-med-tick { font-style: italic; }
 .mkv-merged .mm-gapzone { fill: var(--sw-3); opacity: .11; }
 .mkv-merged .mm-axis { fill: var(--fb-muted); font-size: 12px; }
 .mkv-merged .mm-axis-title { fill: var(--fb-ink-2); font-weight: 600; }

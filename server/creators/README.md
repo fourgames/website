@@ -105,6 +105,14 @@ To make a GIF from a Steam trailer, on the server: get the trailer with
 `ffmpeg -i <the hls_h264 address from Steam's appdetails movies> -c copy trailer.mp4`, then
 `ffmpeg -ss 7.8 -t 3 -i trailer.mp4 -vf "fps=8,scale=360:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=32:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -loop 0 out.gif`.
 
+**Audiences and languages:** a campaign goes to YouTubers (best fit for the game), streamers (the
+same, only creators with a Twitch channel) or press (the Press tab's filters), each with its own short
+template. On the dashboard, Translate asks Claude (`POST /admin/outreach/translate`, Sonnet) to write the
+English email in each recipient language in the same short, plain style, keeping every placeholder and
+link (a translation that changes one is refused). The owner reads and can edit each; each person gets
+their channel's or outlet's language, English otherwise. Replies saying no are recognized in those
+languages too.
+
 **Safety brake:** a campaign pauses itself (with the reason on the dashboard) once 10+ of its emails
 are sent and more than 5% bounce or more than 8% say no, counted since it was last resumed.
 

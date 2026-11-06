@@ -71,7 +71,8 @@ CREATE TABLE IF NOT EXISTS outreach_messages (
     sent_at     INTEGER,
     message_id  TEXT,                   -- the Message-ID we sent, to match replies
     replied_at  INTEGER,
-    error       TEXT
+    error       TEXT,
+    language    TEXT                    -- the language it was written in (en, de, ja...)
 );
 CREATE INDEX IF NOT EXISTS outreach_messages_campaign ON outreach_messages (campaign_id, status);
 CREATE INDEX IF NOT EXISTS outreach_messages_email ON outreach_messages (email);
@@ -162,6 +163,8 @@ def open_store(path: str) -> Store:
     store = Store(path)
     store.db.executescript(SCHEMA)
     columns = {r[1] for r in store.db.execute("PRAGMA table_info(outreach_campaigns)")}
+    if "language" not in {r[1] for r in store.db.execute("PRAGMA table_info(outreach_messages)")}:
+        store.db.execute("ALTER TABLE outreach_messages ADD COLUMN language TEXT")  # the language it was written in
     for name, kind in (("gif", "INTEGER NOT NULL DEFAULT 0"),   # 1 = also the HTML version with the game's GIF
                        ("paused_reason", "TEXT"),               # why the safety brake paused it
                        ("resumed_at", "INTEGER")):              # the brake only counts sends after this
@@ -214,18 +217,44 @@ def render(template: str, fields: dict[str, str]) -> str:
     return FIELD.sub(lambda m: fields.get(m.group(1), ""), template)
 
 
-def with_opt_out(body: str) -> str:
-    """Adds the opt-out line in the sender's own words, before the sign-off ("Thanks,\nDanny"), unless
-    the body already says how to opt out. Required (an easy way to say no) without reading like a mass mailing."""
+def with_opt_out(body: str, line: str = OPT_OUT_LINE) -> str:
+    """Adds the opt-out line in the sender's own words (and language), before the sign-off ("Thanks,\nDanny"),
+    unless the body already says how to opt out. Required (an easy way to say no) without reading like a mass mailing."""
     body = body.rstrip()
     low = body.lower()
-    if "email again" in low or "email you again" in low or "reply \"no\"" in low or "unsubscribe" in low:
+    if line.lower() in low or "email again" in low or "email you again" in low or "reply \"no\"" in low or "unsubscribe" in low:
         return body
     paragraphs = body.split("\n\n")
     last = paragraphs[-1]
     if len(paragraphs) > 1 and "\n" in last and len(last) < 80:  # a sign-off: put the line above it
-        return "\n\n".join(paragraphs[:-1] + [OPT_OUT_LINE, last])
-    return f"{body}\n\n{OPT_OUT_LINE}"
+        return "\n\n".join(paragraphs[:-1] + [line, last])
+    return f"{body}\n\n{line}"
+
+
+def short_lang(code: str | None) -> str | None:
+    return (code or "").split("-")[0].split("_")[0].lower()[:3] or None
+
+
+def check_translations(spec_translations, subject: str, body: str) -> dict[str, dict[str, str]]:
+    """{lang: {subject, body, opt_out}}, checked: the same placeholders and links as the English."""
+    if not spec_translations:
+        return {}
+    if not isinstance(spec_translations, dict) or len(spec_translations) > 40:
+        raise OutreachError("translations must be {language: {subject, body, opt_out}}")
+    want = sorted(set(FIELD.findall(subject + body)) | set(_URL.findall(body)))
+    out = {}
+    for lang, t in spec_translations.items():
+        code = short_lang(str(lang))
+        if not code or not isinstance(t, dict):
+            raise OutreachError(f"bad translation for {lang!r}")
+        sub, bod, opt = (str(t.get(k) or "").strip() for k in ("subject", "body", "opt_out"))
+        if not sub or not bod or len(sub) > MAX_SUBJECT * 2 or len(bod) > MAX_BODY:
+            raise OutreachError(f"the {lang} translation needs a subject and a body")
+        have = sorted(set(FIELD.findall(sub + bod)) | set(_URL.findall(bod)))
+        if have != want:
+            raise OutreachError(f"the {lang} translation must keep the same placeholders and links as the English")
+        out[code] = {"subject": sub, "body": bod, "opt_out": opt or OPT_OUT_LINE}
+    return out
 
 
 def blocked(store: Store, email: str, now: float, exclude: int | None = None, sent_only: bool = False) -> str | None:
@@ -242,7 +271,7 @@ def blocked(store: Store, email: str, now: float, exclude: int | None = None, se
 
 
 def _creator(store: Store, channel_id: str, own: set[int]) -> dict | None:
-    r = store.db.execute("SELECT channel_id, title, emails, revealed_email FROM youtube_channels WHERE channel_id = ?",
+    r = store.db.execute("SELECT channel_id, title, emails, revealed_email, language FROM youtube_channels WHERE channel_id = ?",
                          (channel_id,)).fetchone()
     if not r:
         return None
@@ -255,12 +284,16 @@ def _creator(store: Store, channel_id: str, own: set[int]) -> dict | None:
     covered = [a for (a,) in store.db.execute(
         "SELECT appid FROM youtube_videos WHERE channel_id = ? GROUP BY appid ORDER BY COUNT(*) DESC", (channel_id,))]
     ours = [a for a in covered if a in own]
-    return {"id": channel_id, "name": r["title"] or "", "email": emails[0].lower(), "games": ours + [a for a in covered if a not in own]}
+    lang = r["language"] or (store.db.execute(
+        "SELECT language FROM youtube_videos WHERE channel_id = ? AND language IS NOT NULL GROUP BY language ORDER BY COUNT(*) DESC LIMIT 1",
+        (channel_id,)).fetchone() or [None])[0]
+    return {"id": channel_id, "name": r["title"] or "", "email": emails[0].lower(), "lang": short_lang(lang),
+            "games": ours + [a for a in covered if a not in own]}
 
 
 def _press(store: Store, key: str) -> dict | None:
-    r = store.db.execute("SELECT key, name, email FROM press WHERE key = ?", (key,)).fetchone()
-    return {"id": r["key"], "name": r["name"], "email": r["email"].lower()} if r and r["email"] else None
+    r = store.db.execute("SELECT key, name, email, language FROM press WHERE key = ?", (key,)).fetchone()
+    return {"id": r["key"], "name": r["name"], "email": r["email"].lower(), "lang": short_lang(r["language"])} if r and r["email"] else None
 
 
 def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, str], own: set[int],
@@ -268,8 +301,8 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
     """A draft campaign with one filled-in message per usable recipient. spec: {appid, game, audience,
     from_name, from_email, subject, body, daily_limit, recipients: [ids]} (channel ids or press keys)."""
     audience = spec.get("audience")
-    if audience not in ("creators", "press"):
-        raise OutreachError("audience must be creators or press")
+    if audience not in ("creators", "streamers", "press"):
+        raise OutreachError("audience must be creators, streamers or press")
     game = str(spec.get("game") or "").strip()
     subject = str(spec.get("subject") or "").strip()
     body = str(spec.get("body") or "").strip()
@@ -290,6 +323,7 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
     ids = [str(x) for x in (spec.get("recipients") or []) if isinstance(x, (str, int))]
     if not ids or len(ids) > MAX_RECIPIENTS:
         raise OutreachError(f"pick between 1 and {MAX_RECIPIENTS} recipients")
+    translations = check_translations(spec.get("translations"), subject, body)
     appid = spec.get("appid")
     appid = appid if type(appid) is int else None
     steam = f"https://store.steampowered.com/app/{appid}/" if appid else ""
@@ -303,7 +337,7 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
         campaign = cur.lastrowid
         seen: set[str] = set()
         for target in dict.fromkeys(ids):
-            who = _creator(store, target, own) if audience == "creators" else _press(store, target)
+            who = _press(store, target) if audience == "press" else _creator(store, target, own)
             if not who:
                 skipped["no email"] = skipped.get("no email", 0) + 1
                 continue
@@ -318,12 +352,15 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
                          game if appid in games else "")
             fields = {"name": who["name"], "game": game, "steam": steam, "their_game": their,
                       "press": f"https://press.fourgames.se/{re.sub(r'[^a-z0-9]+', '-', game.lower()).strip('-')}"}
+            t = translations.get(who.get("lang") or "")
+            lang = who.get("lang") if t else "en"
+            sub, bod, opt = (t["subject"], t["body"], t["opt_out"]) if t else (subject, body, OPT_OUT_LINE)
             store.db.execute(
                 """INSERT INTO outreach_messages (campaign_id, target_kind, target_id, name, email, subject, body,
-                                                  status, queued_at)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?)""",
-                (campaign, "youtube" if audience == "creators" else "press", who["id"], who["name"], who["email"],
-                 render(subject, fields), with_opt_out(render(body, fields)), int(now)))
+                                                  status, queued_at, language)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)""",
+                (campaign, "press" if audience == "press" else "youtube", who["id"], who["name"], who["email"],
+                 render(sub, fields), with_opt_out(render(bod, fields), opt), int(now), lang))
     return {"id": campaign, "skipped": skipped, **summary(store, campaign)}
 
 
@@ -342,7 +379,7 @@ def campaigns(store: Store) -> list[dict[str, Any]]:
 
 def messages(store: Store, campaign: int, limit: int = 600) -> list[dict[str, Any]]:
     return [dict(r) for r in store.db.execute(
-        """SELECT id, target_kind, target_id, name, email, subject, body, status, queued_at, sent_at, replied_at, error
+        """SELECT id, target_kind, target_id, name, email, subject, body, status, queued_at, sent_at, replied_at, error, language
            FROM outreach_messages WHERE campaign_id = ? ORDER BY id LIMIT ?""", (campaign, limit))]
 
 

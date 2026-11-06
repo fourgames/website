@@ -46,7 +46,11 @@ RUNS_PER_HOUR = 4
 # send me a key!" is a yes.
 OPT_OUT = re.compile(r"^\s*(?:no|nope|nah)\s*[.!]*\s*$|^\s*no,? thanks|^\s*no thank you|not interested|unsubscribe|"
                      r"stop emailing|please stop|remove me|take me off|no more emails?|don'?t (?:contact|email|write|send)|"
-                     r"(?:don'?t|do not) want (?:any )?(?:more |future )?emails?|i'?d rather not",
+                     r"(?:don'?t|do not) want (?:any )?(?:more |future )?emails?|i'?d rather not|"
+                     # The same in the languages emails go out in.
+                     r"^\s*(?:nein|non|nej|nee|nie|não|nao|нет|いいえ)\s*[.!]*\s*$|nein,? danke|kein interesse|non merci|pas int[ée]ress[ée]|"
+                     r"no,? gracias|no me interesa|n[ãa]o,? obrigad|n[ãa]o tenho interesse|nie,? dzi[eę]kuj[eę]|nie jestem zainteresowan|"
+                     r"нет,? спасибо|не интересно|興味(?:が)?ありません|結構です|관심 없|아니요|不感兴趣|不用了|nej tack|inte intresserad|nee,? bedankt|geen interesse",
                      re.IGNORECASE)
 QUOTE_START = re.compile(r"^(>|On .{5,200} wrote:|Am .{5,200} schrieb|Le .{5,200} a écrit|El .{5,200} escribió|-{2,}\s*Original)",
                          re.IGNORECASE | re.MULTILINE)

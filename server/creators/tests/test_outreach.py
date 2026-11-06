@@ -258,3 +258,27 @@ def test_dmarc_reports(store, tmp_path):
     sm = dmarc.summary(store, 1794100000)
     assert sm["by"] == [{"org": "google.com", "messages": 16, "passed": 14, "reports": 1, "last": 1794086399}]
     assert sm["failed_from"] == {"6.6.6.6": 2} and outreach.overview(store)["dmarc"]["ever"] == 1
+
+
+def test_each_person_gets_their_language(store):
+    store.db.execute("UPDATE youtube_channels SET language = 'de' WHERE channel_id = 'UCa'")
+    store.db.execute("UPDATE youtube_channels SET language = 'ja-JP' WHERE channel_id = 'UCc'")
+    store.db.commit()
+    de = {"subject": "{game} für {name}?", "body": "Hallo {name},\nich habe dein {their_game}-Video gesehen. {game}: {steam} {press}\nDanny",
+          "opt_out": "Wenn du solche E-Mails nicht willst, sag es einfach."}
+    out = make(store, {**SPEC, "body": SPEC["body"].replace("{steam}", "{steam} {press}"), "translations": {"de": de}})
+    msgs = {m["target_id"]: m for m in outreach.messages(store, out["id"])}
+    assert msgs["UCa"]["language"] == "de" and msgs["UCa"]["subject"] == "Pomo Valley für Alpha Plays?"
+    assert msgs["UCa"]["body"].startswith("Hallo Alpha Plays") and "Wenn du solche E-Mails" in msgs["UCa"]["body"]
+    assert outreach.OPT_OUT_LINE not in msgs["UCa"]["body"]
+    assert msgs["UCc"]["language"] == "en" and outreach.OPT_OUT_LINE in msgs["UCc"]["body"]  # no Japanese: English
+    with pytest.raises(outreach.OutreachError):  # a translation that drops a placeholder or link is refused
+        make(store, {**SPEC, "recipients": ["UCb"], "translations": {"de": {**de, "body": "Hallo {name}"}}})
+
+
+def test_no_in_other_languages():
+    from creators.send import OPT_OUT
+    for text in ("Nein danke", "non merci", "No, gracias", "Não, obrigado", "Нет, спасибо", "興味がありません", "Nej tack"):
+        assert OPT_OUT.search(text), text
+    for text in ("Ja gerne!", "Oui, avec plaisir", "Sí, mándame una key", "はい、ぜひ"):
+        assert not OPT_OUT.search(text), text

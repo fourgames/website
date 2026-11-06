@@ -808,3 +808,34 @@ def test_outreach_routes(tmp_path, monkeypatch):
         r = await w.client.get("/gamedata/v1/admin/outreach", headers=w.page())
         assert r.status == 401
     run(tmp_path, steps, **ADMIN)
+
+
+
+def test_outreach_translate(tmp_path, monkeypatch):
+    import types
+    from gamedata import outreach as routes
+    monkeypatch.setenv("CREATORS_DB", str(tmp_path / "c.db"))
+
+    class Fake:
+        def __init__(self):
+            self.messages = self
+            self.asked = None
+
+        async def create(self, **kw):
+            self.asked = kw
+            answer = {"translations": [
+                {"language": "de", "subject": "{game} für dich?", "body": "Hallo {name}, {steam}", "opt_out": "Sag einfach nein."},
+                {"language": "fr", "subject": "{game} ?", "body": "Salut", "opt_out": "x"}]}  # lost {name} and {steam}
+            return types.SimpleNamespace(content=[types.SimpleNamespace(type="text", text=__import__("json").dumps(answer))],
+                                         model="claude-sonnet-5-5")
+    fake = Fake()
+    monkeypatch.setattr(routes, "CLIENT", fake)
+
+    async def steps(w):
+        cookie = await w.sign_in(back="/fb-dash")
+        r = await w.client.post("/gamedata/v1/admin/outreach/translate", headers=w.page(cookie),
+                                json={"subject": "{game} for you?", "body": "Hi {name}, {steam}", "languages": ["de", "fr", "xx"]})
+        out = await r.json()
+        assert r.status == 200 and set(out["translations"]) == {"de"} and out["skipped"] == ["fr"]
+        assert "German" in fake.asked["messages"][0]["content"] and "xx" not in fake.asked["messages"][0]["content"]
+    run(tmp_path, steps, **ADMIN)

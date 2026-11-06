@@ -352,9 +352,13 @@ const TEMPLATES = {
     subject: "{game} for your channel?",
     body: "Hi {name},\n\nI made a game called {game}. [What you do in it, in one simple sentence.] You played {their_game}, so I think you might like it.\n\nSteam: {steam}\nFree key: join https://discord.fourgames.se and type /request, the bot sends it right away\n\nThere's a press kit with screenshots and the trailer on fourgames.se too.\n\nThanks,\nDanny",
   },
+  streamers: {
+    subject: "{game} for your stream?",
+    body: "Hi {name},\n\nI made a game called {game}. [What you do in it, in one simple sentence.] You've played {their_game}, so I think it could be fun on stream.\n\nSteam: {steam}\nFree key: join https://discord.fourgames.se and type /request, the bot sends it right away\n\nThanks,\nDanny",
+  },
   press: {
     subject: "{game}: [the news, in a few words]",
-    body: "Hi {name} team,\n\n[The news in one sentence, with the date.]\n\n[Two or three lines about {game}.]\n\nSteam: {steam}\nTrailer: [trailer link]\nPress kit: {press}\n\nHappy to send a key for coverage.\n\nBest,\nDanny\nFour Games",
+    body: "Hi {name} team,\n\n[The news in one simple sentence, with the date.]\n\nI made {game}: [what you do in it, in one simple sentence].\n\nSteam: {steam}\nPress kit (screenshots, trailer, logo): {press}\n\nI'm happy to send a key for coverage.\n\nThanks,\nDanny",
   },
 };
 const MSG_STATUS = { queued: "Waiting", sent: "Sent", replied: "Replied", opted_out: "Said no", bounced: "Bounced", failed: "Failed", skipped: "Skipped" };
@@ -418,7 +422,7 @@ function outreachView(d) {
   if (ot.form) wrap.append(formView(d, contacted));
   wrap.append(o.campaigns.length ? h("div.cr-scroll", h("table.cr-table", h("thead", h("tr", h("th", "Campaign"), h("th", "Status"), h("th.cr-num", "Waiting"), h("th.cr-num", "Sent"), h("th.cr-num", "Replied"), h("th.cr-num", "No / bounced"), h("th", ""))),
     h("tbody", ...o.campaigns.map(({ campaign: c, counts: n }) => h("tr.cr-main", { onclick: () => { ot.open = c.id; ot.openData = null; loadOutreach(); } },
-      h("td.cr-chan", h("b", c.game), h("div.cr-muted", `${c.audience === "press" ? "Press" : "Creators"} · from ${c.from_name} · ${C.fmtDate(c.created_at)}`)),
+      h("td.cr-chan", h("b", c.game), h("div.cr-muted", `${c.audience === "press" ? "Press" : c.audience === "streamers" ? "Streamers" : "YouTubers"} · from ${c.from_name} · ${C.fmtDate(c.created_at)}`)),
       h("td", h("span.cr-type", { title: c.paused_reason || "" }, c.paused_reason ? "Paused by the safety brake" : CAMPAIGN_STATUS[c.status] || c.status)),
       h("td.cr-num", num(n.queued || 0)), h("td.cr-num", num((n.sent || 0) + (n.replied || 0) + (n.opted_out || 0) + (n.bounced || 0))),
       h("td.cr-num", num(n.replied || 0)), h("td.cr-num", `${num(n.opted_out || 0)} / ${num(n.bounced || 0)}`),
@@ -462,13 +466,14 @@ function newForm(d) {
 function recipientsFor(d, f, contacted) {
   if (f.audience === "press") {
     return filterPress(d.press || [], st.pf).filter((p) => p.email && !contacted.has(p.email.toLowerCase()))
-      .map((p) => ({ id: pressKey(p.url), label: p.name, email: p.email }));
+      .map((p) => ({ id: pressKey(p.url), label: p.name, email: p.email, lang: (p.language || "en").slice(0, 2) }));
   }
   const weights = gameWeights(d.games[f.appid], d.metaSet);
   const today = now();
-  return d.creators.filter((c) => c.e.length && !contacted.has(c.e[0][0]) && (!f.activeOnly || activity(c, today) !== "inactive"))
+  return d.creators.filter((c) => c.e.length && !contacted.has(c.e[0][0]) && (!f.activeOnly || activity(c, today) !== "inactive")
+      && (f.audience !== "streamers" || c.k.twitch))
     .map((c) => [fit(c, f.appid, weights, today).score, c]).sort((a, b) => b[0] - a[0]).slice(0, f.n)
-    .map(([, c]) => ({ id: c.id, label: c.t, email: c.e[0][0] }));
+    .map(([, c]) => ({ id: c.id, label: c.t, email: c.e[0][0], lang: (c.l || "en").slice(0, 2) }));
 }
 export function pressKey(url) {
   const u = new URL(url);
@@ -481,33 +486,72 @@ function formView(d, contacted) {
   const own = Object.entries(d.games).filter(([, g]) => g.own).map(([id, g]) => [String(id), g.n]);
   const set = (patch, redraw = true) => { Object.assign(f, patch); if (redraw) draw(); };
   const input = (label, key, attrs = {}) => { const el = h("input.cr-input", { value: f[key], ...attrs }); el.addEventListener("input", () => set({ [key]: attrs.type === "number" ? Number(el.value) : el.value }, false)); if (key === "n") el.addEventListener("change", () => draw()); return h("label.cr-field", h("span", label), el); };
-  const area = (label, key, rows) => { const el = h("textarea.cr-area", { rows }, f[key]); el.addEventListener("input", () => set({ [key]: el.value }, false)); return h("label.cr-field", h("span", label), el); };
+  const area = (label, key, rows) => { const el = h("textarea.cr-area", { rows }, f[key]); el.addEventListener("input", () => { const stale = !!f.translations; set({ [key]: el.value, translations: null }, false); if (stale) draw(); }); return h("label.cr-field", h("span", label), el); };
   const people = recipientsFor(d, f, contacted);
   const leftover = /\[[^\]]{3,}\]/.test(f.subject + f.body);
   const create = () => {
     if (leftover) { ot.msg = "Fill in the [bracketed] parts of the subject and message first."; draw(); return; }
     outreachSend("outreach", { appid: f.appid, game: f.game, audience: f.audience, from_name: f.from_name, from_email: f.from_email,
-      subject: f.subject, body: f.body, daily_limit: f.daily_limit, gif: f.gif, recipients: people.map((p) => p.id) },
+      subject: f.subject, body: f.body, daily_limit: f.daily_limit, gif: f.gif, recipients: people.map((p) => p.id),
+      translations: f.translations || undefined },
       (out) => { ot.form = null; ot.open = out.id; });
   };
   return h("div.cr-filters.cr-form",
     h("div.cr-row", h("span.cr-label", "Game"), C.chips(own, String(f.appid), (v) => { const g = d.games[v]?.n || ""; set({ appid: Number(v), game: g, from_name: `Danny from ${g}`, from_email: `${slug(g)}@fourgames.se` }); }, "Game")),
-    h("div.cr-row", h("span.cr-label", "Who"), C.chips([["creators", "Best creators for the game"], ["press", "Press list"]], f.audience, (v) => set({ audience: v, ...TEMPLATES[v] }), "Audience"),
-      f.audience === "creators" ? input("How many", "n", { type: "number", min: 1, max: 500, style: "max-width:6em" }) : null,
-      f.audience === "creators" ? h("label.cr-select", h("input", { type: "checkbox", checked: f.activeOnly, onchange: (e) => set({ activeOnly: e.currentTarget.checked }) }), h("span", "Skip inactive channels")) : null),
+    h("div.cr-row", h("span.cr-label", "Who"), C.chips([["creators", "YouTubers"], ["streamers", "Streamers"], ["press", "Press list"]], f.audience, (v) => set({ audience: v, translations: null, ...TEMPLATES[v] }), "Audience"),
+      f.audience !== "press" ? input("How many", "n", { type: "number", min: 1, max: 500, style: "max-width:6em" }) : null,
+      f.audience !== "press" ? h("label.cr-select", h("input", { type: "checkbox", checked: f.activeOnly, onchange: (e) => set({ activeOnly: e.currentTarget.checked }) }), h("span", "Skip inactive channels")) : null),
     h("p.cr-muted", f.audience === "press"
       ? `${C.plural(people.length, "outlet")} with an email from the Press tab's current filters (country, language, kind, reach), not emailed before. Change the filters there to change who's in.`
-      : `The ${C.plural(people.length, "creator")} who fit ${f.game} best, with an email, not emailed before. Change "How many" to pick more or fewer.`),
+      : f.audience === "streamers"
+        ? `The ${C.plural(people.length, "creator")} with a Twitch channel who fit ${f.game} best, with an email, not emailed before.`
+        : `The ${C.plural(people.length, "creator")} who fit ${f.game} best, with an email, not emailed before. Change "How many" to pick more or fewer.`),
     h("div.cr-row", input("From name", "from_name"), input("From address", "from_email", { type: "email" }), input("Per day", "daily_limit", { type: "number", min: 1, max: 200, style: "max-width:6em" })),
     h("p.cr-muted", "The from address must be your Strato mailbox or one of its aliases (add a game address as an alias in Strato's mail settings first)."),
     h("label.cr-select", h("input", { type: "checkbox", checked: f.gif, onchange: (e) => set({ gif: e.currentTarget.checked }, false) }),
       h("span", "Add the game's GIF (makes it an HTML email; plain text has the lowest spam risk)")),
     input("Subject", "subject"),
     area("Message", "body", 14),
+    translateView(f, people, leftover),
     h("p.cr-muted", "{name} = the channel or outlet, {game}, {steam} = the store link, {press} = the game's press page, {their_game} = a game the creator made a video of. Replace the [bracketed] parts. Keep it short and simple (creators skim, and many read English as a second language), and true. The game's GIF goes in after the second paragraph, and an opt-out line at the end."),
     h("div.cr-row", h("button.btn.primary", { type: "button", disabled: ot.busy || !people.length, onclick: create }, ot.busy ? "Saving…" : `Save draft for ${people.length === 1 ? "1 person" : `${num(people.length)} people`}`),
       h("span.cr-muted", "Nothing is sent until you approve the draft.")),
     people.length ? h("details", h("summary.cr-muted", `Who's in (${people.length})`), h("p.cr-muted", people.slice(0, 200).map((p) => p.label).join(", "))) : null);
+}
+
+// Each recipient gets the email in their language (their channel's or outlet's), translated by Claude
+// from the English in the same short, plain style; the owner reads and can edit each one. Languages
+// without a translation get the English.
+const LANG_LABEL = { de: "German", fr: "French", es: "Spanish", pt: "Portuguese", it: "Italian", pl: "Polish", ru: "Russian", uk: "Ukrainian", tr: "Turkish", ja: "Japanese", ko: "Korean", zh: "Chinese", nl: "Dutch", sv: "Swedish", da: "Danish", no: "Norwegian", fi: "Finnish", cs: "Czech", hu: "Hungarian", ro: "Romanian", id: "Indonesian", vi: "Vietnamese", th: "Thai", ar: "Arabic", hi: "Hindi", el: "Greek", he: "Hebrew" };
+function translateView(f, people, leftover) {
+  const { h } = C;
+  const counts = {};
+  for (const p of people) if (p.lang && p.lang !== "en" && LANG_LABEL[p.lang]) counts[p.lang] = (counts[p.lang] || 0) + 1;
+  const langs = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  if (!langs.length) return h("p.cr-muted", "Everyone here gets the English email (no other languages among them).");
+  const english = people.length - langs.reduce((a, [, n]) => a + n, 0);
+  const go = async (e) => {
+    if (leftover) { ot.msg = "Fill in the [bracketed] parts first, then translate."; draw(); return; }
+    e.currentTarget.disabled = true; e.currentTarget.textContent = "Translating…";
+    try {
+      const out = await (await C.adminSend("outreach/translate", "POST", { subject: f.subject, body: f.body, languages: langs.map(([l]) => l) }, 200000)).json();
+      f.translations = out.translations;
+      ot.msg = out.skipped?.length ? `Left in English (the translation changed a link or placeholder): ${out.skipped.map((l) => LANG_LABEL[l] || l).join(", ")}.` : null;
+    } catch (err) { if (!err.signedOut) ot.msg = `Translating failed: ${err.message}`; }
+    draw();
+  };
+  const t = f.translations;
+  return h("div.cr-translate",
+    h("div.cr-row", h("span.cr-label", "Languages"),
+      h("span.cr-muted", `${langs.map(([l, n]) => `${LANG_LABEL[l]} ${n}`).join(" · ")}${english ? ` · English ${english}` : ""}`),
+      h("button.btn", { type: "button", onclick: go }, t ? "Translate again" : `Translate into ${C.plural(langs.length, "language")}`)),
+    t ? h("div", ...Object.entries(t).map(([l, tr]) => {
+      const sub = h("input.cr-input", { value: tr.subject }); sub.addEventListener("input", () => { tr.subject = sub.value; });
+      const bod = h("textarea.cr-area", { rows: 9 }, tr.body); bod.addEventListener("input", () => { tr.body = bod.value; });
+      const opt = h("input.cr-input", { value: tr.opt_out }); opt.addEventListener("input", () => { tr.opt_out = opt.value; });
+      return h("details.cr-lang", h("summary", `${LANG_LABEL[l] || l} (${counts[l] || 0})`),
+        h("label.cr-field", h("span", "Subject"), sub), h("label.cr-field", h("span", "Message"), bod), h("label.cr-field", h("span", "Opt-out line"), opt));
+    }), h("p.cr-muted", "Open a language to read or fix it. Changing the English clears these; translate again after.")) : h("p.cr-muted", "Optional: without translating, everyone gets the English."));
 }
 
 function campaignView(d) {
@@ -522,14 +566,14 @@ function campaignView(d) {
         c.status === "paused" ? action("Resume", "approved", true) : null, c.status === "approved" ? action("Pause", "paused") : null, " ",
         c.status === "draft" ? action("Delete draft", "deleted") : null)),
     c.paused_reason ? h("p.cr-alert", h("b", "Paused by the safety brake: "), c.paused_reason, " Fix the list or the message before resuming; resuming counts afresh.") : null,
-    h("h3.cr-h", `${c.game} · ${c.audience === "press" ? "press" : "creators"} · ${CAMPAIGN_STATUS[c.status] || c.status}`),
+    h("h3.cr-h", `${c.game} · ${c.audience} · ${CAMPAIGN_STATUS[c.status] || c.status}`),
     h("p.cr-muted", `From ${c.from_name} <${c.from_email}> · up to ${c.daily_limit} a day · ${Object.entries(n).map(([k, v]) => `${MSG_STATUS[k] || k} ${v}`).join(" · ")}`),
     preview ? h("div.cr-preview", h("div.cr-muted", `To ${preview.name || ""} <${preview.email}> · from ${c.from_name}`), h("div", h("b", preview.subject)),
       preview.html ? h("iframe.cr-frame", { title: "Email preview", sandbox: "", srcdoc: preview.html }) : h("pre.cr-body", preview.body),
       preview.html ? h("details", h("summary.cr-muted", "Plain-text version (sent inside the same email)"), h("pre.cr-body", preview.body)) : null) : null,
     h("div.cr-scroll", h("table.cr-table", h("thead", h("tr", h("th", "To"), h("th", "Subject"), h("th", "Status"), h("th", "When"), h("th", ""))),
       h("tbody", ...msgs.map((m) => h("tr.cr-main", { class: m.id === preview?.id ? "is-open" : null, onclick: () => { ot.shownMsg = m.id; draw(); } },
-        h("td.cr-chan", h("b", m.name || m.email), h("div.cr-muted", m.email)),
+        h("td.cr-chan", h("b", m.name || m.email), h("div.cr-muted", `${m.email}${m.language && m.language !== "en" ? ` · ${LANG_LABEL[m.language] || m.language}` : ""}`)),
         h("td.cr-genres", m.subject),
         h("td", h("span.cr-type", { title: m.error || "" }, MSG_STATUS[m.status] || m.status)),
         h("td.cr-muted", m.replied_at ? `replied ${C.fmtDate(m.replied_at)}` : m.sent_at ? C.fmtDateTime(m.sent_at) : "–"),
@@ -595,6 +639,9 @@ const CSS = `
 .crv .cr-field { display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--fb-ink-2); margin: 0 0 10px; flex: 1 1 220px; }
 .crv .cr-field .cr-input { max-width: none; flex: none; }
 .crv .cr-area { font: inherit; font-size: 0.9rem; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 8px; padding: 8px 10px; resize: vertical; }
+.crv .cr-translate { border-top: 1px solid var(--fb-line); padding-top: 10px; margin: 6px 0 10px; }
+.crv .cr-lang { margin: 6px 0; }
+.crv .cr-lang > summary { cursor: pointer; font-weight: 600; font-size: 0.88rem; }
 .crv .cr-h { margin: 12px 0 2px; color: var(--fb-title); font-size: 1.05rem; }
 .crv .cr-preview { background: var(--fb-card); border: 1px solid var(--fb-line); border-left: 3px solid var(--fb-accent); border-radius: 8px; padding: 10px 14px; margin: 10px 0 14px; }
 .crv .cr-frame { display: block; width: 100%; height: 560px; border: 1px solid var(--fb-line); border-radius: 8px; margin-top: 10px; background: #fff; }

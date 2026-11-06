@@ -9,11 +9,15 @@ checks the owner's sign-in and the request. Sending is creators/send.py's (creat
 - POST /v1/admin/outreach/<id>/status        {status: approved | paused | deleted (drafts only)}
 - POST /v1/admin/outreach/messages/<id>/skip  leave one message out
 - POST /v1/admin/outreach/suppress           {email}: never email this address
+- POST /v1/admin/outreach/translate          {subject, body, languages}: Claude translates the email into
+                                             each language in the same short, plain style (the owner checks them)
 """
 
 from __future__ import annotations
 
 import asyncio
+import json
+import logging
 import os
 import re
 import time
@@ -25,6 +29,41 @@ from . import web as W
 from .limits import Refused, read_json
 
 BODY_CAPS = (256 * 1024, 256 * 1024)
+log = logging.getLogger("gamedata.outreach")
+
+# Translating outreach emails: short and plain, written the way a native speaker would write a short
+# personal email, never more formal or longer than the English.
+TRANSLATE_MODEL = "claude-sonnet-5-5"
+LANG_NAMES = {"de": "German", "fr": "French", "es": "Spanish", "pt": "Portuguese (Brazil)", "it": "Italian",
+              "pl": "Polish", "ru": "Russian", "uk": "Ukrainian", "tr": "Turkish", "ja": "Japanese", "ko": "Korean",
+              "zh": "Simplified Chinese", "nl": "Dutch", "sv": "Swedish", "da": "Danish", "no": "Norwegian",
+              "fi": "Finnish", "cs": "Czech", "hu": "Hungarian", "ro": "Romanian", "id": "Indonesian",
+              "vi": "Vietnamese", "th": "Thai", "ar": "Arabic", "hi": "Hindi", "el": "Greek", "he": "Hebrew"}
+TRANSLATE_SYSTEM = """You translate short outreach emails from a solo indie game developer to YouTubers,
+streamers and games press. For each requested language, write the email the way a native speaker would
+write a short, friendly personal email to a stranger: simple everyday words, short sentences, the same
+meaning and the same length or shorter as the English. Not more formal, not salesy, no exclamation marks
+the English doesn't have, nothing added or left out. Use the informal "you" where that is normal for
+talking to content creators in that language (du, tu, tú...), formal only where informal would be rude
+(e.g. Japanese: polite です/ます).
+
+Keep exactly as they are, character for character: every {placeholder} in curly braces ({name}, {game},
+{steam}, {press}, {their_game}), every URL, the game's name, "Danny", "/request" and "fourgames.se".
+Keep the line breaks and blank lines where the English has them. Also translate the separate opt-out line."""
+TRANSLATE_SCHEMA = {
+    "type": "object", "additionalProperties": False, "required": ["translations"],
+    "properties": {"translations": {"type": "array", "items": {
+        "type": "object", "additionalProperties": False, "required": ["language", "subject", "body", "opt_out"],
+        "properties": {"language": {"type": "string"}, "subject": {"type": "string"}, "body": {"type": "string"},
+                       "opt_out": {"type": "string"}}}}}}
+
+
+CLIENT = None  # the Anthropic client, made on first use (a test sets a fake)
+
+
+def make_client():
+    import anthropic
+    return anthropic.AsyncAnthropic(timeout=180.0, max_retries=1)
 EMAIL = re.compile(r"^[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$")
 
 
@@ -90,7 +129,8 @@ async def create(request: web.Request) -> web.Response:
     from .admin import require_admin
     require_admin(request)
     body = await read_json(request, *BODY_CAPS, require_json_type=True)
-    allowed = {"appid", "game", "audience", "from_name", "from_email", "subject", "body", "daily_limit", "recipients", "gif"}
+    allowed = {"appid", "game", "audience", "from_name", "from_email", "subject", "body", "daily_limit", "recipients", "gif",
+               "translations"}
     if not isinstance(body, dict) or not set(body) <= allowed:
         raise Refused(400, "bad_request", "send {" + ", ".join(sorted(allowed)) + "}")
 
@@ -131,6 +171,56 @@ async def suppress(request: web.Request) -> web.Response:
     return W.ok()
 
 
+async def translate(request: web.Request) -> web.Response:
+    from creators import outreach
+    from .admin import require_admin
+    require_admin(request)
+    body = await read_json(request, 64 * 1024, 64 * 1024, require_json_type=True)
+    if not isinstance(body, dict) or not set(body) <= {"subject", "body", "languages"}:
+        raise Refused(400, "bad_request", "send {subject, body, languages}")
+    subject, text = str(body.get("subject") or "").strip(), str(body.get("body") or "").strip()
+    langs = [outreach.short_lang(str(x)) for x in body.get("languages") or [] if isinstance(x, str)]
+    langs = [x for x in dict.fromkeys(langs) if x in LANG_NAMES][:20]
+    if not subject or not text or len(text) > outreach.MAX_BODY:
+        raise Refused(400, "bad_request", "send the English subject and body")
+    if not langs:
+        return W.ok({"translations": {}, "skipped": []})
+    global CLIENT
+    if not os.environ.get("ANTHROPIC_API_KEY", "").strip() and CLIENT is None:
+        raise Refused(503, "claude_not_configured", "the server has no ANTHROPIC_API_KEY in its environment")
+    CLIENT = CLIENT or make_client()
+    client = CLIENT
+    ask = (f"Languages: {', '.join(f'{c} ({LANG_NAMES[c]})' for c in langs)}\n\n"
+           f"Subject:\n{subject}\n\nBody:\n{text}\n\nOpt-out line:\n{outreach.OPT_OUT_LINE}")
+    import anthropic
+    try:
+        message = await client.messages.create(
+            model=TRANSLATE_MODEL, max_tokens=16000,
+            output_config={"effort": "medium", "format": {"type": "json_schema", "schema": TRANSLATE_SCHEMA}},
+            system=TRANSLATE_SYSTEM, messages=[{"role": "user", "content": ask}])
+    except anthropic.AuthenticationError:
+        raise Refused(503, "claude_key_refused", "Anthropic refused the server's ANTHROPIC_API_KEY") from None
+    except (anthropic.APIStatusError, anthropic.APIConnectionError, anthropic.APITimeoutError) as error:
+        log.warning("claude translate failed: %s", type(error).__name__)
+        raise Refused(502, "claude_error", "Claude couldn't translate it right now; try again") from None
+    text_out = next((b.text for b in message.content if b.type == "text"), "")
+    try:
+        items = json.loads(text_out).get("translations") or []
+    except (ValueError, AttributeError):
+        raise Refused(502, "claude_bad_answer", "Claude's answer wasn't readable; try again") from None
+    good, skipped = {}, []
+    for item in items:
+        code = outreach.short_lang(str(item.get("language") or ""))
+        if code not in langs:
+            continue
+        try:
+            good.update(outreach.check_translations({code: item}, subject, text))
+        except outreach.OutreachError:
+            skipped.append(code)  # it changed a placeholder or link: left out, English goes to them
+    skipped += [c for c in langs if c not in good and c not in skipped]
+    return W.ok({"translations": good, "skipped": skipped, "model": getattr(message, "model", TRANSLATE_MODEL)})
+
+
 def _int(value: str) -> int:
     if not value.isdigit() or len(value) > 12:
         raise Refused(404, "not_found", "no such campaign or message")
@@ -142,6 +232,7 @@ def add_routes(app: web.Application, v1: str) -> None:
     add("GET", f"{v1}/outreach", overview)
     add("POST", f"{v1}/outreach", create)
     add("POST", f"{v1}/outreach/suppress", suppress)
+    add("POST", f"{v1}/outreach/translate", translate)
     add("POST", f"{v1}/outreach/messages/{{mid}}/skip", skip)
     add("GET", f"{v1}/outreach/{{cid}}", one)
     add("POST", f"{v1}/outreach/{{cid}}/status", status)

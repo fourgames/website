@@ -562,6 +562,7 @@ function card(v, idea) {
       return h("span.mki-chip", { title: `${t.why || ""}${r ? `\n${pct(r.hitRate)} of its games hit · typical ${r.medianReviews} reviews · ${r.releases} releases in 90 days` : "\nToo few recent games to rate"}` },
         t.name, r ? h("small", ` ${pct(r.hitRate)} hit`) : null);
     })));
+    body.push(h("p.mki-muted.mki-tagnote", "Tag numbers show where buyers are and how crowded it is. They go with doing well; they don't cause it (hits collect more player tags, and good games do well anyway)."));
     if (a.hook) body.push(h("p.mki-hook", h("b", "The hook: "), a.hook));
     if (a.has?.length) body.push(h("p.mki-has", h("b", "Already has: "), a.has.join(" · ")));
     body.push(h("p.mki-verdict", a.verdict));
@@ -586,6 +587,8 @@ function card(v, idea) {
   const notes = editing ? notesForm(v, idea) : idea.notes ? h("p.mki-notes", h("b", "Notes: "), idea.notes) : null;
   const actions = h("div.mki-row",
     h("button.btn", { type: "button", disabled: !!busy, onclick: () => rescore(v, idea) }, a ? "Re-score with Claude" : "Score with Claude"),
+    v.ctx.openTags && idea.tags?.length ? h("button.btn", { type: "button", title: "Opens Tag my game with this idea's tags: which of them go with doing well among the games most like it, and which to add",
+      onclick: () => v.ctx.openTags({ tags: idea.tags, about: idea.text }) }, "Check its tags in Tag my game") : null,
     h("button.btn", { type: "button", disabled: editing, onclick: () => { v.editing.add(idea.id); v.focusNotes = idea.id; paintList(v); } }, idea.notes ? "Edit notes" : "Add notes"),
     h("button.btn", { type: "button", onclick: () => act(v, idea, () => v.api.update(idea.id, { archived: !idea.archived })) }, idea.archived ? "Unarchive" : "Archive"),
     h("button.btn.mki-danger", { type: "button", onclick: () => remove(v, idea) }, "Delete"));
@@ -863,6 +866,7 @@ const CSS = `
 .mkv-ideas .mki-card.mki-pinned { border-color: var(--fb-accent); }
 .mkv-ideas .mki-sort { font-size: 0.85rem; color: var(--fb-ink-2); }
 .mkv-ideas .mki-sort select { font: inherit; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 6px; padding: 2px 6px; }
+.mkv-ideas .mki-tagnote { margin: 0 0 6px; font-size: 0.78rem; }
 .mkv-ideas .mki-hook, .mkv-ideas .mki-has { margin: 6px 0; font-size: 0.9rem; color: var(--fb-ink-2); max-width: 80ch; }
 .mkv-ideas .mki-hook b, .mkv-ideas .mki-has b { color: var(--fb-ink); }
 .mkv-ideas .mki-verdict { margin: 8px 0; line-height: 1.5; color: var(--fb-ink); max-width: 80ch; }

@@ -363,6 +363,14 @@ opportunity (demand, competition, hit odds, timing); small_team_fit is reported 
 score only a little (at most about 10 points), because the studio decides scope separately. Judge scope by how \
 many hard systems it has (netcode, physics, AI, procedural generation), not by art or content volume.
 
+Tag numbers are correlation, not cause. Good games do well whatever their tags, and Steam tags are added by \
+players: a game that sells is played by more people, so it collects more tags and more fitting ones, which \
+puts hits into more tags' numbers. So a tag's hit rate shows that buyers exist and how crowded it is; it does \
+not show that a game with the tag will hit, or that adding a tag helps. Treat tag numbers as a modest signal, \
+let the idea's own strength (its hook, its fit with what players of these tags want) count as much, and say \
+so when a score leans on tag numbers alone. Never suggest adding a tag the game wouldn't truly have just \
+because it sells; a pivot that adds a tag must change the game itself.
+
 Judge with the market data below, not general hype. Quote its numbers in your reasons (hit rates, median and \
 top-10% reviews, releases, supply, demand) in plain words a non-analyst understands. Small tags have few games: \
 say how sure the data is. A rising supply means more competition arriving; strong demand with modest supply is \

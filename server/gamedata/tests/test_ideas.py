@@ -326,6 +326,8 @@ def test_pivots_that_only_restate_the_idea_are_dropped(tmp_path, monkeypatch):
     assert [p["change"] for p in kept["pivots"]] == ["Add roguelite runs between safe houses", "Cut the open world to short arena levels"]
     assert ideas.SCHEMA["required"].index("has") < ideas.SCHEMA["required"].index("pivots")
     assert "already" in ideas.SYSTEM and "hook" in ideas.SYSTEM
+    assert "correlation, not cause" in ideas.SYSTEM, "tag numbers are a modest signal, not proof"
+
     prompt = ideas.user_prompt({"text": "zombie cars", "stars": 5}, [], m)
     assert "5 of 5 stars" in prompt and "must not move the scores" in prompt
     assert "stars" not in ideas.user_prompt({"text": "zombie cars", "stars": 0}, [], m)

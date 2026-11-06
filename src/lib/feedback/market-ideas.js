@@ -457,7 +457,9 @@ async function scoreAll(v, items, fromBox) {
       try {
         const idea = await v.api.create(left[0].text, left[0].notes);
         v.ideas = [idea, ...(v.ideas || []).filter((i) => i.id !== idea.id)];
+        // Highlighted, not scrolled to: the owner is watching the progress, and the page shouldn't move.
         v.flash = idea.id;
+        v.flashQuiet = true;
         if (left[0].made) left[0].made.idea = idea;
         left.shift();
         done++;
@@ -635,7 +637,8 @@ function paintList(v) {
     const el = v.list.querySelector(`[data-idea="${v.flash}"]`);
     v.flash = null;
     el?.classList.add("mki-new");
-    el?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+    if (!v.flashQuiet) el?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+    v.flashQuiet = false;
   }
 }
 

@@ -834,9 +834,16 @@ function paceLine(r) {
   return p ? C.h("div", `New games collect ${p.rate < 10 ? p.rate.toFixed(1) : fmtK(p.rate)} reviews a month (${times(p.ratio)} Steam's pace)${demand}`) : demand ? C.h("div", demand.slice(3)) : null;
 }
 
+// " (52 opportunity + 9 growth)": the score's two bar parts in points.
+function scoreSplit(r) {
+  if (!r.parts) return [];
+  const g = SCORE_WEIGHTS.growth * r.parts.growth, all = Object.keys(SCORE_WEIGHTS).reduce((a, k) => a + SCORE_WEIGHTS[k] * r.parts[k], 0) || 1;
+  const gp = Math.round((g / all) * r.score);
+  return [` (${r.score - gp} opportunity + ${gp} growth)`];
+}
 function tagTip(r) {
   const h = C.h, gl = glossary(r.name);
-  return [h("div.mm-tip-t", r.name), gl ? h("div.mm-tip-raw", gl) : null, h("div", "Opportunity score ", h("b", String(r.score)), "/100"),
+  return [h("div.mm-tip-t", r.name), gl ? h("div.mm-tip-raw", gl) : null, h("div", "Opportunity score ", h("b", String(r.score)), "/100", ...scoreSplit(r)),
     h("div", h("b", pct(r.hitRate)), ` become hits (${times(r.lift)} Steam's)`),
     h("div", `${fmtK(r.releases)} new games in 90 days · ${growthWords(r.supply)}`),
     h("div", `Typical game ${fmtK(r.medianReviews)} reviews, top 10% ${fmtK(r.topReviews)}`),
@@ -905,15 +912,10 @@ const monthName = (ym) => { const [y, m] = String(ym).split("-"); return `${MONT
 
 // --- Score bars (top 25) ---
 
-// The score's parts, bottom to top: the three opportunity parts in shades of one blue, then growth
-// (colored by direction in the bar, so "growing" no longer paints the whole bar).
-const BAR_PARTS = [
-  ["hit", "var(--sw-1)"],
-  ["typical", "color-mix(in srgb, var(--sw-1) 72%, #0b1a33)"],
-  ["quiet", "color-mix(in srgb, var(--sw-1) 48%, #0b1a33)"],
-  ["growth", null],
-];
-const BAR_WORDS = { hit: "Hit chance", typical: "Reviews per game", quiet: "Few rivals", growth: "Growth" };
+// A bar in two parts: opportunity (hit chance, reviews per game and few rivals together) in blue, and
+// growth on top in the niche's direction, so "growing" no longer paints the whole bar. The exact
+// split is in the tooltip.
+const BAR_PARTS = [["opp", ["hit", "typical", "quiet"]], ["growth", ["growth"]]];
 
 function scoreBars(rows) {
   const h = C.h, svgEl = C.svgEl;
@@ -934,7 +936,7 @@ function scoreBars(rows) {
     const g = svgEl("g", { class: `mm-barg${on ? " is-sel" : ""}`, "data-tag": r.tag, tabindex: "0", role: "button", "aria-label": `${r.name}: score ${r.score}. Pick it.` });
     // The bar as a stack of its score parts, scaled so they add up to the score; the growth part on
     // top, colored by where the niche is heading.
-    const pts = BAR_PARTS.map(([k]) => SCORE_WEIGHTS[k] * (r.parts?.[k] ?? 0));
+    const pts = BAR_PARTS.map(([, ks]) => ks.reduce((a, k) => a + SCORE_WEIGHTS[k] * (r.parts?.[k] ?? 0), 0));
     const sum = pts.reduce((a, b) => a + b, 0) || 1;
     const clip = `mm-bc-${i}`;
     const cp = svgEl("clipPath", { id: clip });
@@ -942,11 +944,10 @@ function scoreBars(rows) {
     g.append(cp);
     const stack = svgEl("g", { "clip-path": `url(#${clip})` });
     let at = base;
-    BAR_PARTS.forEach(([k, color], j) => {
+    BAR_PARTS.forEach(([k], j) => {
       const v = (pts[j] / sum) * r.score, hgt = base - y(v);
       if (hgt <= 0) return;
-      stack.append(svgEl("rect", { x: cx - w / 2, y: at - hgt, width: w, height: hgt, fill: k === "growth" ? DIR_COLOR(r) : color, class: "mm-bar-seg" }));
-      if (hgt >= 15) text({ x: cx, y: at - hgt / 2 + 4, "text-anchor": "middle", class: "mm-barseg" }, String(Math.round(v)), stack);
+      stack.append(svgEl("rect", { x: cx - w / 2, y: at - hgt, width: w, height: hgt, fill: k === "growth" ? DIR_COLOR(r) : "var(--sw-1)", class: "mm-bar-seg" }));
       at -= hgt;
     });
     g.append(stack);
@@ -959,12 +960,12 @@ function scoreBars(rows) {
     svg.append(g);
   });
   const box = h("div.mm-chart",
-    h("div.mm-legend", h("b", "Bar parts:"), ...BAR_PARTS.slice(0, 3).map(([k, c]) => h("span", h("i.mm-key", { style: `background:${c}` }), `${BAR_WORDS[k]} (${Math.round(SCORE_WEIGHTS[k] * 100)}%)`)),
-      h("span", `${BAR_WORDS.growth} (${Math.round(SCORE_WEIGHTS.growth * 100)}%), on top, in the niche's direction:`)),
-    h("div.mm-legend", ...dirLegend("Growth part"),
+    h("div.mm-legend", h("span", h("i.mm-key", { style: "background:var(--sw-1)" }), h("b", "Opportunity"), ": hit chance, reviews per game and few rivals"),
+      h("span", h("b", "Growth"), " on top, colored by where the niche is heading:")),
+    h("div.mm-legend", ...dirLegend("Growth"),
       h("span", h("i.mm-key.mm-key-selbox"), "The tag you picked (click a bar, dot or row to pick one)")),
     h("div.mm-hscroll", svg),
-    h("p.mm-small.mm-tight", h("b", "Opportunity score. "), SCORE_TEXT, " Each bar is split into how many points each part gave. Click a bar to pick that tag."));
+    h("p.mm-small.mm-tight", h("b", "Opportunity score. "), SCORE_TEXT, " Hover a bar for the full breakdown. Click a bar to pick that tag."));
   wireChart(svg, box, ".mm-barg");
   return box;
 }
@@ -1451,7 +1452,6 @@ const CSS = `
 .mkv-merged .mm-barg { cursor: pointer; outline: none; }
 .mkv-merged .mm-barval { fill: #fff; font-size: 11.5px; font-weight: 700; pointer-events: none; }
 .mkv-merged .mm-barval-out { fill: var(--fb-ink); font-size: 11.5px; font-weight: 700; }
-.mkv-merged .mm-barseg { fill: #fff; font-size: 10px; font-weight: 600; pointer-events: none; }
 .mkv-merged .mm-bar-seg { stroke: var(--fb-card); stroke-width: 1; }
 .mkv-merged .mm-bar-selbox { fill: none; stroke: var(--fb-title); stroke-width: 2; pointer-events: none; }
 .mkv-merged .mm-barg:hover .mm-bar-seg, .mkv-merged .mm-barg:focus .mm-bar-seg { filter: brightness(1.12); }

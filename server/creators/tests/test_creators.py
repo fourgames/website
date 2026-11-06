@@ -79,10 +79,13 @@ def steam_db(tmp_path):
         (3, "Space Shooter Deluxe", 900, [7, 8, 9]),
         (4, "Dig", 5000, [1, 2]),          # too short a name to search
         (5, "Quiet Little Game", 5, [1]),  # too few reviews
+        (6, "Giant Shooter", 900_000, [7]),  # too many: channels too big for us
+        (7, "Our Other Game", 2, [1, 2]),  # ours by studio name, despite few reviews
     ]
     for appid, name, reviews, tags in apps:
-        db.execute("INSERT INTO apps (appid, name, type, first_seen, reviews, tags, coming_soon) VALUES (?, ?, 'game', 0, ?, ?, 0)",
-                   (appid, name, reviews, json.dumps(tags)))
+        studio = json.dumps(["Four Games"] if appid == 7 else ["Someone"])
+        db.execute("INSERT INTO apps (appid, name, type, first_seen, reviews, tags, coming_soon, developers, publishers) "
+                   "VALUES (?, ?, 'game', 0, ?, ?, 0, ?, ?)", (appid, name, reviews, json.dumps(tags), studio, studio))
         db.execute("INSERT INTO app_daily (day, appid, reviews) VALUES (100, ?, ?)", (appid, reviews // 2))
         db.execute("INSERT INTO app_daily (day, appid, reviews) VALUES (128, ?, ?)", (appid, reviews))
     db.commit()
@@ -92,8 +95,8 @@ def steam_db(tmp_path):
 
 def test_game_order(steam_db):
     games = read(steam_db, (1,), 30)
-    assert [g.appid for g in games] == [1, 4, 2, 3]  # ours, then activity lifted by shared tags
-    assert games[2].gain == 250
+    assert [g.appid for g in games] == [1, 7, 4, 2, 3]  # ours, then activity lifted by shared tags
+    assert games[3].gain == 250
 
 
 class FakeYouTube:
@@ -148,7 +151,7 @@ def test_run_collects_channels_and_emails(tmp_path, steam_db):
     fake = FakeYouTube()
     collector, store = make(tmp_path, steam_db, fake)
     summary = collector.run(spend_all=True)
-    assert summary["searches"] == 3  # 1, 2 and 3; "Dig" and the 5-review game are skipped
+    assert summary["searches"] == 4  # 1, 7, 2 and 3; "Dig", the 5-review and the giant game are skipped
     kept = {(r[0], r[1]) for r in store.db.execute("SELECT video_id, appid FROM youtube_videos")}
     assert kept == {("v1", 1), ("v2", 2), ("v4", 2)}  # v3 doesn't name the game
     b = store.db.execute("SELECT * FROM youtube_channels WHERE channel_id = 'UCb'").fetchone()
@@ -161,7 +164,7 @@ def test_run_collects_channels_and_emails(tmp_path, steam_db):
     again, _ = make(tmp_path, steam_db, fake)
     assert again.run(spend_all=True)["searches"] == 0
     due = dict(store.db.execute("SELECT appid, due_at - searched_at FROM searches").fetchall())
-    assert due == {1: 7 * 86400, 2: 30 * 86400, 3: 30 * 86400}
+    assert due == {1: 7 * 86400, 7: 7 * 86400, 2: 30 * 86400, 3: 30 * 86400}
 
 
 def test_units_are_spread_over_the_day(tmp_path, steam_db):

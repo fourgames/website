@@ -38,6 +38,10 @@ class Config:
     lookback_days: int = 180
     # Only games with at least this many reviews are searched (fewer: hardly any videos).
     min_reviews: int = 30
+    # Games with more reviews than this are skipped: their creators are too big to answer a small studio.
+    max_reviews: int = 50_000
+    # Games whose developer or publisher is exactly this name count as ours too.
+    own_studio: str = "Four Games"
     # Channel numbers (subscribers, description, emails) are read again after this many days.
     channel_refresh_days: int = 30
     log_level: str = "INFO"
@@ -74,6 +78,8 @@ class Config:
             research_days=number("RESEARCH_DAYS", 30, 1, 365),
             lookback_days=number("LOOKBACK_DAYS", 180, 7, 3650),
             min_reviews=number("MIN_REVIEWS", 30, 0, 1_000_000),
+            max_reviews=number("MAX_REVIEWS", 50_000, 1, 100_000_000),
+            own_studio=get("OWN_STUDIO", "Four Games"),
             channel_refresh_days=number("CHANNEL_REFRESH_DAYS", 30, 1, 365),
             log_level=level,
         )

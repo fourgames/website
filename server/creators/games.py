@@ -50,8 +50,11 @@ def connect(path: str) -> sqlite3.Connection:
     return db
 
 
-def read(steam_db: str, own_appids: tuple[int, ...], min_reviews: int) -> list[Game]:
-    """Every game worth searching, best first."""
+def read(steam_db: str, own_appids: tuple[int, ...], min_reviews: int, max_reviews: int = 50_000,
+         own_studio: str = "Four Games") -> list[Game]:
+    """Every game worth searching, best first. Ours: the app ids given, and every game whose developer
+    or publisher is exactly own_studio. Games over max_reviews are left out: their videos come from
+    channels far too big to answer a small studio (and from esports channels)."""
     db = connect(steam_db)
     try:
         last, first = db.execute("SELECT MAX(day), MIN(day) FROM app_daily").fetchone()
@@ -62,23 +65,42 @@ def read(steam_db: str, own_appids: tuple[int, ...], min_reviews: int) -> list[G
                                       (day,)).fetchall())
         own = set(own_appids)
         rows = db.execute(
-            f"""SELECT appid, name, tags, reviews FROM apps
-                WHERE name IS NOT NULL AND COALESCE(type, 'game') = 'game' AND COALESCE(coming_soon, 0) = 0
-                  AND (COALESCE(reviews, 0) >= ? OR appid IN ({",".join("?" * len(own)) or "NULL"}))""",
-            (min_reviews, *own)).fetchall()
+            """SELECT appid, name, tags, reviews, developers, publishers FROM apps
+               WHERE name IS NOT NULL AND COALESCE(type, 'game') = 'game' AND COALESCE(coming_soon, 0) = 0
+                 AND (COALESCE(reviews, 0) BETWEEN ? AND ? OR developers LIKE ? OR publishers LIKE ?)""",
+            (min_reviews, max_reviews, f'%"{own_studio}"%', f'%"{own_studio}"%')).fetchall()
+        if own:
+            seen = {r["appid"] for r in rows}
+            missing = [a for a in own if a not in seen]
+            if missing:
+                rows += db.execute(f"""SELECT appid, name, tags, reviews, developers, publishers FROM apps
+                                       WHERE name IS NOT NULL AND appid IN ({",".join("?" * len(missing))})""",
+                                   missing).fetchall()
     finally:
         db.close()
     games = []
     for r in rows:
+        studios = set(_json(r["developers"])) | set(_json(r["publishers"]))
+        is_own = r["appid"] in own or own_studio in studios
+        if not is_own and not min_reviews <= (r["reviews"] or 0) <= max_reviews:
+            continue
         try:
             tags = [int(t) for t in json.loads(r["tags"] or "[]")][:TOP_TAGS]
         except (ValueError, TypeError):
             tags = []
         reviews = r["reviews"] or 0
         games.append(Game(r["appid"], r["name"], tags, reviews,
-                          gain=max(0, reviews - earlier.get(r["appid"], reviews)), own=r["appid"] in own))
+                          gain=max(0, reviews - earlier.get(r["appid"], reviews)), own=is_own))
     rank(games)
     return games
+
+
+def _json(text: str | None) -> list:
+    try:
+        value = json.loads(text or "[]")
+    except ValueError:
+        return []
+    return value if isinstance(value, list) else []
 
 
 def rank(games: list[Game]) -> None:

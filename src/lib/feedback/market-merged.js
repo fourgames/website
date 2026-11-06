@@ -905,6 +905,16 @@ const monthName = (ym) => { const [y, m] = String(ym).split("-"); return `${MONT
 
 // --- Score bars (top 25) ---
 
+// The score's parts, bottom to top: the three opportunity parts in shades of one blue, then growth
+// (colored by direction in the bar, so "growing" no longer paints the whole bar).
+const BAR_PARTS = [
+  ["hit", "var(--sw-1)"],
+  ["typical", "color-mix(in srgb, var(--sw-1) 72%, #0b1a33)"],
+  ["quiet", "color-mix(in srgb, var(--sw-1) 48%, #0b1a33)"],
+  ["growth", null],
+];
+const BAR_WORDS = { hit: "Hit chance", typical: "Reviews per game", quiet: "Few rivals", growth: "Growth" };
+
 function scoreBars(rows) {
   const h = C.h, svgEl = C.svgEl;
   const top = [...rows].sort((a, b) => b.score - a.score).slice(0, 25);
@@ -922,9 +932,26 @@ function scoreBars(rows) {
   top.forEach((r, i) => {
     const on = r.tag === st.sel, cx = M.left + (i + 0.5) * bw, w = bw * 0.74, top_ = y(r.score);
     const g = svgEl("g", { class: `mm-barg${on ? " is-sel" : ""}`, "data-tag": r.tag, tabindex: "0", role: "button", "aria-label": `${r.name}: score ${r.score}. Pick it.` });
-    g.append(svgEl("rect", { x: cx - w / 2, y: top_, width: w, height: base - top_, rx: 3, fill: on ? "var(--fb-accent)" : DIR_COLOR(r), class: "mm-bar-rect" }));
-    if (base - top_ >= 20) text({ x: cx, y: top_ + 15, "text-anchor": "middle", class: "mm-barval" }, String(r.score), g);
-    else text({ x: cx, y: top_ - 4, "text-anchor": "middle", class: "mm-barval-out" }, String(r.score), g);
+    // The bar as a stack of its score parts, scaled so they add up to the score; the growth part on
+    // top, colored by where the niche is heading.
+    const pts = BAR_PARTS.map(([k]) => SCORE_WEIGHTS[k] * (r.parts?.[k] ?? 0));
+    const sum = pts.reduce((a, b) => a + b, 0) || 1;
+    const clip = `mm-bc-${i}`;
+    const cp = svgEl("clipPath", { id: clip });
+    cp.append(svgEl("rect", { x: cx - w / 2, y: top_, width: w, height: base - top_, rx: 3 }));
+    g.append(cp);
+    const stack = svgEl("g", { "clip-path": `url(#${clip})` });
+    let at = base;
+    BAR_PARTS.forEach(([k, color], j) => {
+      const v = (pts[j] / sum) * r.score, hgt = base - y(v);
+      if (hgt <= 0) return;
+      stack.append(svgEl("rect", { x: cx - w / 2, y: at - hgt, width: w, height: hgt, fill: k === "growth" ? DIR_COLOR(r) : color, class: "mm-bar-seg" }));
+      if (hgt >= 15) text({ x: cx, y: at - hgt / 2 + 4, "text-anchor": "middle", class: "mm-barseg" }, String(Math.round(v)), stack);
+      at -= hgt;
+    });
+    g.append(stack);
+    if (on) g.append(svgEl("rect", { x: cx - w / 2 - 2, y: top_ - 2, width: w + 4, height: base - top_ + 2, rx: 4, class: "mm-bar-selbox" }));
+    text({ x: cx, y: top_ - 5, "text-anchor": "middle", class: "mm-barval-out" }, String(r.score), g);
     const name = r.name.length > 17 ? `${r.name.slice(0, 16)}…` : r.name;
     text({ x: cx + 4, y: base + 10, "text-anchor": "end", transform: `rotate(-55 ${cx + 4} ${base + 10})`, class: `mm-barname${on ? " is-sel" : ""}` }, name, g);
     g.append(svgEl("rect", { x: cx - bw / 2, y: M.top, width: bw, height: H - M.top, fill: "transparent" }));
@@ -932,10 +959,12 @@ function scoreBars(rows) {
     svg.append(g);
   });
   const box = h("div.mm-chart",
-    h("div.mm-legend", ...dirLegend("Bar"),
-      h("span", h("i.mm-key", { style: "background:var(--fb-accent)" }), "The tag you picked (click a bar, dot or row to pick one)")),
+    h("div.mm-legend", h("b", "Bar parts:"), ...BAR_PARTS.slice(0, 3).map(([k, c]) => h("span", h("i.mm-key", { style: `background:${c}` }), `${BAR_WORDS[k]} (${Math.round(SCORE_WEIGHTS[k] * 100)}%)`)),
+      h("span", `${BAR_WORDS.growth} (${Math.round(SCORE_WEIGHTS.growth * 100)}%), on top, in the niche's direction:`)),
+    h("div.mm-legend", ...dirLegend("Growth part"),
+      h("span", h("i.mm-key.mm-key-selbox"), "The tag you picked (click a bar, dot or row to pick one)")),
     h("div.mm-hscroll", svg),
-    h("p.mm-small.mm-tight", h("b", "Opportunity score. "), SCORE_TEXT, " Click a bar to pick that tag."));
+    h("p.mm-small.mm-tight", h("b", "Opportunity score. "), SCORE_TEXT, " Each bar is split into how many points each part gave. Click a bar to pick that tag."));
   wireChart(svg, box, ".mm-barg");
   return box;
 }
@@ -1420,9 +1449,13 @@ const CSS = `
 .mkv-merged .mm-hscroll { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .mkv-merged .mm-hscroll > .mm-svg { min-width: 620px; }
 .mkv-merged .mm-barg { cursor: pointer; outline: none; }
-.mkv-merged .mm-barg:hover .mm-bar-rect, .mkv-merged .mm-barg:focus .mm-bar-rect { filter: brightness(1.12); }
 .mkv-merged .mm-barval { fill: #fff; font-size: 11.5px; font-weight: 700; pointer-events: none; }
 .mkv-merged .mm-barval-out { fill: var(--fb-ink); font-size: 11.5px; font-weight: 700; }
+.mkv-merged .mm-barseg { fill: #fff; font-size: 10px; font-weight: 600; pointer-events: none; }
+.mkv-merged .mm-bar-seg { stroke: var(--fb-card); stroke-width: 1; }
+.mkv-merged .mm-bar-selbox { fill: none; stroke: var(--fb-title); stroke-width: 2; pointer-events: none; }
+.mkv-merged .mm-barg:hover .mm-bar-seg, .mkv-merged .mm-barg:focus .mm-bar-seg { filter: brightness(1.12); }
+.mkv-merged .mm-key-selbox { background: none; box-shadow: inset 0 0 0 2px var(--fb-title); }
 .mkv-merged .mm-barname { fill: var(--fb-ink-2); font-size: 11.5px; }
 .mkv-merged .mm-barname.is-sel { fill: var(--fb-title); font-weight: 700; }
 

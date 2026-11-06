@@ -322,6 +322,16 @@ export function fakeApi(files, delay = 1500) {
       const drafts = cannedDrafts(files, direction);
       return { drafts, keep: Math.min(5, drafts.length), day: dayOf(files), model: FAKE_MODEL };
     },
+    async improve(id) {
+      await wait();
+      const idea = find(id);
+      if (!idea.analysis) throw Object.assign(new Error("score the idea first: the improvement works from its scores"), { status: 409 });
+      const title = `${ideaTitle(idea.text)} (improved)`;
+      const rest = idea.text.replace(/^\s*working title\s*:.*$/im, "").trim();
+      return { draft: { text: `Working title: ${title}\n${rest}\nScope (team, months to make, hours of play): 1 person, 3 months, solo only`.slice(0, 2000), title,
+        why: "Test mode, not Claude: a canned rewrite (scope cut to solo).", changes: [{ change: "Solo only, no netcode", aims: "small_team_fit" }, { change: "Sharper hook", aims: null }] },
+        from: { id, score: idea.analysis.score }, day: dayOf(files), model: FAKE_MODEL };
+    },
     async update(id, changes) { const idea = find(id); Object.assign(idea, changes, { updated: Math.floor(Date.now() / 1000) }); return copy(idea); },
     async remove(id) { const i = ideas.findIndex((x) => x.id === id); if (i < 0) throw new Error("no idea with that id"); ideas.splice(i, 1); },
   };
@@ -336,6 +346,8 @@ function serverApi(ctx) {
     rescore: async (id) => (await json(await ctx.adminSend(`ideas/${id}/score`, "POST", {}))).idea,
     // One Claude call for all eight drafts: give it as long as the server gives Claude (5 minutes).
     generate: async (direction) => json(await ctx.adminSend("ideas/generate", "POST", direction ? { direction } : {}, 310000)),
+    // One Claude call that rewrites the idea; the dashboard then scores it like a new idea.
+    improve: async (id) => json(await ctx.adminSend(`ideas/${id}/improve`, "POST", {}, 310000)),
     update: async (id, changes) => (await json(await ctx.adminSend(`ideas/${id}`, "PUT", changes))).idea,
     remove: async (id) => { await ctx.adminSend(`ideas/${id}`, "DELETE", {}); },
   };
@@ -358,7 +370,7 @@ export function ideasView(ctx, files, redraw) {
   }
   const v = { mode, ctx, files, redraw, api: ctx.dataOverride ? fakeApi(files) : serverApi(ctx),
     ideas: null, error: null, loading: false, claude: null, market: null,
-    submitting: null, submitError: null, generating: null, made: null, open: new Set(), busy: new Map(), editing: new Set(), noteDrafts: new Map(), focusNotes: null, showArchived: false, flash: null, sort: "mine" };
+    submitting: null, submitError: null, generating: null, made: null, open: new Set(), busy: new Map(), improved: new Map(), editing: new Set(), noteDrafts: new Map(), focusNotes: null, showArchived: false, flash: null, sort: "mine" };
   kept = v;
   const { h } = ctx;
   v.root = h("section.mkv-ideas", { "aria-label": "My game ideas" });
@@ -603,18 +615,19 @@ function paintMade(v) {
 
 const STAGES = [[0, "Sending the idea and today's market data…"], [4, "Claude is mapping it to Steam tags…"], [15, "Claude is weighing demand, competition and hit odds…"], [35, "Writing pivots, alternatives and timing…"], [70, "Taking longer than usual, still waiting…"]];
 const GEN_STAGES = [[0, "Picking the strongest tag pairs in today's data…"], [5, "Claude is drafting different ideas on them…"], [35, "Filling in the templates…"], [150, "Still writing (8 ideas take a while)…"]];
+const IMPROVE_STAGES = [[0, "Sending the idea, its scores and today's market data…"], [5, "Claude is fixing its weakest scores…"], [40, "Writing the new version into the template…"], [120, "Taking longer than usual, still waiting…"]];
 const stage = (s, stages = STAGES) => stages.filter(([at]) => s >= at).pop()[1];
 
 // A progress bar that eases toward 95% (the real call has no progress to report) and names a stage.
 // tick() repaints every .mki-progress inside a root in place, so nothing else is redrawn.
-function progress(h, started, expected = 45, prefix = "", stages = STAGES) {
+function progress(h, started, expected = 45, prefix = "", stages = STAGES, usual = "30-60 s") {
   const bar = h("span");
   const label = h("span.mki-progress-t");
   const el = h("div.mki-progress", { role: "status", "data-started": started }, h("div.mki-bar", bar), label);
   el._update = () => {
     const s = Math.floor((Date.now() - started) / 1000);
     bar.style.width = `${(Math.min(0.95, 1 - Math.exp(-s / expected)) * 100).toFixed(1)}%`;
-    label.textContent = `${prefix}${stage(s, stages)} ${s} s (usually 30-60 s)`;
+    label.textContent = `${prefix}${stage(s, stages)} ${s} s (usually ${usual})`;
   };
   el._update();
   return el;
@@ -764,6 +777,8 @@ function card(v, idea) {
   const notes = editing ? notesForm(v, idea) : idea.notes ? h("p.mki-notes", h("b", "Notes: "), ...linkify(h, idea.notes)) : null;
   const actions = h("div.mki-row",
     h("button.btn", { type: "button", disabled: !!busy, onclick: () => rescore(v, idea) }, a ? "Re-score with Claude" : "Score with Claude"),
+    a && !idea.archived ? h("button.btn.primary", { type: "button", disabled: !!busy?.started, title: "Claude rewrites this idea to fix its weakest scores (keeping the hook, so it stays your game), then the new version is scored. It is kept as a new idea only if it beats this one; this one is never changed. About 2 minutes.",
+      onclick: () => improve(v, idea) }, "Improve with Claude") : null,
     v.ctx.openTags && idea.tags?.length ? h("button.btn", { type: "button", title: "Opens Tag my game with this idea's tags: which of them go with doing well among the games most like it, and which to add",
       onclick: () => v.ctx.openTags({ tags: idea.tags, about: idea.text }) }, "Check its tags in Tag my game") : null,
     h("button.btn", { type: "button", disabled: editing, onclick: () => { v.editing.add(idea.id); v.focusNotes = idea.id; paintList(v); } }, idea.notes ? "Edit notes" : "Add notes"),
@@ -779,7 +794,7 @@ function card(v, idea) {
       h("b.mki-s-title", ideaTitle(idea.text)),
       h("span.mki-s-sub", [a?.timing?.advice ? { now: "Make now", soon: "Soon", wait: "Wait" }[a.timing.advice] || a.timing.advice : null, last ? `market ${last.score}` : null,
         ...(a?.tags || []).slice(0, 3).map((t) => t.name)].filter(Boolean).join(" · "))),
-    busy?.started ? h("span.mki-s-busy", "scoring…") : null,
+    busy?.started ? h("span.mki-s-busy", busy.improving ? "improving…" : "scoring…") : null,
     h("span.mki-s-chev", { "aria-hidden": "true" }, open ? "▾" : "▸"));
   const headRow = h("div.mki-headrow", summary, mine(v, idea));
   const cls2 = [idea.archived ? "mki-archived" : "", idea.pinned ? "mki-pinned" : ""].filter(Boolean).join(" ") || null;
@@ -791,7 +806,9 @@ function card(v, idea) {
     h("p.mki-idea", idea.text),
     idea.archived ? h("p.mki-muted", "Archived: no new market points.") : null,
     ...body, notes,
-    busy?.started ? progress(h, busy.started) : null,
+    busy?.started ? (busy.improving === "rewrite" ? progress(h, busy.started, 50, "Improving, step 1 of 2: ", IMPROVE_STAGES, "1-2 min")
+      : progress(h, busy.started, 45, busy.improving ? "Improving, step 2 of 2, scoring the new version: " : "")) : null,
+    improvedNote(v, idea),
     busy?.error ? h("p.mki-error", { role: "alert" }, busy.error) : null,
     actions,
     h("p.mki-muted.mki-meta", `Added ${new Date(idea.created * 1000).toLocaleDateString()}${a ? ` · ${a.model}` : ""}`));
@@ -869,6 +886,61 @@ async function rescore(v, idea) {
     clearInterval(timer);
   }
   paintList(v);
+}
+
+// Improve: Claude rewrites the idea to fix its weakest sub-scores, then the rewrite is scored as a new
+// idea. Better than the original: it stays (the original is untouched). Not better: it is archived.
+async function improve(v, idea) {
+  if (v.busy.get(idea.id)?.started) return;
+  const before = idea.analysis?.score;
+  v.improved.delete(idea.id);
+  v.busy.set(idea.id, { started: Date.now(), improving: "rewrite" });
+  paintList(v);
+  const timer = setInterval(() => tick(v.list), 1000);
+  try {
+    const body = await v.api.improve(idea.id);
+    const d = body.draft;
+    v.busy.set(idea.id, { started: Date.now(), improving: "score" });
+    paintList(v);
+    const label = (k) => SUBSCORES.find(([key]) => key === k)?.[1].toLowerCase();
+    const notes = [`Improved from "${ideaTitle(idea.text)}" (Claude ${before ?? "–"}, ${body.day}).`,
+      ...(d.changes?.length ? ["Changes:", ...d.changes.map((c) => `- ${c.change}${c.aims ? ` (for ${label(c.aims)})` : ""}`)] : []),
+      d.why || null, idea.notes ? `\n${idea.notes}` : null].filter(Boolean).join("\n").slice(0, 4900);
+    let made = await v.api.create(d.text, notes);
+    const after = made.analysis?.score;
+    const better = after != null && (before == null || after > before);
+    if (!better) made = await v.api.update(made.id, { archived: true });
+    v.ideas = [made, ...(v.ideas || []).filter((i) => i.id !== made.id)];
+    v.improved.set(idea.id, { better, before, after, id: made.id, title: d.title });
+    v.busy.delete(idea.id);
+  } catch (e) {
+    if (e.signedOut) v.busy.delete(idea.id);
+    else v.busy.set(idea.id, { error: `Not improved: ${errorText(e)}` });
+  } finally {
+    clearInterval(timer);
+  }
+  paintList(v);
+}
+
+// Under the original: how the rewrite did, with a button that opens it (a click the owner makes, so
+// moving the page there is expected).
+function improvedNote(v, idea) {
+  const { h } = v.ctx;
+  const r = v.improved.get(idea.id);
+  if (!r) return null;
+  const show = () => {
+    if (!r.better) v.showArchived = true;
+    v.open.add(r.id);
+    store(v, "open", JSON.stringify([...v.open]));
+    v.flash = r.id;
+    paintList(v);
+  };
+  return h("p.mki-improved", { class: r.better ? "mki-improved-up" : null, role: "status" },
+    r.better ? h("b", `Improved: ${r.before ?? "–"} → ${r.after}. `) : h("b", `The rewrite scored ${r.after ?? "–"}, not above ${r.before ?? "–"}. `),
+    r.better ? `Kept as a new idea, "${r.title}"; this one is unchanged (archive it if you like the new one more). `
+      : "It is archived, not deleted. Rewrites differ each time, and scores move a few points between runs: try again for another one. ",
+    h("button.mki-link", { type: "button", onclick: show }, r.better ? "Open the new version" : "Show it"),
+    " ", h("button.mki-link", { type: "button", onclick: () => { v.improved.delete(idea.id); paintList(v); } }, "Dismiss"));
 }
 
 // Every live idea, one after another (the server runs at most two Claude calls at once anyway).
@@ -1016,6 +1088,8 @@ const CSS = `
 .mkv-ideas .mki-score-t small { color: var(--fb-muted); font-size: 0.78rem; }
 .mkv-ideas .mki-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--fb-muted); }
 .mkv-ideas .mki-dot.mki-good { background: var(--fb-positive); }
+.mkv-ideas .mki-improved { margin: 8px 0; padding: 8px 10px; border-radius: 8px; background: var(--fb-card-2); }
+.mkv-ideas .mki-improved.mki-improved-up { background: color-mix(in srgb, var(--fb-positive) 14%, transparent); }
 .mkv-ideas .mki-dot.mki-ok { background: var(--fb-warning); }
 .mkv-ideas .mki-dot.mki-weak { background: var(--fb-negative); }
 .mkv-ideas .mki-market { flex: 1 1 220px; min-width: 0; max-width: 340px; }
@@ -1111,4 +1185,4 @@ function injectCss() {
   document.head.append(el);
 }
 
-export const _test = { sortIdeas, myRank, splitIdeas, joinIdeas, submitAll, scoreAll, generate, cannedDrafts, linkify, marketScore, mapTags, cannedAnalysis, fakeApi, tagScore, marketOf, words };
+export const _test = { improve, sortIdeas, myRank, splitIdeas, joinIdeas, submitAll, scoreAll, generate, cannedDrafts, linkify, marketScore, mapTags, cannedAnalysis, fakeApi, tagScore, marketOf, words };

@@ -11,6 +11,9 @@ can flop early and hit a year later.
 - POST   /v1/admin/ideas/generate      {direction?}: eight new ideas aimed at a high score, not saved (see
                                        candidate_pairs; the dashboard scores each through POST /ideas
                                        and keeps the best five)
+- POST   /v1/admin/ideas/<id>/improve  the scored idea rewritten to fix its weakest sub-scores, keeping its
+                                       hook; not saved (the dashboard scores it through POST /ideas and
+                                       keeps it only when it beats the original)
 - PUT    /v1/admin/ideas/<id>          {text?, notes?, archived?, pinned?, stars?}
 - DELETE /v1/admin/ideas/<id>          the idea and its history
 
@@ -945,6 +948,14 @@ def similar_games(like_these: str, c: dict[str, Any]) -> list[dict[str, Any]]:
     return out[:SIMILAR + 3]
 
 
+def template_values(raw: dict[str, Any]) -> dict[str, str]:
+    return {k: " ".join(str(raw.get(k) or "").split())[:FIELD_CAP] for k, _ in TEMPLATE_FIELDS}
+
+
+def template_text(values: dict[str, str]) -> str:
+    return "\n".join(f"{label}: {values[k]}" for k, label in TEMPLATE_FIELDS)[:MAX_TEXT]
+
+
 def tidy_drafts(result: dict[str, Any], m: Market, candidates: list[dict[str, Any]], count: int) -> list[dict[str, Any]]:
     """Claude's ideas as template texts ready to score: known pairs only, one idea per pair, the pair's tag
     names on the Genre line (so the scorer gets its evidence), every field short."""
@@ -958,11 +969,11 @@ def tidy_drafts(result: dict[str, Any], m: Market, candidates: list[dict[str, An
         if c is None or pair in seen:
             continue
         seen.add(pair)
-        values = {k: " ".join(str(raw.get(k) or "").split())[:FIELD_CAP] for k, _ in TEMPLATE_FIELDS}
+        values = template_values(raw)
         named = [n.strip() for n in values["genre_tags"].split(",") if n.strip()]
         lower = {n.lower() for n in named}
         values["genre_tags"] = ", ".join([n for n in c["names"] if n.lower() not in lower] + named)[:FIELD_CAP]
-        text = "\n".join(f"{label}: {values[k]}" for k, label in TEMPLATE_FIELDS)[:MAX_TEXT]
+        text = template_text(values)
         drafts.append({"text": text, "title": values["title"] or "Untitled idea", "why": str(raw.get("why", ""))[:600],
                        "pair": {"tags": c["tags"], "names": c["names"], "score": c["score"], "games": c["games"],
                                 "hitRate": c["hitRate"]},
@@ -970,6 +981,83 @@ def tidy_drafts(result: dict[str, Any], m: Market, candidates: list[dict[str, An
         if len(drafts) >= count:
             break
     return drafts
+
+
+# Improve: one scored idea rewritten to fix what the analyst marked down, still the owner's game
+
+IMPROVE_SYSTEM = """You improve one game idea for a small indie studio: one to three people, making small PC \
+games in Godot for Steam, fast (months, not years), self-published, using AI tools heavily for art, code and \
+content. The owner wants to make this game, so it must stay their game: keep its hook, its core fantasy and \
+what makes it theirs. Do not swap it for a different game that happens to score higher.
+
+The idea has been scored by an analyst who reads the same Steam market data; you get the analyst's whole \
+assessment. Your job: the version of this idea that scores highest with that analyst, honestly. Fix the \
+weakest sub-scores first, with concrete changes to the game: a sharper, more specific hook; a scope cut \
+(fewer hard systems: netcode, physics, AI, procedural generation; fewer hand-made levels; no big story); a \
+mechanic or mode that fits what players of its strongest tags want; a tag the game truly gets because the \
+game changes (an early rising tag from the data is worth a lot when it really fits); a better price or \
+player count. Use the analyst's pivots that keep the hook, and answer its risks. Leave alone what already \
+scored well. Never add a tag the game wouldn't truly have just because it sells, and never drop the hook \
+unless the analyst says the hook itself is the problem (then say so in "why").
+
+Write the whole improved idea in the template fields, short concrete phrases (each under 25 words). \
+genre_tags lists Steam tag names exactly as in the data, comma separated, the core one first, no more \
+than 6. "changes" lists each change you made (a few words each) and the sub-score it is for. "why" says in \
+one or two plain sentences why the new version should score higher, quoting the data.
+
+"""
+
+IMPROVE_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {
+        **{k: {"type": "string"} for k, _ in TEMPLATE_FIELDS},
+        "changes": {"type": "array", "items": {"type": "object", "properties": {
+            "change": {"type": "string"}, "aims": {"type": "string", "enum": SUBSCORES}},
+            "required": ["change", "aims"], "additionalProperties": False}},
+        "why": {"type": "string"}},
+    "required": [*[k for k, _ in TEMPLATE_FIELDS], "changes", "why"],
+    "additionalProperties": False,
+}
+
+
+def improve_prompt(idea: dict[str, Any], m: Market) -> str:
+    a = idea["analysis"]
+    parts = [f"The idea, as the owner has it now:\n{idea['text']}"]
+    proof = evidence([t["id"] for t in a.get("tags") or []][:MAX_TAGS], m)
+    if proof:
+        parts.append(proof)
+    if idea.get("notes"):
+        parts.append(f"The owner's notes:\n{idea['notes'][:1500]}")
+    if idea.get("stars"):
+        parts.append(f"The owner rates this idea {idea['stars']} of 5 stars: the higher, the closer the new "
+                     "version should stay to it.")
+    subs = "\n".join(f"- {s['key']} {s['score']}: {s['reason']}" for s in sorted(
+        a.get("subscores") or [], key=lambda s: s["score"] if s["score"] is not None else 101))
+    lines = [f"Overall {a.get('score')}. Verdict: {a.get('verdict', '')}",
+             f"Tags it mapped: {', '.join(t['name'] for t in a.get('tags') or [])}",
+             f"Hook: {a.get('hook', '')}", f"Already has: {'; '.join(a.get('has') or [])}",
+             f"Sub-scores, weakest first:\n{subs}"]
+    if a.get("risks"):
+        lines.append("Risks:\n" + "\n".join(f"- {r}" for r in a["risks"]))
+    if a.get("pivots"):
+        lines.append("Pivots it suggested:\n" + "\n".join(f"- {p['change']}: {p['why']}" for p in a["pivots"]))
+    t = a.get("timing") or {}
+    if t:
+        lines.append(f"Timing: {t.get('advice')}: {t.get('detail', '')} (watch: {t.get('watch', '')})")
+    parts.append("The analyst's assessment of it (" + str(a.get("day", "")) + "):\n" + "\n".join(lines))
+    parts.append("Give the improved idea: same game, the weakest scores fixed, aimed at the highest score it can get.")
+    return "\n\n".join(parts)
+
+
+def tidy_improved(raw: dict[str, Any]) -> dict[str, Any] | None:
+    values = template_values(raw)
+    if not values["one_sentence"] and not values["core_loop"]:
+        return None
+    changes = [{"change": " ".join(str(c.get("change", "")).split())[:FIELD_CAP],
+                "aims": c.get("aims") if c.get("aims") in SUBSCORES else None}
+               for c in raw.get("changes") or [] if isinstance(c, dict) and str(c.get("change", "")).strip()][:8]
+    return {"text": template_text(values), "title": values["title"] or "Untitled idea",
+            "why": str(raw.get("why", ""))[:600], "changes": changes}
 
 
 # The store
@@ -1278,6 +1366,27 @@ async def generate_ideas(request: web.Request) -> web.Response:
     return W.ok({"drafts": drafts, "keep": min(GEN_KEEP, len(drafts)), "day": m.day, "model": model})
 
 
+async def improve_idea(request: web.Request) -> web.Response:
+    """The idea rewritten to score higher, not saved: the dashboard scores it through POST /ideas."""
+    from .admin import require_admin
+    require_admin(request)
+    store = ideas_of(request)
+    idea = await asyncio.to_thread(one, store, found(store, request)["id"])
+    if not idea.get("analysis"):
+        raise Refused(409, "not_scored", "score the idea first: the improvement works from its scores")
+    m = await ready(store)
+    started = time.monotonic()
+    async with store.parallel:
+        raw, model, usage = await call_claude(store.client, IMPROVE_SYSTEM + GEN_RUBRIC_INTRO + SYSTEM + market_brief(m),
+                                              improve_prompt(idea, m), IMPROVE_SCHEMA, "improve this idea")
+    draft = tidy_improved(raw)
+    log.info("idea %d improved by %s in %.0fs (%s)", idea["id"], model, time.monotonic() - started, usage)
+    if draft is None:
+        raise Refused(502, "claude_bad_answer", "Claude's improved idea came back empty; try again")
+    return W.ok({"draft": draft, "from": {"id": idea["id"], "score": idea["analysis"].get("score")},
+                 "day": m.day, "model": model})
+
+
 async def delete_idea(request: web.Request) -> web.Response:
     from .admin import require_admin
     require_admin(request)
@@ -1302,5 +1411,6 @@ def add_routes(app: web.Application, v1: str) -> None:
     add("POST", f"{v1}/ideas", create_idea)
     add("POST", f"{v1}/ideas/generate", generate_ideas)
     add("POST", f"{v1}/ideas/{{idea_id}}/score", rescore_idea)
+    add("POST", f"{v1}/ideas/{{idea_id}}/improve", improve_idea)
     add("PUT", f"{v1}/ideas/{{idea_id}}", update_idea)
     add("DELETE", f"{v1}/ideas/{{idea_id}}", delete_idea)

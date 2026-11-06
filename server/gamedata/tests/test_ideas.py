@@ -6,6 +6,7 @@ from __future__ import annotations
 import gzip
 import json
 import math
+import re
 from types import SimpleNamespace
 
 import pytest
@@ -487,4 +488,55 @@ def test_generating_ideas(tmp_path, market):
         write_market(market, rows=[])
         response = await send(w, cookie, "POST", f"{BASE}/generate", {})
         assert response.status == 503 and (await response.json())["error"] == "market_too_thin"
+    run(tmp_path, steps, **ADMIN)
+
+
+def test_improving_an_idea(tmp_path, market):
+    async def steps(w):
+        cookie = await w.sign_in(back="/fb-dash")
+        fake = claude_of(w)
+        fake.reply()
+        response = await send(w, cookie, "POST", BASE, {"text": "Working title: Dwarf Extraction\nA dwarf extraction shooter",
+                                                        "notes": "Similar games: g3"})
+        idea = (await response.json())["idea"]
+        await send(w, cookie, "PUT", f"{BASE}/{idea['id']}", {"stars": 4})
+
+        better = drafted([1, 2], title="Dwarf Extraction, solo", genre="Extraction Shooter, Roguelite",
+                         changes=[{"change": "Solo only, no netcode", "aims": "small_team_fit"},
+                                  {"change": "  ", "aims": "demand"}, {"change": "Sharper hook", "aims": "nonsense"}])
+        del better["pair"]
+        fake.reply(better)
+        response = await send(w, cookie, "POST", f"{BASE}/{idea['id']}/improve", {})
+        assert response.status == 200, await response.text()
+        body = await response.json()
+        draft = body["draft"]
+        assert body["from"] == {"id": idea["id"], "score": 72} and body["day"] == "2026-11-05"
+        assert draft["title"] == "Dwarf Extraction, solo"
+        assert draft["changes"] == [{"change": "Solo only, no netcode", "aims": "small_team_fit"},
+                                    {"change": "Sharper hook", "aims": None}], "empty changes dropped, unknown aims cleared"
+        lines = draft["text"].split("\n")
+        assert lines[0] == "Working title: Dwarf Extraction, solo" and len(lines) == len(ideas.TEMPLATE_FIELDS)
+        assert ideas.listed_tags(draft["text"], ideas.Market.load()) == [1, 2], "the scorer gets the evidence"
+
+        call = fake.calls[-1]
+        assert call["output_config"]["format"]["schema"] is ideas.IMPROVE_SCHEMA
+        assert ideas.SYSTEM in call["system"][0]["text"], "the scorer's own rubric, word for word"
+        prompt = call["messages"][0]["content"]
+        assert "A dwarf extraction shooter" in prompt and "Similar games: g3" in prompt and "4 of 5 stars" in prompt
+        subs = prompt.split("Sub-scores, weakest first:\n")[1]
+        scores = [int(n) for n in re.findall(r"^- [a-z_]+ (\d+):", subs, re.M)]
+        assert len(scores) == 5
+        assert scores == sorted(scores), "weakest first"
+        listing = await (await w.client.get(BASE, headers=w.page(cookie))).json()
+        assert len(listing["ideas"]) == 1, "the improved draft isn't saved until it's scored"
+
+        fake.reply({**better, "one_sentence": "", "core_loop": ""})
+        response = await send(w, cookie, "POST", f"{BASE}/{idea['id']}/improve", {})
+        assert response.status == 502 and (await response.json())["error"] == "claude_bad_answer"
+        assert (await send(w, cookie, "POST", f"{BASE}/999/improve", {})).status == 404
+
+        ideas_ = w.app[ideas.IDEAS]
+        unscored = ideas_.create("Not scored yet", "")
+        response = await send(w, cookie, "POST", f"{BASE}/{unscored}/improve", {})
+        assert response.status == 409 and (await response.json())["error"] == "not_scored"
     run(tmp_path, steps, **ADMIN)

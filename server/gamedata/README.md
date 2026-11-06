@@ -39,6 +39,7 @@ work. Errors are JSON, `{"ok": false, "error": "<code>", "message": "…"}`, wit
 | `GET /v1/admin/ideas` | the dashboard | The owner's game ideas, newest first, each with its latest Claude analysis, every earlier score and its daily market score (below). |
 | `POST /v1/admin/ideas` | the dashboard | `{"text", "notes"?}`: saves the idea and scores it with Claude (30-60 s). `201 {"idea"}`; when the scoring fails nothing is kept. |
 | `POST /v1/admin/ideas/<id>/score` | the dashboard | Asks Claude again, with today's market data; the earlier analyses stay. |
+| `POST /v1/admin/ideas/generate` | the dashboard | `{direction?}`: "Make 5 top ideas". Picks the tag pairs with the best market score (varied: no tag in more than two), Claude drafts one idea per pair in the template, each with similar games of the last year (Steam links). Not saved: the dashboard scores each through `POST /ideas`, with the links in its notes. |
 | `PUT /v1/admin/ideas/<id>` | the dashboard | `{"text"?, "notes"?, "archived"?, "pinned"?, "stars"?}`: `pinned` true/false, `stars` 0 (not rated) to 5, the owner's own ranking. |
 | `DELETE /v1/admin/ideas/<id>` | the dashboard | The idea and its history (send `{}`: admin writes need a JSON body). |
 | `POST /v1/admin/tagcheck` | the dashboard | `{"appid"?, "name", "about"?, "tags", "candidates"}`: Claude marks each tag fits / maybe / no for the game (Market, Tag my game; tagcheck.py). Without `about` it reads the store page's description. Nothing is stored. |

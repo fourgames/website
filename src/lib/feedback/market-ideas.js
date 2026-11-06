@@ -249,6 +249,31 @@ function dayOf(files) {
   return typeof t === "number" ? new Date(t * 86400000).toISOString().slice(0, 10) : new Date().toISOString().slice(0, 10);
 }
 
+// Test mode's "Make 5 top ideas": the strongest rated tags paired off, each pair's biggest games of the
+// last year as the similar games. The server picks pairs from real pair stats and Claude writes the ideas.
+export function cannedDrafts(files, direction = "") {
+  const m = marketOf(files);
+  const strong = [...m.tags.values()].filter((r) => !META.includes(r.name) && !BIG.includes(r.name) && !ADULT.includes(r.name) && (r.hitGames || 0) >= 40)
+    .map((r) => ({ r, s: tagScore(r, m) })).sort((a, b) => b.s.score - a.s.score).slice(0, 10);
+  const g = files.games;
+  const c = Object.fromEntries((g?.columns || []).map((n, i) => [n, i]));
+  const drafts = [];
+  for (let i = 0; i + 1 < strong.length && drafts.length < 5; i += 2) {
+    const [a, b] = [strong[i].r, strong[i + 1].r];
+    const similar = (g?.rows || []).filter((row) => typeof m.today === "number" && m.today - row[c.day] <= 365 && row[c.tags]?.slice(0, 5).includes(a.tag) && row[c.tags]?.slice(0, 5).includes(b.tag))
+      .sort((x, y) => (y[c.reviews] || 0) - (x[c.reviews] || 0)).slice(0, 4)
+      .map((row) => ({ appid: row[c.appid], name: row[c.name], reviews: row[c.reviews] || 0, released: new Date(row[c.day] * 86400000).toISOString().slice(0, 10), url: `https://store.steampowered.com/app/${row[c.appid]}/` }));
+    const title = `Test ${a.name} × ${b.name}`;
+    const text = IDEA_TEMPLATE.split("\n").map((line) => line.startsWith("Working title") ? `${line} ${title}`
+      : line.startsWith("Genre") ? `${line} ${a.name}, ${b.name}` : line.startsWith("Like these") ? `${line} ${similar.map((x) => x.name).join(", ")}`
+      : line.startsWith("Scope") ? `${line} 1-2 people, 4 months` : `${line} test mode${direction ? ` (${direction})` : ""}`).join("\n");
+    const score = marketScore([a.tag, b.tag], files)?.score ?? 50;
+    drafts.push({ text, title, why: `Test mode, not Claude: ${a.name} ${pct(a.hitRate)} hit, ${b.name} ${pct(b.hitRate)} hit (Steam ${pct(m.base)}).`,
+      pair: { tags: [a.tag, b.tag], names: [a.name, b.name], score }, similar });
+  }
+  return drafts;
+}
+
 // The in-memory server. A text with "fail" in it fails on purpose, to try the error path.
 export function fakeApi(files, delay = 1500) {
   const ideas = [];
@@ -291,6 +316,11 @@ export function fakeApi(files, delay = 1500) {
       return copy(idea);
     },
     async rescore(id) { await wait(); const idea = find(id); analyse(idea); return copy(idea); },
+    async generate(direction = "") {
+      await wait();
+      if (/fail/i.test(direction)) throw Object.assign(new Error("Test mode: a direction with \"fail\" in it fails on purpose"), { status: 502 });
+      return { drafts: cannedDrafts(files, direction), day: dayOf(files), model: FAKE_MODEL };
+    },
     async update(id, changes) { const idea = find(id); Object.assign(idea, changes, { updated: Math.floor(Date.now() / 1000) }); return copy(idea); },
     async remove(id) { const i = ideas.findIndex((x) => x.id === id); if (i < 0) throw new Error("no idea with that id"); ideas.splice(i, 1); },
   };
@@ -303,6 +333,8 @@ function serverApi(ctx) {
     list: async () => json(await ctx.adminGet("ideas")),
     create: async (text, notes) => (await json(await ctx.adminSend("ideas", "POST", notes ? { text, notes } : { text }))).idea,
     rescore: async (id) => (await json(await ctx.adminSend(`ideas/${id}/score`, "POST", {}))).idea,
+    // One Claude call for all five drafts: give it longer than a single score.
+    generate: async (direction) => json(await ctx.adminSend("ideas/generate", "POST", direction ? { direction } : {}, 180000)),
     update: async (id, changes) => (await json(await ctx.adminSend(`ideas/${id}`, "PUT", changes))).idea,
     remove: async (id) => { await ctx.adminSend(`ideas/${id}`, "DELETE", {}); },
   };
@@ -325,7 +357,7 @@ export function ideasView(ctx, files, redraw) {
   }
   const v = { mode, ctx, files, redraw, api: ctx.dataOverride ? fakeApi(files) : serverApi(ctx),
     ideas: null, error: null, loading: false, claude: null, market: null,
-    submitting: null, submitError: null, open: new Set(), busy: new Map(), editing: new Set(), noteDrafts: new Map(), focusNotes: null, showArchived: false, flash: null, sort: "mine" };
+    submitting: null, submitError: null, generating: null, made: null, open: new Set(), busy: new Map(), editing: new Set(), noteDrafts: new Map(), focusNotes: null, showArchived: false, flash: null, sort: "mine" };
   kept = v;
   const { h } = ctx;
   v.root = h("section.mkv-ideas", { "aria-label": "My game ideas" });
@@ -337,12 +369,13 @@ export function ideasView(ctx, files, redraw) {
   v.box.addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) { if (splitIdeas(v.box.value).length) submitAll(v); else submit(v); } });
   v.composer = h("div.mki-composer");
   v.list = h("div.mki-list");
+  v.madeBox = h("div.mki-made-box", { hidden: true });
   v.root.append(
     h("div.mki-head",
       h("h2.mki-title", "My game ideas"),
       h("p.mki-sub", "Type a game idea and Claude scores it against today's Steam data: which tags it is, how many games in them become hits, how crowded they are and whether they're growing. It suggests pivots and other ideas. Ideas are kept and get a fresh market score every day, because timing matters: the same idea can flop early and hit a year later."),
       v.mode === "test" ? h("p.mki-test", h("b", "Test mode: not saved, not Claude."), " Ideas live in this tab only, the analysis is canned from the real market files (tags found by keyword), the earlier days of the sparkline are made up. Put \"fail\" in an idea to try the error (in a list of ideas, it stops there and keeps the unsent ones in the box).") : null),
-    v.composer, v.list);
+    v.composer, v.madeBox, v.list);
   paintComposer(v);
   refresh(v);
   return v.root;
@@ -392,7 +425,7 @@ async function submit(v) {
     store(v, "draft", "");
     v.flash = idea.id;
   } catch (e) {
-    if (!e.signedOut) v.submitError = errorText(e);
+    if (!e.signedOut) v.submitError = `Not scored: ${errorText(e)} Your text is still in the box.`;
   } finally {
     clearInterval(timer);
     v.submitting = null;
@@ -401,54 +434,116 @@ async function submit(v) {
   paintList(v);
 }
 
-// Several ideas, one after another (each takes the server 30-60 s). The box always holds exactly the
-// ideas not yet scored, so a failure (or closing the page) loses nothing.
-async function submitAll(v) {
+// Several ideas, one after another (each takes the server 30-60 s). Typed ones: the box always holds
+// exactly the ideas not yet scored, so a failure (or closing the page) loses nothing. Made ones ("Make 5
+// top ideas"): the ones not scored are put in the box when it fails.
+function submitAll(v) {
   const list = splitIdeas(v.box.value);
-  if (list.length < 2 || v.submitting || list.some((x) => x.length > MAX_IDEA)) return;
-  const n = list.length, left = [...list];
+  if (list.length < 2 || list.some((x) => x.length > MAX_IDEA)) return;
+  return scoreAll(v, list.map((text) => ({ text })), true);
+}
+
+async function scoreAll(v, items, fromBox) {
+  if (v.submitting) return;
+  const n = items.length, left = [...items];
   v.submitError = null;
   let done = 0;
   try {
     while (left.length) {
       v.submitting = { started: Date.now(), i: done + 1, n };
       paintComposer(v);
+      paintMade(v);
       const timer = setInterval(() => tick(v.status), 1000);
       try {
-        const idea = await v.api.create(left[0]);
+        const idea = await v.api.create(left[0].text, left[0].notes);
         v.ideas = [idea, ...(v.ideas || []).filter((i) => i.id !== idea.id)];
         v.flash = idea.id;
+        if (left[0].made) left[0].made.idea = idea;
         left.shift();
         done++;
-        v.box.value = joinIdeas(left);
-        store(v, "draft", v.box.value);
+        if (fromBox) { v.box.value = joinIdeas(left.map((x) => x.text)); store(v, "draft", v.box.value); }
         paintList(v);
       } finally {
         clearInterval(timer);
       }
     }
   } catch (e) {
-    if (!e.signedOut) v.submitError = `Idea ${done + 1} of ${n} not scored: ${errorText(e).replace(/([^.!?])$/, "$1.")} ${done ? `${done} scored; the` : "The"} ${left.length === 1 ? "unsent idea is" : `${left.length} unsent ideas are`} still in the box.`;
+    if (!fromBox && left.length) {
+      const cur = v.box.value.trim();
+      v.box.value = [cur, joinIdeas(left.map((x) => x.text))].filter(Boolean).join("\n\n");
+      store(v, "draft", v.box.value);
+    }
+    if (!e.signedOut) v.submitError = `Idea ${done + 1} of ${n} not scored: ${errorText(e).replace(/([^.!?])$/, "$1.")} ${done ? `${done} scored; the` : "The"} ${left.length === 1 ? "unsent idea is" : `${left.length} unsent ideas are`} ${fromBox ? "still" : "now"} in the box.`;
   } finally {
     v.submitting = null;
   }
   paintComposer(v);
+  paintMade(v);
   paintList(v);
 }
 
+// "Make 5 top ideas": the server picks the strongest, most varied tag pairs in today's data and Claude
+// drafts an idea on each; then each is scored and kept like a typed idea. Its similar games go in the
+// idea's notes (as links), and the drafts stay on show above the list until closed.
+async function generate(v) {
+  if (v.submitting || v.generating) return;
+  const direction = v.genDir.value.trim();
+  v.generating = { started: Date.now() };
+  v.submitError = null;
+  paintComposer(v);
+  const timer = setInterval(() => tick(v.status), 1000);
+  let body = null;
+  try {
+    body = await v.api.generate(direction);
+  } catch (e) {
+    if (!e.signedOut) v.submitError = `No ideas made: ${errorText(e)}`;
+  } finally {
+    clearInterval(timer);
+    v.generating = null;
+  }
+  if (!body?.drafts?.length) { paintComposer(v); return; }
+  v.made = { day: body.day, direction, drafts: body.drafts.map((d) => ({ ...d, idea: null })) };
+  const notes = (d) => [`Made by "Make 5 top ideas" (${body.day}) on ${d.pair.names.join(" + ")}, market score ${d.pair.score}${direction ? `; your direction: ${direction}` : ""}.`,
+    ...(d.similar?.length ? ["Similar games:", ...d.similar.map((g) => `- ${g.name}: ${g.url}`)] : [])].join("\n").slice(0, 4900);
+  await scoreAll(v, v.made.drafts.map((d) => ({ text: d.text, notes: notes(d), made: d })), false);
+}
+
+// The drafts just made: title, why, its tag pair, the similar games as links, and its score once in.
+function paintMade(v) {
+  const { h } = v.ctx;
+  if (!v.madeBox) return;
+  if (!v.made) { v.madeBox.replaceChildren(); v.madeBox.hidden = true; return; }
+  v.madeBox.hidden = false;
+  const scoring = v.submitting?.n ? v.submitting.i : 0;
+  v.madeBox.replaceChildren(
+    h("div.mki-made-head", h("h3", `Just made: ${v.made.drafts.length} ideas`), h("span.mki-muted", `Market data of ${v.made.day}${v.made.direction ? ` · direction: ${v.made.direction}` : ""}`),
+      h("button.mki-link", { type: "button", disabled: !!v.submitting, onclick: () => { v.made = null; paintMade(v); } }, "Close")),
+    h("ol.mki-made-list", v.made.drafts.map((d, i) => {
+      const s = d.idea?.analysis?.score;
+      const [cls] = band(s);
+      return h("li.mki-made",
+        h("div.mki-made-top", h("span.mki-s-score", { class: s != null ? `mki-${cls}` : null }, s ?? (scoring === i + 1 ? "…" : "–")),
+          h("div", h("b", d.title), h("div.mki-muted", `${d.pair.names.join(" + ")} · market ${d.pair.score}${s == null ? scoring === i + 1 ? " · scoring now" : " · waiting to be scored" : ""}`))),
+        d.why ? h("p.mki-made-why", d.why) : null,
+        d.similar?.length ? h("p.mki-similar", h("b", "Similar games: "), ...d.similar.flatMap((g, j) => [j ? " · " : null,
+          h("a", { href: g.url, target: "_blank", rel: "noopener noreferrer", title: `${(g.reviews || 0).toLocaleString()} reviews${g.released ? `, released ${g.released}` : ""}` }, g.name)]).filter(Boolean)) : null);
+    })));
+}
+
 const STAGES = [[0, "Sending the idea and today's market data…"], [4, "Claude is mapping it to Steam tags…"], [15, "Claude is weighing demand, competition and hit odds…"], [35, "Writing pivots, alternatives and timing…"], [70, "Taking longer than usual, still waiting…"]];
-const stage = (s) => STAGES.filter(([at]) => s >= at).pop()[1];
+const GEN_STAGES = [[0, "Picking the strongest tag pairs in today's data…"], [5, "Claude is drafting different ideas on them…"], [35, "Filling in the templates…"], [90, "Taking longer than usual, still waiting…"]];
+const stage = (s, stages = STAGES) => stages.filter(([at]) => s >= at).pop()[1];
 
 // A progress bar that eases toward 95% (the real call has no progress to report) and names a stage.
 // tick() repaints every .mki-progress inside a root in place, so nothing else is redrawn.
-function progress(h, started, expected = 45, prefix = "") {
+function progress(h, started, expected = 45, prefix = "", stages = STAGES) {
   const bar = h("span");
   const label = h("span.mki-progress-t");
   const el = h("div.mki-progress", { role: "status", "data-started": started }, h("div.mki-bar", bar), label);
   el._update = () => {
     const s = Math.floor((Date.now() - started) / 1000);
     bar.style.width = `${(Math.min(0.95, 1 - Math.exp(-s / expected)) * 100).toFixed(1)}%`;
-    label.textContent = `${prefix}${stage(s)} ${s} s (usually 30-60 s)`;
+    label.textContent = `${prefix}${stage(s, stages)} ${s} s (usually 30-60 s)`;
   };
   el._update();
   return el;
@@ -474,27 +569,36 @@ function paintComposer(v) {
     } }, "Use the template");
     const copyTemplate = h("button.btn", { type: "button", title: "Copy the template, to fill in somewhere else first", onclick: (e) => v.ctx.copy?.(IDEA_TEMPLATE, e.currentTarget) }, "Copy template");
     const copyInterview = h("button.btn", { type: "button", title: "A prompt for Claude (claude.ai or the app): it asks you about the idea one question at a time, then gives you the filled-in template to paste here", onclick: (e) => v.ctx.copy?.(INTERVIEW_PROMPT, e.currentTarget) }, "Copy interview prompt");
+    v.genDir = h("input.mki-gen-dir", { type: "text", maxlength: 300, placeholder: "Steer it (optional): e.g. cozy, solo, 3 months, no horror", "aria-label": "Direction for the new ideas",
+      value: load(v, "gen-dir") || "", oninput: () => store(v, "gen-dir", v.genDir.value), onkeydown: (e) => { if (e.key === "Enter") generate(v); } });
+    v.genButton = h("button.btn.primary", { type: "button", title: "Claude drafts 5 different ideas on the strongest tag pairs in today's data, then each is scored and kept like one you typed (about 5 minutes in all)", onclick: () => generate(v) }, "Make 5 top ideas");
+    v.composer.append(h("div.mki-gen", h("div.mki-gen-t", h("b", "Out of ideas?"), " Make 5 ideas aimed at the highest score: each on a different strong tag pair from today's data, with similar recent games for inspiration."),
+      h("div.mki-actions", v.genDir, v.genButton)));
     v.composer.append(h("div.mki-labelrow", h("label.mki-label", { for: "mki-text" }, "Your idea (or several)"), h("span.mki-tpl", useTemplate, copyTemplate, copyInterview)),
       h("p.mki-tip", "The more Claude knows, the better the score: 2D or 3D, the camera, solo or co-op, scope and what it's like. The template asks for all of it; fill in what you know. Not sure yet? \"Copy interview prompt\", paste it into Claude with your rough idea, answer its questions, and paste the template it gives back here."),
       v.box, h("div.mki-actions", v.allButton, v.button, v.hint), v.status);
   }
-  const busy = !!v.submitting;
+  const busy = !!v.submitting || !!v.generating;
+  v.genButton.disabled = busy;
+  v.genDir.disabled = busy;
+  v.genButton.textContent = v.generating ? "Making ideas…" : busy && v.made && v.submitting?.n ? `Scoring ${v.submitting.i} of ${v.submitting.n}…` : "Make 5 top ideas";
   const n = v.box.value.trim().length, many = splitIdeas(v.box.value), tooLong = many.filter((x) => x.length > MAX_IDEA).length;
   v.box.disabled = busy;
   v.allButton.style.display = many.length ? "" : "none";
   v.allButton.disabled = busy || !!tooLong;
-  v.allButton.textContent = busy && v.submitting.n ? `Scoring ${v.submitting.i} of ${v.submitting.n}…` : `Score all ${many.length} ideas`;
+  v.allButton.textContent = busy && v.submitting?.n ? `Scoring ${v.submitting.i} of ${v.submitting.n}…` : `Score all ${many.length} ideas`;
   // With several ideas found, "as one" stays there (a long idea with paragraphs), as the second choice.
   v.button.className = many.length ? "btn" : "btn primary";
   v.button.disabled = busy || !n || n > MAX_IDEA;
-  v.button.textContent = busy && !v.submitting.n ? "Scoring…" : many.length ? "Score it as one idea" : "Score this idea";
+  v.button.textContent = busy && v.submitting && !v.submitting.n ? "Scoring…" : many.length ? "Score it as one idea" : "Score this idea";
   v.hint.textContent = many.length
     ? `${many.length} ideas found (a list, or blank lines between them)${tooLong ? ` · ${tooLong} ${tooLong === 1 ? "is" : "are"} over ${MAX_IDEA} characters: shorten ${tooLong === 1 ? "it" : "them"}` : ""} · Ctrl+Enter scores all`
     : `${n}/${MAX_IDEA}${n > MAX_IDEA ? " · too long for one idea" : ""} · Ctrl+Enter to score`;
   const notice = v.claude === false && v.mode !== "test" ? h("p.mki-warn", "The server has no ANTHROPIC_API_KEY yet: scoring will fail until it's set in /etc/fourgames/gamedata.env (then restart gamedata).") : null;
   v.status.replaceChildren(
-    ...[busy ? progress(h, v.submitting.started, 45, v.submitting.n ? `${v.submitting.i} of ${v.submitting.n}: ` : "") : null,
-      v.submitError ? h("p.mki-error", { role: "alert" }, /^Idea \d+ of/.test(v.submitError) ? v.submitError : `Not scored: ${v.submitError} Your text is still in the box.`) : null,
+    ...[v.generating ? progress(h, v.generating.started, 50, "", GEN_STAGES) : null,
+      v.submitting ? progress(h, v.submitting.started, 45, v.submitting.n ? `${v.submitting.i} of ${v.submitting.n}: ` : "") : null,
+      v.submitError ? h("p.mki-error", { role: "alert" }, v.submitError) : null,
       notice].filter(Boolean));
 }
 
@@ -584,7 +688,7 @@ function card(v, idea) {
   }
 
   const editing = v.editing.has(idea.id);
-  const notes = editing ? notesForm(v, idea) : idea.notes ? h("p.mki-notes", h("b", "Notes: "), idea.notes) : null;
+  const notes = editing ? notesForm(v, idea) : idea.notes ? h("p.mki-notes", h("b", "Notes: "), ...linkify(h, idea.notes)) : null;
   const actions = h("div.mki-row",
     h("button.btn", { type: "button", disabled: !!busy, onclick: () => rescore(v, idea) }, a ? "Re-score with Claude" : "Score with Claude"),
     v.ctx.openTags && idea.tags?.length ? h("button.btn", { type: "button", title: "Opens Tag my game with this idea's tags: which of them go with doing well among the games most like it, and which to add",
@@ -637,6 +741,12 @@ function mine(v, idea) {
       [1, 2, 3, 4, 5].map((n) => h("button.mki-star", { type: "button", class: n <= stars ? "mki-on" : null, "aria-pressed": String(n === stars),
         title: n === stars ? "Clear your rating" : `${n} star${n > 1 ? "s" : ""}: ${n === 3 ? "keeps Claude's score" : `${n > 3 ? "+" : "−"}${Math.abs(n - 3) * STAR_STEP} in your order`}`,
         onclick: () => set({ stars: n === stars ? 0 : n }) }, n <= stars ? "★" : "☆"))));
+}
+
+// Text with its Steam store links clickable (the similar games "Make 5 top ideas" puts in the notes).
+function linkify(h, text) {
+  return text.split(/(https:\/\/store\.steampowered\.com\/app\/\d+\/?)/).map((part, i) =>
+    i % 2 ? h("a", { href: part, target: "_blank", rel: "noopener noreferrer" }, part.replace(/^https:\/\//, "")) : part);
 }
 
 // "Working title: (crab fishing)" → "crab fishing"; otherwise the first line, cut short.
@@ -891,6 +1001,23 @@ const CSS = `
 .mkv-ideas .mki-notes { font-size: 0.88rem; color: var(--fb-ink-2); white-space: pre-wrap; margin: 8px 0; }
 .mkv-ideas .mki-notes b { color: var(--fb-ink); }
 .mkv-ideas .mki-notes-form { margin: 8px 0; }
+.mkv-ideas .mki-gen { margin: 0 0 12px; padding: 0 0 12px; border-bottom: 1px solid var(--fb-line); }
+.mkv-ideas .mki-gen-t { font-size: 0.88rem; color: var(--fb-ink-2); }
+.mkv-ideas .mki-gen-t b { color: var(--fb-ink); }
+.mkv-ideas .mki-gen-dir { flex: 1 1 240px; min-width: 0; font: inherit; font-size: 0.9rem; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 8px; padding: 6px 10px; }
+.mkv-ideas .mki-gen-dir:focus { outline: 2px solid var(--fb-accent); border-color: transparent; }
+.mkv-ideas .mki-made-box { background: var(--fb-card); border: 1px solid var(--fb-accent); border-radius: 12px; padding: 12px 14px; margin-bottom: 18px; }
+.mkv-ideas .mki-made-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.mkv-ideas .mki-made-head h3 { margin: 0; font-size: 1rem; color: var(--fb-title); }
+.mkv-ideas .mki-made-head .mki-link { margin-left: auto; }
+.mkv-ideas .mki-made-list { list-style: none; margin: 8px 0 0; padding: 0; }
+.mkv-ideas .mki-made { padding: 8px 0; border-top: 1px solid var(--fb-line); }
+.mkv-ideas .mki-made:first-child { border-top: 0; }
+.mkv-ideas .mki-made-top { display: flex; align-items: center; gap: 12px; }
+.mkv-ideas .mki-made-top b { color: var(--fb-title); }
+.mkv-ideas .mki-made-why, .mkv-ideas .mki-similar { margin: 4px 0 0; font-size: 0.86rem; color: var(--fb-ink-2); overflow-wrap: anywhere; }
+.mkv-ideas .mki-similar b { color: var(--fb-ink); }
+.mkv-ideas .mki-similar a, .mkv-ideas .mki-notes a { color: var(--fb-link); }
 .mkv-ideas .mki-danger { color: var(--fb-negative); }
 .mkv-ideas .mki-meta { margin: 8px 0 0; font-size: 0.76rem; }
 .mkv-ideas .mki-history { margin: 8px 0 0; }
@@ -910,4 +1037,4 @@ function injectCss() {
   document.head.append(el);
 }
 
-export const _test = { sortIdeas, myRank, splitIdeas, joinIdeas, submitAll, marketScore, mapTags, cannedAnalysis, fakeApi, tagScore, marketOf, words };
+export const _test = { sortIdeas, myRank, splitIdeas, joinIdeas, submitAll, scoreAll, generate, cannedDrafts, linkify, marketScore, mapTags, cannedAnalysis, fakeApi, tagScore, marketOf, words };

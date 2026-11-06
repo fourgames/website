@@ -362,3 +362,80 @@ def test_an_older_database_gets_the_ranking_columns(tmp_path):
     store.update(1, {"pinned": True, "stars": 3})
     assert store.get(1)["pinned"] is True and store.get(1)["stars"] == 3
     store.close()
+
+
+# Generate: new ideas aimed at a high score
+
+
+def drafted(pair, title="Ore Rush", genre="Roguelite, Dwarf", **changes):
+    out = {k: f"{k} text" for k, _ in ideas.TEMPLATE_FIELDS}
+    out.update(pair=pair, title=title, genre_tags=genre, why="8 hits of 20")
+    out.update(changes)
+    return out
+
+
+def test_candidate_pairs_rank_by_market_score_and_spread_the_tags(market):
+    m = ideas.Market.load()
+    [c] = ideas.candidate_pairs(m)
+    assert c["tags"] == [1, 2], "the stronger tag first, as market_score weighs it"
+    assert c["score"] == ideas.market_score([1, 2], m)["score"], "the same number the idea will get each day"
+    assert (c["games"], c["hits"]) == (20, 8) and c["recent"] == 21 and c["top"][0][0] == 10
+
+
+def test_candidate_pairs_spread_the_tags(tmp_path, monkeypatch):
+    rows = [[100 * k + i, f"g{k}{i}", TODAY - 30, 999, 10, 90, tags, 0, 1, 50, None, None, None]
+            for k, tags in enumerate(([1, 2], [1, 3], [2, 3])) for i in range(12)]
+    write_market(tmp_path, rows=rows)
+    monkeypatch.setenv("MARKET_DIR", str(tmp_path))
+    m = ideas.Market.load()
+    assert len(ideas.candidate_pairs(m)) == 3
+    monkeypatch.setattr(ideas, "GEN_TAG_REPEAT", 1)
+    assert len(ideas.candidate_pairs(m)) == 1, "every pair shares a tag with the best one"
+    assert ideas.candidate_pairs(m, limit=1)[0]["tags"] == [1, 2], "the best: the two strongest tags"
+
+
+def test_generating_ideas(tmp_path, market):
+    async def steps(w):
+        cookie = await w.sign_in(back="/fb-dash")
+        fake = claude_of(w)
+        fake.reply()
+        await send(w, cookie, "POST", BASE, {"text": "Working title: Dwarf Extraction\nA dwarf extraction shooter"})
+        ideas_ = (await (await w.client.get(BASE, headers=w.page(cookie))).json())["ideas"]
+        await send(w, cookie, "PUT", f"{BASE}/{ideas_[0]['id']}", {"stars": 5})
+
+        fake.reply({"ideas": [drafted([2, 1], like_these="G3, Not On Steam"), drafted([1, 2], title="Same pair again"), drafted([1, 3], title="Not a candidate")]})
+        response = await send(w, cookie, "POST", f"{BASE}/generate", {"direction": "cozy, solo"})
+        assert response.status == 200, await response.text()
+        body = await response.json()
+        [draft] = body["drafts"]
+        assert body["day"] == "2026-11-05" and body["model"] == ideas.MODEL
+        assert draft["title"] == "Ore Rush" and draft["pair"]["names"] == ["Extraction Shooter", "Roguelite"]
+        lines = draft["text"].split("\n")
+        assert lines[0] == "Working title: Ore Rush" and len(lines) == len(ideas.TEMPLATE_FIELDS)
+        assert lines[2] == "Genre (closest Steam tags): Extraction Shooter, Roguelite, Dwarf", "the pair's tags, once each"
+        assert ideas.listed_tags(draft["text"], ideas.Market.load()) == [1, 2, 4], "the scorer will get the pair's evidence"
+        similar = draft["similar"]
+        assert similar[0]["name"] == "g3" and similar[0]["url"] == "https://store.steampowered.com/app/3/", "a named game first"
+        assert [g["appid"] for g in similar[1:]] == [2, 1, 0], "then the pair's biggest of the last year, g3 once"
+        assert similar[1]["released"] == "2026-10-06" and similar[1]["reviews"] == 10
+
+        call = fake.calls[-1]
+        assert call["output_config"]["format"]["schema"] is ideas.GEN_SCHEMA
+        assert "1|Extraction Shooter|" in call["system"][0]["text"]
+        prompt = call["messages"][0]["content"]
+        assert "Extraction Shooter + Roguelite (ids 1, 2)" in prompt and "8 hits of 20 games" in prompt
+        assert "cozy, solo" in prompt and "Dwarf Extraction (Claude 72, 5 of 5 stars)" in prompt
+        assert "exactly 1 ideas" in prompt, "no more ideas than candidate pairs"
+        listing = await (await w.client.get(BASE, headers=w.page(cookie))).json()
+        assert len(listing["ideas"]) == 1, "drafts aren't saved until they're scored"
+
+        fake.reply({"ideas": [drafted([1, 3])]})
+        response = await send(w, cookie, "POST", f"{BASE}/generate", {})
+        assert response.status == 502 and (await response.json())["error"] == "claude_bad_answer"
+        for bad in ({"direction": "x" * 301}, {"count": 3}, {"direction": 5}):
+            response = await send(w, cookie, "POST", f"{BASE}/generate", bad)
+            assert response.status == 400, bad
+        write_market(market, rows=[])
+        response = await send(w, cookie, "POST", f"{BASE}/generate", {})
+        assert response.status == 503 and (await response.json())["error"] == "market_too_thin"
+    run(tmp_path, steps, **ADMIN)

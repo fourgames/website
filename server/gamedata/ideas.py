@@ -8,6 +8,8 @@ can flop early and hit a year later.
 - GET    /v1/admin/ideas               every idea, newest first, with its analyses and daily market score
 - POST   /v1/admin/ideas               {text, notes?}: saves the idea and scores it with Claude
 - POST   /v1/admin/ideas/<id>/score    asks Claude again (today's market data)
+- POST   /v1/admin/ideas/generate      {direction?}: five new ideas aimed at a high score, not saved (see
+                                       candidate_pairs; the dashboard scores each through POST /ideas)
 - PUT    /v1/admin/ideas/<id>          {text?, notes?, archived?, pinned?, stars?}
 - DELETE /v1/admin/ideas/<id>          the idea and its history
 
@@ -507,17 +509,17 @@ def make_client():
     return anthropic.AsyncAnthropic(timeout=CLAUDE_TIMEOUT, max_retries=1)
 
 
-async def ask_claude(client, idea: dict[str, Any], history: list[dict[str, Any]], m: Market) -> tuple[dict[str, Any], str, dict]:
-    """(the analysis, the model that answered, usage). Refused on any failure, with a message for the owner."""
+async def call_claude(client, system: str, content: str, schema: dict[str, Any], what: str = "score this idea") -> tuple[dict[str, Any], str, dict]:
+    """(Claude's JSON answer, the model that answered, usage). Refused on any failure, with a message for the owner."""
     import anthropic
     try:
         async with client.messages.stream(
             model=MODEL,
             max_tokens=MAX_TOKENS,
-            output_config={"effort": EFFORT, "format": {"type": "json_schema", "schema": SCHEMA}},
-            # The brief changes once a day: several ideas scored the same day share the cached prefix.
-            system=[{"type": "text", "text": SYSTEM + market_brief(m), "cache_control": {"type": "ephemeral"}}],
-            messages=[{"role": "user", "content": user_prompt(idea, history, m)}],
+            output_config={"effort": EFFORT, "format": {"type": "json_schema", "schema": schema}},
+            # The brief changes once a day: several calls the same day share the cached prefix.
+            system=[{"type": "text", "text": system, "cache_control": {"type": "ephemeral"}}],
+            messages=[{"role": "user", "content": content}],
         ) as stream:
             message = await stream.get_final_message()
     except anthropic.AuthenticationError:
@@ -533,7 +535,7 @@ async def ask_claude(client, idea: dict[str, Any], history: list[dict[str, Any]]
     except anthropic.APIConnectionError:
         raise Refused(502, "claude_unavailable", "Claude can't be reached; try again") from None
     if message.stop_reason == "refusal":
-        raise Refused(502, "claude_refused", "Claude declined to score this idea; reword it and try again")
+        raise Refused(502, "claude_refused", f"Claude declined to {what}; reword it and try again")
     if message.stop_reason == "max_tokens":
         raise Refused(502, "claude_cut_off", "Claude's answer was cut off; try again")
     text = next((b.text for b in message.content if b.type == "text"), "")
@@ -546,6 +548,253 @@ async def ask_claude(client, idea: dict[str, Any], history: list[dict[str, Any]]
     usage = getattr(message, "usage", None)
     used = {k: getattr(usage, k, None) for k in ("input_tokens", "output_tokens", "cache_read_input_tokens")} if usage else {}
     return result, getattr(message, "model", MODEL) or MODEL, used
+
+
+async def ask_claude(client, idea: dict[str, Any], history: list[dict[str, Any]], m: Market) -> tuple[dict[str, Any], str, dict]:
+    """Claude's analysis of one idea (see call_claude)."""
+    return await call_claude(client, SYSTEM + market_brief(m), user_prompt(idea, history, m), SCHEMA)
+
+
+# Generate: new ideas aimed at a high score, built on the strongest tag pairs in the data
+
+GEN_COUNT = 5
+GEN_CANDIDATES = 14
+MAX_DIRECTION = 300
+# A tag can be in at most this many of the candidate pairs, so the candidates aren't all one genre.
+GEN_TAG_REPEAT = 2
+# Tags an idea isn't built around: store and review words, adult content, and what 1-3 people can't make.
+NOT_A_BASE = {
+    "Indie", "Singleplayer", "Casual", "2D", "3D", "Free to Play", "Early Access", "Great Soundtrack", "Addictive",
+    "Replay Value", "Classic", "Beautiful", "Masterpiece", "Multiplayer", "Nudity", "Sexual Content", "NSFW",
+    "Hentai", "Mature", "Gore", "Violent", "Massively Multiplayer", "MMORPG", "Photorealistic", "Realistic",
+    "Software", "Utilities", "Design & Illustration", "Animation & Modeling",
+    "Game Development", "Video Production", "Audio Production", "Web Publishing", "Education", "Movie",
+    "Documentary", "Episodic", "Short", "Memes", "Mod", "Benchmark", "VR", "360 Video",
+}
+# The template's lines, as the fields Claude fills in.
+TEMPLATE_FIELDS = [
+    ("title", "Working title"), ("one_sentence", "In one sentence"), ("genre_tags", "Genre (closest Steam tags)"),
+    ("camera", "2D or 3D, camera (top-down, side, first/third person)"), ("art_style", "Art style"),
+    ("core_loop", "Core loop (what you do minute to minute)"), ("progression", "Progression (upgrades, skill tree, unlocks)"),
+    ("modes", "Modes (story, endless, free roam, missions)"), ("players", "Players (solo, local co-op, online co-op, PvP; how many)"),
+    ("hook", "Hook (what's new or different)"), ("like_these", "Like these games"),
+    ("scope", "Scope (team, months to make, hours of play)"), ("price", "Price"),
+    ("extras", "Extras (leaderboards, Steam Deck, mods, demo)"),
+]
+FIELD_CAP = 220
+SIMILAR = 4  # recent games with the pair, linked under each new idea
+SIMILAR_DAYS = 365
+
+
+def gen_games(games: dict[str, Any]) -> dict[str, Any]:
+    """games.json cut down for generating: top tags, day, hit, reviews, name, app id; and every game by its
+    name (lowercase), to link the games Claude names."""
+    cols = {name: i for i, name in enumerate(games.get("columns", []))}
+    top = games.get("topTags", 5)
+    rows, by_name = [], {}
+    for row in games.get("rows", []):
+        name, appid, reviews = row[cols["name"]], row[cols["appid"]], row[cols["reviews"]] or 0
+        if isinstance(name, str) and (name.lower() not in by_name or reviews > by_name[name.lower()]["reviews"]):
+            by_name[name.lower()] = {"appid": appid, "name": name, "reviews": reviews, "day": row[cols["day"]]}
+        if row[cols["day"]] is not None:
+            rows.append((frozenset((row[cols["tags"]] or [])[:top]), row[cols["day"]], row[cols["hit"]], reviews, name, appid))
+    return {"rows": rows, "byName": by_name}
+
+
+def game_link(appid: int, name: str, reviews: int, day: int | None) -> dict[str, Any]:
+    return {"appid": appid, "name": name, "reviews": reviews, "released": iso_day(day) if isinstance(day, int) else None,
+            "url": f"https://store.steampowered.com/app/{appid}/"}
+
+
+def candidate_pairs(m: Market, limit: int = GEN_CANDIDATES) -> list[dict[str, Any]]:
+    """The tag pairs with the best market score (market_score of the two tags, the stronger first), with
+    PAIR_MIN_GAMES rated games behind them, no tag in more than GEN_TAG_REPEAT of them."""
+    if not isinstance(m.today, int):
+        return []
+    games = market_file("games", gen_games)
+    if not games:
+        return []
+    pool = {t: tag_score(r, m) for t, r in m.tags.items()
+            if r.get("name") not in NOT_A_BASE and (r.get("hitGames") or 0) >= 30}
+    lo, hi = m.trends.get("hitRateWindow") or [14, 180]
+    stats: dict[tuple[int, int], dict[str, Any]] = {}
+    for tags, day, hit, revs, name, appid in games["rows"]:
+        mine = sorted(t for t in tags if t in pool)
+        if len(mine) < 2:
+            continue
+        age = m.today - day
+        for i, a in enumerate(mine):
+            for b in mine[i + 1:]:
+                s = stats.get((a, b))
+                if s is None:
+                    s = stats[(a, b)] = {"n": 0, "hits": 0, "reviews": [], "recent": 0, "top": [], "similar": []}
+                if age <= 90:
+                    s["recent"] += 1
+                if 0 <= age <= SIMILAR_DAYS and (len(s["similar"]) < SIMILAR or revs > s["similar"][-1][0]):
+                    s["similar"] = sorted([*s["similar"], (revs, name, day, appid)], reverse=True)[:SIMILAR]
+                if age <= COMPARABLE_DAYS and (len(s["top"]) < 3 or revs > s["top"][-1][0]):
+                    s["top"] = sorted([*s["top"], (revs, name, day)], reverse=True)[:3]
+                if hit is not None and lo <= age <= hi:
+                    s["n"] += 1
+                    s["hits"] += hit >= 90
+                    s["reviews"].append(revs)
+    ranked = []
+    for (a, b), s in stats.items():
+        if s["n"] < PAIR_MIN_GAMES:
+            continue
+        first, second = sorted((pool[a], pool[b]), key=lambda p: -p["score"])
+        rate = (s["hits"] + m.prior * m.base_hit) / (s["n"] + m.prior)
+        pair_score = clamp(50 + 25 * math.log2(max(rate, 1e-3) / m.base_hit))
+        tags = (first["score"] + 0.8 * second["score"]) / 1.8
+        ranked.append({"tags": [first["id"], second["id"]], "names": [first["name"], second["name"]],
+                       "score": round(0.7 * tags + 0.3 * pair_score), "games": s["n"], "hits": s["hits"],
+                       "hitRate": round(rate, 3), "median": _median(s["reviews"]), "recent": s["recent"],
+                       "top": s["top"], "parts": [first, second],
+                       "similar": [game_link(appid, n, r, d) for r, n, d, appid in s["similar"]]})
+    ranked.sort(key=lambda c: (-c["score"], -c["games"]))
+    used: dict[int, int] = {}
+    picked = []
+    for c in ranked:
+        if any(used.get(t, 0) >= GEN_TAG_REPEAT for t in c["tags"]):
+            continue
+        for t in c["tags"]:
+            used[t] = used.get(t, 0) + 1
+        picked.append(c)
+        if len(picked) >= limit:
+            break
+    return picked
+
+
+def candidate_line(i: int, c: dict[str, Any], m: Market) -> str:
+    a, b = c["parts"]
+    def tag(p):
+        return (f"{p['name']} alone: {pct(p['hitRate'])} hit, supply {num(p['supply'])}, "
+                f"demand {num(p['demand'], 2)}, {p['releases']} releases in 90 days")
+    biggest = "; ".join(f"{n} ({r:,} reviews, {iso_day(d)[:4]})" for r, n, d in c["top"]) or "none"
+    return (f"{i}. {c['names'][0]} + {c['names'][1]} (ids {c['tags'][0]}, {c['tags'][1]}): market score {c['score']} "
+            f"(50 = average). {c['hits']} hits of {c['games']} games released 2 weeks to 6 months ago "
+            f"({pct(c['hitRate'])} allowing for chance; Steam {pct(m.base_hit)}), median {c['median']} reviews, "
+            f"{c['recent']} new in the last 90 days. {tag(a)}. {tag(b)}. Biggest in 3 years: {biggest}. "
+            f"Biggest in the last year: " + ("; ".join(f"{g['name']} ({g['reviews']:,} reviews)" for g in c["similar"]) or "none") + ".")
+
+
+def idea_title(text: str) -> str:
+    match = re.search(r"^\s*working title\s*:\s*(.+)$", text or "", re.I | re.M)
+    title = (match.group(1) if match else (text or "").split("\n")[0]).strip().strip("()").strip()
+    return (title[:67] + "...") if len(title) > 70 else title or "Untitled idea"
+
+
+def owner_taste(ideas_: list[dict[str, Any]]) -> str:
+    """The owner's ideas so far, rated and pinned first: what they like, and what not to repeat."""
+    live = [i for i in ideas_ if not i["archived"]]
+    if not live:
+        return ""
+    def key(i):
+        return (-int(i["pinned"]), -(i["stars"] or 0), -((i.get("analysis") or {}).get("score") or 0))
+    lines = []
+    for i in sorted(live, key=key)[:30]:
+        a = i.get("analysis") or {}
+        bits = [f"Claude {a['score']}" if a.get("score") is not None else "not scored"]
+        if i["stars"]:
+            bits.append(f"{i['stars']} of 5 stars")
+        if i["pinned"]:
+            bits.append("pinned")
+        hook = f"; hook: {a['hook'][:120]}" if a.get("hook") else ""
+        lines.append(f"- {idea_title(i['text'])} ({', '.join(bits)}){hook}")
+    return ("The owner's ideas so far (don't repeat them; their stars and pins show their taste, which may "
+            "shape one or two of the new ideas but never at the cost of the score):\n" + "\n".join(lines))
+
+
+GEN_SYSTEM = """You come up with new game ideas for a small indie studio: one to three people, making small PC \
+games in Godot for Steam, fast (months, not years), self-published, using AI tools heavily for art, code and \
+content.
+
+Each idea will then be scored, on its own, by an analyst who reads the same Steam market data. The analyst scores \
+0-100 (50 = an average Steam idea for this team) on demand, competition (high = few rivals), hit odds, \
+small-team fit and timing. Tag pairs with real hits behind them weigh most; tag numbers are a modest signal \
+and the idea's own strength (a clear, specific hook that fits what players of those tags want) counts as \
+much. Scope is judged by the hard systems (netcode, physics, AI, procedural generation), not by art volume. \
+Your goal: ideas that analyst would score as high as possible, honestly. That means a strong market base AND a \
+sharp hook AND a scope 1-3 people can finish in 3-9 months.
+
+Build every idea on one of the candidate tag pairs given, each idea on a different pair and a different first \
+tag, so the ideas are clearly different from each other: different genres, loops, camera, mood and players. \
+Not five variations of one game. Make each one concrete: a hook a player understands in one line, a minute-to-\
+minute loop, real comparable games. No generic "X but with Y" without saying what you actually do. Prefer \
+solo or simple co-op; avoid online PvP and big open worlds unless the data clearly pays for them.
+
+Fill the template fields with short, concrete phrases. genre_tags lists Steam tag names exactly as in the data, \
+comma separated: the pair first, then any other tags the game truly has (no more than 6 in all). \
+"pair" is the two tag ids of the candidate it is built on. "why" says in one or two plain sentences why it \
+should score high, quoting the pair's numbers.
+
+"""
+
+GEN_SCHEMA: dict[str, Any] = {
+    "type": "object",
+    "properties": {"ideas": {"type": "array", "items": {"type": "object", "properties": {
+        "pair": {"type": "array", "items": {"type": "integer"}},
+        **{k: {"type": "string"} for k, _ in TEMPLATE_FIELDS},
+        "why": {"type": "string"}},
+        "required": ["pair", *[k for k, _ in TEMPLATE_FIELDS], "why"], "additionalProperties": False}}},
+    "required": ["ideas"],
+    "additionalProperties": False,
+}
+
+
+def generate_prompt(candidates: list[dict[str, Any]], m: Market, taste: str, direction: str, count: int) -> str:
+    parts = ["Candidate tag pairs, best market score first (games with both tags among their top 5):\n"
+             + "\n".join(candidate_line(i + 1, c, m) for i, c in enumerate(candidates))]
+    if taste:
+        parts.append(taste)
+    if direction:
+        parts.append(f"The owner's direction for this batch (follow it; still aim for the highest score within it):\n{direction}")
+    parts.append(f"Give exactly {count} ideas, each on a different candidate pair, as different from each other as the "
+                 "data allows. Best expected score first.")
+    return "\n\n".join(parts)
+
+
+def similar_games(like_these: str, c: dict[str, Any]) -> list[dict[str, Any]]:
+    """Links for inspiration: the games Claude named that are in the data, then the pair's biggest recent ones."""
+    by_name = (market_file("games", gen_games) or {}).get("byName", {})
+    out, seen = [], set()
+    for name in re.split(r",|;|/|\band\b", like_these):
+        g = by_name.get(name.strip().strip(".()\"'").lower())
+        if g and g["appid"] not in seen:
+            seen.add(g["appid"])
+            out.append(game_link(g["appid"], g["name"], g["reviews"], g["day"]))
+    for g in c["similar"]:
+        if g["appid"] not in seen:
+            seen.add(g["appid"])
+            out.append(g)
+    return out[:SIMILAR + 3]
+
+
+def tidy_drafts(result: dict[str, Any], m: Market, candidates: list[dict[str, Any]], count: int) -> list[dict[str, Any]]:
+    """Claude's ideas as template texts ready to score: known pairs only, one idea per pair, the pair's tag
+    names on the Genre line (so the scorer gets its evidence), every field short."""
+    by_pair = {frozenset(c["tags"]): c for c in candidates}
+    drafts, seen = [], set()
+    for raw in result.get("ideas") or []:
+        if not isinstance(raw, dict):
+            continue
+        pair = frozenset(t for t in raw.get("pair") or [] if isinstance(t, int))
+        c = by_pair.get(pair)
+        if c is None or pair in seen:
+            continue
+        seen.add(pair)
+        values = {k: " ".join(str(raw.get(k) or "").split())[:FIELD_CAP] for k, _ in TEMPLATE_FIELDS}
+        named = [n.strip() for n in values["genre_tags"].split(",") if n.strip()]
+        lower = {n.lower() for n in named}
+        values["genre_tags"] = ", ".join([n for n in c["names"] if n.lower() not in lower] + named)[:FIELD_CAP]
+        text = "\n".join(f"{label}: {values[k]}" for k, label in TEMPLATE_FIELDS)[:MAX_TEXT]
+        drafts.append({"text": text, "title": values["title"] or "Untitled idea", "why": str(raw.get("why", ""))[:600],
+                       "pair": {"tags": c["tags"], "names": c["names"], "score": c["score"], "games": c["games"],
+                                "hitRate": c["hitRate"]},
+                       "similar": similar_games(values["like_these"], c)})
+        if len(drafts) >= count:
+            break
+    return drafts
 
 
 # The store
@@ -729,7 +978,8 @@ def listing(store: Ideas) -> dict[str, Any]:
             "model": MODEL, "claude": bool(os.environ.get("ANTHROPIC_API_KEY", "").strip())}
 
 
-async def score(request: web.Request, store: Ideas, idea: dict[str, Any]) -> None:
+async def ready(store: Ideas) -> Market:
+    """Today's market, with the Claude client made; refused without a key or market files."""
     if not os.environ.get("ANTHROPIC_API_KEY", "").strip() and store.client is None:
         raise Refused(503, "claude_not_configured", "the server has no ANTHROPIC_API_KEY in its environment")
     m = await asyncio.to_thread(Market.load)
@@ -737,6 +987,11 @@ async def score(request: web.Request, store: Ideas, idea: dict[str, Any]) -> Non
         raise Refused(503, "market_not_built", "the market files aren't built yet (steamdata-market.timer)")
     if store.client is None:
         store.client = make_client()
+    return m
+
+
+async def score(request: web.Request, store: Ideas, idea: dict[str, Any]) -> None:
+    m = await ready(store)
     history = [{"score": a["score"], "day": a["day"]} for a in await asyncio.to_thread(store.history, idea["id"])]
     started = time.monotonic()
     async with store.parallel:
@@ -820,6 +1075,34 @@ async def update_idea(request: web.Request) -> web.Response:
     return W.ok({"idea": await asyncio.to_thread(one, store, idea["id"])})
 
 
+async def generate_ideas(request: web.Request) -> web.Response:
+    """New ideas aimed at a high score, not saved: the dashboard scores (and so keeps) each one through
+    POST /ideas, like ideas the owner typed."""
+    from .admin import require_admin
+    require_admin(request)
+    body = await read_json(request, *BODY_CAPS, require_json_type=True)
+    if not set(body) <= {"direction"}:
+        raise Refused(400, "bad_request", "send {direction?}")
+    direction = text_field(body, "direction", MAX_DIRECTION, False) or ""
+    store = ideas_of(request)
+    m = await ready(store)
+    candidates = await asyncio.to_thread(candidate_pairs, m)
+    if not candidates:
+        raise Refused(503, "market_too_thin", "the market data has no tag pairs with enough rated games yet")
+    count = min(GEN_COUNT, len(candidates))
+    taste = owner_taste(await asyncio.to_thread(store.everything))
+    started = time.monotonic()
+    async with store.parallel:
+        raw, model, usage = await call_claude(store.client, GEN_SYSTEM + market_brief(m),
+                                              generate_prompt(candidates, m, taste, direction, count), GEN_SCHEMA,
+                                              "come up with ideas")
+    drafts = tidy_drafts(raw, m, candidates, count)
+    log.info("generated %d ideas by %s in %.0fs (%s)", len(drafts), model, time.monotonic() - started, usage)
+    if not drafts:
+        raise Refused(502, "claude_bad_answer", "Claude's ideas didn't use the candidate tag pairs; try again")
+    return W.ok({"drafts": drafts, "day": m.day, "model": model})
+
+
 async def delete_idea(request: web.Request) -> web.Response:
     from .admin import require_admin
     require_admin(request)
@@ -842,6 +1125,7 @@ def add_routes(app: web.Application, v1: str) -> None:
     add = app.router.add_route
     add("GET", f"{v1}/ideas", list_ideas)
     add("POST", f"{v1}/ideas", create_idea)
+    add("POST", f"{v1}/ideas/generate", generate_ideas)
     add("POST", f"{v1}/ideas/{{idea_id}}/score", rescore_idea)
     add("PUT", f"{v1}/ideas/{{idea_id}}", update_idea)
     add("DELETE", f"{v1}/ideas/{{idea_id}}", delete_idea)

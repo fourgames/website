@@ -99,11 +99,11 @@ Short one-to-one emails to the creators and press on the lists, in small daily d
 Each email has a plain-text part and an HTML part that looks like a normal email from a person
 (no card, buttons or logo: designed cold emails read like marketing and land in spam more often),
 with the game's gameplay GIF dropped in after the second paragraph:
-`public/images/outreach/<game-name-slug>.gif`, served from fourgames.se, under ~2 MB, with a good
-first frame since Outlook shows only that. Without one, the Steam header image. No tracking pixels.
+`public/images/outreach/<game-name-slug>.gif`, served from fourgames.se, as small as it can be
+(about 360 px, 8 fps, 32 colors, 3 s: ~350 KB), with a good first frame since Outlook shows only that. Without one, the Steam header image. No tracking pixels.
 To make a GIF from a Steam trailer, on the server: get the trailer with
 `ffmpeg -i <the hls_h264 address from Steam's appdetails movies> -c copy trailer.mp4`, then
-`ffmpeg -ss 7.6 -t 3.6 -i trailer.mp4 -vf "fps=12,scale=520:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=96:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=4:diff_mode=rectangle" -loop 0 out.gif`.
+`ffmpeg -ss 7.8 -t 3 -i trailer.mp4 -vf "fps=8,scale=360:-1:flags=lanczos,split[a][b];[a]palettegen=max_colors=32:stats_mode=diff[p];[b][p]paletteuse=dither=bayer:bayer_scale=5:diff_mode=rectangle" -loop 0 out.gif`.
 
 The from address can be the game's (e.g. "Danny from Pomo Valley" <pomovalley@fourgames.se>): add it
 in Strato as an **alias** of the sending mailbox, so Strato lets the mailbox send as it and replies land

@@ -143,8 +143,8 @@ def html_body(text: str, *, image: str, steam: str, from_name: str) -> str:
 
     parts = [para(p) for p in paragraphs]
     if image:
-        gif = (f'<p style="margin:0 0 14px"><a href="{h.escape(steam or SITE)}"><img src="{h.escape(image)}" width="460" alt="" '
-               f'style="display:block;width:100%;max-width:460px;height:auto;border:0;border-radius:6px"></a></p>')
+        gif = (f'<p style="margin:0 0 14px"><a href="{h.escape(steam or SITE)}"><img src="{h.escape(image)}" width="360" alt="" '
+               f'style="display:block;width:100%;max-width:360px;height:auto;border:0;border-radius:6px"></a></p>')
         parts.insert(min(2, len(parts)), gif)
     if foot:
         parts.append(f'<p style="margin:18px 0 0;color:#888;font-size:12px">{h.escape(foot)}</p>')

@@ -259,8 +259,18 @@ function draw() {
     return [main, detail];
   }
 
+  // Collecting: YouTube's daily units, so a still number reads as "limit reached", not "broken".
+  const q = d.quota;
+  const clock = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  const resetAt = q ? clock(q.reset) : "";
+  const collecting = q ? h("p.cr-muted.cr-quota",
+    q.exhausted
+      ? `Collecting paused: today's YouTube limit is used (${num(q.spent)} of ${num(q.limit)} units). New creators again after ${resetAt}.`
+      : `Collecting: ${num(q.spent)} of ${num(q.limit)} YouTube units used today, spread over the day (resets at ${resetAt}).`,
+    d.generated ? ` Last run ${clock(d.generated)}.` : "") : null;
+
   drawList();
-  root.replaceChildren(switcher, cards, gamePick, filters, list,
+  root.replaceChildren(switcher, cards, collecting, gamePick, filters, list,
     h("details.about", h("summary", "How this works"),
       h("p", "The server searches YouTube every hour for videos of Steam games (ours every week, then games with 30 to 50,000 reviews, those like ours first) and keeps the channels that made them. Emails come from the channel description, from pages they link to (Linktree, their website; the server follows those), or from YouTube's hidden View email button, which needs a captcha (the creator-emails skill)."),
       h("p", "Last upload is the channel's newest upload of any kind, read every 14 days. Type comes from the games they covered: indie variety plays 4+ different, mostly small games; one game is mostly one title. Genres are the Steam tags of those games."),

@@ -294,6 +294,9 @@ def test_export(tmp_path, steam_db, monkeypatch):
     data = json.loads(gz.open(path, "rt").read())
     by = {c["id"]: c for c in data["creators"]}
     assert set(by) == {"UCa", "UCb"} and data["searched"] == 4
+    q = data["quota"]
+    assert q["limit"] == collector.config.daily_units and q["spent"] > 0 and q["reset"] > NOW
+    assert q["reset"] - NOW <= 25 * 3600 and q["exhausted"] == (q["spent"] >= q["limit"])
     assert by["UCa"]["e"] == [["uca@mail.com", "description"], ["a@a.com", "links"]]
     assert by["UCa"]["own"] and not by["UCb"]["own"] and by["UCb"]["g"][0][0] == 2
     assert by["UCa"]["cat"] == "few-games" and by["UCa"]["lu"] is not None and by["UCa"]["v30"] == 1

@@ -9,7 +9,9 @@ Per creator (short keys, the file grows to thousands): id, t title, h handle, s 
 on the channel, c country, l language, e [[email, source]] (source: description, revealed, links),
 k links {twitch, x, ...}, b hidden-email button (1/0/null), lu newest upload, lv newest video of a
 game we searched, g [[appid, videos, newest, views]], cat category, p genre profile [[tagid, weight]].
-Also "press": the press list (press.py), one object per outlet.
+Also "press": the press list (press.py), one object per outlet, and "quota": today's YouTube units
+(day, spent, limit, exhausted, reset = when YouTube's quota day ends), so the page can say when
+collecting stops for the day.
 """
 
 from __future__ import annotations
@@ -21,7 +23,9 @@ import statistics
 import sys
 import time
 from collections import Counter, defaultdict
+from datetime import datetime, timedelta
 
+from .collector import PACIFIC, quota_day
 from .config import Config, ConfigError
 from .db import Store
 from .games import _json, connect, own_appids
@@ -51,7 +55,17 @@ def category(games: list[tuple[int, int]], reviews: dict[int, int]) -> str:
     return "few-games"
 
 
-def build(store: Store, steam_db: str, own: set[int], now: float) -> dict:
+def quota(store: Store, daily_units: int, now: float) -> dict:
+    """Today's YouTube units and when the quota day ends (midnight Pacific)."""
+    day, _ = quota_day(now)
+    spent, exhausted = store.units_spent(day)
+    midnight = datetime.fromtimestamp(now, PACIFIC).replace(hour=0, minute=0, second=0, microsecond=0)
+    reset = midnight + timedelta(days=1)  # wall-clock arithmetic in Pacific time
+    return {"day": day, "spent": spent, "limit": daily_units, "exhausted": exhausted or spent >= daily_units,
+            "reset": int(reset.timestamp())}
+
+
+def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: int | None = None) -> dict:
     db = store.db
     covered: dict[str, list[list]] = defaultdict(list)
     appids: set[int] = set(own)
@@ -121,12 +135,13 @@ def build(store: Store, steam_db: str, own: set[int], now: float) -> dict:
         "creators": creators,
         "searched": db.execute("SELECT COUNT(*) FROM searches").fetchone()[0],
         "press": press_rows(store),
+        **({"quota": quota(store, daily_units, now)} if daily_units else {}),
     }
 
 
 def write(config: Config, store: Store, now: float | None = None) -> str:
     data = build(store, config.steam_db, own_appids(config.steam_db, config.own_appids, config.own_studio),
-                 now or time.time())
+                 now or time.time(), config.daily_units)
     folder = os.environ.get("EXPORT_DIR", "").strip() or DEFAULT_DIR
     os.makedirs(folder, exist_ok=True)
     path = os.path.join(folder, "creators.json.gz")

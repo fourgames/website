@@ -15,7 +15,7 @@ Rules that always hold, whatever a campaign says:
   - Every email says how to opt out (a line before the sign-off: reply and say so), and carries a List-Unsubscribe header.
 
 Placeholders in the subject and body: {name} (the channel or outlet), {game}, {steam} (the store
-link), {their_game} (for a creator: a game they made a video of, ours first, else one like ours;
+link), {press} (the game's press page on press.fourgames.se), {their_game} (for a creator: a game they made a video of, ours first, else one like ours;
 for press: empty). Anything else is written as it is.
 
 This module is the database side, used by send.py and by the game-data server's admin routes
@@ -37,7 +37,7 @@ MAX_SUBJECT = 150
 MAX_BODY = 5000
 STATUSES = ("draft", "approved", "paused", "done")
 EMAIL = re.compile(r"^[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$")
-FIELD = re.compile(r"\{(name|game|steam|their_game)\}")
+FIELD = re.compile(r"\{(name|game|steam|press|their_game)\}")
 OPT_OUT_LINE = "If you don't want emails like this, just tell me and I won't email again."
 
 SCHEMA = """
@@ -268,7 +268,8 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
             # A game they made a video of, ours first; the campaign's own game only if it's all they played.
             their = next((game_names[a] for a in games if a in game_names and a != appid),
                          game if appid in games else "")
-            fields = {"name": who["name"], "game": game, "steam": steam, "their_game": their}
+            fields = {"name": who["name"], "game": game, "steam": steam, "their_game": their,
+                      "press": f"https://press.fourgames.se/{re.sub(r'[^a-z0-9]+', '-', game.lower()).strip('-')}"}
             store.db.execute(
                 """INSERT INTO outreach_messages (campaign_id, target_kind, target_id, name, email, subject, body,
                                                   status, queued_at)

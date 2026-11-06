@@ -350,11 +350,11 @@ function pressView(d) {
 const TEMPLATES = {
   creators: {
     subject: "{game} for your channel?",
-    body: "Hi {name},\n\nI made a game called {game}. [What you do in it, in one simple sentence.] You played {their_game}, so I think you might like it.\n\nSteam: {steam}\nFree key: https://discord.fourgames.se (type /request and the bot gives you one instantly)\n\nThanks,\nDanny",
+    body: "Hi {name},\n\nI made a game called {game}. [What you do in it, in one simple sentence.] You played {their_game}, so I think you might like it.\n\nSteam: {steam}\nFree key: join https://discord.fourgames.se and type /request, the bot sends it right away\nPress kit: {press}\n\nThanks,\nDanny",
   },
   press: {
     subject: "{game}: [the news, in a few words]",
-    body: "Hi {name} team,\n\n[The news in one sentence, with the date.]\n\n[Two or three lines about {game}.]\n\nSteam: {steam}\nTrailer: [trailer link]\nPress kit: [press kit link]\n\nHappy to send a key for coverage.\n\nBest,\nDanny\nFour Games",
+    body: "Hi {name} team,\n\n[The news in one sentence, with the date.]\n\n[Two or three lines about {game}.]\n\nSteam: {steam}\nTrailer: [trailer link]\nPress kit: {press}\n\nHappy to send a key for coverage.\n\nBest,\nDanny\nFour Games",
   },
 };
 const MSG_STATUS = { queued: "Waiting", sent: "Sent", replied: "Replied", opted_out: "Said no", bounced: "Bounced", failed: "Failed", skipped: "Skipped" };
@@ -479,7 +479,7 @@ function formView(d, contacted) {
     h("p.cr-muted", "The from address must be your Strato mailbox or one of its aliases (add a game address as an alias in Strato's mail settings first)."),
     input("Subject", "subject"),
     area("Message", "body", 14),
-    h("p.cr-muted", "{name} = the channel or outlet, {game}, {steam} = the store link, {their_game} = a game the creator made a video of. Replace the [bracketed] parts. Keep it short and simple (creators skim, and many read English as a second language), and true. The game's GIF goes in after the second paragraph, and an opt-out line at the end."),
+    h("p.cr-muted", "{name} = the channel or outlet, {game}, {steam} = the store link, {press} = the game's press page, {their_game} = a game the creator made a video of. Replace the [bracketed] parts. Keep it short and simple (creators skim, and many read English as a second language), and true. The game's GIF goes in after the second paragraph, and an opt-out line at the end."),
     h("div.cr-row", h("button.btn.primary", { type: "button", disabled: ot.busy || !people.length, onclick: create }, ot.busy ? "Saving…" : `Save draft for ${people.length === 1 ? "1 person" : `${num(people.length)} people`}`),
       h("span.cr-muted", "Nothing is sent until you approve the draft.")),
     people.length ? h("details", h("summary.cr-muted", `Who's in (${people.length})`), h("p.cr-muted", people.slice(0, 200).map((p) => p.label).join(", "))) : null);

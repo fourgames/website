@@ -35,7 +35,7 @@ def store(tmp_path):
 
 SPEC = {"appid": 1, "game": "Pomo Valley", "audience": "creators", "from_name": "Danny from Pomo Valley",
         "from_email": "pomovalley@fourgames.se", "subject": "{game} for {name}?",
-        "body": "Hi {name},\nI saw your {their_game} video. {game}: {steam}\nDanny", "daily_limit": 10,
+        "body": "Hi {name},\nI saw your {their_game} video. {game}: {steam} {press}\nDanny", "daily_limit": 10,
         "recipients": ["UCa", "UCb", "UCc", "UCd", "UCe", "UCnope"]}
 GAMES = {1: "Pomo Valley", 99: "Our Old Game", 5: "Other Game"}
 
@@ -53,6 +53,7 @@ def test_draft_fills_in_each_message_and_skips_the_unusable(store):
     a = msgs["UCa"]
     assert a["subject"] == "Pomo Valley for Alpha Plays?"
     assert "I saw your Our Old Game video" in a["body"]  # ours first
+    assert "https://press.fourgames.se/pomo-valley" in a["body"]
     assert "https://store.steampowered.com/app/1/" in a["body"] and a["body"].endswith(outreach.OPT_OUT_LINE + "\n\nDanny") is False and outreach.OPT_OUT_LINE in a["body"]
     with pytest.raises(outreach.OutreachError):
         make(store, {**SPEC, "from_email": "nope"})

@@ -228,7 +228,7 @@ def test_urls_and_followable():
                                    "https://linktr.ee/somebody", "https://www.beacons.ai/me"]
     assert followable("https://linktr.ee/somebody") and followable("https://sarahsunstone.store")
     for url in ("https://twitch.tv/x", "https://www.youtube.com/@a", "https://amazon.de/dp/1", "https://smile.amazon.com",
-                "https://discord.gg/abc", "https://bit.ly/m/x", "ftp://a.com", "https://localhost/"):
+                "https://discord.gg/abc", "https://bit.ly/m/x", "https://www.ign.com", "https://www.digipen.edu", "ftp://a.com", "https://localhost/"):
         assert not followable(url), url
 
 
@@ -237,6 +237,7 @@ def test_page_emails():
     page = ('<a href="mailto:Biz%40Creator.com?subject=hi">mail</a> privacy@linktr.ee me@linktr.ee '
             'your@email.com 123@sentry.wixpress.com other [at] gmail [dot] com')
     assert page_emails(page, "linktr.ee") == ["biz@creator.com", "other@gmail.com"]
+    assert page_emails("a@test.rutube.ru b@uni.edu", "x.com") == []
 
 
 def test_follower(tmp_path):

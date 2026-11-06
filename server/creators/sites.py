@@ -49,8 +49,18 @@ SKIP_HOSTS = (
     "epicgames.com", "playstation.com", "xbox.com", "nintendo.", "roblox.com", "github.com",
     "soundcloud.com", "bandcamp.com", "twitchtracker.com", "streamable.com", "imgur.com",
     "buymeacoffee.com", "subscribestar.", "boosty.to", "donationalerts.com", "tipeeestream.com",
-    "streamloots.com", "gofundme.com", "bit.ly/m/",
+    "streamloots.com", "gofundme.com", "bit.ly/m/", "creativecommons.org", "wikipedia.org", "ign.com",
+    "rutube.ru", "vkvideo.ru", "vkplay.live", "donatepay.ru", "dzen.ru", "ok.ru", "mail.ru", "yandex.",
+    "bilibili.com", "nicovideo.jp", "afreecatv.com", "trovo.live", "dlive.tv", "itch.io", "gamejolt.com",
+    "medium.com", "substack.com", "wordpress.com", "blogspot.com", "ytmusic", "music.apple.com",
+    "deezer.com", "tidal.com", "audiomack.com", "gamersupps.gg", "razer.com", "logitech", "corsair.com",
+    "hyperx.com", "secretlab.co", "elgato.com", "gfuel.com", "manscaped.com", "displate.com",
+    "skillshare.com", "audible.", "curiositystream.com", "nebula.tv", "opera.com", "honey.com",
+    "ground.news", "brilliant.org", "squarespace.com", "wix.com", "shopify.com", "etsy.com", "ebay.",
+    "aliexpress.", "temu.com", "booking.com", "expressvpn.com", "surfshark.com", "privateinternetaccess.com",
 )
+# A page with more emails than this is a company or platform page, not one creator's.
+MAX_PAGE_EMAILS = 4
 # Emails that belong to the page's host or a web tool, not the creator.
 SKIP_EMAIL_DOMAINS = {"wixpress.com", "sentry.wixpress.com", "sentry-next.wixpress.com", "squarespace.com",
                       "godaddy.com", "shopify.com", "carrd.co", "linktr.ee", "linktree.com", "beacons.ai",
@@ -87,7 +97,7 @@ def followable(url: str) -> bool:
     if not url.lower().startswith(("http://", "https://")):
         return False
     h = host(url)
-    if not h or "." not in h:
+    if not h or "." not in h or h.endswith(".edu"):
         return False
     whole = h + urllib.parse.urlsplit(url).path.lower()
     for s in SKIP_HOSTS:
@@ -110,6 +120,7 @@ def page_emails(text: str, page_host: str) -> list[str]:
     for email in found:
         local, _, domain = email.partition("@")
         if (domain in SKIP_EMAIL_DOMAINS or domain.endswith(".wixpress.com") or local in SKIP_LOCAL
+                or domain.startswith("test.") or domain.endswith(".edu")
                 or (domain == page_host and page_host.endswith(contacts.BIO_HOSTS))):
             continue
         out.append(email)
@@ -173,9 +184,11 @@ class Follower:
                 more, _, _ = self._get(link)
                 if more:
                     emails = page_emails(more, page_host)
-                    if emails:
+                    if emails and len(emails) <= MAX_PAGE_EMAILS:
                         break
-        return "ok", emails[:5]
+        if len(emails) > MAX_PAGE_EMAILS:
+            return "ok", []
+        return "ok", emails
 
     def sync_description_links(self) -> int:
         """Adds the web addresses in every channel's description to channel_links."""

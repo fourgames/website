@@ -12,7 +12,7 @@ How it works:
 Rules that always hold, whatever a campaign says:
   - Never to an address that opted out or bounced (the suppress table), ever again.
   - Never twice to the same address within RECONTACT_DAYS, across all campaigns.
-  - Every email says how to opt out (reply "no"), and carries a List-Unsubscribe header.
+  - Every email says how to opt out (a P.S.: reply "no"), and carries a List-Unsubscribe header.
 
 Placeholders in the subject and body: {name} (the channel or outlet), {game}, {steam} (the store
 link), {their_game} (for a creator: a game they made a video of, ours first, else one like ours;
@@ -38,7 +38,7 @@ MAX_BODY = 5000
 STATUSES = ("draft", "approved", "paused", "done")
 EMAIL = re.compile(r"^[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$")
 FIELD = re.compile(r"\{(name|game|steam|their_game)\}")
-OPT_OUT_LINE = 'Not interested? Just reply "no" and I won\'t write again.'
+OPT_OUT_LINE = 'P.S. Not your kind of game? No worries, just reply "no" and I won\'t email again.'
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS outreach_campaigns (
@@ -168,7 +168,8 @@ def render(template: str, fields: dict[str, str]) -> str:
 
 def with_opt_out(body: str) -> str:
     body = body.rstrip()
-    return body if "reply \"no\"" in body.lower() or "unsubscribe" in body.lower() else f"{body}\n\n--\n{OPT_OUT_LINE}"
+    # In the sender's own words, as a P.S.: required (an easy way to say no), without looking like a mass mailing.
+    return body if "reply \"no\"" in body.lower() or "unsubscribe" in body.lower() else f"{body}\n\n{OPT_OUT_LINE}"
 
 
 def blocked(store: Store, email: str, now: float, exclude: int | None = None, sent_only: bool = False) -> str | None:

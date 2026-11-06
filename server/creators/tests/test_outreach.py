@@ -176,10 +176,18 @@ def test_designed_email(store):
     assert mail.is_multipart() and mail.get_body(("plain",)) and mail.get_body(("html",))
     html = mail.get_body(("html",)).get_content()
     assert "https://store.steampowered.com/app/1/" in html and "header.jpg" in html
-    assert "Not interested?" in html and "<script" not in html
+    assert "Not your kind of game?" in html and "<script" not in html
     designed = outreach.html_body("Hi A,\n\nSteam: https://store.steampowered.com/app/9/\n\nKey: https://discord.gg/x\n\nBest,\nDanny\nFour Games\n\n--\nreply no",
                                   image="https://x/y.gif", steam="https://store.steampowered.com/app/9/", from_name="D")
     assert designed.index("https://x/y.gif") < designed.index("Key:")  # the GIF after the second paragraph
     assert '<a href="https://discord.gg/x">' in designed and "Danny<br>Four Games" in designed
     assert outreach.image_for("Some Game", 7, {"some-game"}).endswith("/images/outreach/some-game.gif")
     assert outreach.image_for("Other", 7, set()).endswith("/apps/7/header.jpg")
+
+
+def test_what_counts_as_no():
+    from creators.send import OPT_OUT
+    for text in ("no", "No.", "nope!", "No thanks, not my genre", "Not interested", "Please remove me", "unsubscribe"):
+        assert OPT_OUT.search(text), text
+    for text in ("No problem, send me a key!", "Nope, I'd love to try it", "Sounds fun", "Now that looks cool"):
+        assert not OPT_OUT.search(text), text

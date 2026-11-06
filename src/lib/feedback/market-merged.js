@@ -9,13 +9,14 @@
 //      what's doing well right now (releases by hit index), and all of today's alerts, folded.
 //   4. My game ideas             market-ideas.js: score an idea against the market.
 //   5. Tag my game               market-tags.js: a game's tags against the games most like it.
+//      ctx.openTags({ tags, about }) opens it on an idea's tags (used by My game ideas).
 // Same contract as market.js: marketTop(ctx) fills the header, marketView(ctx) returns one root that
 // redraws itself. The data files come from server/steamdata/market.py.
 
 import { signView } from "./market-sign.js";
 import { gapView, topPairsWith } from "./market-gaps.js";
 import { ideasView } from "./market-ideas.js";
-import { tagsView } from "./market-tags.js";
+import { tagsView, openWith as openTagsWith } from "./market-tags.js";
 
 const DAY = 86400;
 const PREFIX = "mkv-merged-";
@@ -606,6 +607,8 @@ export function marketTop(ctx) {
 
 export function marketView(ctx) {
   C = ctx;
+  // For the other tabs: open "Tag my game" on a list of tag ids (and a description), e.g. a game idea's.
+  C.openTags = (req) => { openTagsWith(req); goTab("tags"); };
   injectStyle();
   restore();
   st.root = C.h("div.mk.mkv-merged");

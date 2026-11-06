@@ -17,7 +17,8 @@
 // Contract: tagsView(ctx, files, redraw) returns one element (.mkv-tags), kept and handed back on
 // later calls, so typing and focus survive the page's redraws. files = { overview, trends, games,
 // upcoming, godot }. Claude: ctx.adminSend("tagcheck", "POST", body), see server/gamedata/tagcheck.py;
-// with ctx.dataOverride set there is no server and a canned local answer stands in.
+// with ctx.dataOverride set there is no server and a canned local answer stands in. openWith({tags, about})
+// opens it on a list of tags (market-merged.js's ctx.openTags, for "My game ideas").
 
 import { SITE } from "@/data/site.js";
 import { GAMES } from "@/data/games.js";
@@ -254,11 +255,34 @@ export function fakeCheck(body) {
 // ---------------------------------------------------------------------------
 
 let kept = null;
+let asked = null;
+
+// Another view's way in (market-merged.js's ctx.openTags, used by "My game ideas"): the next draw shows
+// these tag ids and this description as "A game not on Steam yet", replacing any edited custom tags.
+export function openWith({ tags = [], about = "" } = {}) {
+  asked = { tags: Array.isArray(tags) ? tags.filter((t) => Number.isInteger(t)) : [], about: String(about || "").slice(0, MAX_ABOUT) };
+}
+
+function takeAsked(v) {
+  if (!asked) return;
+  const { tags, about } = asked;
+  asked = null;
+  const names = v.files.overview?.tags || {};
+  choose(v, null, { quiet: true });
+  v.tags = [...new Set(tags)].filter((t) => t in names).slice(0, MAX_TAGS);
+  save(v, "tags:custom", v.tags);
+  v.about.value = about;
+  save(v, "about:custom", about);
+  v.claude = null;
+  try { v.ctx.store?.del?.(PREFIX + "claude:custom"); } catch {}
+  requestAnimationFrame(() => v.root.scrollIntoView?.({ behavior: "smooth", block: "start" }));
+}
 
 export function tagsView(ctx, files, redraw) {
   injectCss();
   if (kept && kept.files.games === files.games && kept.files.upcoming === files.upcoming) {
     kept.ctx = ctx; kept.files = files; kept.redraw = redraw;
+    takeAsked(kept);
     paint(kept);
     return kept.root;
   }
@@ -279,6 +303,7 @@ export function tagsView(ctx, files, redraw) {
     v.picker, v.editor, v.report,
     h("datalist", { id: "mkt-taglist" }, ...names.map((n) => h("option", { value: n }))));
   restore(v);
+  takeAsked(v);
   paint(v);
   return v.root;
 }

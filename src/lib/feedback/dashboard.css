@@ -2167,8 +2167,16 @@
 .fb .md-v-positive { color: var(--type-praise); }
 .fb .md-v-mixed { color: #d79b00; }
 .fb .md-v-negative { color: var(--fb-serious); }
-.fb .md-review .pc-points .pk {
-	cursor: default;
+.fb .md-v {
+	background: none;
+	border: 0;
+	padding: 0;
+	font: inherit;
+	font-weight: 700;
+	cursor: pointer;
+}
+.fb .md-v:hover {
+	text-decoration: underline;
 }
 .fb .md-at {
 	flex: none;

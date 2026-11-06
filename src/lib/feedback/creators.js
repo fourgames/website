@@ -498,7 +498,9 @@ function campaignView(d) {
         c.status === "draft" ? action("Delete draft", "deleted") : null)),
     h("h3.cr-h", `${c.game} · ${c.audience === "press" ? "press" : "creators"} · ${CAMPAIGN_STATUS[c.status] || c.status}`),
     h("p.cr-muted", `From ${c.from_name} <${c.from_email}> · up to ${c.daily_limit} a day · ${Object.entries(n).map(([k, v]) => `${MSG_STATUS[k] || k} ${v}`).join(" · ")}`),
-    preview ? h("div.cr-preview", h("div.cr-muted", `To ${preview.name || ""} <${preview.email}>`), h("div", h("b", preview.subject)), h("pre.cr-body", preview.body)) : null,
+    preview ? h("div.cr-preview", h("div.cr-muted", `To ${preview.name || ""} <${preview.email}> · from ${c.from_name}`), h("div", h("b", preview.subject)),
+      preview.html ? h("iframe.cr-frame", { title: "Email preview", sandbox: "", srcdoc: preview.html }) : h("pre.cr-body", preview.body),
+      preview.html ? h("details", h("summary.cr-muted", "Plain-text version (sent along with it)"), h("pre.cr-body", preview.body)) : null) : null,
     h("div.cr-scroll", h("table.cr-table", h("thead", h("tr", h("th", "To"), h("th", "Subject"), h("th", "Status"), h("th", "When"), h("th", ""))),
       h("tbody", ...msgs.map((m) => h("tr.cr-main", { class: m.id === preview?.id ? "is-open" : null, onclick: () => { ot.shownMsg = m.id; draw(); } },
         h("td.cr-chan", h("b", m.name || m.email), h("div.cr-muted", m.email)),
@@ -565,6 +567,7 @@ const CSS = `
 .crv .cr-area { font: inherit; font-size: 0.9rem; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 8px; padding: 8px 10px; resize: vertical; }
 .crv .cr-h { margin: 12px 0 2px; color: var(--fb-title); font-size: 1.05rem; }
 .crv .cr-preview { background: var(--fb-card); border: 1px solid var(--fb-line); border-left: 3px solid var(--fb-accent); border-radius: 8px; padding: 10px 14px; margin: 10px 0 14px; }
+.crv .cr-frame { display: block; width: 100%; height: 720px; border: 0; border-radius: 8px; margin-top: 10px; background: #f3f5f8; }
 .crv .cr-body { white-space: pre-wrap; font: inherit; font-size: 0.88rem; margin: 8px 0 0; color: var(--fb-ink); }
 @media (max-width: 640px) {
   .crv .cr-input { max-width: none; flex-basis: 100%; }

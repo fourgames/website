@@ -85,6 +85,95 @@ CREATE TABLE IF NOT EXISTS outreach_state (
 """
 
 
+# The designed (HTML) version of every email: the game's GIF or header image on top, the text, a
+# button for the Steam page and one for a key, and a signature with the logo. The plain text stays in
+# the same email as the fallback. Kept light (one image, no tracking pixels) so it reads as a personal
+# email, not a newsletter.
+SITE = "https://fourgames.se"
+LOGO = f"{SITE}/logo-512.png"
+GIF_DIR = "/images/outreach"
+_URL = re.compile(r"https?://[^\s<>()\"']+[^\s<>()\"'.,;:!?]")
+
+
+def image_for(game: str, appid: int | None, gifs: set[str] | None = None) -> str:
+    """The game's gameplay GIF on fourgames.se when there is one (public/images/outreach/<slug>.gif),
+    else its Steam header image."""
+    slug = re.sub(r"[^a-z0-9]+", "-", game.lower()).strip("-")
+    if gifs is not None and slug in gifs:
+        return f"{SITE}{GIF_DIR}/{slug}.gif"
+    return f"https://shared.akamai.steamstatic.com/store_item_assets/steam/apps/{appid}/header.jpg" if appid else ""
+
+
+def local_gifs() -> set[str]:
+    """The game GIFs in this checkout's public/images/outreach (the website serves the same files)."""
+    import os
+    folder = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "public", "images", "outreach")
+    try:
+        return {f[:-4] for f in os.listdir(folder) if f.endswith(".gif")}
+    except OSError:
+        return set()
+
+
+def html_for(campaign: dict, body: str) -> str:
+    appid = campaign.get("appid")
+    steam = f"https://store.steampowered.com/app/{appid}/" if appid else ""
+    return html_body(body, image=image_for(campaign["game"], appid, local_gifs()), steam=steam,
+                     from_name=campaign["from_name"])
+
+
+def html_body(text: str, *, image: str, steam: str, from_name: str) -> str:
+    """The designed email, from the filled-in plain text."""
+    import html as h
+    paragraphs = [p.strip() for p in re.split(r"\n\s*\n", text.strip()) if p.strip()]
+    foot = ""
+    if paragraphs and paragraphs[-1].startswith("--"):
+        foot = paragraphs.pop()[2:].strip()
+    sign = []
+    if paragraphs and len(paragraphs[-1]) < 120 and "\n" in paragraphs[-1]:
+        sign = paragraphs.pop().split("\n")
+
+    def link(m):
+        url = m.group(0)
+        return f'<a href="{h.escape(url)}" style="color:#2f7fc1">{h.escape(url)}</a>'
+
+    def button(url: str, label: str, color: str) -> str:
+        return (f'<a href="{h.escape(url)}" style="display:inline-block;background:{color};color:#ffffff;text-decoration:none;'
+                f'font-weight:600;font-size:15px;padding:11px 20px;border-radius:8px;margin:4px 8px 4px 0">{h.escape(label)}</a>')
+
+    parts = []
+    for p in paragraphs:
+        urls = _URL.findall(p)
+        if urls and "store.steampowered.com" in urls[0] and len(p) - len(urls[0]) < 60:
+            parts.append(f'<p style="margin:0 0 18px">{button(urls[0], "Watch the trailer on Steam", "#1b6fb3")}</p>')
+            continue
+        body = _URL.sub(link, h.escape(p).replace("&amp;", "&")).replace("\n", "<br>")
+        parts.append(f'<p style="margin:0 0 16px">{body}</p>')
+        discord = next((u for u in urls if "discord" in u), None)
+        if discord:
+            parts.append(f'<p style="margin:-4px 0 18px">{button(discord, "Get a free key", "#5865f2")}</p>')
+    top = (f'<a href="{h.escape(steam or SITE)}"><img src="{h.escape(image)}" width="560" alt="" '
+           f'style="display:block;width:100%;max-width:560px;height:auto;border:0;border-radius:10px 10px 0 0"></a>') if image else ""
+    closing = ""
+    if sign and sign[0].rstrip().endswith((",", "!")) and len(sign) > 1:  # "Thanks for reading," / "Best,"
+        closing = f'<p style="margin:0 0 6px">{h.escape(sign.pop(0))}</p>'
+    name = h.escape(sign[0]) if sign else h.escape(from_name)
+    rest = "<br>".join(h.escape(x) for x in sign[1:]) if len(sign) > 1 else "Four Games"
+    signature = (f'<table role="presentation" cellpadding="0" cellspacing="0" style="margin-top:8px"><tr>'
+                 f'<td style="padding-right:12px;vertical-align:middle"><img src="{LOGO}" width="44" height="44" alt="Four Games" '
+                 f'style="display:block;border-radius:10px"></td><td style="vertical-align:middle;font-size:14px;line-height:1.4">'
+                 f'<b>{name}</b><br><span style="color:#5b6470">{rest}</span><br>'
+                 f'<a href="{SITE}" style="color:#2f7fc1;text-decoration:none">fourgames.se</a></td></tr></table>')
+    footer = f'<p style="margin:18px 0 0;font-size:12px;color:#8a929c">{h.escape(foot)}</p>' if foot else ""
+    return ('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width">'
+            '<meta name="color-scheme" content="light"></head>'
+            '<body style="margin:0;padding:0;background:#f3f5f8">'
+            '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f5f8"><tr><td align="center" style="padding:24px 12px">'
+            '<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border-radius:10px;'
+            'font-family:-apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif;color:#1d2329;font-size:15px;line-height:1.55">'
+            f'<tr><td>{top}</td></tr><tr><td style="padding:24px 28px 26px">{"".join(parts)}{closing}{signature}{footer}</td></tr>'
+            '</table></td></tr></table></body></html>')
+
+
 class OutreachError(ValueError):
     """Something the dashboard asked for that can't be done; the message says why."""
 

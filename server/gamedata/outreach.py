@@ -76,7 +76,13 @@ async def one(request: web.Request) -> web.Response:
     from .admin import require_admin
     require_admin(request)
     cid = _int(request.match_info["cid"])
-    return W.ok(await asyncio.to_thread(_with_store, lambda o, s, _: {**o.summary(s, cid), "messages": o.messages(s, cid)}))
+    def work(o, s, _):
+        out = {**o.summary(s, cid), "messages": o.messages(s, cid)}
+        # The designed version of each message, as the dashboard preview shows it.
+        for m in out["messages"]:
+            m["html"] = o.html_for(out["campaign"], m["body"])
+        return out
+    return W.ok(await asyncio.to_thread(_with_store, work))
 
 
 async def create(request: web.Request) -> web.Response:

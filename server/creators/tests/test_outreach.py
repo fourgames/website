@@ -165,3 +165,20 @@ def test_status_changes(store):
     assert Settings.from_env({"SEND_HOURS": "8-20", "DAILY_MAX": "25"}).hours == (8, 20)
     with pytest.raises(ValueError):
         Settings.from_env({"SEND_HOURS": "20-8"})
+
+
+def test_designed_email(store):
+    out = make(store)
+    outreach.set_status(store, out["id"], "approved", NOW)
+    smtp = FakeSMTP()
+    sender(store, smtp).send_due()
+    mail = smtp.sent[0]
+    assert mail.is_multipart() and mail.get_body(("plain",)) and mail.get_body(("html",))
+    html = mail.get_body(("html",)).get_content()
+    assert "https://store.steampowered.com/app/1/" in html and outreach.LOGO in html
+    assert "Not interested?" in html and "<script" not in html
+    designed = outreach.html_body("Hi A,\n\nSteam: https://store.steampowered.com/app/9/\n\nKey: https://discord.gg/x\n\nBest,\nDanny\nFour Games\n\n--\nreply no",
+                                  image="https://x/y.gif", steam="https://store.steampowered.com/app/9/", from_name="D")
+    assert "Watch the trailer on Steam" in designed and "Get a free key" in designed and "<b>Danny</b>" in designed
+    assert outreach.image_for("Some Game", 7, {"some-game"}).endswith("/images/outreach/some-game.gif")
+    assert outreach.image_for("Other", 7, set()).endswith("/apps/7/header.jpg")

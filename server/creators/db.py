@@ -24,6 +24,8 @@ CREATE TABLE IF NOT EXISTS youtube_channels (
     -- The email behind YouTube's "View email address" button, saved by hand (the Chrome skill).
     revealed_email  TEXT,
     revealed_at     INTEGER,            -- when it was looked at (also when nothing was there)
+    email_button    INTEGER,            -- the About panel has a "View email address" button: 1 yes, 0 no, NULL not checked
+    button_checked_at INTEGER,          -- when that was checked
     first_seen      INTEGER NOT NULL,
     refreshed_at    INTEGER,            -- when the numbers above were last read; NULL: not yet
     gone            INTEGER NOT NULL DEFAULT 0   -- the API no longer finds it
@@ -78,6 +80,10 @@ class Store:
         self.db.execute("PRAGMA journal_mode=WAL")
         self.db.execute("PRAGMA foreign_keys=ON")
         self.db.executescript(SCHEMA)
+        columns = {r[1] for r in self.db.execute("PRAGMA table_info(youtube_channels)")}
+        for name in ("email_button", "button_checked_at"):  # added after the first databases were made
+            if name not in columns:
+                self.db.execute(f"ALTER TABLE youtube_channels ADD COLUMN {name} INTEGER")
 
     def close(self) -> None:
         self.db.close()

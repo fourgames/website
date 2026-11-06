@@ -2,8 +2,7 @@
 
 Builds a big list of YouTube creators who make videos of Steam games, so we can later pick the best
 few hundred for each of our games and email them. Step 1 of the creator outreach plan: it only
-collects. Matching, the dashboard tab, the Chrome skill for hidden emails, Twitch and sending
-come next.
+collects (plus the hidden emails, below). Matching, the dashboard tab, Twitch and sending come next.
 
 Every hour (`creators.timer` → `creators.service`, `python -m creators`) it:
 
@@ -67,11 +66,27 @@ One SQLite file, `/srv/fourgames/creators/creators.db`:
 
 | Table | What's in it |
 | --- | --- |
-| `youtube_channels` | One row per channel: title, handle, description, country, language, subscribers (NULL when hidden), videos, views, when it was made, `emails` and `links` (JSON) from the description, and `revealed_email` / `revealed_at` for the email behind YouTube's "View email address" button, saved by hand later |
+| `youtube_channels` | One row per channel: title, handle, description, country, language, subscribers (NULL when hidden), videos, views, when it was made, `emails` and `links` (JSON) from the description, and `revealed_email` / `revealed_at` for the email behind YouTube's "View email address" button, saved by the creator-emails skill, and `email_button` (1/0, NULL not checked) / `button_checked_at` |
 | `youtube_videos` | Every kept video, per game it names: channel, title, published, views, likes, comments, length, language |
 | `channel_games` (view) | Per channel and game: videos, the latest, total views. What matching will score on |
 | `searches` | Each game searched: when, when it's due again, results and kept |
 | `quota` | Units spent per Pacific day |
+
+## Hidden emails
+
+Many channels keep their business email behind YouTube's **View email address** button (signed in,
+plus a captcha). The `creator-emails` Claude skill gets them in the user's own Chrome, with
+`python -m creators.reveal` as its server side:
+
+- `check N`: channels without a public email whose button isn't checked yet, best first. The skill
+  fetches each About page (no captcha) and saves whether the button is there (`email_button`).
+- `reveal N`: channels with the button and no email yet, best first. The skill opens them, the
+  user ticks the captcha and presses Submit, and the email goes to `revealed_email`.
+- `save`: JSON lines on stdin (see `reveal.py`).
+
+Best first, until per-game matching exists: a video of one of our games, then 1k–300k subscribers,
+then a video in the last 30 days, then more games, then more subscribers. Nobody but the user
+solves the captcha.
 
 ## About the emails
 

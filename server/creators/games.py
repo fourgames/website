@@ -97,6 +97,25 @@ def read(steam_db: str, own_appids: tuple[int, ...], min_reviews: int, max_revie
     return games
 
 
+def own_appids(steam_db: str, appids: tuple[int, ...], own_studio: str = "Four Games") -> set[int]:
+    """Our games: the app ids given plus every game whose developer or publisher is exactly own_studio."""
+    own = set(appids)
+    try:
+        db = connect(steam_db)
+    except sqlite3.Error:
+        return own
+    try:
+        for r in db.execute("SELECT appid, developers, publishers FROM apps WHERE developers LIKE ? OR publishers LIKE ?",
+                            (f'%"{own_studio}"%', f'%"{own_studio}"%')):
+            if own_studio in set(_json(r["developers"])) | set(_json(r["publishers"])):
+                own.add(r["appid"])
+    except sqlite3.Error:
+        pass
+    finally:
+        db.close()
+    return own
+
+
 def _json(text: str | None) -> list:
     try:
         value = json.loads(text or "[]")

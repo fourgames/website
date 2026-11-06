@@ -189,3 +189,33 @@ def test_quota_exceeded_stops_for_the_day(tmp_path, steam_db):
     calls = len(fake.calls)
     later.run(spend_all=True)
     assert len(fake.calls) == calls
+
+
+def test_reveal_queue_and_save(tmp_path):
+    from creators import reveal
+    store = Store(str(tmp_path / "c.db"))
+    t = int(NOW)
+    rows = [  # id, subscribers, public emails, last video days ago, appid
+        ("UCbig", 2_000_000, "[]", 1, 10), ("UCmid", 50_000, "[]", 40, 10), ("UCactive", 20_000, "[]", 2, 10),
+        ("UCours", 500, "[]", 90, 99), ("UCpublic", 30_000, '["a@b.com"]', 1, 10)]
+    for cid, subs, emails, ago, appid in rows:
+        store.db.execute("INSERT INTO youtube_channels (channel_id, handle, subscribers, emails, first_seen) VALUES (?,?,?,?,?)",
+                         (cid, "@" + cid.lower(), subs, emails, t))
+        store.db.execute("INSERT INTO youtube_videos (video_id, appid, channel_id, published, found_at) VALUES (?,?,?,?,?)",
+                         ("v" + cid, appid, cid, t - ago * 86400, t))
+    store.db.commit()
+    assert reveal.to_check(store, {99}, NOW, 10) == ["UCours", "UCactive", "UCmid", "UCbig"]
+    lines = ['{"channel_id": "UCours", "button": true}', '{"channel_id": "UCactive", "button": true}',
+             '{"channel_id": "UCmid", "button": false}', 'junk', '{"channel_id": "UCnope", "button": true}']
+    assert reveal.save(store, lines, NOW) == {"button": 2, "no button": 1, "revealed": 0, "nothing shown": 0, "skipped": 2}
+    assert reveal.to_check(store, {99}, NOW, 10) == ["UCbig"]
+    queue = reveal.to_reveal(store, {99}, NOW, 10)
+    assert [r["channel_id"] for r in queue] == ["UCours", "UCactive"] and queue[0]["own"]
+    assert queue[0]["url"] == "https://www.youtube.com/@ucours/about"
+    counts = reveal.save(store, ['{"channel_id": "UCours", "email": " Biz@Ours.COM "}',
+                                 '{"channel_id": "UCactive", "email": "not an email"}'], NOW)
+    assert counts["revealed"] == 1 and counts["skipped"] == 1
+    assert store.db.execute("SELECT revealed_email FROM youtube_channels WHERE channel_id='UCours'").fetchone()[0] == "biz@ours.com"
+    assert [r["channel_id"] for r in reveal.to_reveal(store, {99}, NOW, 10)] == ["UCactive"]
+    reveal.save(store, ['{"channel_id": "UCactive", "email": null}'], NOW)
+    assert reveal.to_reveal(store, {99}, NOW, 10) == []

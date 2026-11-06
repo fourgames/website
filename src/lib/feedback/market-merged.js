@@ -1054,11 +1054,13 @@ function scatterCard(rows, base) {
     if (host) { members.get(host).push(r); lead.set(r, host); } else { members.set(r, [r]); lead.set(r, r); }
   }
   // The label's wordings, longest first: a shared label falls back to "FMV + 1 more" where the full one won't fit.
+  // Each wording is a list of [text, tag or null]; a tag's name is drawn in its dot's color.
   const labelTexts = (r) => {
     const g = members.get(r) || [r];
-    if (g.length === 1) return [r.name];
+    if (g.length === 1) return [[[r.name, r]]];
     const rest = g.filter((m) => m !== r);
-    return [rest.length === 1 ? `${r.name} + ${rest[0].name}` : `${r.name} + ${rest[0].name} + ${rest.length - 1} more`, `${r.name} + ${rest.length} more`];
+    return [rest.length === 1 ? [[r.name, r], [" + ", null], [rest[0].name, rest[0]]] : [[r.name, r], [" + ", null], [rest[0].name, rest[0]], [` + ${rest.length - 1} more`, null]],
+      [[r.name, r], [` + ${rest.length} more`, null]]];
   };
   const dotBoxes = rows.map((r) => { const { cx, cy, r: R } = geo.get(r); const e = R + 3; return [cx - e, cy - e, cx + e, cy + e, r]; });
   const bigBoxes = dotBoxes.filter((p) => geo.get(p[4]).r > 5);
@@ -1076,7 +1078,7 @@ function scatterCard(rows, base) {
     let box = null, name = null;
     for (const avoid of zone ? [bigBoxes, []] : [dotBoxes]) {
       for (const t of labelTexts(r)) {
-        const w = t.length * (on ? CH * 1.15 : CH) + 2;
+        const w = t.map(([x]) => x).join("").length * (on ? CH * 1.15 : CH) + 2;
         const spots = [[cx + R + 4, cy - LH / 2 - 1], [cx - R - 4 - w, cy - LH / 2 - 1], [cx - w / 2, cy - R - 3 - LH], [cx - w / 2, cy + R + 3]];
         for (const [left, top_] of spots) {
           const b = [left, top_, left + w, top_ + LH + 1, r];
@@ -1090,7 +1092,12 @@ function scatterCard(rows, base) {
     }
     if (!box) continue;
     placed.push(box);
-    const label = text({ x: box[0], y: box[1] + LH - 1.6, class: `mm-dl${on ? " mm-dl-sel" : ""}${zone ? " mm-dl-zone" : ""}` }, name);
+    const label = text({ x: box[0], y: box[1] + LH - 1.6, class: `mm-dl${on ? " mm-dl-sel" : ""}${zone ? " mm-dl-zone" : ""}` }, "");
+    for (const [part, m] of name) {
+      const ts = svgEl("tspan", m && !on ? { style: `fill:${m === sel ? "var(--fb-accent)" : m.dir ? DIR_COLOR(m) : "var(--fb-ink-2)"}` } : {});
+      ts.textContent = part;
+      label.append(ts);
+    }
     label.__row = r;
     const tt = svgEl("title");
     tt.textContent = own.map((m) => { const gl = glossary(m.name); return gl ? `${m.name}: ${gl}` : m.name; }).join("\n");

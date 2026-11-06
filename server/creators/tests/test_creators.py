@@ -81,11 +81,13 @@ def steam_db(tmp_path):
         (5, "Quiet Little Game", 5, [1]),  # too few reviews
         (6, "Giant Shooter", 900_000, [7]),  # too many: channels too big for us
         (7, "Our Other Game", 2, [1, 2]),  # ours by studio name, despite few reviews
+        (8, "New AAA Shooter", 4000, [7]),  # $70: skipped
     ]
     for appid, name, reviews, tags in apps:
         studio = json.dumps(["Four Games"] if appid == 7 else ["Someone"])
-        db.execute("INSERT INTO apps (appid, name, type, first_seen, reviews, tags, coming_soon, developers, publishers) "
-                   "VALUES (?, ?, 'game', 0, ?, ?, 0, ?, ?)", (appid, name, reviews, json.dumps(tags), studio, studio))
+        db.execute("INSERT INTO apps (appid, name, type, first_seen, reviews, tags, coming_soon, developers, publishers, price) "
+                   "VALUES (?, ?, 'game', 0, ?, ?, 0, ?, ?, ?)",
+                   (appid, name, reviews, json.dumps(tags), studio, studio, 6999 if appid == 8 else 999))
         db.execute("INSERT INTO app_daily (day, appid, reviews) VALUES (100, ?, ?)", (appid, reviews // 2))
         db.execute("INSERT INTO app_daily (day, appid, reviews) VALUES (128, ?, ?)", (appid, reviews))
     db.commit()

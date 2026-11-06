@@ -80,7 +80,7 @@ class Collector:
         now = int(self.clock())
         done = self.store.searches()
         for game in games_mod.read(self.config.steam_db, self.config.own_appids, self.config.min_reviews,
-                                   self.config.max_reviews, self.config.own_studio):
+                                   self.config.max_reviews, self.config.own_studio, self.config.max_price):
             if max_searches is not None and self.summary["searches"] >= max_searches:
                 return
             prior = done.get(game.appid)

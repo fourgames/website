@@ -8,7 +8,7 @@ come next.
 Every hour (`creators.timer` → `creators.service`, `python -m creators`) it:
 
 1. Reads the games from the Steam data collector's `steam.db` (read only): **our own games** first
-   (every 7 days: those in the website's game list and every game whose developer or publisher is "Four Games"), then every game with 30 to 50,000 reviews (bigger ones like Counter-Strike 2 bring channels far too big to answer us, and esports channels), ordered by reviews gained in the last 28 days,
+   (every 7 days: those in the website's game list and every game whose developer or publisher is "Four Games"), then every game with 30 to 50,000 reviews (bigger ones like Counter-Strike 2 bring channels far too big to answer us, and esports channels) and at most $30 full price (so a new AAA release without many reviews yet stays out), ordered by reviews gained in the last 28 days,
    with games that share tags with ours lifted up to 3×. Names under 4 letters or only digits are
    skipped (they find videos about something else).
 2. Searches YouTube for each game's name in quotes, videos from the last 180 days (after that, since

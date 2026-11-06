@@ -40,6 +40,8 @@ class Config:
     min_reviews: int = 30
     # Games with more reviews than this are skipped: their creators are too big to answer a small studio.
     max_reviews: int = 50_000
+    # Games over this full price (cents, US) are skipped: AAA releases too new to have many reviews.
+    max_price: int = 3000
     # Games whose developer or publisher is exactly this name count as ours too.
     own_studio: str = "Four Games"
     # Channel numbers (subscribers, description, emails) are read again after this many days.
@@ -80,6 +82,7 @@ class Config:
             min_reviews=number("MIN_REVIEWS", 30, 0, 1_000_000),
             max_reviews=number("MAX_REVIEWS", 50_000, 1, 100_000_000),
             own_studio=get("OWN_STUDIO", "Four Games"),
+            max_price=number("MAX_PRICE", 3000, 0, 100_000),
             channel_refresh_days=number("CHANNEL_REFRESH_DAYS", 30, 1, 365),
             log_level=level,
         )

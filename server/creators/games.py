@@ -51,10 +51,11 @@ def connect(path: str) -> sqlite3.Connection:
 
 
 def read(steam_db: str, own_appids: tuple[int, ...], min_reviews: int, max_reviews: int = 50_000,
-         own_studio: str = "Four Games") -> list[Game]:
+         own_studio: str = "Four Games", max_price: int = 3000) -> list[Game]:
     """Every game worth searching, best first. Ours: the app ids given, and every game whose developer
     or publisher is exactly own_studio. Games over max_reviews are left out: their videos come from
-    channels far too big to answer a small studio (and from esports channels)."""
+    channels far too big to answer a small studio (and from esports channels), and so are games over
+    max_price cents (full price): new AAA releases that don't have the reviews yet."""
     db = connect(steam_db)
     try:
         last, first = db.execute("SELECT MAX(day), MIN(day) FROM app_daily").fetchone()
@@ -65,7 +66,7 @@ def read(steam_db: str, own_appids: tuple[int, ...], min_reviews: int, max_revie
                                       (day,)).fetchall())
         own = set(own_appids)
         rows = db.execute(
-            """SELECT appid, name, tags, reviews, developers, publishers FROM apps
+            """SELECT appid, name, tags, reviews, developers, publishers, COALESCE(price_original, price) AS full_price FROM apps
                WHERE name IS NOT NULL AND COALESCE(type, 'game') = 'game' AND COALESCE(coming_soon, 0) = 0
                  AND (COALESCE(reviews, 0) BETWEEN ? AND ? OR developers LIKE ? OR publishers LIKE ?)""",
             (min_reviews, max_reviews, f'%"{own_studio}"%', f'%"{own_studio}"%')).fetchall()
@@ -73,7 +74,7 @@ def read(steam_db: str, own_appids: tuple[int, ...], min_reviews: int, max_revie
             seen = {r["appid"] for r in rows}
             missing = [a for a in own if a not in seen]
             if missing:
-                rows += db.execute(f"""SELECT appid, name, tags, reviews, developers, publishers FROM apps
+                rows += db.execute(f"""SELECT appid, name, tags, reviews, developers, publishers, NULL AS full_price FROM apps
                                        WHERE name IS NOT NULL AND appid IN ({",".join("?" * len(missing))})""",
                                    missing).fetchall()
     finally:
@@ -82,7 +83,8 @@ def read(steam_db: str, own_appids: tuple[int, ...], min_reviews: int, max_revie
     for r in rows:
         studios = set(_json(r["developers"])) | set(_json(r["publishers"]))
         is_own = r["appid"] in own or own_studio in studios
-        if not is_own and not min_reviews <= (r["reviews"] or 0) <= max_reviews:
+        if not is_own and (not min_reviews <= (r["reviews"] or 0) <= max_reviews
+                           or (r["full_price"] or 0) > max_price):
             continue
         try:
             tags = [int(t) for t in json.loads(r["tags"] or "[]")][:TOP_TAGS]

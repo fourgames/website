@@ -38,7 +38,7 @@ MAX_BODY = 5000
 STATUSES = ("draft", "approved", "paused", "done")
 EMAIL = re.compile(r"^[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$")
 FIELD = re.compile(r"\{(name|game|steam|their_game)\}")
-OPT_OUT_LINE = "If you'd rather not get emails like this, just say so and I won't email again."
+OPT_OUT_LINE = "If you don't want emails like this, just tell me and I won't email again."
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS outreach_campaigns (

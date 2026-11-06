@@ -26,6 +26,8 @@ CREATE TABLE IF NOT EXISTS youtube_channels (
     revealed_at     INTEGER,            -- when it was looked at (also when nothing was there)
     email_button    INTEGER,            -- the About panel has a "View email address" button: 1 yes, 0 no, NULL not checked
     button_checked_at INTEGER,          -- when that was checked
+    last_upload     INTEGER,            -- the channel's newest upload of any kind (unix time); NULL: none or not read
+    upload_checked_at INTEGER,          -- when last_upload was read
     first_seen      INTEGER NOT NULL,
     refreshed_at    INTEGER,            -- when the numbers above were last read; NULL: not yet
     gone            INTEGER NOT NULL DEFAULT 0   -- the API no longer finds it
@@ -104,7 +106,7 @@ class Store:
         self.db.execute("PRAGMA foreign_keys=ON")
         self.db.executescript(SCHEMA)
         columns = {r[1] for r in self.db.execute("PRAGMA table_info(youtube_channels)")}
-        for name in ("email_button", "button_checked_at"):  # added after the first databases were made
+        for name in ("email_button", "button_checked_at", "last_upload", "upload_checked_at"):  # added after the first databases were made
             if name not in columns:
                 self.db.execute(f"ALTER TABLE youtube_channels ADD COLUMN {name} INTEGER")
 
@@ -182,3 +184,16 @@ class Store:
             for channel_id in set(asked) - found:
                 self.db.execute("UPDATE youtube_channels SET gone = 1, refreshed_at = ? WHERE channel_id = ?",
                                 (now, channel_id))
+
+    def channels_to_check_uploads(self, now: int, days: int, limit: int) -> list[str]:
+        """Channels whose newest upload wasn't read in `days`, never-read first."""
+        return [r[0] for r in self.db.execute(
+            """SELECT channel_id FROM youtube_channels
+               WHERE gone = 0 AND refreshed_at IS NOT NULL AND (upload_checked_at IS NULL OR upload_checked_at < ?)
+               ORDER BY upload_checked_at IS NOT NULL, upload_checked_at LIMIT ?""",
+            (now - days * 86400, limit))]
+
+    def save_upload(self, channel_id: str, last_upload: int | None, now: int) -> None:
+        with self.db:
+            self.db.execute("UPDATE youtube_channels SET last_upload = COALESCE(?, last_upload), upload_checked_at = ? "
+                            "WHERE channel_id = ?", (last_upload, now, channel_id))

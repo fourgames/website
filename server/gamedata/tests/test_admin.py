@@ -755,3 +755,20 @@ def test_market_files(tmp_path, monkeypatch):
         response = await w.client.get("/gamedata/v1/admin/market/growth", headers=w.page())
         assert response.status == 401
     run(tmp_path, steps, **ADMIN)
+
+
+def test_creators_file(tmp_path, monkeypatch):
+    import gzip
+    path = tmp_path / "creators.json.gz"
+    monkeypatch.setenv("CREATORS_FILE", str(path))
+
+    async def steps(w):
+        cookie = await w.sign_in(back="/fb-dash")
+        response = await w.client.get("/gamedata/v1/admin/creators", headers=w.page(cookie))
+        assert response.status == 404 and (await response.json())["error"] == "not_built"
+        path.write_bytes(gzip.compress(b'{"creators":[]}'))
+        response = await w.client.get("/gamedata/v1/admin/creators", headers=w.page(cookie))
+        assert response.status == 200 and await response.json() == {"creators": []}
+        response = await w.client.get("/gamedata/v1/admin/creators", headers=w.page())
+        assert response.status == 401
+    run(tmp_path, steps, **ADMIN)

@@ -14,6 +14,7 @@ import sys
 
 from .collector import Collector
 from .config import Config, ConfigError
+from . import export
 from .db import Store
 from .games import own_appids
 from .sites import Follower
@@ -44,6 +45,10 @@ def main(argv: list[str] | None = None) -> int:
                 Follower(store).run(own_appids(config.steam_db, config.own_appids, config.own_studio), args.links)
             except Exception:  # never let the link follower break the YouTube runs
                 logging.getLogger("creators").exception("following links failed")
+        try:
+            export.write(config, store)
+        except Exception:  # the page shows the last file; the next run tries again
+            logging.getLogger("creators").exception("writing the dashboard file failed")
     finally:
         store.close()
     return 0

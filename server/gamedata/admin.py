@@ -19,6 +19,7 @@ request, GET included, must come from the site (Origin: SITE_ORIGIN); a PUT or P
   players' sessions, one session in the shape the replay viewer reads, and its "Copy for Claude".
 - GET /v1/admin/market/<name>: the Steam market files (overview, growth, games, godot, trends)
   that server/steamdata/market.py builds daily into MARKET_DIR, gzipped as they are on disk.
+- GET /v1/admin/creators: the creator list (server/creators/export.py, hourly), gzipped.
 - /v1/admin/ideas*: the owner's game ideas, scored by Claude against the market files (ideas.py).
 - /v1/admin/tagcheck: Claude says which of a game's tags (and suggested ones) really fit it (tagcheck.py).
 - POST /v1/admin/players: the game data of the players behind a game's Steam posts, for the chips
@@ -435,6 +436,23 @@ async def market(request: web.Request) -> web.Response:
                         headers={"Content-Encoding": "gzip", "Cache-Control": "private, max-age=300"})
 
 
+# The creator list (server/creators/export.py writes it after every hourly run; this only reads).
+CREATORS_FILE = "/srv/fourgames/creators/export/creators.json.gz"
+
+
+async def creators(request: web.Request) -> web.Response:
+    require_admin(request)
+    path = os.environ.get("CREATORS_FILE", "").strip() or CREATORS_FILE
+    try:
+        with open(path, "rb") as f:
+            body = await asyncio.to_thread(f.read)
+    except FileNotFoundError:
+        raise Refused(404, "not_built", "the creator list isn't built yet (creators.timer)") from None
+    # Creators' emails: never cached anywhere but this browser, and only briefly.
+    return web.Response(body=body, content_type="application/json",
+                        headers={"Content-Encoding": "gzip", "Cache-Control": "private, max-age=60"})
+
+
 def add_routes(app: web.Application, prefix: str) -> None:
     v1 = f"{prefix}/v1/admin"
     add = app.router.add_route
@@ -447,6 +465,7 @@ def add_routes(app: web.Application, prefix: str) -> None:
     add("GET", f"{v1}/sessions/{{session_id}}/summary", session_summary)
     add("POST", f"{v1}/players", players)
     add("GET", f"{v1}/market/{{name}}", market)
+    add("GET", f"{v1}/creators", creators)
     ideas.add_routes(app, v1)
     tagcheck.add_routes(app, v1)
     add("OPTIONS", f"{v1}/{{rest:.*}}", W.preflight)

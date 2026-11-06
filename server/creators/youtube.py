@@ -125,3 +125,18 @@ class YouTube:
             out += self._get("channels", {"part": "snippet,statistics",
                                           "id": ",".join(ids[start:start + 50])}).get("items") or []
         return out
+
+    def latest_upload(self, channel_id: str) -> int | None:
+        """When the channel last uploaded anything (1 unit), from its uploads playlist (UU + the id's
+        rest). None: no uploads. Raises HttpError as it came: a 403 here may also be a private playlist."""
+        if not channel_id.startswith("UC"):
+            return None
+        try:
+            reply = self.http.get_json(f"{API}/playlistItems", {
+                "part": "contentDetails", "playlistId": "UU" + channel_id[2:], "maxResults": 1, "key": self.key}) or {}
+        except HttpError as error:
+            if error.status == 404:
+                return None
+            raise
+        items = reply.get("items") or []
+        return iso_time(((items[0].get("contentDetails") or {}).get("videoPublishedAt")) if items else None)

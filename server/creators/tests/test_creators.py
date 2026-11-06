@@ -133,6 +133,10 @@ class FakeYouTube:
                                                     "publishedAt": "2026-11-01T10:00:00Z"},
                                "statistics": {"viewCount": "1234"}, "contentDetails": {"duration": "PT10M"}}
                               for v in q["id"].split(",") for c, t, cat in [self.videos[v]]]}
+        elif kind == "playlistItems":
+            if q["playlistId"] == "UUb":
+                return 404, {}, b"{}"
+            body = {"items": [{"contentDetails": {"videoPublishedAt": "2026-11-03T08:00:00Z"}}]}
         else:
             body = {"items": [{"id": c, "snippet": {"title": f"Channel {c}", "customUrl": f"@{c.lower()}",
                                                     "description": f"business: {c.lower()}@mail.com twitch.tv/{c}x",
@@ -160,6 +164,9 @@ def test_run_collects_channels_and_emails(tmp_path, steam_db):
     assert json.loads(b["emails"]) == ["ucb@mail.com"] and json.loads(b["links"]) == {"twitch": "UCbx"}
     assert b["subscribers"] == 5000 and b["handle"] == "@ucb"
     assert store.db.execute("SELECT gone FROM youtube_channels WHERE channel_id = 'UCc'").fetchone()[0] == 1
+    uploads = dict(store.db.execute("SELECT channel_id, last_upload FROM youtube_channels WHERE upload_checked_at = ?",
+                                    (int(NOW),)).fetchall())
+    assert uploads == {"UCa": datetime(2026, 11, 3, 8, tzinfo=timezone.utc).timestamp(), "UCb": None}
     search = [q for kind, q in fake.calls if kind == "search"][0]
     assert search["q"] == '"Our Ice Game"' and search["publishedAfter"] == "2026-05-10T12:00:00Z"
     # Everything is due later now: a second run searches nothing.
@@ -268,3 +275,30 @@ def test_follower(tmp_path):
     assert found == {"UCa": "aaa@gmail.com", "UCb": "hello@bbb.com"}
     assert reveal.to_reveal(store, set(), NOW, 10) == []  # no captcha needed for them
     assert Follower(store, transport, pause=0).run(set(), 50, NOW)["followed"] == 0  # nothing due again
+
+
+def test_export(tmp_path, steam_db, monkeypatch):
+    import gzip as gz
+    from creators import export
+    db = sqlite3.connect(steam_db)
+    db.executemany("INSERT INTO tags (tagid, name) VALUES (?, ?)", [(1, "Indie"), (2, "Fishing"), (3, "Cozy"), (4, "Ice")])
+    db.commit()
+    db.close()
+    collector, store = make(tmp_path, steam_db, FakeYouTube())
+    collector.run(spend_all=True)
+    store.db.execute("INSERT INTO channel_links VALUES ('UCa', 'https://a.com', 'about')")
+    store.db.execute("INSERT INTO sites VALUES ('https://a.com', 1, 'ok', '[\"a@a.com\", \"uca@mail.com\"]')")
+    store.db.commit()
+    monkeypatch.setenv("EXPORT_DIR", str(tmp_path / "out"))
+    path = export.write(collector.config, store, NOW)
+    data = json.loads(gz.open(path, "rt").read())
+    by = {c["id"]: c for c in data["creators"]}
+    assert set(by) == {"UCa", "UCb"} and data["searched"] == 4
+    assert by["UCa"]["e"] == [["uca@mail.com", "description"], ["a@a.com", "links"]]
+    assert by["UCa"]["own"] and not by["UCb"]["own"] and by["UCb"]["g"][0][0] == 2
+    assert by["UCa"]["cat"] == "few-games" and by["UCa"]["lu"] is not None and by["UCa"]["v30"] == 1
+    tags = [t for t, _ in by["UCb"]["p"]]
+    assert 1 not in tags and tags[0] == 2  # Indie left out; Fishing weighs most
+    assert data["tags"]["2"] == "Fishing" and data["games"]["1"]["own"]
+    assert export.category([(1, 5)], {}) == "one-game"
+    assert export.category([(1, 1), (2, 1), (3, 1), (4, 1)], {1: 10, 2: 10, 3: 90000, 4: 20}) == "indie-variety"

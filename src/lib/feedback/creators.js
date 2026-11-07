@@ -32,7 +32,7 @@ const TYPE_HELP = {
 const SOURCES = { description: "in their channel description", links: "on a page they link to (Linktree, website)", revealed: "behind YouTube's View email button" };
 const LANGS = { en: "English", ru: "Russian", de: "German", fr: "French", pt: "Portuguese", es: "Spanish", ja: "Japanese", tr: "Turkish", it: "Italian", pl: "Polish", ko: "Korean", zh: "Chinese", nl: "Dutch", sv: "Swedish", uk: "Ukrainian", ar: "Arabic", id: "Indonesian", vi: "Vietnamese", th: "Thai", cs: "Czech", hu: "Hungarian", fi: "Finnish", da: "Danish", no: "Norwegian", ro: "Romanian", el: "Greek", he: "Hebrew", hi: "Hindi" };
 
-import { huntView, HUNT_CSS, bounties } from "./creators-hunt.js";
+import { huntStrip, HUNT_CSS } from "./creators-hunt.js";
 
 let C = null;
 const st = { view: "creators", pf: { q: "", kind: "all", lang: "all", country: "all", reach: "all", email: "any" }, pshown: PAGE, data: null, error: null, loading: false, root: null, f: { q: "", email: "any", active: "all", size: "all", type: "all", lang: "all", genre: "all", game: "all", sort: "best" }, shown: PAGE, open: new Set() };
@@ -139,14 +139,10 @@ function draw() {
     return;
   }
   const d = st.data;
-  const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`], ["hunt", `Email hunt (${num(bounties(d.creators, now()).length)} left)`], ["outreach", "Outreach"]],
+  const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`], ["outreach", "Outreach"]],
     st.view, (v) => { st.view = v; draw(); }, "Show"));
   if (st.view === "press") {
     root.replaceChildren(switcher, pressView(d));
-    return;
-  }
-  if (st.view === "hunt") {
-    root.replaceChildren(switcher, huntView(d, C));
     return;
   }
   if (st.view === "outreach") {
@@ -168,7 +164,7 @@ function draw() {
   const cards = h("div.cr-cards",
     card("Creators", num(all.length), `${num(all.filter((c) => c.own).length)} made a video of our games`),
     card("With an email", num(withEmail.length), `${num(bySource("description"))} description · ${num(bySource("links"))} links · ${num(bySource("revealed"))} revealed`, () => setF({ email: "yes" })),
-    card("Hidden email only", num(all.filter((c) => !c.e.length && c.b === 1).length), "behind YouTube's captcha button · play the Email hunt", () => { st.view = "hunt"; draw(); }),
+    card("Hidden email only", num(all.filter((c) => !c.e.length && c.b === 1).length), "behind YouTube's captcha button", () => setF({ email: "hidden" })),
     card("Active", num(all.filter((c) => activity(c, today) === "active").length), "uploaded in the last 30 days", () => setF({ active: "active" })));
 
   // Best for one of our games.
@@ -276,7 +272,7 @@ function draw() {
     d.generated ? ` Last run ${clock(d.generated)}.` : "") : null;
 
   drawList();
-  root.replaceChildren(switcher, cards, collecting, gamePick, filters, list,
+  root.replaceChildren(switcher, huntStrip(d, C), cards, collecting, gamePick, filters, list,
     h("details.about", h("summary", "How this works"),
       h("p", "The server searches YouTube every hour for videos of Steam games (ours every week, then games with 30 to 50,000 reviews, those like ours first) and keeps the channels that made them. Emails come from the channel description, from pages they link to (Linktree, their website; the server follows those), or from YouTube's hidden View email button, which needs a captcha (the creator-emails skill)."),
       h("p", "Last upload is the channel's newest upload of any kind, read every 14 days. Type comes from the games they covered: indie variety plays 4+ different, mostly small games; one game is mostly one title. Genres are the Steam tags of those games."),

@@ -62,7 +62,7 @@ Reread each version as a native speaker before answering: the grammar must be pe
 sound like a person, not a translation.
 
 Keep exactly as they are, character for character: every {placeholder} in curly braces ({name}, {game},
-{steam}, {press}, {their_game}), every URL, "Danny", "/request" and "fourgames.se". Keep the line breaks
+{steam}, {press}, {their_game}, {key}), every URL, "Danny", "/request" and "fourgames.se". Keep the line breaks
 and blank lines where the English has them. Also localize the separate opt-out line."""
 TRANSLATE_SCHEMA = {
     "type": "object", "additionalProperties": False, "required": ["translations"],

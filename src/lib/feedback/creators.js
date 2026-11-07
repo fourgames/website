@@ -376,18 +376,19 @@ function pressView(d) {
 // Outreach: drafts, approvals and status of the emails (server/creators/outreach.py and send.py,
 // through the game-data server's /admin/outreach routes). Nothing is sent before a batch is approved.
 const TEMPLATES = {
-  // One thing to do (get the key from the bot), everything else is just information. Plain text by default.
+  // Short, one thing to do (play it: the key is right there), plain text by default. {key} is a Steam
+  // key from the key bot's pool, put in when the email is sent.
   creators: {
-    subject: "{game} for your channel?",
-    body: "Hi {name},\n\nI'm Danny, a 23-year-old solo developer from Sweden. I made {game}: [what you do in it, in one simple sentence]. You played {their_game}, so I think you might like it.\n\nSteam: {steam}\n\nI have no budget for paid marketing, so I'm writing to creators myself. For a free key, join https://discord.fourgames.se and type /request.\n\nThanks,\nDanny",
+    subject: "Steam key for {game}",
+    body: "Hi {name},\n\nI'm Danny, a 23-year-old solo developer from Sweden with no marketing budget. I made {game}: [what you do in it, in one simple sentence]. You played {their_game}, so I think you might like it.\n\nSteam: {steam}\nPress kit: {press}\n\nFree key: {key}\n\nThanks,\nDanny\nFour Games",
   },
   streamers: {
-    subject: "{game} for your stream?",
-    body: "Hi {name},\n\nI'm Danny, a 23-year-old solo developer from Sweden. I made {game}: [what you do in it, in one simple sentence]. You've played {their_game}, so I think it could be fun on stream.\n\nSteam: {steam}\n\nI have no budget for paid marketing, so I'm writing to streamers myself. For a free key, join https://discord.fourgames.se and type /request.\n\nThanks,\nDanny",
+    subject: "Steam key for {game}",
+    body: "Hi {name},\n\nI'm Danny, a 23-year-old solo developer from Sweden with no marketing budget. I made {game}: [what you do in it, in one simple sentence]. You've played {their_game}, so I think it could be fun on stream.\n\nSteam: {steam}\nPress kit: {press}\n\nFree key: {key}\n\nThanks,\nDanny\nFour Games",
   },
   press: {
     subject: "{game}: [the news, in a few words]",
-    body: "Hi {name} team,\n\n[The news in one simple sentence, with the date.]\n\nI'm Danny, a 23-year-old solo developer from Sweden. I made {game}: [what you do in it, in one simple sentence].\n\nSteam: {steam}\nPress kit (screenshots, trailer, logo): {press}\n\nI have no budget for paid marketing, so I'm reaching out myself. For a key, join https://discord.fourgames.se and type /request type:press.\n\nThanks,\nDanny",
+    body: "Hi {name} team,\n\n[The news in one simple sentence, with the date.]\n\nI'm Danny, a 23-year-old solo developer from Sweden with no marketing budget. I made {game}: [what you do in it, in one simple sentence].\n\nSteam: {steam}\nPress kit (screenshots, trailer, logo): {press}\n\nFor a key, join https://discord.fourgames.se and type /request type:press.\n\nThanks,\nDanny\nFour Games",
   },
 };
 const MSG_STATUS = { queued: "Waiting", sent: "Sent", replied: "Replied", opted_out: "Said no", bounced: "Bounced", failed: "Failed", skipped: "Skipped" };
@@ -548,7 +549,7 @@ function formView(d, contacted) {
     input("Subject", "subject"),
     area("Message", "body", 14),
     translateView(f, people, leftover),
-    h("p.cr-muted", "{name} = the channel or outlet, {game}, {steam} = the store link, {press} = the game's press page, {their_game} = a game the creator made a video of. Replace the [bracketed] parts. Keep it short and simple (creators skim, and many read English as a second language), and true. The game's GIF goes in after the second paragraph, and an opt-out line at the end."),
+    h("p.cr-muted", "{name} = the channel or outlet, {game}, {steam} = the store link, {press} = the game's press page, {their_game} = a game the creator made a video of, {key} = a Steam key from the key bot (taken when the email is sent; the game needs its Steam app id in the bot and enough keys to approve). Replace the [bracketed] parts. Keep it short and simple (creators skim, and many read English as a second language), and true. The game's GIF goes in after the second paragraph, and an opt-out line at the end."),
     h("div.cr-row", h("button.btn.primary", { type: "button", disabled: ot.busy || !people.length, onclick: create }, ot.busy ? "Saving…" : `Save draft for ${people.length === 1 ? "1 person" : `${num(people.length)} people`}`),
       h("span.cr-muted", "Nothing is sent until you approve the draft.")),
     people.length ? h("details", h("summary.cr-muted", `Who's in (${people.length})`), h("p.cr-muted", people.slice(0, 200).map((p) => p.label).join(", "))) : null);

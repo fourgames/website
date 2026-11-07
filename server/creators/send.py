@@ -9,7 +9,9 @@ Each run:
   2. In sending hours (SEND_HOURS, TIMEZONE) and under DAILY_MAX for the day across all campaigns
      (and each campaign's own daily limit), sends the next few queued messages of approved
      campaigns, oldest campaign first, a short random pause between them. A campaign with nothing
-     left to send becomes done.
+     left to send becomes done. An email with {key} gets its Steam key from the key bot's pool right
+     before it goes out (keys.py); if it can't be sent or it bounces, the key goes back. A campaign
+     whose game runs out of keys pauses itself.
 
 Settings: /etc/fourgames/outreach.env (outreach.env.example). The mailbox password is the owner's
 to put there; without MAIL_USER and MAIL_PASSWORD nothing is sent or read.
@@ -37,6 +39,7 @@ from typing import Callable
 from zoneinfo import ZoneInfo
 
 from . import dmarc, outreach
+from . import keys as K
 from .config import DEFAULT_DB_PATH
 
 log = logging.getLogger("creators.send")
@@ -88,7 +91,10 @@ class Settings:
                    daily_max=daily, hours=(int(m[1]), int(m[2])), timezone=get("TIMEZONE", "Europe/Stockholm"))
 
 
-def build(msg: dict, campaign: dict, now: float) -> EmailMessage:
+def build(msg: dict, campaign: dict, now: float, key: str | None = None) -> EmailMessage:
+    """The email; key fills {key} (the stored message keeps the placeholder, so the key is only in the key bot)."""
+    if key is not None:
+        msg = {**msg, "subject": msg["subject"].replace(K.PLACEHOLDER, key), "body": msg["body"].replace(K.PLACEHOLDER, key)}
     mail = EmailMessage(policy=email.policy.SMTP)
     sender = campaign["from_email"]
     mail["From"] = formataddr((campaign["from_name"], sender))
@@ -125,13 +131,31 @@ def own_words(text: str) -> str:
 class Sender:
     def __init__(self, settings: Settings, store, smtp_factory: Callable | None = None,
                  imap_factory: Callable | None = None, clock: Callable[[], float] = time.time,
-                 sleep: Callable[[float], None] = time.sleep):
+                 sleep: Callable[[float], None] = time.sleep, keys_factory: Callable | None = None):
         self.s = settings
         self.store = store
         self.smtp_factory = smtp_factory or self._smtp
         self.imap_factory = imap_factory or self._imap
         self.clock = clock
         self.sleep = sleep
+        self.keys_factory = keys_factory or K.open_keys
+        self._keys = None
+
+    @property
+    def keys(self):
+        """The key bot's database, opened the first time an email needs a key."""
+        if self._keys is None:
+            self._keys = self.keys_factory()
+        return self._keys
+
+    def close(self) -> None:
+        if self._keys is not None:
+            self._keys.close()
+            self._keys = None
+
+    def give_back(self, msg: dict, key_id: int | None) -> None:
+        if key_id is not None:
+            K.give_back(self.keys, key_id, K.holder(msg["target_kind"], msg["target_id"]))
 
     def _smtp(self):
         smtp = smtplib.SMTP(self.s.smtp_host, self.s.smtp_port, timeout=30)
@@ -232,12 +256,21 @@ class Sender:
                      or message.get_content_type() == "multipart/report")
         if is_bounce:
             body = text + " " + " ".join(str(p.get_payload()) for p in message.walk() if p.get_content_maintype() in ("message", "text"))
-            for mid, address in db.execute("SELECT id, email FROM outreach_messages WHERE sent_at IS NOT NULL "
-                                           "AND status IN ('sent', 'replied')").fetchall():
+            for row in db.execute("SELECT id, email, key_id, target_kind, target_id FROM outreach_messages "
+                                  "WHERE sent_at IS NOT NULL AND status IN ('sent', 'replied')").fetchall():
+                mid, address = row["id"], row["email"]
                 if address in body.lower():
                     with db:
                         db.execute("UPDATE outreach_messages SET status = 'bounced', error = 'bounced' WHERE id = ?", (mid,))
                     outreach.suppress(self.store, address, "bounced", now)
+                    # Nobody got the email, so nobody got its key (unless another email to them carried it).
+                    if row["key_id"] is not None and not db.execute(
+                            "SELECT 1 FROM outreach_messages WHERE key_id = ? AND id != ? AND sent_at IS NOT NULL "
+                            "AND status IN ('sent', 'replied', 'opted_out')", (row["key_id"], mid)).fetchone():
+                        try:
+                            self.give_back(dict(row), row["key_id"])
+                        except Exception:  # noqa: BLE001 - the bounce still counts
+                            log.exception("couldn't put the key of bounced message %s back", mid)
                     return "bounced"
             return None
         row = None
@@ -300,10 +333,25 @@ class Sender:
                         smtp = self.smtp_factory()
                     elif counts["sent"] + counts["failed"]:
                         self.sleep(random.uniform(*self.s.pause))
-                    mail = build(msg, c, self.clock())
+                    key_id = key = None
+                    new = False
+                    if K.uses_key(msg["subject"] + msg["body"]):
+                        who = K.holder(msg["target_kind"], msg["target_id"])
+                        try:
+                            key_id, key, new = K.take(self.keys, c["appid"], who, "press" if msg["target_kind"] == "press" else "creator")
+                        except K.NoKeys as error:
+                            reason = f"Out of keys: {error}. Add keys with /keys add, then resume."
+                            with db:
+                                db.execute("UPDATE outreach_campaigns SET status = 'paused', paused_reason = ? WHERE id = ?",
+                                           (reason, c["id"]))
+                            self._set_state("last_error", f"{c['game']}: {reason}")
+                            log.warning("paused campaign %s: %s", c["id"], error)
+                            break
+                    mail = build(msg, c, self.clock(), key)
                     try:
                         smtp.send_message(mail)
                     except smtplib.SMTPSenderRefused as error:
+                        self.give_back(msg, key_id if new else None)
                         # The from address isn't allowed for this mailbox (an alias missing in Strato): stop, keep queued.
                         log.error("Strato refused the from address %s (%s); add it as an alias of %s",
                                   c["from_email"], error.smtp_code, self.s.user)
@@ -311,14 +359,15 @@ class Sender:
                                                       f"alias of {self.s.user} in Strato's mail settings. Nothing was sent.")
                         return counts
                     except smtplib.SMTPRecipientsRefused as error:
+                        self.give_back(msg, key_id if new else None)
                         with db:
                             db.execute("UPDATE outreach_messages SET status = 'failed', error = ? WHERE id = ?",
                                        (f"refused: {list(error.recipients.values())[0][0]}"[:200], msg["id"]))
                         counts["failed"] += 1
                         continue
                     with db:
-                        db.execute("UPDATE outreach_messages SET status = 'sent', sent_at = ?, message_id = ? WHERE id = ?",
-                                   (int(self.clock()), mail["Message-ID"], msg["id"]))
+                        db.execute("UPDATE outreach_messages SET status = 'sent', sent_at = ?, message_id = ?, key_id = ? WHERE id = ?",
+                                   (int(self.clock()), mail["Message-ID"], key_id, msg["id"]))
                         db.execute("DELETE FROM outreach_state WHERE key = 'last_error'")
                     counts["sent"] += 1
                     budget -= 1
@@ -363,7 +412,11 @@ def main() -> int:
         return 0
     store = outreach.open_store(settings.db_path)
     try:
-        result = Sender(settings, store).run()
+        sender = Sender(settings, store)
+        try:
+            result = sender.run()
+        finally:
+            sender.close()
         with store.db:
             store.db.execute("INSERT OR REPLACE INTO outreach_state (key, value) VALUES ('last_run', ?)", (str(int(time.time())),))
     except smtplib.SMTPAuthenticationError:

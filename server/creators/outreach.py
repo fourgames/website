@@ -16,7 +16,8 @@ Rules that always hold, whatever a campaign says:
 
 Placeholders in the subject and body: {name} (the channel or outlet), {game}, {steam} (the store
 link), {press} (the game's press page on press.fourgames.se), {their_game} (for a creator: a game they made a video of, ours first, else one like ours;
-for press: empty). Anything else is written as it is.
+for press: empty), {key} (a Steam key for the game from the key bot's pool, put in when the email is
+sent; see keys.py). Anything else is written as it is.
 
 This module is the database side, used by send.py and by the game-data server's admin routes
 (server/gamedata/outreach.py), both on the same SQLite file.
@@ -30,6 +31,7 @@ import time
 from typing import Any
 
 from . import coverage
+from . import keys as K
 from .db import Store
 from .dmarc import summary as dmarc_summary
 
@@ -39,7 +41,7 @@ MAX_SUBJECT = 150
 MAX_BODY = 5000
 STATUSES = ("draft", "approved", "paused", "done")
 EMAIL = re.compile(r"^[A-Za-z0-9._%+'-]+@[A-Za-z0-9-]+(\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,}$")
-FIELD = re.compile(r"\{(name|game|steam|press|their_game)\}")
+FIELD = re.compile(r"\{(name|game|steam|press|their_game|key)\}")
 OPT_OUT_LINE = "If you don't want emails like this, just tell me and I won't email again."
 
 SCHEMA = """
@@ -173,6 +175,8 @@ def migrate(store: Store) -> None:
     message_columns = {r[1] for r in store.db.execute("PRAGMA table_info(outreach_messages)")}
     if "language" not in message_columns:
         store.db.execute("ALTER TABLE outreach_messages ADD COLUMN language TEXT")  # the language it was written in
+    if "key_id" not in message_columns:  # the key bot's key in this email ({key}), once it was sent
+        store.db.execute("ALTER TABLE outreach_messages ADD COLUMN key_id INTEGER")
     if "game_name" not in message_columns:  # the game's name as written in this email (localized), to spot their video
         store.db.execute("ALTER TABLE outreach_messages ADD COLUMN game_name TEXT")
     coverage.ensure(store)
@@ -340,6 +344,57 @@ def _press(store: Store, key: str) -> dict | None:
     return {"id": r["key"], "name": r["name"], "email": r["email"].lower(), "lang": short_lang(r["language"])} if r and r["email"] else None
 
 
+# Words a channel name often ends with that nobody would be greeted by ("Hi Bob Gaming Official").
+NAME_TAIL = re.compile(r"(?:\s+(?:official|tv|yt|youtube|channel|ch\.?))+\s*$", re.IGNORECASE)
+NAME_SPLIT = re.compile(r"\s+[|•·/]\s+|\s+[-–—]\s+|\s*[|•]\s*")
+
+
+def greeting_name(name: str) -> str:
+    """The channel name as it reads after "Hi": without a tagline after " | " or " - ", and without a
+    trailing "Official", "TV", "YT" or "Channel". The whole name when that would leave nothing."""
+    name = (name or "").strip()
+    short = NAME_SPLIT.split(name)[0].strip()
+    short = NAME_TAIL.sub("", short).strip(" -–—|,.") or short
+    return short or name
+
+
+def check_keys_exist(appid: int | None, game: str) -> None:
+    """A campaign with {key} needs the game in the key bot (matched by its Steam app id)."""
+    if not appid:
+        raise OutreachError("{key} needs the game's Steam app id")
+    try:
+        keys = K.open_keys()
+    except Exception:  # noqa: BLE001 - the key bot's database missing or unreadable
+        raise OutreachError("{key} needs the key bot's database, and it couldn't be opened") from None
+    try:
+        if K.available(keys, appid) is None:
+            raise OutreachError(f"the key bot has no game with {game}'s Steam app id ({appid}): set it with "
+                                "/keys game steam_app_id:")
+    finally:
+        keys.close()
+
+
+def check_enough_keys(store: Store, campaign: dict) -> None:
+    """Approving a campaign with {key}: the key bot must have a key for every waiting email (a channel
+    that already got one by email gets the same key again, so it needs none)."""
+    targets = store.db.execute("SELECT target_kind, target_id FROM outreach_messages WHERE campaign_id = ? "
+                               "AND status = 'queued'", (campaign["id"],)).fetchall()
+    try:
+        keys = K.open_keys()
+    except Exception:  # noqa: BLE001
+        raise OutreachError("{key} needs the key bot's database, and it couldn't be opened") from None
+    try:
+        left = K.available(keys, campaign["appid"])
+        if left is None:
+            raise OutreachError(f"the key bot has no game with {campaign['game']}'s Steam app id")
+        need = sum(not K.already_has(keys, campaign["appid"], K.holder(t["target_kind"], t["target_id"])) for t in targets)
+    finally:
+        keys.close()
+    if need > left:
+        raise OutreachError(f"this campaign needs {need} keys for {campaign['game']} and the key bot has {left} left: "
+                            "add keys with /keys add, or leave some emails out")
+
+
 def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, str], own: set[int],
                     now: float) -> dict[str, Any]:
     """A draft campaign with one filled-in message per usable recipient. spec: {appid, game, audience,
@@ -371,6 +426,8 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
     appid = spec.get("appid")
     appid = appid if type(appid) is int else None
     steam = f"https://store.steampowered.com/app/{appid}/" if appid else ""
+    if K.uses_key(subject + body):
+        check_keys_exist(appid, game)
     skipped: dict[str, int] = {}
     with store.db:
         cur = store.db.execute(
@@ -395,7 +452,7 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
             # A game they made a video of, ours first; the campaign's own game only if it's all they played.
             their = next((game_names[a] for a in games if a in game_names and a != appid),
                          game if appid in games else "")
-            fields = {"name": who["name"], "game": game, "steam": steam, "their_game": their,
+            fields = {"name": greeting_name(who["name"]), "game": game, "key": K.PLACEHOLDER, "steam": steam, "their_game": their,
                       "press": f"https://press.fourgames.se/{re.sub(r'[^a-z0-9]+', '-', game.lower()).strip('-')}"}
             t = translations.get(who.get("lang") or "")
             lang = who.get("lang") if t else "en"
@@ -437,6 +494,8 @@ def set_status(store: Store, campaign: int, status: str, now: float) -> dict[str
     allowed = {"approved": ("draft", "paused"), "paused": ("approved",), "deleted": ("draft",)}
     if status not in allowed or c["status"] not in allowed[status]:
         raise OutreachError(f"a {c['status']} campaign can't be {status}")
+    if status == "approved" and K.uses_key(c["subject"] + c["body"]):
+        check_enough_keys(store, c)
     with store.db:
         if status == "deleted":
             store.db.execute("DELETE FROM outreach_messages WHERE campaign_id = ?", (campaign,))

@@ -297,6 +297,19 @@ class KeyBot(discord.Client):
         if store.open_request_count(user_id) >= MAX_OPEN_REQUESTS:
             return "Too many requests", "Wait for an answer on the others first."
 
+        # A channel that already got this game's key in one of our emails: the same key, not a new one.
+        emailed = store.claim_emailed(game_id, [f"{'yt' if c.platform == 'youtube' else 'tw'}:{c.id}" for c in channels],
+                                      user_id)
+        if emailed is not None:
+            user = await self.user_by_id(user_id)
+            try:
+                await user.send(key_message(game, emailed.value))
+            except discord.HTTPException:
+                pass  # it's theirs now either way: /claim shows it
+            log.info("creator %s verified a channel that got key #%s for %s by email", user_id, emailed.key_id, game["name"])
+            return ("You already have a key", f"We emailed your channel a {game['name']} key. It's in your DMs now, "
+                                              "and /claim in Discord shows it too.")
+
         decision = evaluate(channels, self.config.thresholds)
         details = {"channels": [channel.to_dict() for channel in channels], "reasons": decision.reasons}
         best = decision.channel or (channels[0] if channels else None)
@@ -977,11 +990,21 @@ def status_line(row: sqlite3.Row) -> str:
             f"{'public' if row['public'] else 'private'}, {limit_text(row['per_user_limit'])} · {app}")
 
 
+def holder_text(given_to: str) -> str:
+    """A Discord mention, or the channel or outlet an outreach email gave the key to (yt:, tw:, press:)."""
+    given_to = str(given_to or "")
+    if given_to.isdigit():
+        return f"<@{given_to}>"
+    kind, _, ident = given_to.partition(":")
+    return {"yt": f"YouTube channel {ident} (by email)", "tw": f"Twitch user {ident} (by email)",
+            "press": f"press {ident} (by email)"}.get(kind, escape_markdown(given_to))
+
+
 def handout_line(row: sqlite3.Row) -> str:
     """One handout, with the key's id (never the key)."""
     when = discord.utils.format_dt(discord.utils.parse_time(row["given_at"]), "R")
     extra = f", request #{row['request_id']}" if row["request_id"] else ""
-    return (f"{when} **{escape_markdown(row['game'])}** → <@{row['given_to']}> ({row['reason']}{extra}), "
+    return (f"{when} **{escape_markdown(row['game'])}** → {holder_text(row['given_to'])} ({row['reason']}{extra}), "
             f"key #{row['id']}")
 
 
@@ -1350,7 +1373,7 @@ def lookup_key_text(key: sqlite3.Row) -> str:
         return f"{head}: not given out yet."
     when = discord.utils.format_dt(discord.utils.parse_time(key["given_at"]), "f")
     extra = f", request #{key['request_id']}" if key["request_id"] else ""
-    return f"{head}: given to <@{key['given_to']}> ({key['given_to']}), {key['reason']}{extra}, {when}."
+    return f"{head}: given to {holder_text(key['given_to'])} ({key['given_to']}), {key['reason']}{extra}, {when}."
 
 
 @keys_group.command(name="find", description="Every key someone got, or who has a key")

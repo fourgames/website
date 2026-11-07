@@ -387,6 +387,20 @@ class Store:
             )
             return cursor.rowcount == 1
 
+    def claim_emailed(self, game_id: int, holders: list[str], user_id: int) -> Given | None:
+        """A key outreach emailed to one of these channels ("yt:<id>", "tw:<id>"; creators/keys.py), moved
+        to this Discord user so /claim shows it. None when none of the channels got one by email."""
+        if not holders:
+            return None
+        marks = ",".join("?" * len(holders))
+        with self.transaction() as db:
+            key = db.execute(f"SELECT id, value FROM keys WHERE game_id = ? AND status = 'given' AND given_to IN ({marks}) "
+                             "ORDER BY id LIMIT 1", (game_id, *holders)).fetchone()
+            if key is None:
+                return None
+            db.execute("UPDATE keys SET given_to = ? WHERE id = ?", (str(user_id), key["id"]))
+        return Given("given", key["id"], key["value"])
+
     def key_by_value(self, value: str) -> sqlite3.Row | None:
         """A key and its game, by the key itself (for /keys find)."""
         value = value.strip()

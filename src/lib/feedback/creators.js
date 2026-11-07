@@ -396,10 +396,12 @@ const TEMPLATES = {
     body: "Hi {name} team,\n\n[The news in one simple sentence, with the date.]\n\nI'm Danny, a 23-year-old solo developer from Sweden with no marketing budget. I made {game}: [what you do in it, in one simple sentence].\n\nSteam: {steam}\nPress kit (screenshots, trailer, logo): {press}\n\nFor a key, join https://discord.fourgames.se and type /request type:press.\n\nThanks,\nDanny\nFour Games",
   },
 };
+// Outreach comes from a person, not a game: one address creators get to know across all our games
+// (the game is in the subject). Any alias of the mailbox can still be typed in the form.
+const SENDER = { name: "Danny from Four Games", email: "danny@fourgames.se" };
 const MSG_STATUS = { queued: "Waiting", sent: "Sent", replied: "Replied", opted_out: "Said no", bounced: "Bounced", failed: "Failed", skipped: "Skipped" };
 const CAMPAIGN_STATUS = { draft: "Draft: not approved", approved: "Sending", paused: "Paused", done: "Done" };
 const ot = { data: null, error: null, loading: false, open: null, openData: null, form: null, busy: false, msg: null, shownMsg: null };
-const slug = (s) => (s || "").toLowerCase().normalize("NFKD").replace(/[^a-z0-9]+/g, "");
 
 async function loadOutreach() {
   if (ot.loading) return;
@@ -498,7 +500,7 @@ function healthBox(o) {
 function newForm(d) {
   const own = Object.entries(d.games).filter(([, g]) => g.own).map(([id, g]) => [Number(id), g.n]);
   const [appid, game] = own[0] || [null, ""];
-  return { appid, game, audience: "creators", n: 30, activeOnly: true, gif: false, from_name: `Danny from ${game}`, from_email: `${slug(game)}@fourgames.se`, daily_limit: 20, ...TEMPLATES.creators };
+  return { appid, game, audience: "creators", n: 30, activeOnly: true, gif: false, from_name: SENDER.name, from_email: SENDER.email, daily_limit: 20, ...TEMPLATES.creators };
 }
 
 function recipientsFor(d, f, contacted) {
@@ -538,7 +540,7 @@ function formView(d, contacted) {
       (out) => { ot.form = null; ot.open = out.id; });
   };
   return h("div.cr-filters.cr-form",
-    h("div.cr-row", h("span.cr-label", "Game"), C.chips(own, String(f.appid), (v) => { const g = d.games[v]?.n || ""; set({ appid: Number(v), game: g, from_name: `Danny from ${g}`, from_email: `${slug(g)}@fourgames.se` }); }, "Game")),
+    h("div.cr-row", h("span.cr-label", "Game"), C.chips(own, String(f.appid), (v) => { const g = d.games[v]?.n || ""; set({ appid: Number(v), game: g }); }, "Game")),
     h("div.cr-row", h("span.cr-label", "Who"), C.chips([["creators", "YouTubers"], ["streamers", "Streamers"], ["press", "Press list"]], f.audience, (v) => set({ audience: v, translations: null, ...TEMPLATES[v] }), "Audience"),
       f.audience !== "press" ? input("How many", "n", { type: "number", min: 1, max: 500, style: "max-width:6em" }) : null,
       f.audience !== "press" ? h("label.cr-select", h("input", { type: "checkbox", checked: f.activeOnly, onchange: (e) => set({ activeOnly: e.currentTarget.checked }) }), h("span", "Skip inactive channels")) : null),

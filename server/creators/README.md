@@ -123,7 +123,9 @@ and dmarc@ as an alias of the sending mailbox, receivers (Gmail, Outlook, Yahoo.
 mail they got from the domain and whether it passed. `send.py` saves them (`dmarc_reports`), moves those
 emails (only mail to dmarc@) into a DMARC folder, and the Outreach tab's Mail health box shows 30 days.
 
-The from address can be the game's (e.g. "Danny from Pomo Valley" <pomovalley@fourgames.se>): add it
+Campaigns come from "Danny from Four Games" <danny@fourgames.se> by default: a person creators get to
+know across all our games, with the game in the subject. The form can still take another address, e.g. a
+game's (pomovalley@fourgames.se): add it
 in Strato as an **alias** of the sending mailbox, so Strato lets the mailbox send as it and replies land
 in the same inbox. If Strato refuses the from address, sending stops and the log says so.
 

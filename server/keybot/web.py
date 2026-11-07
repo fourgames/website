@@ -90,31 +90,23 @@ PAGE = """<!doctype html>
   .brand {{ display: flex; align-items: center; gap: 10px; margin-bottom: 20px; color: var(--title);
            font-weight: 700; font-size: 1.1rem; text-decoration: none; }}
   .brand svg {{ width: 34px; height: 34px; }}
-  main {{ width: 100%; max-width: 30rem; background: var(--card); border-radius: 16px; padding: 28px;
+  main {{ width: 100%; max-width: 24rem; text-align: center; background: var(--card); border-radius: 16px; padding: 28px;
          box-shadow: var(--shadow); }}
   h1 {{ margin: 0 0 6px; color: var(--title); font-size: 1.45rem; line-height: 1.25; }}
-  p {{ margin: 0 0 14px; }}
-  .lead {{ color: var(--muted); margin-bottom: 22px; }}
-  .lead strong {{ color: var(--title); }}
-  .status {{ width: 48px; height: 48px; border-radius: 50%; display: grid; place-items: center; margin-bottom: 16px;
+  p {{ margin: 0; }}
+  .lead {{ color: var(--muted); margin-bottom: 4px; }}
+  .status {{ width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; margin: 0 auto 16px;
             background: color-mix(in srgb, currentColor 14%, transparent); }}
   .status svg {{ width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2.2;
                 stroke-linecap: round; stroke-linejoin: round; }}
   .success {{ color: var(--good); }} .pending {{ color: var(--wait); }} .problem {{ color: var(--bad); }}
   .info {{ color: var(--primary); }}
-  h2 {{ font-size: .8rem; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 18px 0 8px; }}
-  ul {{ list-style: none; margin: 0; padding: 0; }}
-  li {{ display: flex; gap: 10px; padding: 4px 0; }}
-  li::before {{ flex: none; width: 1.2em; font-weight: 700; }}
-  .yes li::before {{ content: "✓"; color: var(--good); }}
-  .no li::before {{ content: "✕"; color: var(--bad); }}
-  .note {{ margin-top: 20px; padding: 12px 14px; border-radius: 10px; background: var(--base); font-size: .92rem; }}
   .button {{ display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; margin-top: 22px;
             padding: 13px 18px; border-radius: 10px; background: #5865f2; color: #fff; font-weight: 600;
             text-decoration: none; font-size: 1rem; }}
   .button:hover {{ background: #4752c4; }}
   .button svg {{ width: 22px; height: 22px; }}
-  .small {{ margin: 12px 0 0; font-size: .85rem; color: var(--muted); text-align: center; }}
+  .small {{ margin: 14px 0 0; font-size: .85rem; color: var(--muted); }}
   footer {{ margin-top: 20px; font-size: .85rem; color: var(--muted); text-align: center; }}
   a {{ color: var(--primary); }}
   footer a {{ color: inherit; }}
@@ -123,8 +115,7 @@ PAGE = """<!doctype html>
 <body>
 <a class="brand" href="https://fourgames.se">{logo}<span>Four Games</span></a>
 <main>{body}</main>
-<footer><a href="https://fourgames.se">fourgames.se</a> · <a href="https://fourgames.se/privacy">Privacy</a>
- · <a href="https://discord.fourgames.se">Our Discord</a></footer>
+<footer><a href="https://fourgames.se">fourgames.se</a></footer>
 </body>
 </html>
 """
@@ -140,11 +131,10 @@ def render(title: str, body: str, status: int = 200) -> web.Response:
 
 
 # Results from KeyBot.creator_verified and this module, by how they went. Anything else is a problem.
-SUCCESS_TITLES = {"Verified — check your DMs", "You already have a key"}
+SUCCESS_TITLES = {"Check your DMs", "You already have a key"}
 # Amber: waiting, or one step for them to fix. Blue: nothing wrong, just start again.
-PENDING_TITLES = {"Sent for review", "Already waiting for review", "Verified, but we couldn't DM you",
-                  "Too many open requests"}
-INFO_TITLES = {"Cancelled", "This link has expired", "This link was already used", "This link doesn't work"}
+PENDING_TITLES = {"Sent for review", "Already sent", "Turn on DMs", "Too many requests"}
+INFO_TITLES = {"Cancelled", "Link expired", "Link already used", "Link not working"}
 
 
 def tone_for(title: str) -> str:
@@ -158,45 +148,30 @@ def tone_for(title: str) -> str:
 def page(title: str, text: str, status: int = 200, tone: str | None = None) -> web.Response:
     tone = tone or tone_for(title)
     body = (f'<div class="status {tone}">{ICONS[tone]}</div><h1>{html.escape(title)}</h1>'
-            f'<p>{html.escape(text)}</p>'
-            '<p class="small">You can close this tab and go back to Discord.</p>')
+            f'<p>{html.escape(text)}</p>')
     return render(title, body, status)
 
 
 def expired_page(reason: str) -> web.Response:
     if reason == "expired":
-        return page("This link has expired", "Links work for 15 minutes. Run /request again in Discord.", 400)
+        return page("Link expired", "Type /request in Discord for a new one.", 400)
     if reason == "used":
-        return page("This link was already used", "Run /request again in Discord for a new one.", 400)
-    return page("This link doesn't work", "Run /request again in Discord for a new one.", 400)
+        return page("Link already used", "Type /request in Discord for a new one.", 400)
+    return page("Link not working", "Type /request in Discord for a new one.", 400)
 
 
 def landing_page(game_name: str, token: str, minutes_left: int) -> web.Response:
-    """What a creator sees first: who we are, what Discord will show us and what it won't."""
+    """What a creator sees first: what this is, one button, and what we can't see."""
     minutes = "1 minute" if minutes_left == 1 else f"{minutes_left} minutes"
     body = (
-        '<h1>Verify your channel</h1>'
-        f'<p class="lead">for a free Steam key to <strong>{html.escape(game_name)}</strong></p>'
-        '<p>Discord will ask you to share your connected accounts with Four Games. '
-        'Here is exactly what that means:</p>'
-        '<h2>We see</h2><ul class="yes">'
-        '<li>Your Discord username</li>'
-        '<li>Your YouTube or Twitch channel, if it\'s linked to your Discord</li>'
-        '</ul>'
-        '<h2>We never see</h2><ul class="no">'
-        '<li>Your password or email address</li>'
-        '<li>Your messages, servers or friends</li>'
-        '<li>Anything that lets us post or act as you</li>'
-        '</ul>'
-        '<div class="note">We read your channels once, then hand the access straight back to Discord. '
-        'We only keep the channel we checked, as our '
-        '<a href="https://fourgames.se/privacy">privacy policy</a> says.</div>'
+        f'<h1>Get your {html.escape(game_name)} key</h1>'
+        '<p class="lead">We check your YouTube or Twitch channel through Discord.</p>'
         f'<a class="button" href="login?state={html.escape(token, quote=True)}">{DISCORD_MARK}'
         'Continue with Discord</a>'
-        f'<p class="small">This link works once and expires in {minutes}. Channel not linked yet? '
-        'Link it in Discord under User Settings → Connections first.</p>'
+        '<p class="small">We never see your password or messages. '
+        f'<a href="https://fourgames.se/privacy">Privacy</a> · Works for {minutes}</p>'
     )
-    return render("Verify your channel", body)
+    return render("Get your key", body)
 
 
 async def verify(request: web.Request) -> web.Response:
@@ -211,7 +186,7 @@ async def verify(request: web.Request) -> web.Response:
         return expired_page("used")
     game = bot.store.game(state.game_id)
     if game is None:
-        return page("Something's off", "That game isn't in the list any more. Run /request again in Discord.", 404)
+        return page("Game not found", "Try /request again in Discord.", 404)
     minutes_left = max(1, (state.expires_at - int(time.time()) + 59) // 60)
     return landing_page(game["name"], token, minutes_left)
 
@@ -239,7 +214,7 @@ async def login(request: web.Request) -> web.Response:
 async def callback(request: web.Request) -> web.Response:
     bot: KeyBot = request.app[BOT_KEY]
     if request.query.get("error"):
-        return page("Cancelled", "Nothing was sent. Run /request again in Discord whenever you like.")
+        return page("Cancelled", "Nothing was shared.")
     try:
         state = verify_state(bot.config.state_secret, request.query.get("state", ""))
     except StateError as error:
@@ -261,19 +236,18 @@ async def callback(request: web.Request) -> web.Response:
             await revoke(session, bot, token)  # we only needed it for these two reads
     except (aiohttp.ClientError, TimeoutError, ValueError, KeyError) as error:
         log.warning("Discord login failed: %s", type(error).__name__)
-        return page("Discord login didn't work", "Run /request again in Discord and try once more.", 502)
+        return page("Sign-in failed", "Try /request again in Discord.", 502)
 
     # The link belongs to whoever ran /request. Someone else's login can't stand in for them.
     if str(me.get("id")) != str(state.user_id):
-        return page("That's a different Discord account",
-                    "Sign in with the account you used for /request, then run /request again.", 403)
+        return page("Wrong account", "Sign in with the account you used for /request.", 403)
 
     try:
         channels = await look_up(session, bot.config.youtube_api_key, bot.twitch, connections)
         title, text = await bot.creator_verified(state.user_id, state.game_id, channels)
     except Exception:
         log.exception("creator verification failed for %s", state.user_id)
-        return page("Something went wrong", "Try /request again in Discord in a bit.", 500)
+        return page("Something went wrong", "Try /request again later.", 500)
     return page(title, text)
 
 

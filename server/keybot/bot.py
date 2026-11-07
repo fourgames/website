@@ -287,15 +287,15 @@ class KeyBot(discord.Client):
         store = self.store
         game = store.game(game_id)
         if game is None:
-            return "Something's off", "That game isn't in the list any more. Run /request again in Discord."
+            return "Game not found", "Try /request again in Discord."
         if store.is_banned(user_id, game_id):
-            return "Not available", "You can't get keys for this game. If you think that's a mistake, ask the team."
+            return "Not available", "You can't get a key for this game."
         if store.at_limit(game_id, user_id):
-            return "You already have a key", "Run /claim in the Four Games Discord to see it again."
+            return "You already have a key", "Type /claim in Discord to see it."
         if store.open_request_for(user_id, game_id):
-            return "Already waiting for review", "Your request for this game is with the team already."
+            return "Already sent", "We'll DM you soon."
         if store.open_request_count(user_id) >= MAX_OPEN_REQUESTS:
-            return "Too many open requests", "Wait until the team has answered one of your requests."
+            return "Too many requests", "Wait for an answer on the others first."
 
         decision = evaluate(channels, self.config.thresholds)
         details = {"channels": [channel.to_dict() for channel in channels], "reasons": decision.reasons}
@@ -311,16 +311,15 @@ class KeyBot(discord.Client):
             if outcome.status == "given":
                 store.finish_request(request_id, "approved", "auto", outcome.key_id)
                 log.info("creator request #%s auto-approved (%s)", request_id, channel_url)
-                return "Verified — check your DMs", f"Your key for {game['name']} is in your Discord DMs."
+                return "Check your DMs", f"Your {game['name']} key is there."
             store.delete_request(request_id)
             if outcome.status == "already":
-                return "You already have a key", "Run /claim in the Four Games Discord to see it again."
+                return "You already have a key", "Type /claim in Discord to see it."
             if outcome.status == "banned":
-                return "Not available", "You can't get keys for this game. If you think that's a mistake, ask the team."
+                return "Not available", "You can't get a key for this game."
             if outcome.status == "dm_failed":
-                return ("Verified, but we couldn't DM you",
-                        "Allow direct messages from server members (right-click the Four Games server → "
-                        "Privacy Settings), then run /request again.")
+                return ("Turn on DMs",
+                        "We couldn't message you. Allow DMs from the Four Games server, then try again.")
             # Out of keys: it qualifies, so let the team hand one out once there are more.
             details["reasons"] = ["Meets the thresholds, but there were no keys left"]
 
@@ -330,9 +329,9 @@ class KeyBot(discord.Client):
         except discord.HTTPException:
             store.delete_request(request_id)
             log.exception("couldn't post the card for request #%s", request_id)
-            return "Something went wrong", "We couldn't pass your request on. Try /request again later."
+            return "Something went wrong", "Try /request again later."
         log.info("creator request #%s sent for review", request_id)
-        return "Sent for review", "The team will take a look, and you'll get a DM either way."
+        return "Sent for review", "We'll DM you soon."
 
 
 def plural(count: int | None, word: str) -> str:
@@ -763,10 +762,8 @@ async def request_creator(interaction: discord.Interaction, game: str) -> None:
     view.add_item(discord.ui.Button(label="Verify your channel", style=discord.ButtonStyle.link,
                                     url=f"{bot.config.public_base_url}/verify?state={token}"))
     await interaction.response.send_message(
-        f"To get a key for **{escape_markdown(row['name'])}**, we look at the YouTube or Twitch channel "
-        "linked to your Discord (link it under User Settings → Connections first).\n"
-        "The button opens a page that explains it, then Discord's own sign-in. We never see your password, "
-        "messages or servers, and can't post as you. The link works once, for 15 minutes.",
+        f"Press the button to get your **{escape_markdown(row['name'])}** key. We check your YouTube or "
+        "Twitch channel through Discord (link it under User Settings → Connections). Works for 15 minutes.",
         view=view, ephemeral=True)
 
 

@@ -62,9 +62,9 @@ def test_verify_explains_before_sending_to_discord(tmp_path):
         status, headers, body = asyncio.run(fetch(bot, f"{prefix}/verify", state=token))
         assert status == 200 and headers["Cache-Control"] == "no-store"
         assert "Pomo &lt;Valley&gt;" in body  # escaped
-        assert "We never see" in body and "Continue with Discord" in body
+        assert "never see your password" in body and "Continue with Discord" in body
         assert f'href="login?state={token}"' in body
-        assert "expires in 15 minutes" in body
+        assert "Works for 15 minutes" in body
 
 
 def test_login_goes_to_discord_with_the_same_state(tmp_path):
@@ -84,11 +84,11 @@ def test_old_or_used_links_get_a_clear_page(tmp_path):
     old = link(bot, game, now=time.time() - 3600)
     for path in ("/verify", "/login"):
         status, _, body = asyncio.run(fetch(bot, path, state=old))
-        assert status == 400 and "This link has expired" in body
+        assert status == 400 and "Link expired" in body
     used = link(bot, game)
     bot.store.use_state(parse_used(used))
     status, _, body = asyncio.run(fetch(bot, "/verify", state=used))
-    assert status == 400 and "already used" in body
+    assert status == 400 and "Link already used" in body
 
 
 def parse_used(token):
@@ -98,9 +98,9 @@ def parse_used(token):
 
 def test_result_pages_show_how_it_went():
     from keybot.web import page
-    assert 'class="status success"' in page("Verified — check your DMs", "x").text
+    assert 'class="status success"' in page("Check your DMs", "x").text
     assert 'class="status pending"' in page("Sent for review", "x").text
     assert 'class="status info"' in page("Cancelled", "x").text
-    assert 'class="status pending"' in page("Verified, but we couldn't DM you", "x").text
-    assert 'class="status info"' in page("This link has expired", "x", 400).text
+    assert 'class="status pending"' in page("Turn on DMs", "x").text
+    assert 'class="status info"' in page("Link expired", "x", 400).text
     assert 'class="status problem"' in page("Something went wrong", "x", 500).text

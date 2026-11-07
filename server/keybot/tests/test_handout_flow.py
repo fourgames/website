@@ -104,7 +104,7 @@ def test_creator_auto_approved(bot):
     bot.users_by_id[5] = user = FakeUser(5)
     big = Channel("youtube", "UC1", "Big", "https://www.youtube.com/@big", audience=50_000, last_upload=recent())
     title, _ = asyncio.run(bot.creator_verified(5, game["id"], [big]))
-    assert title == "Verified — check your DMs"
+    assert title == "Check your DMs"
     assert len(user.sent) == 1
     key = bot.store.user_key(game["id"], 5)
     assert key["reason"] == "creator"
@@ -124,7 +124,7 @@ def test_small_creator_goes_to_review(bot):
     _, kwargs = bot.channel.sent[-1]
     assert "embed" in kwargs and "view" in kwargs
     # The same game again waits on the first request.
-    assert asyncio.run(bot.creator_verified(5, game["id"], [small]))[0] == "Already waiting for review"
+    assert asyncio.run(bot.creator_verified(5, game["id"], [small]))[0] == "Already sent"
 
 
 def test_creator_with_dms_closed_keeps_key_and_request_free(bot):
@@ -132,7 +132,7 @@ def test_creator_with_dms_closed_keeps_key_and_request_free(bot):
     bot.users_by_id[5] = FakeUser(5, dms_open=False)
     big = Channel("twitch", "9", "big", "https://www.twitch.tv/big", audience=10_000)
     title, _ = asyncio.run(bot.creator_verified(5, game["id"], [big]))
-    assert title.startswith("Verified, but")
+    assert title == "Turn on DMs"
     assert bot.store.available_count(game["id"]) == 3
     assert bot.store.open_request_count(5) == 0
 
@@ -147,7 +147,7 @@ def test_open_request_limit(bot):
     for g in games[:3]:
         bot.store.create_request("press", g["id"], 5)
     bot.users_by_id[5] = FakeUser(5)
-    assert asyncio.run(bot.creator_verified(5, games[3]["id"], []))[0] == "Too many open requests"
+    assert asyncio.run(bot.creator_verified(5, games[3]["id"], []))[0] == "Too many requests"
 
 
 # /claim: the key in the reply, the DM only a copy
@@ -280,7 +280,7 @@ def test_request_and_creator_respect_bans_and_limits(bot):
     bot.store.give_key(game["id"], 5, "member")
     assert asyncio.run(bot.creator_verified(5, game["id"], [big]))[0] == "You already have a key"
     bot.store.update_game_settings(game["id"], per_user_limit=2)
-    assert asyncio.run(bot.creator_verified(5, game["id"], [big]))[0] == "Verified — check your DMs"
+    assert asyncio.run(bot.creator_verified(5, game["id"], [big]))[0] == "Check your DMs"
     assert len(user.sent) == 1
 
 

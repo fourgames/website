@@ -32,6 +32,8 @@ const TYPE_HELP = {
 const SOURCES = { description: "in their channel description", links: "on a page they link to (Linktree, website)", revealed: "behind YouTube's View email button" };
 const LANGS = { en: "English", ru: "Russian", de: "German", fr: "French", pt: "Portuguese", es: "Spanish", ja: "Japanese", tr: "Turkish", it: "Italian", pl: "Polish", ko: "Korean", zh: "Chinese", nl: "Dutch", sv: "Swedish", uk: "Ukrainian", ar: "Arabic", id: "Indonesian", vi: "Vietnamese", th: "Thai", cs: "Czech", hu: "Hungarian", fi: "Finnish", da: "Danish", no: "Norwegian", ro: "Romanian", el: "Greek", he: "Hebrew", hi: "Hindi" };
 
+import { huntView, HUNT_CSS, bounties } from "./creators-hunt.js";
+
 let C = null;
 const st = { view: "creators", pf: { q: "", kind: "all", lang: "all", country: "all", reach: "all", email: "any" }, pshown: PAGE, data: null, error: null, loading: false, root: null, f: { q: "", email: "any", active: "all", size: "all", type: "all", lang: "all", genre: "all", game: "all", sort: "best" }, shown: PAGE, open: new Set() };
 
@@ -137,10 +139,14 @@ function draw() {
     return;
   }
   const d = st.data;
-  const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`], ["outreach", "Outreach"]],
+  const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`], ["hunt", `Email hunt (${num(bounties(d.creators, now()).length)} left)`], ["outreach", "Outreach"]],
     st.view, (v) => { st.view = v; draw(); }, "Show"));
   if (st.view === "press") {
     root.replaceChildren(switcher, pressView(d));
+    return;
+  }
+  if (st.view === "hunt") {
+    root.replaceChildren(switcher, huntView(d, C));
     return;
   }
   if (st.view === "outreach") {
@@ -162,7 +168,7 @@ function draw() {
   const cards = h("div.cr-cards",
     card("Creators", num(all.length), `${num(all.filter((c) => c.own).length)} made a video of our games`),
     card("With an email", num(withEmail.length), `${num(bySource("description"))} description · ${num(bySource("links"))} links · ${num(bySource("revealed"))} revealed`, () => setF({ email: "yes" })),
-    card("Hidden email only", num(all.filter((c) => !c.e.length && c.b === 1).length), "behind YouTube's captcha button", () => setF({ email: "hidden" })),
+    card("Hidden email only", num(all.filter((c) => !c.e.length && c.b === 1).length), "behind YouTube's captcha button · play the Email hunt", () => { st.view = "hunt"; draw(); }),
     card("Active", num(all.filter((c) => activity(c, today) === "active").length), "uploaded in the last 30 days", () => setF({ active: "active" })));
 
   // Best for one of our games.
@@ -669,6 +675,6 @@ function injectCss() {
   if (typeof document === "undefined" || document.getElementById("cr-style")) return;
   const el = document.createElement("style");
   el.id = "cr-style";
-  el.textContent = CSS;
+  el.textContent = CSS + HUNT_CSS;
   document.head.append(el);
 }

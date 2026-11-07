@@ -303,7 +303,11 @@ def test_export(tmp_path, steam_db, monkeypatch):
     tags = [t for t, _ in by["UCb"]["p"]]
     assert 1 not in tags and tags[0] == 2  # Indie left out; Fishing weighs most
     assert data["tags"]["2"] == "Fishing" and data["games"]["1"]["own"]
-    assert data["press"] == []
+    assert data["press"] == [] and "ra" not in by["UCa"]
+    store.db.execute("UPDATE youtube_channels SET revealed_email = 'b@b.com', revealed_at = ? WHERE channel_id = 'UCb'", (int(NOW),))
+    store.db.commit()
+    by = {c["id"]: c for c in export.build(store, collector.config.steam_db, set(), NOW)["creators"]}
+    assert by["UCb"]["ra"] == int(NOW) and ["b@b.com", "revealed"] in by["UCb"]["e"]
     assert export.category([(1, 5)], {}) == "one-game"
     assert export.category([(1, 1), (2, 1), (3, 1), (4, 1)], {1: 10, 2: 10, 3: 90000, 4: 20}) == "indie-variety"
 

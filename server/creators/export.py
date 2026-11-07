@@ -8,7 +8,9 @@ Written after every hourly run, gzipped: /srv/fourgames/creators/export/creators
 Per creator (short keys, the file grows to thousands): id, t title, h handle, s subscribers, n videos
 on the channel, c country, l language, e [[email, source]] (source: description, revealed, links),
 k links {twitch, x, ...}, b hidden-email button (1/0/null), lu newest upload, lv newest video of a
-game we searched, g [[appid, videos, newest, views]], cat category, p genre profile [[tagid, weight]].
+game we searched, g [[appid, videos, newest, views]], cat category, p genre profile [[tagid, weight]],
+ra when the hidden email was looked at (only once it was; with or without an email behind it), for
+the page's Email hunt.
 Also "press": the press list (press.py), one object per outlet, and "quota": today's YouTube units
 (day, spent, limit, exhausted, reset = when YouTube's quota day ends), so the page can say when
 collecting stops for the day.
@@ -125,6 +127,7 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
             "v30": v30.get(cid, 0), "g": g, "cat": category([(x[0], x[1]) for x in g], reviews),
             "p": [[t, round(w / total, 3)] for t, w in profile.most_common(PROFILE_TAGS)],
             "own": any(x[0] in own for x in g), "first": r["first_seen"],
+            **({"ra": r["revealed_at"]} if r["revealed_at"] else {}),
         })
     used = {t for c in creators for t, _ in c["p"]} | {t for g in games.values() for t in g["t"]}
     return {

@@ -138,6 +138,16 @@ sudo systemctl daemon-reload && sudo systemctl enable --now creators-send.timer
 
 Logs: `journalctl -u creators-send`.
 
+## The launch checklist
+
+The Creators page's Launch checklist tab: one list per game, from six weeks before release to the
+week after (store page, press kit, keys, creators, streamers, press, trailer channels, short videos,
+Discord, the fan list, replies, reviews, the first patch). The steps are in
+`src/lib/feedback/launch.js`; the server keeps only each game's launch date and the ticks
+(`launch.py`, tables `launch_games` and `launch_checks` in the creators database), through
+`GET/POST /gamedata/v1/admin/launch`. The emailing steps tick themselves from an approved Outreach
+campaign for the game to that audience.
+
 ## The tables
 
 One SQLite file, `/srv/fourgames/creators/creators.db`:

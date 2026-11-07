@@ -12,6 +12,8 @@ checks the owner's sign-in and the request. Sending is creators/send.py's (creat
 - POST /v1/admin/outreach/translate          {subject, body, languages, appid?}: Claude localizes the email
                                              for each language (the game's local Steam name, "it's in your
                                              language too" when it is, local tone), short and plain; the owner checks them
+- GET  /v1/admin/launch                      the launch checklist: each game's launch date and ticked steps
+- POST /v1/admin/launch                      {appid, date: "YYYY-MM-DD" | null} or {appid, item, done: bool}
 """
 
 from __future__ import annotations
@@ -283,6 +285,34 @@ async def translate(request: web.Request) -> web.Response:
     return W.ok({"translations": good, "skipped": skipped, "model": getattr(message, "model", TRANSLATE_MODEL)})
 
 
+def _with_launch(fn):
+    from creators import launch
+    db_path, _ = _paths()
+    from creators.db import Store
+    store = launch.prepare(Store(db_path))
+    try:
+        return fn(launch, store)
+    except launch.LaunchError as error:
+        raise Refused(400, "bad_request", str(error)) from None
+    finally:
+        store.close()
+
+
+async def launch_state(request: web.Request) -> web.Response:
+    from .admin import require_admin
+    require_admin(request)
+    return W.ok(await asyncio.to_thread(_with_launch, lambda l, s: l.state(s)))
+
+
+async def launch_update(request: web.Request) -> web.Response:
+    from .admin import require_admin
+    require_admin(request)
+    body = await read_json(request, 4096, 4096, require_json_type=True)
+    if not isinstance(body, dict) or not set(body) <= {"appid", "date", "item", "done"}:
+        raise Refused(400, "bad_request", "send {appid, date} or {appid, item, done}")
+    return W.ok(await asyncio.to_thread(_with_launch, lambda l, s: l.update(s, body)))
+
+
 def _int(value: str) -> int:
     if not value.isdigit() or len(value) > 12:
         raise Refused(404, "not_found", "no such campaign or message")
@@ -291,6 +321,8 @@ def _int(value: str) -> int:
 
 def add_routes(app: web.Application, v1: str) -> None:
     add = app.router.add_route
+    add("GET", f"{v1}/launch", launch_state)
+    add("POST", f"{v1}/launch", launch_update)
     add("GET", f"{v1}/outreach", overview)
     add("POST", f"{v1}/outreach", create)
     add("POST", f"{v1}/outreach/suppress", suppress)

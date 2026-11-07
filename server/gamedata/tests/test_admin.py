@@ -811,6 +811,29 @@ def test_outreach_routes(tmp_path, monkeypatch):
 
 
 
+def test_launch_checklist_routes(tmp_path, monkeypatch):
+    monkeypatch.setenv("CREATORS_DB", str(tmp_path / "creators.db"))
+    monkeypatch.setenv("STEAM_DB", str(tmp_path / "missing.db"))
+
+    async def steps(w):
+        h = w.page(await w.sign_in(back="/fb-dash"))
+        r = await w.client.get("/gamedata/v1/admin/launch", headers=h)
+        assert r.status == 200 and (await r.json())["games"] == {}
+        r = await w.client.post("/gamedata/v1/admin/launch", headers=h, json={"appid": 7, "date": "2027-02-14"})
+        assert r.status == 200 and (await r.json())["games"]["7"]["date"] == "2027-02-14"
+        r = await w.client.post("/gamedata/v1/admin/launch", headers=h, json={"appid": 7, "item": "press-kit", "done": True})
+        assert "press-kit" in (await r.json())["games"]["7"]["done"]
+        r = await w.client.post("/gamedata/v1/admin/launch", headers=h, json={"appid": 7, "item": "press-kit", "done": False})
+        assert (await r.json())["games"]["7"] == {"date": "2027-02-14", "done": {}}
+        for bad in ({"appid": 7, "date": "14/2"}, {"appid": 7, "item": "Bad Key!", "done": True}, {"appid": "7", "date": None},
+                    {"appid": 7}, {"appid": 7, "evil": 1}):
+            r = await w.client.post("/gamedata/v1/admin/launch", headers=h, json=bad)
+            assert r.status == 400, bad
+        r = await w.client.get("/gamedata/v1/admin/launch", headers=w.page())
+        assert r.status == 401
+    run(tmp_path, steps, **ADMIN)
+
+
 def test_outreach_translate(tmp_path, monkeypatch):
     import types
     from gamedata import outreach as routes

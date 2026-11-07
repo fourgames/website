@@ -33,6 +33,7 @@ const SOURCES = { description: "in their channel description", links: "on a page
 const LANGS = { en: "English", ru: "Russian", de: "German", fr: "French", pt: "Portuguese", es: "Spanish", ja: "Japanese", tr: "Turkish", it: "Italian", pl: "Polish", ko: "Korean", zh: "Chinese", nl: "Dutch", sv: "Swedish", uk: "Ukrainian", ar: "Arabic", id: "Indonesian", vi: "Vietnamese", th: "Thai", cs: "Czech", hu: "Hungarian", fi: "Finnish", da: "Danish", no: "Norwegian", ro: "Romanian", el: "Greek", he: "Hebrew", hi: "Hindi" };
 
 import { huntStrip, HUNT_CSS } from "./creators-hunt.js";
+import { launchView } from "./launch.js";
 
 let C = null;
 const st = { view: "creators", pf: { q: "", kind: "all", lang: "all", country: "all", reach: "all", email: "any" }, pshown: PAGE, data: null, error: null, loading: false, root: null, f: { q: "", email: "any", active: "all", size: "all", type: "all", lang: "all", genre: "all", game: "all", sort: "best" }, shown: PAGE, open: new Set() };
@@ -139,7 +140,7 @@ function draw() {
     return;
   }
   const d = st.data;
-  const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`], ["outreach", "Outreach"]],
+  const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`], ["outreach", "Outreach"], ["launch", "Launch checklist"]],
     st.view, (v) => { st.view = v; draw(); }, "Show"));
   if (st.view === "press") {
     root.replaceChildren(switcher, pressView(d));
@@ -147,6 +148,10 @@ function draw() {
   }
   if (st.view === "outreach") {
     root.replaceChildren(switcher, outreachView(d));
+    return;
+  }
+  if (st.view === "launch") {
+    root.replaceChildren(switcher, launchView(C, d, draw));
     return;
   }
   const today = now();

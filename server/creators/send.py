@@ -291,6 +291,11 @@ class Sender:
         if no:
             outreach.suppress(self.store, row[1], "opted_out", now)
             return "opted_out"
+        # The name they sign with, from the address we wrote to (not a manager answering for them).
+        display, address = parseaddr(str(message.get("From", "")))
+        name = outreach.name_from_display(display) if address.lower() == row[1] else None
+        if name:
+            outreach.save_name(self.store, row[1], name, "reply", now)
         return "replied"
 
     # Sending

@@ -14,7 +14,8 @@ Rules that always hold, whatever a campaign says:
   - Never twice to the same address within RECONTACT_DAYS, across all campaigns.
   - Every email says how to opt out (a line before the sign-off: reply and say so), and carries a List-Unsubscribe header.
 
-Placeholders in the subject and body: {name} (the channel or outlet), {game}, {steam} (the store
+Placeholders in the subject and body: {name} (a creator's first name when we're sure of it, see
+first_name(); else the channel; for press the outlet), {game}, {steam} (the store
 link), {press} (the game's press page on press.fourgames.se), {their_game} (for a creator: a game they made a video of, ours first, else one like ours;
 for press: empty), {key} (a Steam key for the game from the key bot's pool, put in when the email is
 sent; see keys.py). Anything else is written as it is.
@@ -82,6 +83,12 @@ CREATE INDEX IF NOT EXISTS outreach_messages_email ON outreach_messages (email);
 CREATE TABLE IF NOT EXISTS outreach_suppress (
     email   TEXT PRIMARY KEY,
     reason  TEXT NOT NULL,              -- opted_out, bounced, manual
+    at      INTEGER NOT NULL
+);
+CREATE TABLE IF NOT EXISTS outreach_names (
+    email   TEXT PRIMARY KEY,           -- the address we write to
+    name    TEXT NOT NULL,              -- their first name, as they use it themselves
+    source  TEXT NOT NULL,              -- reply (the name on a reply from that address) or manual
     at      INTEGER NOT NULL
 );
 CREATE TABLE IF NOT EXISTS outreach_state (
@@ -358,6 +365,64 @@ def greeting_name(name: str) -> str:
     return short or name
 
 
+# A wrong first name is worse than none, so {name} is a first name only when the creator uses it
+# themselves: the name on a reply they sent us from that address (saved by send.py), or a personal
+# address like mark.jensen@gmail.com. Anything else gets the channel name, as creators go by it.
+FREE_MAIL = {"gmail.com", "googlemail.com", "outlook.com", "hotmail.com", "live.com", "msn.com", "yahoo.com",
+             "icloud.com", "me.com", "proton.me", "protonmail.com", "gmx.de", "gmx.net", "gmx.com", "web.de",
+             "yandex.ru", "mail.ru", "aol.com", "hotmail.co.uk", "yahoo.co.uk", "outlook.de", "hotmail.fr",
+             "orange.fr", "free.fr", "libero.it", "naver.com", "qq.com", "t-online.de"}
+NOT_A_NAME = {"gaming", "games", "game", "gamer", "plays", "play", "lets", "the", "team", "info", "contact", "business",
+              "press", "media", "official", "yt", "tv", "channel", "collab", "collabs", "management", "mgmt", "booking",
+              "inquiries", "enquiries", "hello", "hi", "admin", "support", "marketing", "studio", "studios", "real",
+              "its", "mr", "mrs", "ms", "dr", "sir", "mister", "youtube", "twitch", "stream", "streams", "live",
+              "partner", "partners", "sponsor", "sponsorships", "agency", "network", "group", "noreply", "no"}
+
+
+def _word(w: str) -> bool:
+    return 2 <= len(w) <= 15 and w.isalpha() and w.lower() not in NOT_A_NAME
+
+
+def name_from_email(email: str) -> str | None:
+    """'Mark' for mark.jensen@gmail.com: a first.last address on a free mail service. Not on a company
+    domain, where it may be a manager's or an agency's address, and not for a single word (mark@,
+    splattercat@), which can as well be a channel or a nickname."""
+    local, _, domain = (email or "").lower().partition("@")
+    parts = re.split(r"[._]", local)
+    if domain not in FREE_MAIL or len(parts) != 2 or not all(_word(w) for w in parts):
+        return None
+    return parts[0].capitalize()
+
+
+def name_from_display(display: str) -> str | None:
+    """'Mark' for a reply from "Mark Jensen <...>": two or three words that are all names, so not a
+    channel name like "Bob Gaming" or "Splattercat"."""
+    words = (display or "").replace('"', "").split()
+    if not 2 <= len(words) <= 3 or not all(_word(w.replace("-", "").replace("'", "")) for w in words):
+        return None
+    first = words[0]
+    return first if not first.isupper() and not first.islower() else first.capitalize()
+
+
+def save_name(store: Store, email: str, name: str, source: str, now: float) -> None:
+    """Remembers a first name for an address. A manual one is never replaced by a guessed one."""
+    with store.db:
+        store.db.execute(
+            """INSERT INTO outreach_names (email, name, source, at) VALUES (?, ?, ?, ?)
+               ON CONFLICT(email) DO UPDATE SET name = excluded.name, source = excluded.source, at = excluded.at
+               WHERE outreach_names.source != 'manual' OR excluded.source = 'manual'""",
+            (email.lower(), name, source, int(now)))
+
+
+def first_name(store: Store, email: str) -> tuple[str, str] | None:
+    """(first name, where it came from) when we're sure of it, else None."""
+    r = store.db.execute("SELECT name, source FROM outreach_names WHERE email = ?", ((email or "").lower(),)).fetchone()
+    if r:
+        return r["name"], r["source"]
+    guess = name_from_email(email)
+    return (guess, "email_address") if guess else None
+
+
 def check_keys_exist(appid: int | None, game: str) -> None:
     """A campaign with {key} needs the game in the key bot (matched by its Steam app id)."""
     if not appid:
@@ -452,7 +517,8 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
             # A game they made a video of, ours first; the campaign's own game only if it's all they played.
             their = next((game_names[a] for a in games if a in game_names and a != appid),
                          game if appid in games else "")
-            fields = {"name": greeting_name(who["name"]), "game": game, "key": K.PLACEHOLDER, "steam": steam, "their_game": their,
+            known = None if audience == "press" else first_name(store, who["email"])  # press: "Hi {name} team"
+            fields = {"name": known[0] if known else greeting_name(who["name"]), "game": game, "key": K.PLACEHOLDER, "steam": steam, "their_game": their,
                       "press": f"https://press.fourgames.se/{re.sub(r'[^a-z0-9]+', '-', game.lower()).strip('-')}"}
             t = translations.get(who.get("lang") or "")
             lang = who.get("lang") if t else "en"

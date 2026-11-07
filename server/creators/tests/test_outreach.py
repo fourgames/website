@@ -283,3 +283,55 @@ def test_no_in_other_languages():
         assert OPT_OUT.search(text), text
     for text in ("Ja gerne!", "Oui, avec plaisir", "Sí, mándame una key", "はい、ぜひ"):
         assert not OPT_OUT.search(text), text
+
+
+def test_first_name_only_when_sure():
+    assert outreach.name_from_email("mark.jensen@gmail.com") == "Mark"
+    assert outreach.name_from_email("mark_jensen@outlook.com") == "Mark"
+    assert outreach.name_from_email("mark@gmail.com") is None              # one word: could be a nickname
+    assert outreach.name_from_email("mark.jensen@agency.com") is None      # company domain: maybe a manager
+    assert outreach.name_from_email("bob.gaming@gmail.com") is None
+    assert outreach.name_from_email("business.splattercat@gmail.com") is None
+    assert outreach.name_from_email("mark.jensen99@gmail.com") is None
+    assert outreach.name_from_display("Mark Jensen") == "Mark"
+    assert outreach.name_from_display("MARK JENSEN") == "Mark"
+    assert outreach.name_from_display('"Jean-Luc Picard"') == "Jean-Luc"
+    assert outreach.name_from_display("Splattercat") is None
+    assert outreach.name_from_display("Bob Gaming") is None
+    assert outreach.name_from_display("Bob 2") is None
+
+
+def test_greeting_uses_a_sure_first_name_else_the_channel(store):
+    store.db.execute("INSERT INTO youtube_channels (channel_id, title, emails, first_seen) VALUES "
+                     "('UCf', 'Foxy Plays', '[\"mark.jensen@gmail.com\"]', 0)")
+    store.db.commit()
+    outreach.save_name(store, "alpha@mail.com", "Anna", "reply", NOW)
+    out = make(store, {**SPEC, "recipients": ["UCa", "UCc", "UCf"]})
+    names = {m["target_id"]: m["body"].splitlines()[0] for m in outreach.messages(store, out["id"])}
+    assert names == {"UCa": "Hi Anna,", "UCc": "Hi Gamma,", "UCf": "Hi Mark,"}
+    press = make(store, {**SPEC, "audience": "press", "recipients": ["site.jp"], "body": "Hello {name} team"})
+    assert outreach.messages(store, press["id"])[0]["body"].startswith("Hello Site JP team")
+    outreach.save_name(store, "alpha@mail.com", "Ann", "manual", NOW)
+    outreach.save_name(store, "alpha@mail.com", "Anna", "reply", NOW)    # a guess never replaces a manual name
+    assert outreach.first_name(store, "alpha@mail.com") == ("Ann", "manual")
+
+
+def test_a_reply_teaches_us_their_name_from_the_same_address_only(store):
+    out = make(store)
+    outreach.set_status(store, out["id"], "approved", NOW)
+    smtp = FakeSMTP()
+    sender(store, smtp).send_due()
+    sender(store, smtp).send_due()
+    by = {str(m["To"]).split("<")[-1].rstrip(">"): m for m in smtp.sent}
+    s = sender(store, smtp)
+
+    def reply(frm, to):
+        m = EmailMessage()
+        m["From"], m["Subject"], m["In-Reply-To"] = frm, "Re: hi", by[to]["Message-ID"]
+        m.set_content("Sounds fun!")
+        return m
+
+    assert s.handle(reply("Anna Berg <alpha@mail.com>", "alpha@mail.com")) == "replied"
+    assert outreach.first_name(store, "alpha@mail.com") == ("Anna", "reply")
+    assert s.handle(reply("Tom Manager <tom@agency.com>", "shared@mail.com")) == "replied"
+    assert outreach.first_name(store, "shared@mail.com") is None

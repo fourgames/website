@@ -14,11 +14,11 @@ from .texts import text
 
 
 def confirm_url(config: Config, token: str) -> str:
-    return f"{config.public_url}/confirm?t={quote(token)}"
+    return f"{config.link_url}/c/{quote(token)}"
 
 
 def unsubscribe_url(config: Config, token: str) -> str:
-    return f"{config.public_url}/unsubscribe?t={quote(token)}"
+    return f"{config.link_url}/u/{quote(token)}"
 
 
 def build_confirm_email(config: Config, p: Pending) -> EmailMessage:

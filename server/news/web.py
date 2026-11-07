@@ -5,10 +5,11 @@ without the /news prefix, so handle and handle_path both work.
   _elapsed (ms since the form appeared). Stores the address unconfirmed and emails a confirm link.
   Always {"ok": true} for a valid address, whether it was new, already on the list or just got a
   link, so nobody can use the form to find out who's subscribed.
-- GET /news/confirm?t=…: a page with one button; pressing it (POST /news/confirm) confirms. A
+- GET /c/<code> (news.fourgames.se, the link in the email; /news/confirm?t=<code> works too): a
+  page with one button; pressing it (a POST to the same address) confirms. A
   button and not the link itself, because mail scanners open links, and a scanner must not be able
   to sign someone up.
-- GET /news/unsubscribe?t=…: a page with one Unsubscribe button (POST). POST /news/unsubscribe?t=…
+- GET /u/<code> (or /news/unsubscribe?t=<code>): a page with one Unsubscribe button (POST). A POST
   with List-Unsubscribe=One-Click is the mail app's one-click unsubscribe (RFC 8058).
 - GET /news/health
 
@@ -122,7 +123,7 @@ async def subscribe(request: web.Request) -> web.Response:
 
 
 async def token_of(request: web.Request) -> str:
-    token = request.query.get("t", "")
+    token = request.match_info.get("code") or request.query.get("t", "")
     if not token and request.method == "POST" and request.content_type == "application/x-www-form-urlencoded":
         token = (await request.post()).get("t", "")
     token = token if isinstance(token, str) else ""
@@ -135,7 +136,7 @@ async def confirm_page(request: web.Request) -> web.Response:
     lang = store.pending_lang(token) if token else None
     if lang is None:
         return html(page("en", "bad_link_title", "bad_link_line"), 404)
-    return html(page(lang, "confirm_title", "confirm_line", ("confirm", token, "confirm_button")))
+    return html(page(lang, "confirm_title", "confirm_line", (request.path, token, "confirm_button")))
 
 
 async def confirm(request: web.Request) -> web.Response:
@@ -155,7 +156,7 @@ async def unsubscribe_page(request: web.Request) -> web.Response:
     if lang is None:
         # Not on the list (any more): say so the same way as after unsubscribing.
         return html(page("en", "unsubbed_title", "unsubbed_line"))
-    return html(page(lang, "unsub_title", "unsub_line", ("unsubscribe", token, "unsub_button")))
+    return html(page(lang, "unsub_title", "unsub_line", (request.path, token, "unsub_button")))
 
 
 async def unsubscribe(request: web.Request) -> web.Response:
@@ -164,7 +165,7 @@ async def unsubscribe(request: web.Request) -> web.Response:
     lang = store.lang_of(token) if token else None
     removed = store.unsubscribe(token) if token else False
     log.info("unsubscribe: %s", "removed one address" if removed else "not on the list")
-    if request.content_type == "application/x-www-form-urlencoded" and request.query.get("t"):
+    if request.content_type == "application/x-www-form-urlencoded" and (await request.post()).get("List-Unsubscribe") == "One-Click":
         # The mail app's one-click POST: it only wants a 200.
         return web.Response(text="ok", headers={"Cache-Control": "no-store"})
     return html(page(lang or "en", "unsubbed_title", "unsubbed_line"))
@@ -216,4 +217,8 @@ def make_app(config: Config, send: Callable | None = None, store: Store | None =
         app.router.add_get(f"{prefix}/unsubscribe", unsubscribe_page)
         app.router.add_post(f"{prefix}/unsubscribe", unsubscribe)
         app.router.add_get(f"{prefix}/health", health)
+        app.router.add_get(f"{prefix}/c/{{code}}", confirm_page)
+        app.router.add_post(f"{prefix}/c/{{code}}", confirm)
+        app.router.add_get(f"{prefix}/u/{{code}}", unsubscribe_page)
+        app.router.add_post(f"{prefix}/u/{{code}}", unsubscribe)
     return app

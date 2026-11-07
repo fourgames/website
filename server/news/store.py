@@ -46,6 +46,15 @@ CREATE TABLE IF NOT EXISTS daily (
 """
 
 
+# The codes in the email links (news.fourgames.se/c/<code>): 10 letters and digits, about 59 bits,
+# far past guessing with the rate limits; no look-alike characters (0/O, 1/l/I).
+CODE_CHARS = "23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+
+
+def short_token() -> str:
+    return "".join(secrets.choice(CODE_CHARS) for _ in range(10))
+
+
 def token_hash(token: str) -> str:
     return hashlib.sha256(token.encode()).hexdigest()
 
@@ -100,12 +109,12 @@ class Store:
         key = email.lower()
         row = self.db.execute("SELECT * FROM subscribers WHERE email = ?", (key,)).fetchone()
         if row is None:
-            return Pending(key, lang, secrets.token_urlsafe(24), secrets.token_urlsafe(24), new=True)
+            return Pending(key, lang, short_token(), short_token(), new=True)
         if row["confirmed"] is not None:
             return None
         if row["mails"] >= MAX_CONFIRM_MAILS or (row["last_mail"] or 0) > now - RESEND_AFTER:
             return None
-        return Pending(key, lang, secrets.token_urlsafe(24), row["unsub_token"], new=False)
+        return Pending(key, lang, short_token(), row["unsub_token"], new=False)
 
     def sent(self, p: Pending) -> None:
         """Records a confirm email that went out. A resend replaces the old link."""

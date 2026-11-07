@@ -24,9 +24,9 @@ same two headers as the confirm email.
 | Route | What it does |
 | --- | --- |
 | `POST /news/subscribe` | The footer form, as JSON or form data: `email`, `lang` (en, ja, ko, zh-cn, zh-tw), `_gotcha` (honeypot), `_elapsed` (ms since the form appeared). `{"ok": true}` for any valid address (new, already on the list, or a link sent recently), so the form can't tell anyone who's subscribed. 400 bad address or too fast, 403 another site, 429 too many, 502 the email didn't go out. |
-| `GET /news/confirm?t=…` | The confirm page (one button), or "this link doesn't work any more" (404). |
+| `GET /c/<code>` on news.fourgames.se (or `/news/confirm?t=<code>`) | The confirm page (one button that posts back to the same address), or "this link doesn't work any more" (404). |
 | `POST /news/confirm` | The button: confirms, then "You're on the list". |
-| `GET /news/unsubscribe?t=…` | The unsubscribe page (one button). |
+| `GET /u/<code>` on news.fourgames.se (or `/news/unsubscribe?t=<code>`) | The unsubscribe page (one button); a POST there with `List-Unsubscribe=One-Click` is the mail app's one-click unsubscribe. |
 | `POST /news/unsubscribe` | The button, or the mail app's one-click POST (RFC 8058): deletes the address. |
 | `GET /news/health` | `{"ok": true}` |
 

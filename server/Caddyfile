@@ -86,6 +86,13 @@ verify.fourgames.se {
 	reverse_proxy localhost:8100
 }
 
+# The fan mailing list's email links (server/news): news.fourgames.se/c/<code> confirms and
+# /u/<code> unsubscribes; the address itself goes to the site.
+news.fourgames.se {
+	redir / https://fourgames.se/
+	reverse_proxy localhost:8104
+}
+
 # The public status page (server/status-page): plain files, the checks run in the visitor's browser.
 status.fourgames.se {
 	root * /srv/fourgames/own/server/status-page

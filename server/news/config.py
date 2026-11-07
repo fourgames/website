@@ -24,8 +24,10 @@ class Config:
     from_name: str
     # Origins that may sign up (the browser's Origin header). Anything else gets 403.
     allowed_origins: tuple[str, ...]
-    # Where this service is reached from outside, for the links in the emails.
+    # Where this service is reached from outside (the footer form posts here).
     public_url: str
+    # The short address the email links use: <link_url>/c/<code> confirms, <link_url>/u/<code> unsubscribes.
+    link_url: str
     # The database and stats.json (the dashboard's numbers).
     data_dir: str
     # Anti-spam: a person needs a moment to type an address; bots post at once.
@@ -67,6 +69,7 @@ class Config:
             from_name=get("NEWS_FROM_NAME", "Four Games"),
             allowed_origins=origins,
             public_url=get("NEWS_PUBLIC_URL", "https://api.fourgames.se/news").rstrip("/"),
+            link_url=get("NEWS_LINK_URL", "https://news.fourgames.se").rstrip("/"),
             data_dir=get("NEWS_DIR", "/srv/fourgames/news").rstrip("/") or "/",
             min_seconds=number("NEWS_MIN_SECONDS", "1.5", float),
             rate_limit=number("NEWS_RATE_LIMIT", "5"),

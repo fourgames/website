@@ -41,7 +41,7 @@ class Outbox:
     def link(self, kind: str, i: int = -1) -> str:
         """The path and query of the confirm or unsubscribe link in email i."""
         body = self.sent[i].get_content()
-        return re.search(rf"https://api\.fourgames\.se(/news/{kind}\?t=\S+)", body).group(1)
+        return re.search(rf"https://news\.fourgames\.se(/{kind[0]}/[A-Za-z0-9]+)", body).group(1)
 
 
 @pytest.fixture
@@ -107,7 +107,7 @@ def test_signup_confirm_unsubscribe(env):
         assert mail["To"] == "fan@example.com"
         assert mail["From"] == "Four Games <news@fourgames.se>"
         assert mail["List-Unsubscribe-Post"] == "List-Unsubscribe=One-Click"
-        assert mail["List-Unsubscribe"].startswith("<https://api.fourgames.se/news/unsubscribe?t=")
+        assert re.fullmatch(r"<https://news\.fourgames\.se/u/[A-Za-z0-9]{10}>", mail["List-Unsubscribe"])
         assert stats(env)["confirmed"] == 0 and stats(env)["pending"] == 1
 
         # Opening the link only shows the button: a mail scanner can't confirm.
@@ -116,7 +116,7 @@ def test_signup_confirm_unsubscribe(env):
         assert response.status == 200 and "Yes, add me" in page and 'method="post"' in page
         assert env[1].confirmed_emails() == []
 
-        token = outbox.link("confirm").split("t=")[1]
+        token = outbox.link("confirm").rsplit("/", 1)[1]
         response = await client.post("/news/confirm", data={"t": token})
         assert response.status == 200 and "on the list" in await response.text()
         assert [e for e, _, _ in env[1].confirmed_emails()] == ["fan@example.com"]
@@ -129,7 +129,7 @@ def test_signup_confirm_unsubscribe(env):
         # Unsubscribe: the page has one button, pressing it deletes the address.
         response = await client.get(outbox.link("unsubscribe"))
         assert "Unsubscribe" in await response.text()
-        unsub = outbox.link("unsubscribe").split("t=")[1]
+        unsub = outbox.link("unsubscribe").rsplit("/", 1)[1]
         response = await client.post("/news/unsubscribe", data={"t": unsub})
         assert response.status == 200 and "unsubscribed" in await response.text()
         assert env[1].confirmed_emails() == []
@@ -146,7 +146,7 @@ def test_one_click_unsubscribe_from_the_mail_app(env):
 
     async def steps(client):
         await signup(client)
-        await client.post("/news/confirm", data={"t": outbox.link("confirm").split("t=")[1]})
+        await client.post("/news/confirm", data={"t": outbox.link("confirm").rsplit("/", 1)[1]})
         response = await client.post(outbox.link("unsubscribe"), data="List-Unsubscribe=One-Click",
                                      headers={"Content-Type": "application/x-www-form-urlencoded"})
         assert response.status == 200
@@ -175,7 +175,7 @@ def test_already_confirmed_gets_the_same_answer_and_no_email(env):
 
     async def steps(client):
         await signup(client)
-        await client.post("/news/confirm", data={"t": outbox.link("confirm").split("t=")[1]})
+        await client.post("/news/confirm", data={"t": outbox.link("confirm").rsplit("/", 1)[1]})
         env[2].now += RESEND_AFTER + 1
         assert await signup(client, {**GOOD, "email": "FAN@example.com"}) == (200, {"ok": True})
         assert len(outbox.sent) == 1
@@ -194,7 +194,7 @@ def test_resends_are_spaced_and_capped(env):
         await signup(client)
         assert len(outbox.sent) == 2
         # The new link replaces the old one.
-        old = outbox.link("confirm", 0).split("t=")[1]
+        old = outbox.link("confirm", 0).rsplit("/", 1)[1]
         response = await client.post("/news/confirm", data={"t": old})
         assert response.status == 404
         clock.now += RESEND_AFTER + 1
@@ -213,7 +213,7 @@ def test_unconfirmed_signups_are_forgotten(env):
     async def steps(client):
         await signup(client)
         env[2].now += PENDING_DAYS * 86400 + 1
-        response = await client.post("/news/confirm", data={"t": outbox.link("confirm").split("t=")[1]})
+        response = await client.post("/news/confirm", data={"t": outbox.link("confirm").rsplit("/", 1)[1]})
         assert response.status == 404
         assert env[1].db.execute("SELECT COUNT(*) FROM subscribers").fetchone()[0] == 0
     run(env, outbox, steps)
@@ -303,4 +303,29 @@ def test_pages_escape_the_token(env):
         response = await client.get(outbox.link("confirm"))
         assert "<script" not in await response.text()
         assert response.headers["Content-Security-Policy"].startswith("default-src 'none'")
+    run(env, outbox, steps)
+
+
+def test_short_links_and_old_long_links(env):
+    outbox = Outbox()
+
+    async def steps(client):
+        await signup(client)
+        path = outbox.link("confirm")
+        code = path.rsplit("/", 1)[1]
+        assert len(code) == 10
+        # The page's button posts back to the same short address.
+        page = await (await client.get(path)).text()
+        assert f'action="{path}"' in page
+        # The long form of the same link (emails sent before the short links) still works.
+        response = await client.get(f"/news/confirm?t={code}")
+        assert response.status == 200 and "Yes, add me" in await response.text()
+        response = await client.post(path, data={"t": code})
+        assert response.status == 200 and "on the list" in await response.text()
+        unsub = outbox.link("unsubscribe")
+        page = await (await client.get(unsub)).text()
+        assert f'action="{unsub}"' in page
+        response = await client.post(unsub, data={"t": unsub.rsplit("/", 1)[1]})
+        assert response.status == 200 and "unsubscribed" in await response.text()
+        assert env[1].confirmed_emails() == []
     run(env, outbox, steps)

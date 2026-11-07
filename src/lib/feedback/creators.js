@@ -34,6 +34,7 @@ const LANGS = { en: "English", ru: "Russian", de: "German", fr: "French", pt: "P
 
 import { huntStrip, HUNT_CSS } from "./creators-hunt.js";
 import { launchView } from "./launch.js";
+import { eventsView } from "./events.js";
 import { newsBadge } from "./news.js";
 
 let C = null;
@@ -142,7 +143,7 @@ function draw() {
     return;
   }
   const d = st.data;
-  const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["twitch", `Twitch streamers (${num(d.streamers.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`], ["outreach", "Outreach"], ["launch", "Launch checklist"]],
+  const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["twitch", `Twitch streamers (${num(d.streamers.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`], ["outreach", "Outreach"], ["launch", "Launch checklist"], ["events", "Events & awards"]],
     st.view, (v) => { st.view = v; draw(); }, "Show"), newsBadge(C));
   if (st.view === "press") {
     root.replaceChildren(switcher, pressView(d));
@@ -150,6 +151,10 @@ function draw() {
   }
   if (st.view === "outreach") {
     root.replaceChildren(switcher, outreachView(d));
+    return;
+  }
+  if (st.view === "events") {
+    root.replaceChildren(switcher, eventsView(C, d, draw));
     return;
   }
   if (st.view === "launch") {

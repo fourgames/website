@@ -148,6 +148,16 @@ Discord, the fan list, replies, reviews, the first patch). The steps are in
 `GET/POST /gamedata/v1/admin/launch`. The emailing steps tick themselves from an approved Outreach
 campaign for the game to that audience.
 
+## Events & awards
+
+The Creators page's Events & awards tab: Steam Next Fest and themed fests, third-party Steam
+festivals (Tiny Teams and the like), online showcases, and awards and expos a game can enter, next
+deadline first, with what each costs and what you get. Each game (and "Studio", appid 0) has a shelf of
+what it got into, was nominated for or won, and a click copies the line for a store-page laurel. The
+researched list is `src/lib/feedback/events-list.js` (dates marked est. are last year's); the server
+keeps only each game's status and note per event, and events added by hand on the tab (`events.py`,
+tables `event_entries` and `event_custom`), through `GET/POST /gamedata/v1/admin/events`.
+
 ## The tables
 
 One SQLite file, `/srv/fourgames/creators/creators.db`:

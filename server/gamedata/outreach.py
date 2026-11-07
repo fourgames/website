@@ -14,6 +14,8 @@ checks the owner's sign-in and the request. Sending is creators/send.py's (creat
                                              language too" when it is, local tone), short and plain; the owner checks them
 - GET  /v1/admin/launch                      the launch checklist: each game's launch date and ticked steps
 - POST /v1/admin/launch                      {appid, date: "YYYY-MM-DD" | null} or {appid, item, done: bool}
+- GET  /v1/admin/events                      events & awards: each game's status per event, and the owner's own events
+- POST /v1/admin/events                      {event, appid, status, note?}, {add: {...}} or {remove: key}
 """
 
 from __future__ import annotations
@@ -313,6 +315,35 @@ async def launch_update(request: web.Request) -> web.Response:
     return W.ok(await asyncio.to_thread(_with_launch, lambda l, s: l.update(s, body)))
 
 
+def _with_events(fn):
+    from creators import events
+    from creators.db import Store
+    db_path, _ = _paths()
+    store = events.prepare(Store(db_path))
+    try:
+        return fn(events, store)
+    except events.EventsError as error:
+        raise Refused(400, "bad_request", str(error)) from None
+    finally:
+        store.close()
+
+
+async def events_state(request: web.Request) -> web.Response:
+    from .admin import require_admin
+    require_admin(request)
+    return W.ok(await asyncio.to_thread(_with_events, lambda e, s: e.state(s)))
+
+
+async def events_update(request: web.Request) -> web.Response:
+    from .admin import require_admin
+    require_admin(request)
+    body = await read_json(request, 8192, 8192, require_json_type=True)
+    if not isinstance(body, dict) or not body or not (set(body) <= {"event", "appid", "status", "note"}
+                                                      or set(body) in ({"add"}, {"remove"})):
+        raise Refused(400, "bad_request", "send {event, appid, status}, {add: {...}} or {remove: key}")
+    return W.ok(await asyncio.to_thread(_with_events, lambda e, s: e.update(s, body)))
+
+
 def _int(value: str) -> int:
     if not value.isdigit() or len(value) > 12:
         raise Refused(404, "not_found", "no such campaign or message")
@@ -323,6 +354,8 @@ def add_routes(app: web.Application, v1: str) -> None:
     add = app.router.add_route
     add("GET", f"{v1}/launch", launch_state)
     add("POST", f"{v1}/launch", launch_update)
+    add("GET", f"{v1}/events", events_state)
+    add("POST", f"{v1}/events", events_update)
     add("GET", f"{v1}/outreach", overview)
     add("POST", f"{v1}/outreach", create)
     add("POST", f"{v1}/outreach/suppress", suppress)

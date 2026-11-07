@@ -850,6 +850,46 @@ def test_launch_checklist_routes(tmp_path, monkeypatch):
     run(tmp_path, steps, **ADMIN)
 
 
+def test_events_routes(tmp_path, monkeypatch):
+    monkeypatch.setenv("CREATORS_DB", str(tmp_path / "creators.db"))
+    monkeypatch.setenv("STEAM_DB", str(tmp_path / "missing.db"))
+    url = "/gamedata/v1/admin/events"
+
+    async def steps(w):
+        h = w.page(await w.sign_in(back="/fb-dash"))
+        r = await w.client.get(url, headers=h)
+        body = await r.json()
+        assert r.status == 200 and body["entries"] == {} and body["custom"] == []
+        r = await w.client.post(url, headers=h, json={"event": "steam-next-fest-2027-02", "appid": 7, "status": "applied"})
+        assert (await r.json())["entries"]["steam-next-fest-2027-02"]["7"]["status"] == "applied"
+        r = await w.client.post(url, headers=h, json={"event": "steam-next-fest-2027-02", "appid": 7, "status": "in", "note": "demo"})
+        assert (await r.json())["entries"]["steam-next-fest-2027-02"]["7"]["note"] == "demo"
+        # A status change alone keeps the note; the studio (appid 0) is allowed.
+        r = await w.client.post(url, headers=h, json={"event": "steam-next-fest-2027-02", "appid": 7, "status": "won"})
+        assert (await r.json())["entries"]["steam-next-fest-2027-02"]["7"]["note"] == "demo"
+        r = await w.client.post(url, headers=h, json={"event": "igf", "appid": 0, "status": "nominated"})
+        assert r.status == 200
+        r = await w.client.post(url, headers=h, json={"add": {"name": "Gothenburg Indie Night", "kind": "festival", "deadline": "2027-03"}})
+        custom = (await r.json())["custom"]
+        assert custom[0]["name"] == "Gothenburg Indie Night" and custom[0]["key"].startswith("my-")
+        key = custom[0]["key"]
+        await w.client.post(url, headers=h, json={"event": key, "appid": 7, "status": "planned"})
+        r = await w.client.post(url, headers=h, json={"remove": key})
+        body = await r.json()
+        assert body["custom"] == [] and key not in body["entries"]
+        r = await w.client.post(url, headers=h, json={"event": "igf", "appid": 0, "status": ""})
+        assert "igf" not in (await r.json())["entries"]
+        for bad in ({"event": "igf", "appid": 7, "status": "famous"}, {"event": "Bad Key", "appid": 7, "status": "in"},
+                    {"event": "igf", "appid": -1, "status": "in"}, {"add": {"name": "", "kind": "award"}},
+                    {"add": {"name": "X", "kind": "party"}}, {"add": {"name": "X", "kind": "award", "url": "javascript:1"}},
+                    {"add": {"name": "X", "kind": "award", "deadline": "soon"}}, {"remove": "igf"}, {"evil": 1}, {}):
+            r = await w.client.post(url, headers=h, json=bad)
+            assert r.status == 400, bad
+        r = await w.client.get(url, headers=w.page())
+        assert r.status == 401
+    run(tmp_path, steps, **ADMIN)
+
+
 def test_outreach_translate(tmp_path, monkeypatch):
     import types
     from gamedata import outreach as routes

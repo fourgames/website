@@ -144,7 +144,7 @@ One SQLite file, `/srv/fourgames/creators/creators.db`:
 
 | Table | What's in it |
 | --- | --- |
-| `youtube_channels` | One row per channel: title, handle, description, country, language, subscribers (NULL when hidden), videos, views, when it was made, `emails` and `links` (JSON) from the description, and `revealed_email` / `revealed_at` for the email behind YouTube's "View email address" button, saved by the creator-emails skill, and `email_button` (1/0, NULL not checked) / `button_checked_at` |
+| `youtube_channels` | One row per channel: title, handle, description, country, language, subscribers (NULL when hidden), videos, views, when it was made, `emails` and `links` (JSON) from the description, and `revealed_email` / `revealed_at` for the email behind YouTube's "View email address" button, saved by the yt-email-unlock skill, and `email_button` (1/0, NULL not checked) / `button_checked_at` |
 | `youtube_videos` | Every kept video, per game it names: channel, title, published, views, likes, comments, length, language |
 | `channel_games` (view) | Per channel and game: videos, the latest, total views. What matching will score on |
 | `channel_links` | The web pages each channel links to, from its description or About panel |
@@ -157,13 +157,13 @@ One SQLite file, `/srv/fourgames/creators/creators.db`:
 ## Hidden emails
 
 Many channels keep their business email behind YouTube's **View email address** button (signed in,
-plus a captcha). The `creator-emails` Claude skill gets them in the user's own Chrome, with
+plus a captcha). The `yt-email-unlock` Claude skill gets them in the user's own Chrome, with
 `python -m creators.reveal` as its server side:
 
 - `check N`: channels without a public email whose button isn't checked yet, best first. The skill
   fetches each About page (no captcha) and saves whether the button is there (`email_button`).
-- `reveal N`: channels with the button and no email yet, best first. The skill opens them, the
-  user ticks the captcha and presses Submit, and the email goes to `revealed_email`.
+- `reveal N`: channels with the button and no email yet, best first. The skill opens them 10 tabs
+  at a time, the user clicks the button, ticks the captcha and presses Submit, and the email goes to `revealed_email`.
 - `save`: JSON lines on stdin (see `reveal.py`).
 
 Best first, until per-game matching exists: a video of one of our games, then 1k–300k subscribers,

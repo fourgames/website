@@ -2,7 +2,7 @@
 and their own websites (plus that site's contact page). No captcha, nothing signed in, from the server.
 
 Links come from the channel description (read with the YouTube API) and from the About panel's link
-list (read by the creator-emails Chrome skill, which saves them with `python -m creators.reveal save`).
+list (read by the yt-email-unlock Chrome skill, which saves them with `python -m creators.reveal save`).
 Big platforms (YouTube, Twitch, X, Instagram, Discord, shops, tip jars...) are skipped: their pages
 don't show a creator's email without signing in. Only channels without an email yet, best first.
 

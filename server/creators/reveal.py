@@ -1,4 +1,4 @@
-"""The hidden emails behind YouTube's "View email address" button, for the Chrome skill (creator-emails).
+"""The hidden emails behind YouTube's "View email address" button, for the Chrome skill (yt-email-unlock).
 
 Many channels keep their business email behind a button on the About panel that needs a signed-in
 viewer and a captcha. The skill runs in the user's own Chrome: it checks which channels have the

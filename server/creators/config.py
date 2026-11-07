@@ -46,6 +46,9 @@ class Config:
     own_studio: str = "Four Games"
     # Channel numbers (subscribers, description, emails) are read again after this many days.
     channel_refresh_days: int = 30
+    # Twitch's Helix API (twitch.py): the app the key bot uses. Empty: Twitch is skipped.
+    twitch_client_id: str = ""
+    twitch_client_secret: str = ""
     log_level: str = "INFO"
 
     @classmethod
@@ -84,6 +87,8 @@ class Config:
             own_studio=get("OWN_STUDIO", "Four Games"),
             max_price=number("MAX_PRICE", 3000, 0, 100_000),
             channel_refresh_days=number("CHANNEL_REFRESH_DAYS", 30, 1, 365),
+            twitch_client_id=get("TWITCH_CLIENT_ID"),
+            twitch_client_secret=get("TWITCH_CLIENT_SECRET"),
             log_level=level,
         )
 

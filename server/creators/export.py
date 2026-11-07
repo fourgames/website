@@ -11,6 +11,10 @@ k links {twitch, x, ...}, b hidden-email button (1/0/null), lu newest upload, lv
 game we searched, g [[appid, videos, newest, views]], cat category, p genre profile [[tagid, weight]],
 ra when the hidden email was looked at (only once it was; with or without an email behind it), for
 the page's Email hunt.
+Also "streamers": Twitch streamers (twitch.py) in the same shape, id "tw:<user id>", pl "tw", h their
+login, s followers, n broadcasts of searched games, lu their newest such broadcast, g per game
+[[appid, broadcasts, newest, views]], pk partner/affiliate, yt their YouTube channel when it's on our
+list, and e with source "youtube" for emails taken from that channel.
 Also "press": the press list (press.py), one object per outlet, and "quota": today's YouTube units
 (day, spent, limit, exhausted, reset = when YouTube's quota day ends), so the page can say when
 collecting stops for the day.
@@ -32,6 +36,7 @@ from .config import Config, ConfigError
 from .db import Store
 from .games import _json, connect, own_appids
 from .press import rows as press_rows
+from . import twitch as twitch_mod
 
 DEFAULT_DIR = "/srv/fourgames/creators/export"
 # Tags that say how a game is sold or felt about, not what it is: left out of genre profiles.
@@ -78,6 +83,12 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
     langs: dict[str, Counter] = defaultdict(Counter)
     for cid, lang in db.execute("SELECT channel_id, language FROM youtube_videos WHERE language IS NOT NULL"):
         langs[cid][lang.split("-")[0].lower()] += 1
+    twitch_mod.ensure(db)
+    tw_covered: dict[str, list[list]] = defaultdict(list)
+    for r in db.execute("""SELECT user_id, appid, COUNT(*) AS n, MAX(started) AS last, SUM(COALESCE(views, 0)) AS views
+                           FROM twitch_streams GROUP BY user_id, appid"""):
+        tw_covered[r["user_id"]].append([r["appid"], r["n"], r["last"], r["views"]])
+        appids.add(r["appid"])
     v30 = dict(db.execute("SELECT channel_id, COUNT(*) FROM youtube_videos WHERE published >= ? GROUP BY channel_id",
                           (now - 30 * 86400,)).fetchall())
     site = defaultdict(list)
@@ -105,7 +116,19 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
     meta = {t for t, name in tag_names.items() if name in META_TAGS}
     reviews = {a: g["r"] for a, g in games.items()}
 
+    def genre_profile(g: list[list]) -> list[list]:
+        profile: Counter = Counter()
+        for appid, n, _, _ in g:
+            for i, tag in enumerate((games.get(appid) or {}).get("t", [])):
+                if tag not in meta:
+                    profile[tag] += min(n, 3) * (1 - i / (TOP_TAGS + 2))
+        total = sum(profile.values()) or 1
+        return [[t, round(w / total, 3)] for t, w in profile.most_common(PROFILE_TAGS)]
+
     creators = []
+    yt_emails: dict[str, list[str]] = {}
+    by_twitch: dict[str, str] = {}   # twitch login (lower case) -> the YouTube channel that links it
+    by_handle: dict[str, str] = {}   # "@handle" or "channel/UC..." (lower case) -> YouTube channel id
     for r in db.execute("SELECT * FROM youtube_channels WHERE gone = 0 AND refreshed_at IS NOT NULL"):
         cid = r["channel_id"]
         g = sorted(covered.get(cid, []), key=lambda x: -x[1])
@@ -113,29 +136,49 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
         if r["revealed_email"] and r["revealed_email"] not in [e for e, _ in emails]:
             emails.append([r["revealed_email"], "revealed"])
         emails += [[e, "links"] for e in site.get(cid, []) if e not in [x for x, _ in emails]]
-        profile: Counter = Counter()
-        for appid, n, _, _ in g:
-            for i, tag in enumerate((games.get(appid) or {}).get("t", [])):
-                if tag not in meta:
-                    profile[tag] += min(n, 3) * (1 - i / (TOP_TAGS + 2))
-        total = sum(profile.values()) or 1
+        links = json.loads(r["links"] or "{}")
+        yt_emails[cid] = [e for e, _ in emails]
+        if links.get("twitch"):
+            by_twitch.setdefault(links["twitch"].lower(), cid)
+        if r["handle"]:
+            by_handle[r["handle"].lower()] = cid
+        by_handle[f"channel/{cid}".lower()] = cid
         lang = r["language"].split("-")[0].lower() if r["language"] else (langs[cid].most_common(1)[0][0] if langs[cid] else None)
         creators.append({
             "id": cid, "t": r["title"], "h": r["handle"], "s": r["subscribers"], "n": r["videos"],
-            "c": r["country"], "l": lang, "e": emails, "k": json.loads(r["links"] or "{}"),
+            "c": r["country"], "l": lang, "e": emails, "k": links,
             "b": r["email_button"], "lu": r["last_upload"], "lv": max((x[2] or 0 for x in g), default=None) or None,
             "v30": v30.get(cid, 0), "g": g, "cat": category([(x[0], x[1]) for x in g], reviews),
-            "p": [[t, round(w / total, 3)] for t, w in profile.most_common(PROFILE_TAGS)],
+            "p": genre_profile(g),
             "own": any(x[0] in own for x in g), "first": r["first_seen"],
             **({"ra": r["revealed_at"]} if r["revealed_at"] else {}),
         })
-    used = {t for c in creators for t, _ in c["p"]} | {t for g in games.values() for t in g["t"]}
+    streamers = []
+    for r in db.execute("SELECT * FROM twitch_channels WHERE gone = 0 AND refreshed_at IS NOT NULL"):
+        uid = r["user_id"]
+        g = sorted(tw_covered.get(uid, []), key=lambda x: -x[1])
+        links = json.loads(r["links"] or "{}")
+        emails = [[e, "description"] for e in json.loads(r["emails"] or "[]")]
+        # Their YouTube channel, when it's on our list (it links this Twitch, or this Twitch links it).
+        yt = by_twitch.get((r["login"] or "").lower()) or by_handle.get((links.get("youtube") or "").lower())
+        emails += [[e, "youtube"] for e in yt_emails.get(yt, []) if e not in [x for x, _ in emails]]
+        streamers.append({
+            "id": f"tw:{uid}", "pl": "tw", "t": r["name"], "h": r["login"], "s": r["followers"],
+            "n": sum(x[1] for x in g), "c": None, "l": r["language"], "e": emails, "k": links,
+            **({"yt": yt} if yt else {}), "pk": r["kind"] or "", "b": None,
+            "lu": r["last_stream"] or None, "lv": r["last_stream"] or None,
+            "v30": sum(1 for x in g if (x[2] or 0) >= now - 30 * 86400),
+            "g": g, "cat": category([(x[0], x[1]) for x in g], reviews), "p": genre_profile(g),
+            "own": any(x[0] in own for x in g), "first": r["first_seen"],
+        })
+    used = {t for c in creators + streamers for t, _ in c["p"]} | {t for g in games.values() for t in g["t"]}
     return {
         "generated": int(now),
         "tags": {t: tag_names[t] for t in used if t in tag_names},
         "meta": sorted(meta),
         "games": games,
         "creators": creators,
+        "streamers": streamers,
         "searched": db.execute("SELECT COUNT(*) FROM searches").fetchone()[0],
         "press": press_rows(store),
         **({"quota": quota(store, daily_units, now)} if daily_units else {}),

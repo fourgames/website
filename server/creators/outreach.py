@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS outreach_campaigns (
 CREATE TABLE IF NOT EXISTS outreach_messages (
     id          INTEGER PRIMARY KEY,
     campaign_id INTEGER NOT NULL,
-    target_kind TEXT NOT NULL,          -- youtube or press
+    target_kind TEXT NOT NULL,          -- youtube, twitch or press
     target_id   TEXT NOT NULL,          -- channel id or press key
     name        TEXT,
     email       TEXT NOT NULL,
@@ -307,6 +307,34 @@ def _creator(store: Store, channel_id: str, own: set[int]) -> dict | None:
             "games": ours + [a for a in covered if a not in own]}
 
 
+def _streamer(store: Store, target: str, own: set[int]) -> dict | None:
+    """A Twitch streamer ("tw:" + their user id): the email in their description, else their YouTube
+    channel's when it's on our list (export.py matches them the same way)."""
+    from .twitch import ensure
+    ensure(store.db)
+    uid = target[3:]
+    r = store.db.execute("SELECT user_id, login, name, emails, links, language FROM twitch_channels WHERE user_id = ?",
+                         (uid,)).fetchone()
+    if not r:
+        return None
+    emails = json.loads(r["emails"] or "[]")
+    if not emails:
+        yt_handle = (json.loads(r["links"] or "{}").get("youtube") or "").lower()
+        row = store.db.execute(
+            """SELECT channel_id FROM youtube_channels WHERE gone = 0 AND (lower(json_extract(links, '$.twitch')) = ?
+                   OR (? != '' AND (lower(handle) = ? OR lower('channel/' || channel_id) = ?))) LIMIT 1""",
+            ((r["login"] or "").lower(), yt_handle, yt_handle, yt_handle)).fetchone()
+        yt = _creator(store, row[0], own) if row else None
+        emails = [yt["email"]] if yt else []
+    if not emails:
+        return None
+    covered = [a for (a,) in store.db.execute(
+        "SELECT appid FROM twitch_streams WHERE user_id = ? GROUP BY appid ORDER BY COUNT(*) DESC", (uid,))]
+    ours = [a for a in covered if a in own]
+    return {"id": target, "name": r["name"] or r["login"] or "", "email": emails[0].lower(), "lang": short_lang(r["language"]),
+            "games": ours + [a for a in covered if a not in own]}
+
+
 def _press(store: Store, key: str) -> dict | None:
     r = store.db.execute("SELECT key, name, email, language FROM press WHERE key = ?", (key,)).fetchone()
     return {"id": r["key"], "name": r["name"], "email": r["email"].lower(), "lang": short_lang(r["language"])} if r and r["email"] else None
@@ -353,7 +381,8 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
         campaign = cur.lastrowid
         seen: set[str] = set()
         for target in dict.fromkeys(ids):
-            who = _press(store, target) if audience == "press" else _creator(store, target, own)
+            who = (_press(store, target) if audience == "press" else
+                   _streamer(store, target, own) if target.startswith("tw:") else _creator(store, target, own))
             if not who:
                 skipped["no email"] = skipped.get("no email", 0) + 1
                 continue
@@ -377,7 +406,7 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
                 """INSERT INTO outreach_messages (campaign_id, target_kind, target_id, name, email, subject, body,
                                                   status, queued_at, language, game_name)
                    VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?)""",
-                (campaign, "press" if audience == "press" else "youtube", who["id"], who["name"], who["email"],
+                (campaign, "press" if audience == "press" else "twitch" if target.startswith("tw:") else "youtube", who["id"], who["name"], who["email"],
                  render(sub, fields), with_opt_out(render(bod, fields), opt), int(now), lang, fields["game"]))
     return {"id": campaign, "skipped": skipped, **summary(store, campaign)}
 

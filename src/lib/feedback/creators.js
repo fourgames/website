@@ -29,7 +29,7 @@ const TYPE_HELP = {
   "one-game": "Mostly one game",
   "few-games": "Only a few of the games we searched so far",
 };
-const SOURCES = { description: "in their channel description", links: "on a page they link to (Linktree, website)", revealed: "behind YouTube's View email button" };
+const SOURCES = { youtube: "on their YouTube channel (on our list)", description: "in their channel description", links: "on a page they link to (Linktree, website)", revealed: "behind YouTube's View email button" };
 const LANGS = { en: "English", ru: "Russian", de: "German", fr: "French", pt: "Portuguese", es: "Spanish", ja: "Japanese", tr: "Turkish", it: "Italian", pl: "Polish", ko: "Korean", zh: "Chinese", nl: "Dutch", sv: "Swedish", uk: "Ukrainian", ar: "Arabic", id: "Indonesian", vi: "Vietnamese", th: "Thai", cs: "Czech", hu: "Hungarian", fi: "Finnish", da: "Danish", no: "Norwegian", ro: "Romanian", el: "Greek", he: "Hebrew", hi: "Hindi" };
 
 import { huntStrip, HUNT_CSS } from "./creators-hunt.js";
@@ -101,7 +101,8 @@ async function load() {
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     st.data = await res.json();
     st.data.metaSet = new Set(st.data.meta || []);
-    for (const c of st.data.creators) { c.e ||= []; c.g ||= []; c.p ||= []; c.k ||= {}; }
+    st.data.streamers ||= [];
+    for (const c of [...st.data.creators, ...st.data.streamers]) { c.e ||= []; c.g ||= []; c.p ||= []; c.k ||= {}; }
   } catch (e) {
     if (e.signedOut) return;
     st.error = /not_built|404/.test(e.message) ? "The creator list isn't built yet: the server writes it after its next hourly run." : `Couldn't load the creator list: ${e.message}`;
@@ -118,7 +119,7 @@ export function creatorsTop(ctx) {
   const cap = document.getElementById("fb-capsule"); if (cap) cap.hidden = true;
   set("fb-title", "Creators");
   const d = st.data;
-  set("fb-updated", d ? `${C.plural(d.creators.length, "YouTube creator")} who made videos of the ${num(d.searched)} Steam games searched so far · updated ${C.fmtDateTime(d.generated)}` : "YouTube creators who make videos of Steam games, from the server's collector");
+  set("fb-updated", d ? `${C.plural(d.creators.length, "YouTube creator")} and ${C.plural((d.streamers || []).length, "Twitch streamer")} who covered the ${num(d.searched)} Steam games searched so far · updated ${C.fmtDateTime(d.generated)}` : "YouTube creators who make videos of Steam games, from the server's collector");
   for (const id of ["fb-links", "fb-stats", "fb-expand"]) set(id);
 }
 
@@ -140,7 +141,7 @@ function draw() {
     return;
   }
   const d = st.data;
-  const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`], ["outreach", "Outreach"], ["launch", "Launch checklist"]],
+  const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["twitch", `Twitch streamers (${num(d.streamers.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`], ["outreach", "Outreach"], ["launch", "Launch checklist"]],
     st.view, (v) => { st.view = v; draw(); }, "Show"));
   if (st.view === "press") {
     root.replaceChildren(switcher, pressView(d));
@@ -155,7 +156,10 @@ function draw() {
     return;
   }
   const today = now();
-  const all = d.creators;
+  // Twitch streamers come in the same shape as YouTube creators (export.py), so one view shows both.
+  const tw = st.view === "twitch";
+  const all = tw ? d.streamers : d.creators;
+  const who = tw ? "streamer" : "creator";
   const ownGames = Object.entries(d.games).filter(([, g]) => g.own).map(([id, g]) => [Number(id), g]).sort((a, b) => a[1].n.localeCompare(b[1].n));
   const gameId = st.f.game === "all" ? null : Number(st.f.game);
   const weights = gameId ? gameWeights(d.games[gameId], d.metaSet) : null;
@@ -167,10 +171,11 @@ function draw() {
     h("div.cr-card-v", value), h("div.cr-card-l", label), sub ? h("div.cr-card-s", sub) : null);
   const setF = (patch) => { Object.assign(st.f, patch); st.shown = PAGE; draw(); };
   const cards = h("div.cr-cards",
-    card("Creators", num(all.length), `${num(all.filter((c) => c.own).length)} made a video of our games`),
-    card("With an email", num(withEmail.length), `${num(bySource("description"))} description · ${num(bySource("links"))} links · ${num(bySource("revealed"))} revealed`, () => setF({ email: "yes" })),
-    card("Hidden email only", num(all.filter((c) => !c.e.length && c.b === 1).length), "behind YouTube's captcha button", () => setF({ email: "hidden" })),
-    card("Active", num(all.filter((c) => activity(c, today) === "active").length), "uploaded in the last 30 days", () => setF({ active: "active" })));
+    card(tw ? "Streamers" : "Creators", num(all.length), `${num(all.filter((c) => c.own).length)} ${tw ? "streamed" : "made a video of"} our games`),
+    card("With an email", num(withEmail.length), tw ? `${num(bySource("description"))} description · ${num(bySource("youtube"))} from their YouTube` : `${num(bySource("description"))} description · ${num(bySource("links"))} links · ${num(bySource("revealed"))} revealed`, () => setF({ email: "yes" })),
+    tw ? card("Also on YouTube", num(all.filter((c) => c.yt).length), "their YouTube channel is on our list")
+      : card("Hidden email only", num(all.filter((c) => !c.e.length && c.b === 1).length), "behind YouTube's captcha button", () => setF({ email: "hidden" })),
+    card("Active", num(all.filter((c) => activity(c, today) === "active").length), tw ? "streamed a searched game in 30 days" : "uploaded in the last 30 days", () => setF({ active: "active" })));
 
   // Best for one of our games.
   const gamePick = h("div.cr-row", h("span.cr-label", "Best for"),
@@ -213,14 +218,14 @@ function draw() {
     const shown = rows.slice(0, st.shown);
     const emails = rows.filter((c) => c.e.length);
     const head = h("div.cr-listhead",
-      h("span", `${C.plural(rows.length, "creator")}${rows.length !== all.length ? ` of ${num(all.length)}` : ""}, ${num(emails.length)} with an email`),
+      h("span", `${C.plural(rows.length, who)}${rows.length !== all.length ? ` of ${num(all.length)}` : ""}, ${num(emails.length)} with an email`),
       h("button.btn", { type: "button", disabled: !emails.length, title: "One email per creator, the first found, one per line", onclick: (e) => C.copy(emails.map((c) => c.e[0][0]).join("\n"), e.currentTarget) }, `Copy ${C.plural(emails.length, "email")}`));
     const table = h("table.cr-table",
-      h("thead", h("tr", ...(gameId ? [h("th.cr-num", "Fit")] : []), h("th", "Channel"), h("th.cr-num", "Subs"), h("th", "Lang"), h("th", "Last upload"),
+      h("thead", h("tr", ...(gameId ? [h("th.cr-num", "Fit")] : []), h("th", "Channel"), h("th.cr-num", tw ? "Followers" : "Subs"), h("th", "Lang"), h("th", tw ? "Last stream" : "Last upload"),
         h("th", "Games"), h("th", "Type"), h("th", "Genres"), h("th", "Email"))),
       h("tbody", ...shown.flatMap((c) => row(c, gameId ? scored.get(c.id) : null, top, today))));
     const more = rows.length > st.shown ? h("button.btn.cr-more", { type: "button", onclick: () => { st.shown += PAGE; drawList(); } }, `Show ${Math.min(PAGE, rows.length - st.shown)} more`) : null;
-    list.replaceChildren(head, rows.length ? h("div.cr-scroll", table) : h("p.empty", "No creators match these filters."), more);
+    list.replaceChildren(head, rows.length ? h("div.cr-scroll", table) : h("p.empty", `No ${who}s match these filters.`), more);
   }
 
   function row(c, f, top, today) {
@@ -228,7 +233,7 @@ function draw() {
     const toggle = () => { open ? st.open.delete(c.id) : st.open.add(c.id); drawList(); };
     const act = activity(c, today);
     const games = c.g.map((g) => d.games[g[0]]?.n || `App ${g[0]}`);
-    const url = c.h ? `https://www.youtube.com/${c.h}` : `https://www.youtube.com/channel/${c.id}`;
+    const url = c.pl === "tw" ? `https://www.twitch.tv/${c.h}` : c.h ? `https://www.youtube.com/${c.h}` : `https://www.youtube.com/channel/${c.id}`;
     const email = c.e.length
       ? h("span.cr-email", h("a", { href: `mailto:${c.e[0][0]}`, title: `Found ${SOURCES[c.e[0][1]] || c.e[0][1]}` }, c.e[0][0]),
           c.e.length > 1 ? h("span.cr-muted", ` +${c.e.length - 1}`) : null,
@@ -238,11 +243,12 @@ function draw() {
     const main = h("tr.cr-main", { class: open ? "is-open" : null, onclick: toggle },
       ...(f ? [h("td.cr-num", h("span.cr-fit", { title: f.played ? "Already made a video of this game" : `Genre overlap ${Math.round(f.genre * 100)}%` }, f.played ? "played" : Math.round(f.base / top * 100)))] : []),
       h("td.cr-chan", h("a", { href: url, target: "_blank", rel: "noopener", onclick: (e) => e.stopPropagation() }, c.t || c.id),
-        c.own ? h("span.cr-badge", { title: "Made a video of one of our games" }, "ours") : null,
+        c.own ? h("span.cr-badge", { title: tw ? "Streamed one of our games" : "Made a video of one of our games" }, "ours") : null,
+        c.pk ? h("span.cr-badge", { title: "Twitch partner or affiliate" }, c.pk) : null,
         c.h ? h("div.cr-muted", c.h) : null),
       h("td.cr-num", subs(c.s)),
       h("td", { title: LANGS[c.l] || "" }, (c.l || "–").toUpperCase(), c.c ? h("span.cr-muted", ` ${c.c}`) : null),
-      h("td", h("span.cr-act", { class: `is-${act}`, title: c.lu ? "Newest upload of any kind" : c.lv ? "Newest video of a game we searched (the newest upload isn't read yet)" : "" }, ago(lastActive(c)))),
+      h("td", h("span.cr-act", { class: `is-${act}`, title: tw ? "Newest broadcast of a game we searched" : c.lu ? "Newest upload of any kind" : c.lv ? "Newest video of a game we searched (the newest upload isn't read yet)" : "" }, ago(lastActive(c)))),
       h("td.cr-gamescol", { title: games.join(", ") }, h("b", c.g.length), " ", h("span.cr-muted", games.slice(0, 2).join(", "))),
       h("td", h("span.cr-type", { title: TYPE_HELP[c.cat] }, TYPES[c.cat] || c.cat)),
       h("td.cr-genres", c.p.slice(0, 3).map(([t]) => d.tags[t]).filter(Boolean).join(", ")),
@@ -250,18 +256,21 @@ function draw() {
     if (!open) return [main];
     const cols = (f ? 1 : 0) + 8;
     const links = Object.entries(c.k).map(([k, v]) => {
-      const href = { twitch: `https://twitch.tv/${v}`, x: `https://x.com/${v}`, instagram: `https://instagram.com/${v}`, tiktok: `https://tiktok.com/@${v}`, discord: `https://discord.gg/${v}` }[k];
+      const href = { youtube: `https://www.youtube.com/${v}`, twitch: `https://twitch.tv/${v}`, x: `https://x.com/${v}`, instagram: `https://instagram.com/${v}`, tiktok: `https://tiktok.com/@${v}`, discord: `https://discord.gg/${v}` }[k];
       return href ? h("a", { href, target: "_blank", rel: "noopener" }, k === "x" ? "X" : k[0].toUpperCase() + k.slice(1)) : null;
     }).filter(Boolean);
     const detail = h("tr.cr-detail", h("td", { colspan: cols },
       h("div.cr-detailgrid",
         h("div", h("div.cr-dh", "Emails"), c.e.length ? h("ul", ...c.e.map(([e, s]) => h("li", h("a", { href: `mailto:${e}` }, e), h("span.cr-muted", ` ${SOURCES[s] || s}`)))) : h("p.cr-muted", c.b === 1 ? "None public. There's one behind YouTube's View email address button (the creator-emails skill, with a captcha)." : c.b === 0 ? "None found, and no hidden one on YouTube." : "None found yet.")),
-        h("div", h("div.cr-dh", "Channel"), h("p", `${subs(c.s)} subscribers · ${num(c.n)} videos`, h("br"),
+        h("div", h("div.cr-dh", "Channel"), tw
+          ? h("p", `${subs(c.s)} followers · ${C.plural(c.n || 0, "broadcast")} of searched games`, h("br"),
+            `Newest broadcast: ${ago(c.lu)} · ${C.plural(c.v30 || 0, "broadcast")} in 30 days`)
+          : h("p", `${subs(c.s)} subscribers · ${num(c.n)} videos`, h("br"),
           `Newest upload: ${c.lu ? ago(c.lu) : "not read yet"} · ${C.plural(c.v30 || 0, "video")} of searched games in 30 days`),
           links.length ? h("p", "Also on ", ...links.flatMap((a, i) => [i ? " · " : null, a])) : null),
         h("div", h("div.cr-dh", `Games (${c.g.length})`), h("ul.cr-games", ...c.g.slice(0, 12).map(([id, n, last, views]) =>
           h("li", h("a", { href: `https://store.steampowered.com/app/${id}/`, target: "_blank", rel: "noopener" }, d.games[id]?.n || `App ${id}`), d.games[id]?.own ? h("span.cr-badge", "ours") : null,
-            h("span.cr-muted", ` ${C.plural(n, "video")}, ${num(views)} views, ${ago(last)}`))), c.g.length > 12 ? h("li.cr-muted", `and ${c.g.length - 12} more`) : null)),
+            h("span.cr-muted", ` ${C.plural(n, tw ? "broadcast" : "video")}, ${num(views)} views, ${ago(last)}`))), c.g.length > 12 ? h("li.cr-muted", `and ${c.g.length - 12} more`) : null)),
         h("div", h("div.cr-dh", "Genres"), h("p", c.p.map(([t, w]) => `${d.tags[t] || t} ${Math.round(w * 100)}%`).join(" · ") || "–")))));
     return [main, detail];
   }
@@ -270,14 +279,15 @@ function draw() {
   const q = d.quota;
   const clock = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const resetAt = q ? clock(q.reset) : "";
-  const collecting = q ? h(q.exhausted ? "p.cr-note.cr-quota" : "p.cr-note.cr-quota.is-ok",
+  const collecting = tw ? h("p.cr-note.cr-quota.is-ok", "Twitch is read every hour: each game's past broadcasts this month and who's live in it now (ours every week, other games every 30 days). Twitch keeps broadcasts for 7 to 60 days, so the list grows with each pass.")
+    : q ? h(q.exhausted ? "p.cr-note.cr-quota" : "p.cr-note.cr-quota.is-ok",
     q.exhausted
       ? `Collecting paused: today's YouTube limit is used (${num(q.spent)} of ${num(q.limit)} units). New creators again after ${resetAt}.`
       : `Collecting: ${num(q.spent)} of ${num(q.limit)} YouTube units used today, spread over the day (resets at ${resetAt}).`,
     d.generated ? ` Last run ${clock(d.generated)}.` : "") : null;
 
   drawList();
-  root.replaceChildren(switcher, huntStrip(d, C), cards, collecting, gamePick, filters, list,
+  root.replaceChildren(switcher, tw ? null : huntStrip(d, C), cards, collecting, gamePick, filters, list,
     h("details.about", h("summary", "How this works"),
       h("p", "The server searches YouTube every hour for videos of Steam games (ours every week, then games with 30 to 50,000 reviews, those like ours first) and keeps the channels that made them. Emails come from the channel description, from pages they link to (Linktree, their website; the server follows those), or from YouTube's hidden View email button, which needs a captcha (the creator-emails skill)."),
       h("p", "Last upload is the channel's newest upload of any kind, read every 14 days. Type comes from the games they covered: indie variety plays 4+ different, mostly small games; one game is mostly one title. Genres are the Steam tags of those games."),
@@ -490,9 +500,12 @@ function recipientsFor(d, f, contacted) {
   }
   const weights = gameWeights(d.games[f.appid], d.metaSet);
   const today = now();
-  return d.creators.filter((c) => c.e.length && !contacted.has(c.e[0][0]) && (!f.activeOnly || activity(c, today) !== "inactive")
-      && (f.audience !== "streamers" || c.k.twitch))
-    .map((c) => [fit(c, f.appid, weights, today).score, c]).sort((a, b) => b[0] - a[0]).slice(0, f.n)
+  // Streamers: Twitch streamers, and YouTube creators with a Twitch channel; one email each.
+  const pool = f.audience === "streamers" ? [...d.streamers, ...d.creators.filter((c) => c.k.twitch)] : d.creators;
+  const seen = new Set();
+  return pool.filter((c) => c.e.length && !contacted.has(c.e[0][0]) && (!f.activeOnly || activity(c, today) !== "inactive"))
+    .map((c) => [fit(c, f.appid, weights, today).score, c]).sort((a, b) => b[0] - a[0])
+    .filter(([, c]) => !seen.has(c.e[0][0]) && seen.add(c.e[0][0])).slice(0, f.n)
     .map(([, c]) => ({ id: c.id, label: c.t, email: c.e[0][0], lang: (c.l || "en").slice(0, 2) }));
 }
 export function pressKey(url) {
@@ -524,7 +537,7 @@ function formView(d, contacted) {
     h("p.cr-muted", f.audience === "press"
       ? `${C.plural(people.length, "outlet")} with an email from the Press tab's current filters (country, language, kind, reach), not emailed before. Change the filters there to change who's in.`
       : f.audience === "streamers"
-        ? `The ${C.plural(people.length, "creator")} with a Twitch channel who fit ${f.game} best, with an email, not emailed before.`
+        ? `The ${C.plural(people.length, "streamer")} who fit ${f.game} best (Twitch streamers, and YouTubers with a Twitch channel), with an email, not emailed before.`
         : `The ${C.plural(people.length, "creator")} who fit ${f.game} best, with an email, not emailed before. Change "How many" to pick more or fewer.`),
     h("div.cr-row", input("From name", "from_name"), input("From address", "from_email", { type: "email" }), input("Per day", "daily_limit", { type: "number", min: 1, max: 200, style: "max-width:6em" })),
     h("p.cr-muted", "The from address must be your Strato mailbox or one of its aliases (add a game address as an alias in Strato's mail settings first)."),

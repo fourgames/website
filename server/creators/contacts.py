@@ -22,6 +22,7 @@ LINKS = {
     "x": re.compile(r"(?:twitter|x)\.com/([A-Za-z0-9_]{1,15})", re.IGNORECASE),
     "instagram": re.compile(r"instagram\.com/([A-Za-z0-9_.]{1,30})", re.IGNORECASE),
     "tiktok": re.compile(r"tiktok\.com/@([A-Za-z0-9_.]{2,24})", re.IGNORECASE),
+    "youtube": re.compile(r"youtube\.com/(@[A-Za-z0-9_.-]{3,30}|channel/UC[A-Za-z0-9_-]{22})", re.IGNORECASE),
     "discord": re.compile(r"(?:discord\.gg|discord\.com/invite)/([A-Za-z0-9-]{2,32})", re.IGNORECASE),
 }
 # Web addresses in a description: with http(s)://, or a bare address on a link-in-bio host.

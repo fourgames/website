@@ -5,6 +5,7 @@
   python -m creators --all               spends the whole day's units now
   python -m creators --all --appids 1,2,3  search just these games now (a game's look-alikes)
   python -m creators --links 0           no link following after the YouTube part (default 150 links)
+  python -m creators --twitch-games 5    then read at most 5 games' Twitch broadcasts (default: all due)
 """
 
 from __future__ import annotations
@@ -19,6 +20,7 @@ from . import export
 from .db import Store
 from .games import own_appids
 from .sites import Follower
+from .twitch import Twitch, TwitchCollector
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -28,6 +30,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--appids", help="search just these games now, comma-separated (e.g. a game's look-alikes)")
     parser.add_argument("--links", type=int, default=150,
                         help="then follow up to this many creators' links for emails (0: none)")
+    parser.add_argument("--twitch-games", type=int, help="read at most this many games' Twitch broadcasts")
     args = parser.parse_args(argv)
     try:
         config = Config.from_env()
@@ -43,6 +46,13 @@ def main(argv: list[str] | None = None) -> int:
     try:
         only = {int(x) for x in args.appids.split(",") if x.strip().isdigit()} if args.appids else None
         Collector(config, store).run(spend_all=args.all, max_searches=args.searches, only=only)
+        if config.twitch_client_id and config.twitch_client_secret:
+            try:
+                twitch = Twitch(config.twitch_client_id, config.twitch_client_secret)
+                TwitchCollector(store, twitch, config.steam_db, config.own_appids, config.min_reviews, config.max_reviews,
+                                config.own_studio, config.max_price, config.research_days).run(args.twitch_games)
+            except Exception:  # never let Twitch break the YouTube runs
+                logging.getLogger("creators").exception("the Twitch part failed")
         if args.links:
             try:
                 Follower(store).run(own_appids(config.steam_db, config.own_appids, config.own_studio), args.links)

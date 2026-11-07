@@ -263,7 +263,7 @@ function draw() {
   const q = d.quota;
   const clock = (t) => new Date(t * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   const resetAt = q ? clock(q.reset) : "";
-  const collecting = q ? h("p.cr-muted.cr-quota",
+  const collecting = q ? h(q.exhausted ? "p.cr-note.cr-quota" : "p.cr-note.cr-quota.is-ok",
     q.exhausted
       ? `Collecting paused: today's YouTube limit is used (${num(q.spent)} of ${num(q.limit)} units). New creators again after ${resetAt}.`
       : `Collecting: ${num(q.spent)} of ${num(q.limit)} YouTube units used today, spread over the day (resets at ${resetAt}).`,
@@ -647,6 +647,8 @@ const CSS = `
 .crv .cr-bad { color: var(--fb-negative); font-weight: 600; }
 .crv .cr-alert { background: var(--fb-card); border: 1px solid var(--fb-negative); border-left-width: 3px; border-radius: 8px; padding: 8px 12px; color: var(--fb-ink); }
 .crv .cr-note { background: var(--fb-card); border: 1px solid var(--fb-line); border-left: 3px solid var(--fb-warning); border-radius: 8px; padding: 8px 12px; color: var(--fb-ink-2); font-size: 0.88rem; }
+.crv .cr-quota { color: var(--fb-ink); font-size: 0.95rem; margin: 10px 0; }
+.crv .cr-quota.is-ok { border-left-color: var(--fb-positive); }
 .crv .cr-form { padding-bottom: 12px; }
 .crv .cr-field { display: flex; flex-direction: column; gap: 4px; font-size: 0.82rem; color: var(--fb-ink-2); margin: 0 0 10px; flex: 1 1 220px; }
 .crv .cr-field .cr-input { max-width: none; flex: none; }

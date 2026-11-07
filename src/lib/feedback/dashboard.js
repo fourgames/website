@@ -9,6 +9,7 @@
 // Add ?data=<base url> to read another copy of the data, e.g. a local test run.
 import CSS from "./dashboard.css?inline";
 import { SITE } from "@/data/site.js";
+import { videoImpact, videoImpactCard } from "./video-impact.js";
 
 // The data is read from its newest commit (see dataBase), so a file never mixes two runs; "main" only
 // when GitHub's API can't say which commit that is.
@@ -3178,6 +3179,7 @@ function salesView(all = false) {
         sum(inRange, "activations") ? tile("Key activations", sum(inRange, "activations"), "keys from outside Steam") : null),
       revenueChart(inRange, start, end, all ? launchMarkers(start, end) : markers(start, end)),
       all ? null : refundReasons(),
+      videoImpactCard({ h, fmtNum, usd, fmtDate }, all ? gamesLoaded().flatMap((g) => inGame(g, () => videoRows().map((r) => ({ ...r, game: g.meta.name })))) : videoRows()),
       accountTotals(from, all),
       countryBreakdown(inRange)].filter(Boolean));
   };
@@ -3186,6 +3188,10 @@ function salesView(all = false) {
   return h("div", h("div.filters", h("span.zoom-label", "Zoom"), range,
     h("span.updated", "Steam's days are Pacific time; recent days can still change as payments settle.")), body);
 }
+
+// The game's YouTube videos next to its sales and wishlists around each (video-impact.js).
+const videoRows = () => videoImpact({ videos: mediaItems(), sales: Object.fromEntries(salesDays()), wishlists: state.wishlists?.apps?.[state.game.appId]?.days || {},
+  events: markers(0, now()).map((r) => ({ ...r, launch: isLaunch(r) })), now: now(), salesLast: Object.keys(state.sales?.days || {}).sort().at(-1) });
 
 // Why players refunded: the reason Steam asks for, split, then what they wrote, newest first
 // (their notes, read daily from Steamworks by the task on your Mac). All time: there are few.

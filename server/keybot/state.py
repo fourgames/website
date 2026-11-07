@@ -2,7 +2,9 @@
 
 It ties the Discord login on the web back to the /request it came from (who asked, for which game),
 and Discord hands it back unchanged on /callback. The signature means nobody can make one up for
-someone else; the nonce is also stored in the database so each link works only once.
+someone else; the nonce is also stored in the database so each link works only once. The link
+itself only carries the nonce, as a short code (/k/<code>); the page looks it up and rebuilds the
+token for Discord.
 """
 
 from __future__ import annotations
@@ -16,6 +18,20 @@ import time
 from dataclasses import dataclass
 
 TTL_SECONDS = 15 * 60
+
+# The short code in the link (verify.fourgames.se/k/<code>) is the nonce. No 0/O, 1/l/I, so it reads
+# cleanly. 8 of 55 characters can't be guessed in 15 minutes, and a guessed one would still be
+# useless: /callback only accepts the Discord account that ran /request.
+CODE_ALPHABET = "23456789abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ"
+CODE_LENGTH = 8
+
+
+def new_code() -> str:
+    return "".join(secrets.choice(CODE_ALPHABET) for _ in range(CODE_LENGTH))
+
+
+def looks_like_code(text: str) -> bool:
+    return len(text) == CODE_LENGTH and all(char in CODE_ALPHABET for char in text)
 
 
 class StateError(Exception):
@@ -52,6 +68,13 @@ def sign_state(secret: str, user_id: int, game_id: int, now: float | None = None
         separators=(",", ":"),
     ).encode())
     return f"{body}.{_signature(secret, body)}", state
+
+
+def token_for(secret: str, state: State) -> str:
+    """The signed token for a stored link, the same one sign_state made for it."""
+    token, _ = sign_state(secret, state.user_id, state.game_id, now=state.expires_at - TTL_SECONDS,
+                          ttl=TTL_SECONDS, nonce=state.nonce)
+    return token
 
 
 def verify_state(secret: str, token: str, now: float | None = None) -> State:

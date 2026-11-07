@@ -23,7 +23,7 @@ from .db import MAX_PER_USER_LIMIT, STOCK_LOW, STOCK_OUT, Store, role_ids
 from .eligibility import Channel, evaluate
 from .keyfile import KeyFileError, read_keys
 from .lookups import TwitchAuth
-from .state import sign_state
+from .state import new_code, sign_state
 
 log = logging.getLogger("keybot")
 
@@ -769,11 +769,11 @@ async def request_creator(interaction: discord.Interaction, game: str) -> None:
     if row is None:
         return
     now = time.time()
-    token, state = sign_state(bot.config.state_secret, interaction.user.id, row["id"], now)
+    _, state = sign_state(bot.config.state_secret, interaction.user.id, row["id"], now, nonce=new_code())
     bot.store.save_state(state.nonce, interaction.user.id, row["id"], state.expires_at, int(now))
     view = discord.ui.View()
     view.add_item(discord.ui.Button(label="Verify your channel", style=discord.ButtonStyle.link,
-                                    url=f"{bot.config.public_base_url}/verify?state={token}"))
+                                    url=f"{bot.config.public_base_url}/k/{state.nonce}"))
     await interaction.response.send_message(
         f"Press the button and sign in with Discord to show us your YouTube or Twitch channel. Bigger channels "
         f"get their **{escape_markdown(row['name'])}** key right away, and our team looks at the rest. Link your "

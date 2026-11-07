@@ -572,6 +572,9 @@ class Store:
                 (nonce, str(user_id), game_id, now_iso(), expires_at),
             )
 
+    def stored_state(self, nonce: str) -> sqlite3.Row | None:
+        return self.db.execute("SELECT * FROM oauth_states WHERE nonce = ?", (nonce,)).fetchone()
+
     def state_usable(self, nonce: str) -> bool:
         return self.db.execute(
             "SELECT 1 FROM oauth_states WHERE nonce = ? AND used_at IS NULL", (nonce,)

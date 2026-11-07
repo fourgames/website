@@ -2,7 +2,7 @@
 
 import pytest
 
-from keybot.state import TTL_SECONDS, StateError, sign_state, verify_state
+from keybot.state import TTL_SECONDS, StateError, looks_like_code, new_code, sign_state, token_for, verify_state
 
 SECRET = "s" * 40
 
@@ -45,3 +45,11 @@ def test_nonces_differ():
     a, _ = sign_state(SECRET, 1, 2, now=1000)
     b, _ = sign_state(SECRET, 1, 2, now=1000)
     assert a != b
+
+
+def test_short_codes_rebuild_the_same_token():
+    code = new_code()
+    assert looks_like_code(code) and not looks_like_code("0O1lI000") and not looks_like_code(code + "a")
+    token, state = sign_state(SECRET, 5, 7, now=1000, nonce=code)
+    assert token_for(SECRET, state) == token
+    assert verify_state(SECRET, token, now=1001) == state

@@ -232,7 +232,10 @@ def test_request_creator_sends_the_verify_link(bot):
     (text, kwargs), = interaction.response.sent
     assert "Press the button" in text and "right away" in text and kwargs["ephemeral"]
     button, = kwargs["view"].children
-    assert button.url.startswith("https://example.test/keybot/verify?state=")
+    prefix = "https://example.test/keybot/k/"
+    assert button.url.startswith(prefix)
+    code = button.url[len(prefix):]
+    assert len(code) == 8 and bot.store.state_usable(code)
     assert bot.store.open_request_count(5) == 0
     # The shared checks still apply.
     bot.store.ban(5, game["id"])

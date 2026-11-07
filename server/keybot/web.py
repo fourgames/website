@@ -1,12 +1,13 @@
 """The web side of creator verification, in the same process as the bot.
 
-/verify checks the link from /request and shows a page that says who we are and what Discord will
-and won't show us; its Continue button goes to /login, which sends the person to Discord's login
-(scopes identify and connections). Discord sends them back to /callback, where we read their verified YouTube and Twitch
-connections, look the channels up, and approve or pass the request to the admins.
+/k/<code> is the link from /request (/verify?state= still works for older links). It shows a short
+page about what happens; its Continue button goes to /login, which sends the person to Discord's
+login (scopes identify and connections). Discord sends them back to /callback, where we read their
+verified YouTube and Twitch connections, look the channels up, and approve or pass the request to
+the admins.
 
-Caddy forwards https://api.fourgames.se/keybot/* here. The routes answer both with and without the
-/keybot prefix, so it works whether Caddy strips it (handle_path) or not (handle).
+Caddy forwards https://verify.fourgames.se/* and https://api.fourgames.se/keybot/* here. The routes
+answer both with and without the /keybot prefix, so it works whether Caddy strips it or not.
 """
 
 from __future__ import annotations
@@ -21,7 +22,7 @@ import aiohttp
 from aiohttp import web
 
 from .lookups import look_up
-from .state import StateError, verify_state
+from .state import State, StateError, looks_like_code, token_for, verify_state
 
 if TYPE_CHECKING:
     from .bot import KeyBot
@@ -160,14 +161,14 @@ def expired_page(reason: str) -> web.Response:
     return page("Link not working", "Type /request in Discord for a new one.", 400)
 
 
-def landing_page(game_name: str, token: str, minutes_left: int) -> web.Response:
+def landing_page(game_name: str, login_href: str, minutes_left: int) -> web.Response:
     """What a creator sees first: what this is, one button, and what we can't see."""
     minutes = "1 minute" if minutes_left == 1 else f"{minutes_left} minutes"
     body = (
         f'<h1>Get your {html.escape(game_name)} key</h1>'
         '<p class="lead">Sign in with Discord to show us your YouTube or Twitch channel. Bigger channels get '
         'their key right away, and our team looks at the rest.</p>'
-        f'<a class="button" href="login?state={html.escape(token, quote=True)}">{DISCORD_MARK}'
+        f'<a class="button" href="{html.escape(login_href, quote=True)}">{DISCORD_MARK}'
         'Continue with Discord</a>'
         '<p class="small">We only see your channel and username, never your password or messages. '
         f'<a href="https://fourgames.se/privacy">Privacy</a> · Works for {minutes}</p>'
@@ -175,21 +176,40 @@ def landing_page(game_name: str, token: str, minutes_left: int) -> web.Response:
     return render("Get your key", body)
 
 
-async def verify(request: web.Request) -> web.Response:
-    """The link from /request: explains what happens, then Continue goes to login."""
-    bot: KeyBot = request.app[BOT_KEY]
-    token = request.query.get("state", "")
-    try:
-        state = verify_state(bot.config.state_secret, token)
-    except StateError as error:
-        return expired_page(str(error))
+def show_landing(bot: KeyBot, state: State, login_href: str) -> web.Response:
     if not bot.store.state_usable(state.nonce):
         return expired_page("used")
     game = bot.store.game(state.game_id)
     if game is None:
         return page("Game not found", "Try /request again in Discord.", 404)
     minutes_left = max(1, (state.expires_at - int(time.time()) + 59) // 60)
-    return landing_page(game["name"], token, minutes_left)
+    return landing_page(game["name"], login_href, minutes_left)
+
+
+async def short_link(request: web.Request) -> web.Response:
+    """The link from /request: /k/<code>. Looks the code up and shows the first page."""
+    bot: KeyBot = request.app[BOT_KEY]
+    code = request.match_info["code"]
+    row = bot.store.stored_state(code) if looks_like_code(code) else None
+    if row is None:
+        return expired_page("invalid")
+    state = State(row["nonce"], int(row["user_id"]), int(row["game_id"]), int(row["expires_at"]))
+    if time.time() >= state.expires_at:
+        return expired_page("expired")
+    token = token_for(bot.config.state_secret, state)
+    # Relative, so it works with and without the /keybot prefix: /k/<code> → /login.
+    return show_landing(bot, state, f"../login?{urlencode({'state': token})}")
+
+
+async def verify(request: web.Request) -> web.Response:
+    """Links from before the short codes: /verify?state=<token>."""
+    bot: KeyBot = request.app[BOT_KEY]
+    token = request.query.get("state", "")
+    try:
+        state = verify_state(bot.config.state_secret, token)
+    except StateError as error:
+        return expired_page(str(error))
+    return show_landing(bot, state, f"login?{urlencode({'state': token})}")
 
 
 async def login(request: web.Request) -> web.Response:
@@ -290,6 +310,7 @@ def build_app(bot: KeyBot) -> web.Application:
     app = web.Application()
     app[BOT_KEY] = bot
     for prefix in ("", "/keybot"):
+        app.router.add_get(f"{prefix}/k/{{code}}", short_link)
         app.router.add_get(f"{prefix}/verify", verify)
         app.router.add_get(f"{prefix}/login", login)
         app.router.add_get(f"{prefix}/callback", callback)

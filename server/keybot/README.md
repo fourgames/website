@@ -71,7 +71,7 @@ lost).
 
 The code: `bot.py` (commands, buttons, handouts), `web.py` (the verify pages and login), `db.py`,
 `admin.py` (the command line for the server), `lookups.py` (YouTube and Twitch), `eligibility.py`
-(the thresholds), `keyfile.py`, `state.py` (the signed verify links), `config.py`. Settings are in
+(the thresholds), `keyfile.py`, `state.py` (the signed verify links and their short codes), `config.py`. Settings are in
 `keybot.env.example`.
 
 ## 1. The Discord application
@@ -108,7 +108,11 @@ own account:
 ### A trusted link
 
 Creators are asked to sign in with Discord from a link in a bot message, which can look like
-phishing. So the link goes to `verify.fourgames.se` (not `api.fourgames.se/keybot/verify?…`), and it
+phishing. So the link is short and plain, `verify.fourgames.se/k/7Hq2Xm9P` (not
+`api.fourgames.se/keybot/verify?state=<long token>`): the 8-character code is looked up in the
+database, which already has who the link is for, which game and when it expires. It's as safe as
+the token: it can't be guessed in 15 minutes, works once, and only for the Discord account that ran
+`/request`. The link
 opens a short page in the site's look first: "Get your <game> key", one line saying we check their
 YouTube or Twitch channel through Discord, the *Continue with Discord* button, and that we never see
 their password or messages (with the privacy link). The pages after the sign-in (key sent, sent for

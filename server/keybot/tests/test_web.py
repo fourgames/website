@@ -30,7 +30,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from keybot.config import Config
 from keybot.db import Store
-from keybot.state import sign_state
+from keybot.state import new_code, sign_state
 
 from .test_handout_flow import ENV
 
@@ -63,7 +63,7 @@ def test_verify_explains_before_sending_to_discord(tmp_path):
         assert status == 200 and headers["Cache-Control"] == "no-store"
         assert "Pomo &lt;Valley&gt;" in body  # escaped
         assert "never your password" in body and "right away" in body and "Continue with Discord" in body
-        assert f'href="login?state={token}"' in body
+        assert f'href="login?state={token}"' in body  # older /verify links
         assert "Works for 15 minutes" in body
 
 
@@ -104,3 +104,38 @@ def test_result_pages_show_how_it_went():
     assert 'class="status pending"' in page("Turn on DMs", "x").text
     assert 'class="status info"' in page("Link expired", "x", 400).text
     assert 'class="status problem"' in page("Something went wrong", "x", 500).text
+
+
+def short(bot, game, now=None):
+    now = time.time() if now is None else now
+    _, state = sign_state(bot.config.state_secret, 5, game["id"], now, nonce=new_code())
+    bot.store.save_state(state.nonce, 5, game["id"], state.expires_at, int(now))
+    return state.nonce
+
+
+def test_short_link_shows_the_page_and_leads_to_discord(tmp_path):
+    bot, game = verify_bot(tmp_path)
+    code = short(bot, game)
+    for prefix in ("", "/keybot"):
+        status, _, body = asyncio.run(fetch(bot, f"{prefix}/k/{code}"))
+        assert status == 200 and "Pomo &lt;Valley&gt;" in body
+        href = body.split('class="button" href="')[1].split('"')[0].replace("&amp;", "&")
+        assert href.startswith("../login?state=")
+        # The token the page hands on is a real one for this person and game.
+        token = parse_qs(urlsplit(href).query)["state"][0]
+        status, headers, _ = asyncio.run(fetch(bot, f"{prefix}/login", state=token))
+        assert status == 302 and parse_qs(urlsplit(headers["Location"]).query)["state"] == [token]
+
+
+def test_short_link_refuses_unknown_old_and_used_codes(tmp_path):
+    bot, game = verify_bot(tmp_path)
+    for code in ("zzzzzzzz", "not-a-code", "x" * 40):
+        status, _, body = asyncio.run(fetch(bot, f"/k/{code}"))
+        assert status == 400 and "Link not working" in body
+    old = short(bot, game, now=time.time() - 3600)
+    status, _, body = asyncio.run(fetch(bot, f"/k/{old}"))
+    assert status == 400 and "Link expired" in body
+    used = short(bot, game)
+    bot.store.use_state(used)
+    status, _, body = asyncio.run(fetch(bot, f"/k/{used}"))
+    assert status == 400 and "Link already used" in body

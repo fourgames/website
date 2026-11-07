@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -120,6 +121,11 @@ def duration(text: str | None) -> int | None:
         else:
             return None
     return total or None
+
+
+def twitch_name(steam_name: str) -> str:
+    """Twitch's category names leave out ™, ® and ©: "A Game About Digging A Hole™" -> "A Game About Digging A Hole"."""
+    return " ".join(re.sub(r"[™®©]", "", steam_name).split())
 
 
 class Twitch:
@@ -236,7 +242,7 @@ class TwitchCollector:
         todo = todo[:500]  # 5 calls; the rest next hour
         if not todo:
             return
-        found = self.twitch.categories([g.name for g in todo])
+        found = self.twitch.categories([twitch_name(g.name) for g in todo])
         with db:
             for g in todo:
                 gid = found.get(games_mod.normalize(g.name))

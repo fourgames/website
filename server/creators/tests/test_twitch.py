@@ -5,7 +5,7 @@ import urllib.parse
 
 from creators import export, outreach
 from creators.db import Store
-from creators.twitch import Twitch, TwitchCollector, duration
+from creators.twitch import Twitch, TwitchCollector, duration, twitch_name
 
 from .test_creators import NOW, steam_db  # noqa: F401 - the fixture
 
@@ -54,6 +54,11 @@ def collect(tmp_path, steam_db):  # noqa: F811
     twitch = Twitch("id", "secret", transport=fake, sleep=lambda s: None)
     summary = TwitchCollector(store, twitch, steam_db, (1,), 30, 50_000, "Four Games", 3000, clock=lambda: NOW).run()
     return store, fake, summary
+
+
+def test_twitch_name():
+    assert twitch_name("A Game About Digging A Hole™") == "A Game About Digging A Hole"
+    assert twitch_name("Café®  Rush") == "Café Rush"
 
 
 def test_duration():

@@ -534,6 +534,8 @@ async function serverBase() {
   } catch {
     state.server = null;
   }
+  // When it was read: its age is judged from then, not from now (see renderStatus).
+  state.serverAt = now();
 }
 
 async function apiBase() {
@@ -855,7 +857,10 @@ function renderStatus() {
   try { kept = JSON.parse(store.get("checks")); } catch {}
   const checks = state.checks || (kept && now() - kept.seen < 3600 ? kept : null);
   status.github = {
-    ...collector(checks, state.server, now()),
+    // Judged as of when the server's file was read, not now: in a background tab or after the Mac
+    // slept, the browser holds back the 5-minute refresh while the minute clock still redraws, and
+    // a status read 20 minutes ago would look like the server stopped.
+    ...collector(checks, state.server, state.serverAt || now()),
     active: Math.max(state.index.changedAt || 0, state.dataChanged || 0) || null,
     activeWhat: "data changed",
   };
@@ -4016,6 +4021,7 @@ const loadedAt = Date.now();
 
 async function refresh() {
   if (!document.getElementById("fb-view")) return clearInterval(refreshTimer); // left the page
+  lastRefresh = Date.now();
   // Other views (Market, Status, Game data…) show the service cards too: keep the server's state
   // current there, or its last run looks older every minute and the card says it stopped.
   if (!state.game && !state.home) { await serverBase(); return renderStatus(); }
@@ -4056,6 +4062,12 @@ async function refresh() {
   window.scrollTo(0, y);
 }
 
+let lastRefresh = Date.now();
+function onVisible() {
+  if (!document.getElementById("fb-view")) return document.removeEventListener("visibilitychange", onVisible);
+  if (document.visibilityState === "visible" && Date.now() - lastRefresh > 60 * 1000) refresh();
+}
+
 export function mount(root) {
   if (!document.getElementById("fb-dash-css")) {
     document.head.append(h("style", { id: "fb-dash-css" }, CSS));
@@ -4067,6 +4079,10 @@ export function mount(root) {
   clearInterval(refreshTimer);
   refreshTimer = setInterval(refresh, REFRESH_MS);
   // The header's "x min ago" counts up every minute on its own; only new data needs the network.
+  // Back to the tab (or the Mac woke up): refresh right away rather than at the next 5-minute tick,
+  // which the browser held back meanwhile.
+  document.removeEventListener("visibilitychange", onVisible);
+  document.addEventListener("visibilitychange", onVisible);
   clearInterval(clockTimer);
   clockTimer = setInterval(() => {
     if (!document.getElementById("fb-view")) return clearInterval(clockTimer);

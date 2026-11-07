@@ -62,7 +62,7 @@ def test_verify_explains_before_sending_to_discord(tmp_path):
         status, headers, body = asyncio.run(fetch(bot, f"{prefix}/verify", state=token))
         assert status == 200 and headers["Cache-Control"] == "no-store"
         assert "Pomo &lt;Valley&gt;" in body  # escaped
-        assert "never see your password" in body and "Continue with Discord" in body
+        assert "never your password" in body and "YouTubers and streamers" in body and "Continue with Discord" in body
         assert f'href="login?state={token}"' in body
         assert "Works for 15 minutes" in body
 

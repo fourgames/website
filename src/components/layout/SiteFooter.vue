@@ -2,6 +2,7 @@
 import Icon from "@/components/ui/Icon.vue";
 import I18nT from "@/components/ui/I18nT.vue";
 import NavLink from "@/components/ui/NavLink.vue";
+import NewsSignup from "@/components/layout/NewsSignup.vue";
 import { FOOTER_COLUMNS } from "@/data/footer.js";
 import { SITE, SOCIALS } from "@/data/site.js";
 import { useI18n } from "@/i18n/index.js";
@@ -32,6 +33,10 @@ const year = __BUILD_YEAR__;
 					</li>
 				</ul>
 			</nav>
+		</div>
+
+		<div class="border-t border-white/10">
+			<NewsSignup />
 		</div>
 
 		<div class="border-t border-white/10">

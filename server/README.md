@@ -17,6 +17,7 @@ something does, like the player data API's database.
 | `feedback@research.service.d/` | The research part's longer run limit |
 | `feedback.env.example` | Which secrets go in `/etc/fourgames/feedback.env` |
 | `contact/`, `contact.service` | The website's contact form backend (in place of Formspree), mailing messages to support@: [contact/README.md](contact/README.md) |
+| `news/`, `news.service` | The fan mailing list: the footer signup on fourgames.se, double opt-in by email, one-click unsubscribe: [news/README.md](news/README.md) |
 | `alerts/`, `alerts.service` | Push notifications from YouTube and Twitch that start the loop's announce check at once, so new videos and streams reach Discord within a minute: [alerts/README.md](alerts/README.md) |
 | `steamdata/`, `steamdata.service` | The Steam market-data collector: a daily snapshot of every game (reviews, price, discount, tags, release), player counts, metadata and which games are Godot, into one SQLite file, and `steamdata-market.timer`, which works out the dashboard's Market numbers from it daily: [steamdata/README.md](steamdata/README.md) |
 | `creators/`, `creators.service`, `creators.timer`, `creators-send.*` | The creator collector and outreach: every hour it searches YouTube for videos of Steam games (ours first, then games like ours) and saves the channels that made them, with subscribers, language and any public email, into one SQLite file; `creators-send.timer` sends approved outreach emails slowly and reads replies: [creators/README.md](creators/README.md) |

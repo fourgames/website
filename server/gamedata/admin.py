@@ -20,6 +20,7 @@ request, GET included, must come from the site (Origin: SITE_ORIGIN); a PUT or P
 - GET /v1/admin/market/<name>: the Steam market files (overview, growth, games, godot, trends)
   that server/steamdata/market.py builds daily into MARKET_DIR, gzipped as they are on disk.
 - GET /v1/admin/creators: the creator list (server/creators/export.py, hourly), gzipped.
+- GET /v1/admin/news: the fan mailing list's numbers (server/news writes stats.json), no addresses.
 - /v1/admin/ideas*: the owner's game ideas, scored by Claude against the market files (ideas.py).
 - /v1/admin/outreach*: the creator and press emails: drafts, approvals, status (outreach.py).
 - /v1/admin/tagcheck: Claude says which of a game's tags (and suggested ones) really fit it (tagcheck.py).
@@ -454,6 +455,21 @@ async def creators(request: web.Request) -> web.Response:
                         headers={"Content-Encoding": "gzip", "Cache-Control": "private, max-age=60"})
 
 
+# The fan mailing list's numbers (server/news writes them after every change; this only reads).
+NEWS_STATS_FILE = "/srv/fourgames/news/stats.json"
+
+
+async def news(request: web.Request) -> web.Response:
+    require_admin(request)
+    path = os.environ.get("NEWS_STATS_FILE", "").strip() or NEWS_STATS_FILE
+    try:
+        with open(path, "rb") as f:
+            body = await asyncio.to_thread(f.read)
+    except FileNotFoundError:
+        raise Refused(404, "not_built", "the mailing list isn't running yet (news.service)") from None
+    return web.Response(body=body, content_type="application/json", headers={"Cache-Control": "private, max-age=60"})
+
+
 def add_routes(app: web.Application, prefix: str) -> None:
     v1 = f"{prefix}/v1/admin"
     add = app.router.add_route
@@ -467,6 +483,7 @@ def add_routes(app: web.Application, prefix: str) -> None:
     add("POST", f"{v1}/players", players)
     add("GET", f"{v1}/market/{{name}}", market)
     add("GET", f"{v1}/creators", creators)
+    add("GET", f"{v1}/news", news)
     ideas.add_routes(app, v1)
     tagcheck.add_routes(app, v1)
     outreach.add_routes(app, v1)

@@ -59,6 +59,10 @@ api.fourgames.se {
 		header /contact/health Access-Control-Allow-Origin https://status.fourgames.se
 		reverse_proxy localhost:8101
 	}
+	# The fan mailing list (server/news): the footer signup, the confirm and unsubscribe links.
+	handle /news* {
+		reverse_proxy localhost:8104
+	}
 	# YouTube WebSub and Twitch EventSub pushes (server/alerts): instant stream and video posts.
 	handle /alerts/* {
 		reverse_proxy localhost:8102

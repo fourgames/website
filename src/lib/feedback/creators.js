@@ -34,6 +34,7 @@ const LANGS = { en: "English", ru: "Russian", de: "German", fr: "French", pt: "P
 
 import { huntStrip, HUNT_CSS } from "./creators-hunt.js";
 import { launchView } from "./launch.js";
+import { newsBadge } from "./news.js";
 
 let C = null;
 const st = { view: "creators", pf: { q: "", kind: "all", lang: "all", country: "all", reach: "all", email: "any" }, pshown: PAGE, data: null, error: null, loading: false, root: null, f: { q: "", email: "any", active: "all", size: "all", type: "all", lang: "all", genre: "all", game: "all", sort: "best" }, shown: PAGE, open: new Set() };
@@ -142,7 +143,7 @@ function draw() {
   }
   const d = st.data;
   const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["twitch", `Twitch streamers (${num(d.streamers.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`], ["outreach", "Outreach"], ["launch", "Launch checklist"]],
-    st.view, (v) => { st.view = v; draw(); }, "Show"));
+    st.view, (v) => { st.view = v; draw(); }, "Show"), newsBadge(C));
   if (st.view === "press") {
     root.replaceChildren(switcher, pressView(d));
     return;

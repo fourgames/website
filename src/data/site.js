@@ -46,6 +46,8 @@ export const SITE = {
 	},
 	// The contact form's backend on our server (server/contact): it mails each message to support@.
 	contact: "https://api.fourgames.se/contact",
+	// The fan mailing list's signup in the footer (server/news): double opt-in by email.
+	news: "https://api.fourgames.se/news",
 	// The privacy page (/privacy): who to write to, and the player-data API it signs in to with Steam
 	// (server/gamedata, see server/gamedata/SPEC.md). The page calls it from the browser, with a cookie.
 	// The address is kept in two parts and only joined in the browser (PolicyText.vue), so it's never

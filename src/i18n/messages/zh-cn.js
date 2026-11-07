@@ -103,6 +103,7 @@ export default {
 			status: "服务器状态",
 		},
 		community: { heading: "社区", discord: "Discord", youtube: "YouTube", steam: "Steam" },
+		news: { heading: "新游戏发布时收到邮件", note: "只发送新游戏的消息。你需要先通过邮件确认，每封邮件都有退订链接。{privacy}", privacy: "我们如何处理你的邮箱", label: "邮箱地址", placeholder: "you@example.com", button: "订阅", sending: "正在订阅…", success: "快完成了：请查看收件箱，并点击邮件中的按钮确认。", error: "没有成功。请检查地址，稍后再试。" },
 		copyright: "© {year} {name}。保留所有权利。四叶草图标作者：{author}（CC BY 3.0）。",
 	},
 	hero: {
@@ -413,6 +414,7 @@ export default {
 				title: "本网站和 Discord",
 				list: [
 					"联系表单会把你填写的电子邮箱、消息和你附上的 PDF 发送给我们。本网站没有跟踪 Cookie、访问统计或广告；在这里登录会设置一个有效期 1 小时的 Cookie。",
+					"页脚的邮件列表会保存你的邮箱地址和网站语言，仅用于在我们发布新游戏时给你发邮件。你需要先通过邮件确认；未确认的地址会在 7 天后删除。每封邮件都有退订链接，退订后你的地址会被删除。邮件通过我们的邮件服务商 Strato（德国）发送。",
 					"我们的 Discord 发 key 机器人会保存你的 Discord ID、发给你的 key，以及使用 /request 时它核实过的频道。",
 				],
 			},

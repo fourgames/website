@@ -104,6 +104,7 @@ export default {
 			status: "伺服器狀態",
 		},
 		community: { heading: "社群", discord: "Discord", youtube: "YouTube", steam: "Steam" },
+		news: { heading: "新遊戲推出時收到郵件", note: "只寄送新遊戲的消息。你需要先透過郵件確認，每封郵件都有取消訂閱的連結。{privacy}", privacy: "我們如何處理你的電子郵件", label: "電子郵件地址", placeholder: "you@example.com", button: "訂閱", sending: "正在訂閱…", success: "快完成了：請查看收件匣，並按下郵件中的按鈕確認。", error: "沒有成功。請檢查地址，稍後再試。" },
 		copyright: "© {year} {name}。保留所有權利。四葉草圖示作者：{author}（CC BY 3.0）。",
 	},
 	hero: {
@@ -414,6 +415,7 @@ export default {
 				title: "本網站和 Discord",
 				list: [
 					"聯絡表單會把你填寫的電子郵件地址、訊息和你附上的 PDF 傳送給我們。本網站沒有追蹤 Cookie、流量分析或廣告；在這裡登入會設定一個有效期限 1 小時的 Cookie。",
+					"頁尾的郵件清單會保存你的電子郵件地址和網站語言，僅用於在我們推出新遊戲時寄信給你。你需要先透過郵件確認；未確認的地址會在 7 天後刪除。每封郵件都有取消訂閱的連結，取消訂閱後你的地址會被刪除。郵件透過我們的郵件服務商 Strato（德國）寄出。",
 					"我們的 Discord 序號機器人會保存你的 Discord ID、發給你的序號，以及使用 /request 時它確認過的頻道。",
 				],
 			},

@@ -10,7 +10,7 @@ import { formatDate } from "@/lib/format.js";
 // The privacy policy in plain language, then "Your data": sign in with Steam to see, download, opt
 // out of or anonymise what the games sent (server/gamedata/SPEC.md). The games' "Privacy" link
 // opens this page. Change UPDATED whenever the policy text changes.
-const UPDATED = "2026-11-04";
+const UPDATED = "2026-11-07";
 
 const { t, raw, locale } = useI18n();
 

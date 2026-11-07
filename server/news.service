@@ -1,0 +1,28 @@
+# The fan mailing list (server/news): the footer signup on fourgames.se, the confirm link and the
+# unsubscribe link. A small web server on localhost:8104 (Caddy forwards https://api.fourgames.se/news
+# to it), with the list in /srv/fourgames/news. Setup: server/news/README.md.
+# Logs: journalctl -u news -f
+[Unit]
+Description=Four Games fan mailing list
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=fourgames
+# The checkout feedback-setup.sh made; python -m news finds the package here.
+WorkingDirectory=/srv/fourgames/own/server
+# The Strato mailbox from the outreach settings, then the list's own settings.
+EnvironmentFile=/etc/fourgames/outreach.env
+EnvironmentFile=/etc/fourgames/news.env
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/srv/fourgames/news-venv/bin/python -m news
+Restart=always
+RestartSec=10
+MemoryMax=200M
+# It writes only its own data folder (/srv/fourgames/news, which ProtectSystem=full leaves writable).
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target

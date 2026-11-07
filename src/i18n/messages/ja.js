@@ -105,6 +105,7 @@ export default {
 			status: "サーバーの状態",
 		},
 		community: { heading: "コミュニティ", discord: "Discord", youtube: "YouTube", steam: "Steam" },
+		news: { heading: "新作が出たらメールで受け取る", note: "新作のお知らせだけをお送りします。まずメールで確認していただき、すべてのメールに配信停止のリンクがあります。{privacy}", privacy: "メールアドレスの扱いについて", label: "メールアドレス", placeholder: "you@example.com", button: "登録", sending: "登録中…", success: "あと少しです。受信トレイを確認し、メール内のボタンを押して確認してください。", error: "うまくいきませんでした。アドレスを確認して、しばらくしてからもう一度お試しください。" },
 		copyright: "© {year} {name}. All rights reserved. クローバーアイコン：{author}（CC BY 3.0）",
 	},
 	hero: {
@@ -421,6 +422,7 @@ export default {
 				title: "このサイトとDiscord",
 				list: [
 					"お問い合わせフォームからは、入力したメールアドレス、メッセージ、添付したPDFが届きます。トラッキングCookie、アクセス解析、広告はなく、ここでサインインするとCookieが1つ、1時間だけ設定されます。",
+					"フッターのメーリングリストは、新作が出たときにお知らせするためだけに、メールアドレスとサイトの言語を保存します。まずメールで確認していただき、確認されなかったアドレスは7日後に削除されます。すべてのメールに配信停止のリンクがあり、停止するとアドレスは削除されます。メールはメールサービスのStrato（ドイツ）から送信されます。",
 					"Discordのキー配布ボットは、DiscordのID、渡したキー、/request の場合は確認したチャンネルを保存します。",
 				],
 			},

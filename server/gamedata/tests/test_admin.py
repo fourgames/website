@@ -757,6 +757,22 @@ def test_market_files(tmp_path, monkeypatch):
     run(tmp_path, steps, **ADMIN)
 
 
+def test_news_stats_file(tmp_path, monkeypatch):
+    path = tmp_path / "stats.json"
+    monkeypatch.setenv("NEWS_STATS_FILE", str(path))
+
+    async def steps(w):
+        cookie = await w.sign_in(back="/fb-dash")
+        response = await w.client.get("/gamedata/v1/admin/news", headers=w.page(cookie))
+        assert response.status == 404 and (await response.json())["error"] == "not_built"
+        path.write_text('{"confirmed": 3}')
+        response = await w.client.get("/gamedata/v1/admin/news", headers=w.page(cookie))
+        assert response.status == 200 and await response.json() == {"confirmed": 3}
+        response = await w.client.get("/gamedata/v1/admin/news", headers=w.page())
+        assert response.status == 401
+    run(tmp_path, steps, **ADMIN)
+
+
 def test_creators_file(tmp_path, monkeypatch):
     import gzip
     path = tmp_path / "creators.json.gz"

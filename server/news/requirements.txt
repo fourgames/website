@@ -1,0 +1,3 @@
+# The fan mailing list's dependencies, in its own venv (/srv/fourgames/news-venv). Mail goes out with
+# the standard library's smtplib and the list is SQLite, so aiohttp is all it needs.
+aiohttp>=3.9,<4

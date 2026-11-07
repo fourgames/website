@@ -107,6 +107,7 @@ export default {
 			status: "Server status",
 		},
 		community: { heading: "Community", discord: "Discord", youtube: "YouTube", steam: "Steam" },
+		news: { heading: "Get an email when a new game comes out", note: "Only news about our new games. You confirm by email first, and every email has a link to unsubscribe. {privacy}", privacy: "How we handle your email", label: "Email address", placeholder: "you@example.com", button: "Sign up", sending: "Signing up…", success: "Almost done: check your inbox and press the button in our email to confirm.", error: "That didn't work. Check the address and try again in a little while." },
 		copyright: "© {year} {name}. All rights reserved. Clover icon by {author} (CC BY 3.0).",
 	},
 	hero: {
@@ -418,6 +419,7 @@ export default {
 				title: "This website and Discord",
 				list: [
 					"The contact form sends us the email address you enter, your message and any PDF you attach. The site has no tracking cookies, analytics or ads; signing in here sets one cookie for 1 hour.",
+					"The mailing list in the footer keeps your email address and the site's language, only to email you when we release a new game. You confirm by email first; unconfirmed addresses are deleted after 7 days. Every email has an unsubscribe link, and unsubscribing deletes your address. The emails go out through our email host, Strato (Germany).",
 					"Our Discord key bot stores your Discord ID, the keys it gave you and, for /request, the channel it checked.",
 				],
 			},

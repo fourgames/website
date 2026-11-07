@@ -13,6 +13,10 @@ const year = __BUILD_YEAR__;
 
 <template>
 	<footer class="bg-footer text-footer-fg">
+		<div class="border-b border-white/10">
+			<NewsSignup />
+		</div>
+
 		<div class="container-page grid gap-10 pt-14 pb-12 sm:grid-cols-2 lg:grid-cols-4">
 			<nav v-for="column in FOOTER_COLUMNS" :key="column.id" :aria-labelledby="`footer-${column.id}`">
 				<h2 :id="`footer-${column.id}`" class="text-lg text-white">{{ t(column.heading) }}</h2>
@@ -33,10 +37,6 @@ const year = __BUILD_YEAR__;
 					</li>
 				</ul>
 			</nav>
-		</div>
-
-		<div class="border-t border-white/10">
-			<NewsSignup />
 		</div>
 
 		<div class="border-t border-white/10">

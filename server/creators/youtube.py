@@ -140,3 +140,22 @@ class YouTube:
             raise
         items = reply.get("items") or []
         return iso_time(((items[0].get("contentDetails") or {}).get("videoPublishedAt")) if items else None)
+
+    def uploads_since(self, channel_id: str, since: int) -> list[str]:
+        """The ids of the channel's uploads published after `since`, from its newest 50 (1 unit).
+        Raises HttpError as it came, like latest_upload."""
+        if not channel_id.startswith("UC"):
+            return []
+        try:
+            reply = self.http.get_json(f"{API}/playlistItems", {
+                "part": "contentDetails", "playlistId": "UU" + channel_id[2:], "maxResults": 50, "key": self.key}) or {}
+        except HttpError as error:
+            if error.status == 404:
+                return []
+            raise
+        out = []
+        for item in reply.get("items") or []:
+            cd = item.get("contentDetails") or {}
+            if cd.get("videoId") and (iso_time(cd.get("videoPublishedAt")) or 0) >= since:
+                out.append(cd["videoId"])
+        return out

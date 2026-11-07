@@ -281,7 +281,7 @@ function draw() {
     h("details.about", h("summary", "How this works"),
       h("p", "The server searches YouTube every hour for videos of Steam games (ours every week, then games with 30 to 50,000 reviews, those like ours first) and keeps the channels that made them. Emails come from the channel description, from pages they link to (Linktree, their website; the server follows those), or from YouTube's hidden View email button, which needs a captcha (the creator-emails skill)."),
       h("p", "Last upload is the channel's newest upload of any kind, read every 14 days. Type comes from the games they covered: indie variety plays 4+ different, mostly small games; one game is mostly one title. Genres are the Steam tags of those games."),
-      h("p", "Best for a game ranks creators by how much their genres overlap the game's tags (its first tags count most), how active they are, and size: 1k–300k subscribers is the sweet spot for a small studio. Anyone who already made a video of the game is first. Contact status (emailed, replied, made a video) comes with sending.")));
+      h("p", "Best for a game ranks creators by how much their genres overlap the game's tags (its first tags count most), how active they are, and size: 1k–300k subscribers is the sweet spot for a small studio. Anyone who already made a video of the game is first. Contact status (emailed, replied, made a video) comes with sending: for 60 days after an email, the server looks at the creator's new uploads every 3 days for videos of the game.")));
 }
 
 // Press, aggregators and trailer channels (server/creators/press.py), worldwide.
@@ -431,18 +431,21 @@ function outreachView(d) {
       card("Sent", num(sum("sent") + sum("replied") + sum("opted_out") + sum("bounced")), `${num(o.sent_24h)} in the last 24 hours`),
       card("Waiting", num(sum("queued")), "approved or draft, not sent yet"),
       card("Replied", num(sum("replied")), `${num(sum("opted_out"))} said no`),
+      card("Made a video", num(o.campaigns.reduce((a, c) => a + (c.videos?.creators || 0), 0)),
+        `${num(o.campaigns.reduce((a, c) => a + (c.videos?.views || 0), 0))} views so far`),
       card("Never email again", num(o.suppressed), "opted out or bounced")),
     ot.msg ? h("p.cr-alert", ot.msg) : null);
   add(healthBox(o));
   if (ot.open && ot.openData) { add(campaignView(d)); return wrap; }
   add(h("div.cr-listhead", h("b", "Campaigns"), h("button.btn.primary", { type: "button", onclick: () => { ot.form = ot.form ? null : newForm(d); draw(); } }, ot.form ? "Close" : "New campaign")));
   if (ot.form) wrap.append(formView(d, contacted));
-  wrap.append(o.campaigns.length ? h("div.cr-scroll", h("table.cr-table", h("thead", h("tr", h("th", "Campaign"), h("th", "Status"), h("th.cr-num", "Waiting"), h("th.cr-num", "Sent"), h("th.cr-num", "Replied"), h("th.cr-num", "No / bounced"), h("th", ""))),
-    h("tbody", ...o.campaigns.map(({ campaign: c, counts: n }) => h("tr.cr-main", { onclick: () => { ot.open = c.id; ot.openData = null; loadOutreach(); } },
+  wrap.append(o.campaigns.length ? h("div.cr-scroll", h("table.cr-table", h("thead", h("tr", h("th", "Campaign"), h("th", "Status"), h("th.cr-num", "Waiting"), h("th.cr-num", "Sent"), h("th.cr-num", "Replied"), h("th.cr-num", "Made a video"), h("th.cr-num", "No / bounced"), h("th", ""))),
+    h("tbody", ...o.campaigns.map(({ campaign: c, counts: n, videos: v }) => h("tr.cr-main", { onclick: () => { ot.open = c.id; ot.openData = null; loadOutreach(); } },
       h("td.cr-chan", h("b", c.game), h("div.cr-muted", `${c.audience === "press" ? "Press" : c.audience === "streamers" ? "Streamers" : "YouTubers"} · from ${c.from_name} · ${C.fmtDate(c.created_at)}`)),
       h("td", h("span.cr-type", { title: c.paused_reason || "" }, c.paused_reason ? "Paused by the safety brake" : CAMPAIGN_STATUS[c.status] || c.status)),
       h("td.cr-num", num(n.queued || 0)), h("td.cr-num", num((n.sent || 0) + (n.replied || 0) + (n.opted_out || 0) + (n.bounced || 0))),
-      h("td.cr-num", num(n.replied || 0)), h("td.cr-num", `${num(n.opted_out || 0)} / ${num(n.bounced || 0)}`),
+      h("td.cr-num", num(n.replied || 0)), h("td.cr-num", { title: v?.views ? `${num(v.views)} views` : "" }, num(v?.creators || 0)),
+      h("td.cr-num", `${num(n.opted_out || 0)} / ${num(n.bounced || 0)}`),
       h("td", h("span.cr-muted", "Open ›")))))))
     : h("p.empty", "No campaigns yet."));
   wrap.append(h("details.about", h("summary", "How this works"),
@@ -575,7 +578,7 @@ function translateView(f, people, leftover) {
 
 function campaignView(d) {
   const { h } = C;
-  const { campaign: c, counts: n, messages: msgs } = ot.openData;
+  const { campaign: c, counts: n, messages: msgs, videos: made } = ot.openData;
   const action = (label, status, primary) => h(primary ? "button.btn.primary" : "button.btn", { type: "button", disabled: ot.busy,
     onclick: () => outreachSend(`outreach/${c.id}/status`, { status }, status === "deleted" ? () => { ot.open = null; ot.openData = null; } : null) }, label);
   const preview = msgs.find((m) => m.id === ot.shownMsg) || msgs[0];
@@ -587,6 +590,7 @@ function campaignView(d) {
     c.paused_reason ? h("p.cr-alert", h("b", "Paused by the safety brake: "), c.paused_reason, " Fix the list or the message before resuming; resuming counts afresh.") : null,
     h("h3.cr-h", `${c.game} · ${c.audience} · ${CAMPAIGN_STATUS[c.status] || c.status}`),
     h("p.cr-muted", `From ${c.from_name} <${c.from_email}> · up to ${c.daily_limit} a day · ${Object.entries(n).map(([k, v]) => `${MSG_STATUS[k] || k} ${v}`).join(" · ")}`),
+    made?.creators ? h("p.cr-note", h("b", `${C.plural(made.creators, "creator")} made a video`), ` after the email: ${C.plural(made.videos, "video")}, ${num(made.views)} views so far.`) : null,
     preview ? h("div.cr-preview", h("div.cr-muted", `To ${preview.name || ""} <${preview.email}> · from ${c.from_name}`), h("div", h("b", preview.subject)),
       preview.html ? h("iframe.cr-frame", { title: "Email preview", sandbox: "", srcdoc: preview.html }) : h("pre.cr-body", preview.body),
       preview.html ? h("details", h("summary.cr-muted", "Plain-text version (sent inside the same email)"), h("pre.cr-body", preview.body)) : null) : null,
@@ -594,7 +598,9 @@ function campaignView(d) {
       h("tbody", ...msgs.map((m) => h("tr.cr-main", { class: m.id === preview?.id ? "is-open" : null, onclick: () => { ot.shownMsg = m.id; draw(); } },
         h("td.cr-chan", h("b", m.name || m.email), h("div.cr-muted", `${m.email}${m.language && m.language !== "en" ? ` · ${LANG_LABEL[m.language] || m.language}` : ""}`)),
         h("td.cr-genres", m.subject),
-        h("td", h("span.cr-type", { title: m.error || "" }, MSG_STATUS[m.status] || m.status)),
+        h("td", h("span.cr-type", { title: m.error || "" }, MSG_STATUS[m.status] || m.status),
+          ...(m.videos || []).map((v) => h("div", h("a.cr-made", { href: `https://www.youtube.com/watch?v=${v.id}`, target: "_blank", rel: "noopener", title: v.title || "", onclick: (e) => e.stopPropagation() },
+            `🎬 Made a video · ${num(v.views || 0)} views · ${C.fmtDate(v.published)}`)))),
         h("td.cr-muted", m.replied_at ? `replied ${C.fmtDate(m.replied_at)}` : m.sent_at ? C.fmtDateTime(m.sent_at) : "–"),
         h("td", m.status === "queued" ? h("button.cr-copy", { type: "button", onclick: (e) => { e.stopPropagation(); outreachSend(`outreach/messages/${m.id}/skip`, undefined); } }, "Leave out") : null)))))));
 }
@@ -605,6 +611,8 @@ const CSS = `
 .crv .cr-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 0 0 16px; }
 .crv .cr-card { background: var(--fb-card); border: 1px solid var(--fb-line); border-radius: 12px; padding: 10px 14px; text-align: left; font: inherit; color: var(--fb-ink); }
 .crv .cr-card.is-link { cursor: pointer; }
+.crv .cr-made { display: inline-block; margin-top: 4px; font-size: 0.8rem; font-weight: 650; color: var(--fb-good, #1a7f37); text-decoration: none; }
+.crv .cr-made:hover { text-decoration: underline; }
 .crv .cr-card.is-link:hover { background: var(--fb-hover); }
 .crv .cr-card-v { font-size: 1.5rem; font-weight: 700; color: var(--fb-title); font-variant-numeric: tabular-nums; }
 .crv .cr-card-l { font-weight: 600; font-size: 0.9rem; }

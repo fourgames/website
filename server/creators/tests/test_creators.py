@@ -111,8 +111,11 @@ class FakeYouTube:
             "v2": ("UCb", "frozen lake fishing gameplay", "20"),
             "v3": ("UCb", "unrelated vlog", "22"),
             "v4": ("UCc", "Frozen Lake Fishing #2", "20"),
+            "v5": ("UCd", "氷に穴を掘る #1", "20"),
+            "v6": ("UCd", "my cat", "22"),
         }
         self.quota_left = 10 ** 6
+        self.uploads = {}  # channel id -> [(video id, published)], newest first
 
     def __call__(self, url, headers, timeout):
         parts = urllib.parse.urlsplit(url)
@@ -136,7 +139,9 @@ class FakeYouTube:
         elif kind == "playlistItems":
             if q["playlistId"] == "UUb":
                 return 404, {}, b"{}"
-            body = {"items": [{"contentDetails": {"videoPublishedAt": "2026-11-03T08:00:00Z"}}]}
+            uploads = self.uploads.get("UC" + q["playlistId"][2:])
+            body = {"items": [{"contentDetails": {"videoId": v, "videoPublishedAt": at}} for v, at in uploads]
+                    if uploads else [{"contentDetails": {"videoPublishedAt": "2026-11-03T08:00:00Z"}}]}
         else:
             body = {"items": [{"id": c, "snippet": {"title": f"Channel {c}", "customUrl": f"@{c.lower()}",
                                                     "description": f"business: {c.lower()}@mail.com twitch.tv/{c}x",
@@ -340,3 +345,46 @@ def test_search_only_some_games(tmp_path, steam_db):
     assert again.run(spend_all=True)["searches"] == 0  # nothing due
     forced = make(tmp_path, steam_db, FakeYouTube())[0]
     assert forced.run(spend_all=True, only={2})["searches"] == 1  # searched again on request
+
+
+def test_emailed_creators_videos_are_found(tmp_path, steam_db):
+    from creators import coverage, outreach
+    fake = FakeYouTube()
+    fake.uploads = {"UCd": [("v6", "2026-11-04T08:00:00Z"), ("v5", "2026-11-03T08:00:00Z"),
+                            ("v1", "2026-10-01T08:00:00Z")]}  # v1: before the email
+    collector, store = make(tmp_path, steam_db, fake)
+    outreach.migrate(store)
+    store.db.execute("INSERT INTO youtube_channels (channel_id, title, emails, first_seen) VALUES ('UCd', 'D', '[\"d@x.se\"]', 0)")
+    store.db.execute("""INSERT INTO outreach_campaigns (id, appid, game, audience, from_name, from_email, subject, body,
+                        daily_limit, status, created_at) VALUES (1, 1, 'Our Ice Game', 'creators', 'D', 'd@f.se', 's', 'b', 5, 'approved', 0)""")
+    sent = int(NOW) - 5 * 86400
+    for mid, ch, status, at in ((1, "UCd", "sent", sent), (2, "UCa", "queued", None), (3, "UCb", "sent", int(NOW) - 90 * 86400)):
+        store.db.execute("""INSERT INTO outreach_messages (id, campaign_id, target_kind, target_id, email, subject, body,
+                            status, queued_at, sent_at, game_name) VALUES (?, 1, 'youtube', ?, ?, 's', 'b', ?, 0, ?, ?)""",
+                         (mid, ch, f"{ch}@x.se", status, at, "氷に穴を掘る" if ch == "UCd" else None))
+    store.db.commit()
+    # Only UCd: UCa wasn't emailed yet, and UCb's email is older than the watch.
+    assert [w["channel_id"] for w in coverage.due(store, NOW)] == ["UCd"]
+    summary = collector.run(spend_all=True)
+    assert summary["emailed"] == 1 and summary["made_video"] == 1
+    playlist = [q for kind, q in fake.calls if kind == "playlistItems" and q.get("maxResults") == "50"]
+    assert playlist == [playlist[0]] and playlist[0]["playlistId"] == "UUd"
+    # The fake publishes every video on 2026-11-01, so move v5 after the email like the playlist said.
+    store.db.execute("UPDATE youtube_videos SET published = ? WHERE video_id = 'v5'", (sent + 86400,))
+    found = coverage.videos_by_message(store, 1)
+    assert list(found) == [1] and [v["id"] for v in found[1]] == ["v5"]
+    assert coverage.totals(store, 1) == {"creators": 1, "videos": 1, "views": 1234}
+    assert outreach.summary(store, 1)["videos"]["creators"] == 1
+    assert [m["videos"] for m in outreach.messages(store, 1) if m["id"] == 1][0][0]["title"] == "氷に穴を掘る #1"
+    assert coverage.due(store, NOW) == []  # checked; again in 3 days
+    assert len(coverage.due(store, NOW + 3 * 86400 + 1)) == 1
+
+
+def test_is_about_names_or_steam_link():
+    from creators.coverage import is_about
+    v = lambda title, desc="", cat="20": {"snippet": {"title": title, "description": desc, "categoryId": cat}}  # noqa: E731
+    assert is_about(v("Digging A Hole In Ice With A Chainsaw!"), 3958210, ["Digging A Hole In Ice With A Chainsaw"])
+    assert is_about(v("チェーンソーで氷に穴 part 1"), 3958210, ["Digging", "チェーンソーで氷に穴"])
+    assert is_about(v("new game", "https://store.steampowered.com/app/3958210/Digging/", "22"), 3958210, ["X"])
+    assert not is_about(v("new game", "https://store.steampowered.com/app/39582100/", "22"), 3958210, ["X"])
+    assert not is_about(v("ice fishing"), 3958210, ["Digging A Hole In Ice With A Chainsaw"])

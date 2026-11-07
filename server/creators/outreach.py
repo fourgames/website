@@ -29,6 +29,7 @@ import re
 import time
 from typing import Any
 
+from . import coverage
 from .db import Store
 from .dmarc import summary as dmarc_summary
 
@@ -161,16 +162,25 @@ class OutreachError(ValueError):
 
 def open_store(path: str) -> Store:
     store = Store(path)
+    migrate(store)
+    return store
+
+
+def migrate(store: Store) -> None:
+    """The outreach tables, with the columns added after the first databases were made."""
     store.db.executescript(SCHEMA)
     columns = {r[1] for r in store.db.execute("PRAGMA table_info(outreach_campaigns)")}
-    if "language" not in {r[1] for r in store.db.execute("PRAGMA table_info(outreach_messages)")}:
+    message_columns = {r[1] for r in store.db.execute("PRAGMA table_info(outreach_messages)")}
+    if "language" not in message_columns:
         store.db.execute("ALTER TABLE outreach_messages ADD COLUMN language TEXT")  # the language it was written in
+    if "game_name" not in message_columns:  # the game's name as written in this email (localized), to spot their video
+        store.db.execute("ALTER TABLE outreach_messages ADD COLUMN game_name TEXT")
+    coverage.ensure(store)
     for name, kind in (("gif", "INTEGER NOT NULL DEFAULT 0"),   # 1 = also the HTML version with the game's GIF
                        ("paused_reason", "TEXT"),               # why the safety brake paused it
                        ("resumed_at", "INTEGER")):              # the brake only counts sends after this
         if name not in columns:  # added after the first databases were made
             store.db.execute(f"ALTER TABLE outreach_campaigns ADD COLUMN {name} {kind}")
-    return store
 
 
 # The safety brake: a campaign pauses itself when too many of its emails bounce (a stale or bad list)
@@ -365,10 +375,10 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
                 fields = {**fields, "game": t.get("game") or game}
             store.db.execute(
                 """INSERT INTO outreach_messages (campaign_id, target_kind, target_id, name, email, subject, body,
-                                                  status, queued_at, language)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)""",
+                                                  status, queued_at, language, game_name)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?)""",
                 (campaign, "press" if audience == "press" else "youtube", who["id"], who["name"], who["email"],
-                 render(sub, fields), with_opt_out(render(bod, fields), opt), int(now), lang))
+                 render(sub, fields), with_opt_out(render(bod, fields), opt), int(now), lang, fields["game"]))
     return {"id": campaign, "skipped": skipped, **summary(store, campaign)}
 
 
@@ -378,7 +388,7 @@ def summary(store: Store, campaign: int) -> dict[str, Any]:
         raise OutreachError("no such campaign")
     counts = dict(store.db.execute("SELECT status, COUNT(*) FROM outreach_messages WHERE campaign_id = ? GROUP BY status",
                                    (campaign,)).fetchall())
-    return {"campaign": dict(c), "counts": counts}
+    return {"campaign": dict(c), "counts": counts, "videos": coverage.totals(store, campaign)}
 
 
 def campaigns(store: Store) -> list[dict[str, Any]]:
@@ -386,7 +396,9 @@ def campaigns(store: Store) -> list[dict[str, Any]]:
 
 
 def messages(store: Store, campaign: int, limit: int = 600) -> list[dict[str, Any]]:
-    return [dict(r) for r in store.db.execute(
+    """The campaign's emails, each with the videos of the game its creator made after it (coverage.py)."""
+    videos = coverage.videos_by_message(store, campaign)
+    return [{**dict(r), "videos": videos.get(r["id"], [])} for r in store.db.execute(
         """SELECT id, target_kind, target_id, name, email, subject, body, status, queued_at, sent_at, replied_at, error, language
            FROM outreach_messages WHERE campaign_id = ? ORDER BY id LIMIT ?""", (campaign, limit))]
 

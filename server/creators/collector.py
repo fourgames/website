@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo
 
 from steamdata.net import Http, HttpError
 
+from . import coverage
 from . import games as games_mod
 from .config import USER_AGENT, Config
 from .db import Store
@@ -43,7 +44,8 @@ class Collector:
         self.store = store
         self.youtube = youtube or YouTube(Http(USER_AGENT), config.youtube_api_key)
         self.clock = clock
-        self.summary = {"searches": 0, "videos": 0, "new_videos": 0, "channels": 0, "uploads": 0, "units": 0}
+        self.summary = {"searches": 0, "videos": 0, "new_videos": 0, "channels": 0, "uploads": 0, "emailed": 0,
+                        "made_video": 0, "units": 0}
 
     def allowed(self, spend_all: bool) -> tuple[str, int]:
         day, part = quota_day(self.clock())
@@ -63,6 +65,7 @@ class Collector:
             return self.summary
         self.day, self.spent, self.limit = day, spent, allowed
         try:
+            self._check_emailed()
             self._searches(max_searches)
             self._refresh_channels(stale=True)
             self._check_uploads()
@@ -73,7 +76,8 @@ class Collector:
             # Network trouble or a 5xx: the next hourly run carries on.
             log.warning("YouTube error, stopping this run: %s", error)
         log.info("ran: %(searches)d searches, %(videos)d videos kept (%(new_videos)d new), "
-                 "%(channels)d channels read, %(uploads)d newest uploads read, %(units)d units", self.summary)
+                 "%(channels)d channels read, %(uploads)d newest uploads read, %(emailed)d emailed channels "
+                 "looked at (%(made_video)d new videos of the game), %(units)d units", self.summary)
         return self.summary
 
     def _pay(self, units: int) -> None:
@@ -119,6 +123,34 @@ class Collector:
         self.summary["videos"] += len(rows)
         self.summary["new_videos"] += new
         log.debug("%s (%d): %d results, %d kept, %d new", game.name, game.appid, len(ids), len(rows), new)
+
+    def _check_emailed(self) -> None:
+        """Channels we emailed lately: any new upload about the game? (coverage.py). First in a run, since
+        this is how outreach is judged; 1 unit a channel, 2 when it uploaded since the email."""
+        now = int(self.clock())
+        refused = 0
+        for watch in coverage.due(self.store, now):
+            if not self._can(2 * LIST_COST):
+                return
+            try:
+                ids = self.youtube.uploads_since(watch["channel_id"], watch["since"])
+                refused = 0
+            except HttpError as error:
+                if error.status != 403:
+                    raise
+                refused += 1
+                if refused >= 3:
+                    raise QuotaExceeded(str(error)) from None
+                ids = []
+            self._pay(LIST_COST)
+            if ids:
+                videos = self.youtube.videos(ids)
+                self._pay(LIST_COST * math.ceil(len(ids) / 50))
+                rows = [video_row(watch["appid"], v) for v in videos
+                        if coverage.is_about(v, watch["appid"], watch["names"])]
+                self.summary["made_video"] += self.store.save_videos(rows, now)
+            coverage.checked(self.store, watch["channel_id"], watch["appid"], now)
+            self.summary["emailed"] += 1
 
     def _check_uploads(self) -> None:
         """Each channel's newest upload of any kind (is it still active?), every UPLOAD_CHECK_DAYS, 1 unit

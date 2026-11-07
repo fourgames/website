@@ -165,7 +165,8 @@ def landing_page(game_name: str, token: str, minutes_left: int) -> web.Response:
     minutes = "1 minute" if minutes_left == 1 else f"{minutes_left} minutes"
     body = (
         f'<h1>Get your {html.escape(game_name)} key</h1>'
-        '<p class="lead">Keys are for YouTubers and streamers. Sign in with Discord so we can see your channel.</p>'
+        '<p class="lead">Sign in with Discord to show us your YouTube or Twitch channel. Bigger channels get '
+        'their key right away, and our team looks at the rest.</p>'
         f'<a class="button" href="login?state={html.escape(token, quote=True)}">{DISCORD_MARK}'
         'Continue with Discord</a>'
         '<p class="small">We only see your channel and username, never your password or messages. '

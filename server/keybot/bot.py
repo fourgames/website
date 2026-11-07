@@ -762,9 +762,10 @@ async def request_creator(interaction: discord.Interaction, game: str) -> None:
     view.add_item(discord.ui.Button(label="Verify your channel", style=discord.ButtonStyle.link,
                                     url=f"{bot.config.public_base_url}/verify?state={token}"))
     await interaction.response.send_message(
-        f"Keys for **{escape_markdown(row['name'])}** are for YouTubers and streamers. Press the button and "
-        "sign in with Discord so we can see your channel. Your channel needs to be linked in Discord first "
-        "(User Settings → Connections). Works for 15 minutes.",
+        f"Press the button and sign in with Discord to show us your YouTube or Twitch channel. Bigger channels "
+        f"get their **{escape_markdown(row['name'])}** key right away, and our team looks at the rest. Link your "
+        "channel in Discord first (User Settings → Connections). Works for 15 minutes.\n"
+        "Writing for a site or magazine? Use `/request type:press` instead.",
         view=view, ephemeral=True)
 
 

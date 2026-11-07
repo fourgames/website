@@ -76,6 +76,12 @@ api.fourgames.se {
 	}
 }
 
+# The key bot's creator verification (server/keybot) on a name creators can trust at a glance:
+# the "Verify your channel" button links here once PUBLIC_BASE_URL=https://verify.fourgames.se.
+verify.fourgames.se {
+	reverse_proxy localhost:8100
+}
+
 # The public status page (server/status-page): plain files, the checks run in the visitor's browser.
 status.fourgames.se {
 	root * /srv/fourgames/own/server/status-page

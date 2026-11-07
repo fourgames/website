@@ -2,7 +2,8 @@
 
 Hands out Steam keys in the Four Games Discord. It runs on the server as `keybot.service`: one
 Python process with the Discord bot and a small web server for creator verification on
-`localhost:8100`, behind Caddy at `https://api.fourgames.se/keybot/`.
+`localhost:8100`, behind Caddy at `https://verify.fourgames.se` (and, as before,
+`https://api.fourgames.se/keybot/`).
 
 There are three commands: `/claim` and `/request` for everyone, `/keys …` for the team.
 
@@ -10,7 +11,7 @@ There are three commands: `/claim` and `/request` for everyone, `/keys …` for 
 | --- | --- | --- |
 | YouTube members (the **YouTube Member** role from Discord's YouTube integration, or a game's own roles) | `/claim game:` | The key shows up in the reply, which only they can see, with a Steam link that fills it in (`store.steampowered.com/account/registerkey?key=…`). A copy goes by DM as a receipt; if their DMs are closed they still get the key, and the reply says so. One key per game per person by default, for good: lapsing and rejoining doesn't give another. Non-members get a link to [join](https://www.youtube.com/@FourGamesAB/join). |
 | Everyone | `/claim` (no game) | Only to them: the public games with keys left (keys per person, keys left, which roles can claim them), then their own keys with a Steam link each. Pages of 10 lines, and a menu of the games they can claim right now. |
-| Content creators | `/request game: type:creator` | A one-time **Verify your channel** link (15 minutes). They sign in with Discord, which shows us their *verified* YouTube and Twitch connections. A YouTube channel with 1,000+ subscribers and an upload in the last 60 days, or a Twitch channel with 500+ followers, gets the key by DM at once; anything else goes to the admin channel. |
+| Content creators | `/request game: type:creator` | A one-time **Verify your channel** link (15 minutes). It opens a Four Games page that says what Discord will and won't show us, then *Continue with Discord* goes to Discord's sign-in, which shows us their *verified* YouTube and Twitch connections. A YouTube channel with 1,000+ subscribers and an upload in the last 60 days, or a Twitch channel with 500+ followers, gets the key by DM at once; anything else goes to the admin channel. |
 | Press | `/request game: type:press` | Opens a short form (outlet and work email, both required), then goes to the admin channel. The email isn't checked yet; once the company mail exists, the bot could send a confirmation link first. |
 | The team (Manage Server, or the `ADMIN_ROLE_ID` role) | `/keys status [game:] [count:]` | Per game: keys left, given out by reason (member, creator, press, manual), open requests, settings and Steam app id; then the latest handouts (10 by default, up to 25 with `count:`): who, which game, why, and the key's id (never the key). With `game:`, only that game. |
 | | `/keys add file: game:` / `/keys add file: name: [steam_app_id:]` | Adds keys from a .txt (one per line) or .csv (finds the key column itself, e.g. a Steamworks download) to a game the bot has (`game:`), or adds a new game with them (`name:`, and its Steam app id if you have it). Skips keys it already has and says how many it added. |
@@ -68,7 +69,7 @@ can't get the same key or go over the limit. The logs show key ids, never keys. 
 older version is updated in place when the bot starts (new settings get their defaults; nothing is
 lost).
 
-The code: `bot.py` (commands, buttons, handouts), `web.py` (the verify login), `db.py`,
+The code: `bot.py` (commands, buttons, handouts), `web.py` (the verify pages and login), `db.py`,
 `admin.py` (the command line for the server), `lookups.py` (YouTube and Twitch), `eligibility.py`
 (the thresholds), `keyfile.py`, `state.py` (the signed verify links), `config.py`. Settings are in
 `keybot.env.example`.
@@ -84,7 +85,10 @@ own account:
    Bot** off, so only you can add it to servers. Leave all three *Privileged Gateway Intents* off:
    the bot doesn't need them (only `/keys grant role:` does, see above).
 3. **OAuth2**: *Reset Secret* and copy it (`DISCORD_CLIENT_SECRET`). Under **Redirects**, add
-   `https://api.fourgames.se/keybot/callback` and save.
+   `https://verify.fourgames.se/callback` (and `https://api.fourgames.se/keybot/callback`, the
+   old address) and save. Under **General Information**, also fill in the description, the
+   **Privacy Policy URL** (`https://fourgames.se/privacy`) and the **Terms of Service URL**: Discord
+   shows them on the sign-in screen creators see, which makes it look much less like a stranger's app.
 4. **Invite it** with no server-wide permissions (the slash commands and DMs don't need any):
 
    ```
@@ -100,6 +104,26 @@ own account:
    doesn't all have Manage Server.
 6. `/keys` is hidden from everyone without Manage Server. If the team uses `ADMIN_ROLE_ID` instead,
    *Server Settings → Integrations → Four Games → /keys* lets that role see it. The bot checks either way.
+
+### A trusted link
+
+Creators are asked to sign in with Discord from a link in a bot message, which can look like
+phishing. So the link goes to `verify.fourgames.se` (not `api.fourgames.se/keybot/verify?…`), and it
+opens a page in the site's look first: the game, what Discord will show us (their username and
+connected channels) and what it never shows (password, email, messages, servers), that we give the
+access back right away, and a link to the privacy policy. Only *Continue with Discord* goes on to
+Discord. The pages after the sign-in (verified, sent for review, problems) have the same look.
+
+To move an existing setup from `api.fourgames.se/keybot` to `verify.fourgames.se`:
+
+1. Strato → *Domänadministration* → `verify` → **A record** `82.165.18.23`.
+2. Discord Developer Portal → OAuth2 → Redirects: add `https://verify.fourgames.se/callback`.
+3. On the server: `cd /srv/fourgames/own && git pull`, `sudo cp server/Caddyfile /etc/caddy/Caddyfile
+   && sudo systemctl reload caddy`, then `PUBLIC_BASE_URL=https://verify.fourgames.se` in
+   `/etc/fourgames/keybot.env` and `sudo systemctl restart keybot`.
+
+`curl https://verify.fourgames.se/health` should say `{"ok": true, …}`. Until step 3, the bot keeps
+using the old address, and the new pages show there too.
 
 ## 2. On the server
 
@@ -131,7 +155,7 @@ api.fourgames.se {
 
 The bot answers with or without the `/keybot` prefix, so `handle_path` works too. Then
 `sudo cp /srv/fourgames/own/server/Caddyfile /etc/caddy/Caddyfile && sudo systemctl reload caddy`,
-and `curl https://api.fourgames.se/keybot/health` should say `{"ok": true, …}`.
+and `curl https://verify.fourgames.se/health` (or `https://api.fourgames.se/keybot/health`) should say `{"ok": true, …}`.
 
 ## 3. Keys from Steamworks
 

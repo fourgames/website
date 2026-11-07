@@ -97,7 +97,7 @@ then `gh workflow enable` both workflows and start them (*Run workflow*). The Sa
 
 ## 5. Subdomains with HTTPS
 
-In Strato's *Domänadministration*, for each of `discord`, `youtube`, `steam`, `github`, `press`, `api` and
+In Strato's *Domänadministration*, for each of `discord`, `youtube`, `steam`, `github`, `press`, `api`, `verify` and
 `status`: remove the redirect and set an **A record** to the server's IP (`www` stays on GitHub Pages;
 `join` isn't used). Then:
 

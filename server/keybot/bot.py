@@ -763,9 +763,10 @@ async def request_creator(interaction: discord.Interaction, game: str) -> None:
     view.add_item(discord.ui.Button(label="Verify your channel", style=discord.ButtonStyle.link,
                                     url=f"{bot.config.public_base_url}/verify?state={token}"))
     await interaction.response.send_message(
-        f"To get a key for **{escape_markdown(row['name'])}**, sign in with Discord so we can see your "
-        "verified YouTube or Twitch connection (add it under User Settings → Connections first). "
-        "The link works once, for 15 minutes.",
+        f"To get a key for **{escape_markdown(row['name'])}**, we check the size of the YouTube or Twitch "
+        "channel connected to your Discord (add it under User Settings → Connections first).\n"
+        "The button opens a page that explains it, then Discord's own sign-in. We never see your password, "
+        "messages or servers, and can't post as you. The link works once, for 15 minutes.",
         view=view, ephemeral=True)
 
 

@@ -230,7 +230,7 @@ def test_request_creator_sends_the_verify_link(bot):
     interaction = fake_interaction(bot, FakeUser(5))
     asyncio.run(request_key.callback(interaction, game="Hidden Ones", kind=kind("creator")))
     (text, kwargs), = interaction.response.sent
-    assert "sign in with Discord" in text and kwargs["ephemeral"]
+    assert "never see your password" in text and kwargs["ephemeral"]
     button, = kwargs["view"].children
     assert button.url.startswith("https://example.test/keybot/verify?state=")
     assert bot.store.open_request_count(5) == 0

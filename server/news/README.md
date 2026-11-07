@@ -1,6 +1,6 @@
 # The fan mailing list
 
-A list of fans' email addresses that Four Games owns, so we can tell people about a new game even if
+A list of fans' email addresses that Four Games owns, so we can tell people about new games, big updates and sales (a few emails a year at most) even if
 YouTube, Steam or Discord ever cut us off. People sign up in the footer of fourgames.se. It runs on
 the server as `news.service`: one small Python web server (aiohttp) on `localhost:8104`, behind Caddy
 at `https://api.fourgames.se/news`, with the list in one SQLite file, `/srv/fourgames/news/news.db`.

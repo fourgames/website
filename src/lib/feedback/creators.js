@@ -376,17 +376,18 @@ function pressView(d) {
 // Outreach: drafts, approvals and status of the emails (server/creators/outreach.py and send.py,
 // through the game-data server's /admin/outreach routes). Nothing is sent before a batch is approved.
 const TEMPLATES = {
+  // One thing to do (get the key from the bot), everything else is just information. Plain text by default.
   creators: {
     subject: "{game} for your channel?",
-    body: "Hi {name},\n\nI'm Danny, a 23-year-old solo developer from Sweden, and I made a game called {game}. [What you do in it, in one simple sentence.] You played {their_game}, so I think you might like it.\n\nI have no budget for paid marketing, so I'm writing to people myself.\n\nSteam: {steam}\nFree key: join https://discord.fourgames.se and type /request, the bot sends it right away\n\nThere's a press kit with screenshots and the trailer on fourgames.se too.\n\nThanks,\nDanny",
+    body: "Hi {name},\n\nI'm Danny, a 23-year-old solo developer from Sweden. I made {game}: [what you do in it, in one simple sentence]. You played {their_game}, so I think you might like it.\n\nSteam: {steam}\n\nI have no budget for paid marketing, so I'm writing to creators myself. For a free key, join https://discord.fourgames.se and type /request.\n\nThanks,\nDanny",
   },
   streamers: {
     subject: "{game} for your stream?",
-    body: "Hi {name},\n\nI'm Danny, a 23-year-old solo developer from Sweden, and I made a game called {game}. [What you do in it, in one simple sentence.] You've played {their_game}, so I think it could be fun on stream.\n\nI have no budget for paid marketing, so I'm writing to people myself.\n\nSteam: {steam}\nFree key: join https://discord.fourgames.se and type /request, the bot sends it right away\n\nThanks,\nDanny",
+    body: "Hi {name},\n\nI'm Danny, a 23-year-old solo developer from Sweden. I made {game}: [what you do in it, in one simple sentence]. You've played {their_game}, so I think it could be fun on stream.\n\nSteam: {steam}\n\nI have no budget for paid marketing, so I'm writing to streamers myself. For a free key, join https://discord.fourgames.se and type /request.\n\nThanks,\nDanny",
   },
   press: {
     subject: "{game}: [the news, in a few words]",
-    body: "Hi {name} team,\n\n[The news in one simple sentence, with the date.]\n\nI'm Danny, a 23-year-old solo developer from Sweden. I made {game}: [what you do in it, in one simple sentence].\n\nI have no budget for paid marketing, so I'm reaching out myself.\n\nSteam: {steam}\nPress kit (screenshots, trailer, logo): {press}\n\nI'm happy to send a key for coverage.\n\nThanks,\nDanny",
+    body: "Hi {name} team,\n\n[The news in one simple sentence, with the date.]\n\nI'm Danny, a 23-year-old solo developer from Sweden. I made {game}: [what you do in it, in one simple sentence].\n\nSteam: {steam}\nPress kit (screenshots, trailer, logo): {press}\n\nI have no budget for paid marketing, so I'm reaching out myself. For a key, join https://discord.fourgames.se and type /request type:press.\n\nThanks,\nDanny",
   },
 };
 const MSG_STATUS = { queued: "Waiting", sent: "Sent", replied: "Replied", opted_out: "Said no", bounced: "Bounced", failed: "Failed", skipped: "Skipped" };

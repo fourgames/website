@@ -21,9 +21,9 @@ def main() -> None:
         logging.getLogger("gamedata").warning(
             "GAMEDATA_APP_IDS is empty: every session start is refused until a game's app id is added")
     # access_log=None: aiohttp's access log would show every IP.
-    # shutdown_timeout=2: on a restart aiohttp otherwise waits up to 60 s for open connections
-    # (an idle dashboard tab is enough), and the port answers nothing meanwhile, which the
-    # uptime check counts as down.
+    # shutdown_timeout=2: on a restart aiohttp otherwise waits up to 60 s for requests still being
+    # worked on (a slow dashboard call, say), and the port answers nothing meanwhile, which the
+    # uptime check counts as down. A request still running after 2 s is cut off.
     web.run_app(make_app(config), host=config.host, port=config.port, access_log=None,
                 shutdown_timeout=2,
                 print=lambda *_: logging.getLogger("gamedata").info(

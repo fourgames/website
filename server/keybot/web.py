@@ -181,7 +181,7 @@ def landing_page(game_name: str, token: str, minutes_left: int) -> web.Response:
         'Here is exactly what that means:</p>'
         '<h2>We see</h2><ul class="yes">'
         '<li>Your Discord username</li>'
-        '<li>The YouTube or Twitch channel you connected and verified in Discord, so we can check its size</li>'
+        '<li>Your YouTube or Twitch channel, if it\'s linked to your Discord</li>'
         '</ul>'
         '<h2>We never see</h2><ul class="no">'
         '<li>Your password or email address</li>'
@@ -193,8 +193,8 @@ def landing_page(game_name: str, token: str, minutes_left: int) -> web.Response:
         '<a href="https://fourgames.se/privacy">privacy policy</a> says.</div>'
         f'<a class="button" href="login?state={html.escape(token, quote=True)}">{DISCORD_MARK}'
         'Continue with Discord</a>'
-        f'<p class="small">This link works once and expires in {minutes}. No YouTube or Twitch connected yet? '
-        'Add it in Discord under User Settings → Connections first.</p>'
+        f'<p class="small">This link works once and expires in {minutes}. Channel not linked yet? '
+        'Link it in Discord under User Settings → Connections first.</p>'
     )
     return render("Verify your channel", body)
 

@@ -101,4 +101,6 @@ def test_result_pages_show_how_it_went():
     assert 'class="status success"' in page("Verified — check your DMs", "x").text
     assert 'class="status pending"' in page("Sent for review", "x").text
     assert 'class="status info"' in page("Cancelled", "x").text
+    assert 'class="status pending"' in page("Verified, but we couldn't DM you", "x").text
+    assert 'class="status info"' in page("This link has expired", "x", 400).text
     assert 'class="status problem"' in page("Something went wrong", "x", 500).text

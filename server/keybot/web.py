@@ -141,8 +141,10 @@ def render(title: str, body: str, status: int = 200) -> web.Response:
 
 # Results from KeyBot.creator_verified and this module, by how they went. Anything else is a problem.
 SUCCESS_TITLES = {"Verified — check your DMs", "You already have a key"}
-PENDING_TITLES = {"Sent for review", "Already waiting for review"}
-INFO_TITLES = {"Cancelled"}
+# Amber: waiting, or one step for them to fix. Blue: nothing wrong, just start again.
+PENDING_TITLES = {"Sent for review", "Already waiting for review", "Verified, but we couldn't DM you",
+                  "Too many open requests"}
+INFO_TITLES = {"Cancelled", "This link has expired", "This link was already used", "This link doesn't work"}
 
 
 def tone_for(title: str) -> str:

@@ -378,15 +378,15 @@ function pressView(d) {
 const TEMPLATES = {
   creators: {
     subject: "{game} for your channel?",
-    body: "Hi {name},\n\nI made a game called {game}. [What you do in it, in one simple sentence.] You played {their_game}, so I think you might like it.\n\nSteam: {steam}\nFree key: join https://discord.fourgames.se and type /request, the bot sends it right away\n\nThere's a press kit with screenshots and the trailer on fourgames.se too.\n\nThanks,\nDanny",
+    body: "Hi {name},\n\nI'm Danny, a 23-year-old solo developer from Sweden, and I made a game called {game}. [What you do in it, in one simple sentence.] You played {their_game}, so I think you might like it.\n\nI have no budget for paid marketing, so I'm writing to people myself.\n\nSteam: {steam}\nFree key: join https://discord.fourgames.se and type /request, the bot sends it right away\n\nThere's a press kit with screenshots and the trailer on fourgames.se too.\n\nThanks,\nDanny",
   },
   streamers: {
     subject: "{game} for your stream?",
-    body: "Hi {name},\n\nI made a game called {game}. [What you do in it, in one simple sentence.] You've played {their_game}, so I think it could be fun on stream.\n\nSteam: {steam}\nFree key: join https://discord.fourgames.se and type /request, the bot sends it right away\n\nThanks,\nDanny",
+    body: "Hi {name},\n\nI'm Danny, a 23-year-old solo developer from Sweden, and I made a game called {game}. [What you do in it, in one simple sentence.] You've played {their_game}, so I think it could be fun on stream.\n\nI have no budget for paid marketing, so I'm writing to people myself.\n\nSteam: {steam}\nFree key: join https://discord.fourgames.se and type /request, the bot sends it right away\n\nThanks,\nDanny",
   },
   press: {
     subject: "{game}: [the news, in a few words]",
-    body: "Hi {name} team,\n\n[The news in one simple sentence, with the date.]\n\nI made {game}: [what you do in it, in one simple sentence].\n\nSteam: {steam}\nPress kit (screenshots, trailer, logo): {press}\n\nI'm happy to send a key for coverage.\n\nThanks,\nDanny",
+    body: "Hi {name} team,\n\n[The news in one simple sentence, with the date.]\n\nI'm Danny, a 23-year-old solo developer from Sweden. I made {game}: [what you do in it, in one simple sentence].\n\nI have no budget for paid marketing, so I'm reaching out myself.\n\nSteam: {steam}\nPress kit (screenshots, trailer, logo): {press}\n\nI'm happy to send a key for coverage.\n\nThanks,\nDanny",
   },
 };
 const MSG_STATUS = { queued: "Waiting", sent: "Sent", replied: "Replied", opted_out: "Said no", bounced: "Bounced", failed: "Failed", skipped: "Skipped" };

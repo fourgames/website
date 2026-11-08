@@ -68,6 +68,11 @@ CREATE TABLE IF NOT EXISTS quota (
     exhausted  INTEGER NOT NULL DEFAULT 0       -- YouTube said the quota is used up
 );
 
+-- When YouTube said "You've reached today's access limit" for hidden emails (the yt-email-unlock skill).
+CREATE TABLE IF NOT EXISTS reveal_limits (
+    hit_at      INTEGER PRIMARY KEY
+);
+
 -- Web pages a channel links to (its description and its About panel's links), followed for emails.
 CREATE TABLE IF NOT EXISTS channel_links (
     channel_id  TEXT NOT NULL,

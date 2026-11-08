@@ -4,6 +4,8 @@
 //
 // From creators.json (export.py): a creator's hidden email was looked at when it has ra (that time),
 // found when one of its emails came from "revealed". Days are the viewer's local days.
+// reveal_limit {hit, ready}: YouTube's daily reveal limit was last hit then, so the strip counts down
+// to ready instead of offering a round.
 
 
 export function dayKey(t) {
@@ -21,6 +23,33 @@ export function streaks(days, now) {
   let current = 0;
   for (let k = days.has(today) ? today : shift(today, -1); days.has(k); k = shift(k, -1)) current++;
   return { current, best, today: days.has(today) };
+}
+
+// "3h 05m" / "12m" until t.
+export function untilText(t, now) {
+  const m = Math.max(0, Math.ceil((t - now) / 60));
+  return m >= 60 ? `${Math.floor(m / 60)}h ${String(m % 60).padStart(2, "0")}m` : `${m}m`;
+}
+
+const clock = (t, opts) => new Date(t * 1000).toLocaleString(undefined, { hour: "2-digit", minute: "2-digit", hourCycle: "h23", ...opts });
+
+// The countdown to when YouTube should allow reveals again; it ticks while it's on the page.
+function limitNote(h, limit) {
+  const today = dayKey(limit.ready) === dayKey(Date.now() / 1000);
+  const left = h("b.hn-big.hn-wait");
+  const el = h("div.hn-limit", h("span.hn-icon", "⏳"), left,
+    h("div", h("div", "until YouTube lets you reveal emails again"),
+      h("div.cr-muted", `Daily limit hit ${clock(limit.hit, { weekday: "short" })} · next round ${today ? "today " + clock(limit.ready) : clock(limit.ready, { weekday: "long" })}`)));
+  let seen = false;
+  const tick = () => {
+    if (el.isConnected) seen = true; else if (seen) return clearInterval(timer);
+    const now = Date.now() / 1000;
+    if (now < limit.ready) left.textContent = untilText(limit.ready, now);
+    else { clearInterval(timer); el.replaceChildren(h("span.hn-icon", "✅"), h("b", "The limit should be over: you can do a round again.")); }
+  };
+  const timer = setInterval(tick, 15000);
+  tick();
+  return el;
 }
 
 export function huntStats(all, now) {
@@ -42,6 +71,7 @@ export function huntStrip(d, C) {
   const command = "/yt-email-unlock 10";
 
   const { current, best, today: doneToday } = s.streak;
+  const limit = d.reveal_limit && d.reveal_limit.ready > now ? d.reveal_limit : null;
 
   return h("div.hn",
     h("div.hn-top",
@@ -50,8 +80,9 @@ export function huntStrip(d, C) {
         h("div.hn-bar", h("div.hn-fill", { style: `width:${(s.looked / total) * 100}%` }))),
       h("div.hn-streak", h("b.hn-big", { class: current ? "is-hot" : null }, current ? `🔥 ${current}` : "0"),
         h("div", h("div.cr-muted", `${current === 1 ? "day" : "days"} in a row · best ${best}`),
-          current && !doneToday ? h("div.hn-keep", "Do a round today to keep it") : null)),
-      s.left ? h("button.btn", { type: "button", title: "Paste it into Claude Code to start a round of 10", onclick: (e) => C.copy(command, e.currentTarget) }, `Copy ${command}`) : null));
+          current && !doneToday && !limit ? h("div.hn-keep", "Do a round today to keep it") : null)),
+      s.left && !limit ? h("button.btn", { type: "button", title: "Paste it into Claude Code to start a round of 10", onclick: (e) => C.copy(command, e.currentTarget) }, `Copy ${command}`) : null),
+    limit ? limitNote(h, limit) : null);
 }
 
 export const HUNT_CSS = `
@@ -65,4 +96,7 @@ export const HUNT_CSS = `
 .crv .hn-bar { height: 10px; border-radius: 999px; background: var(--fb-card-2); border: 1px solid var(--fb-line); overflow: hidden; margin-top: 6px; }
 .crv .hn-fill { height: 100%; background: var(--fb-good-text); border-radius: 999px; }
 .crv .hn-keep { font-size: 0.78rem; font-weight: 600; color: var(--fb-warning); }
+.crv .hn-limit { display: flex; align-items: center; gap: 10px; margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--fb-line); }
+.crv .hn-icon { font-size: 1.3rem; }
+.crv .hn-wait { color: var(--fb-warning); min-width: 5.5ch; }
 `;

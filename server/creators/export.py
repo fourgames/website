@@ -17,7 +17,8 @@ login, s followers, n broadcasts of searched games, lu their newest such broadca
 list, and e with source "youtube" for emails taken from that channel.
 Also "press": the press list (press.py), one object per outlet, and "quota": today's YouTube units
 (day, spent, limit, exhausted, reset = when YouTube's quota day ends), so the page can say when
-collecting stops for the day.
+collecting stops for the day. And "reveal_limit": {hit, ready}, the latest time YouTube said the
+hidden-email limit was reached and when to try again (reveal.py), for the Email hunt's countdown.
 """
 
 from __future__ import annotations
@@ -36,6 +37,7 @@ from .config import Config, ConfigError
 from .db import Store
 from .games import _json, connect, own_appids
 from .press import rows as press_rows
+from .reveal import limit_status
 from . import twitch as twitch_mod
 
 DEFAULT_DIR = "/srv/fourgames/creators/export"
@@ -182,6 +184,7 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
         "searched": db.execute("SELECT COUNT(*) FROM searches").fetchone()[0],
         "press": press_rows(store),
         **({"quota": quota(store, daily_units, now)} if daily_units else {}),
+        **({"reveal_limit": status} if (status := limit_status(store)) else {}),
     }
 
 

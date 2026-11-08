@@ -7,6 +7,8 @@ and saves what's revealed. This module is its side on the server (from the serve
 
   python -m creators.reveal check [N]      channel ids to check for the button, best first (one per line)
   python -m creators.reveal reveal [N]     channels with the button and no email yet, best first (JSON lines)
+  python -m creators.reveal limit [TIME]   YouTube showed "today's access limit" (now, or at unix TIME);
+                                           the dashboard counts down LIMIT_HOURS from the latest one
   python -m creators.reveal save           reads JSON lines on stdin and saves them:
         {"channel_id": "UC...", "button": true|false}       the button is there or not
         {"channel_id": "UC...", "email": "a@b.com"}          revealed
@@ -31,6 +33,9 @@ from .games import own_appids
 
 # The button is checked again after this long (creators add and remove it).
 RECHECK_DAYS = 180
+# How long YouTube's reveal limit seems to last: on 2026-11-08 it still held 23 hours after it hit
+# (past midnight Pacific), so it looks like a rolling day, not a calendar one.
+LIMIT_HOURS = 24
 EMAIL = re.compile(r"^[a-z0-9._%+'-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$")
 
 
@@ -66,6 +71,17 @@ def to_reveal(store: Store, own: set[int], now: float, limit: int) -> list[dict]
                 AND c.channel_id NOT IN (SELECT channel_id FROM site_emails) {order} LIMIT ?""", (*a, *b, limit))
     return [{**dict(r), "own": bool(r["own"]),
              "url": f"https://www.youtube.com/{r['handle'] or 'channel/' + r['channel_id']}/about"} for r in rows]
+
+
+def limit_hit(store: Store, at: float) -> None:
+    with store.db:
+        store.db.execute("INSERT OR IGNORE INTO reveal_limits (hit_at) VALUES (?)", (int(at),))
+
+
+def limit_status(store: Store) -> dict | None:
+    """The latest limit hit and when revealing should work again: {hit, ready}."""
+    hit = store.db.execute("SELECT MAX(hit_at) FROM reveal_limits").fetchone()[0]
+    return {"hit": hit, "ready": hit + LIMIT_HOURS * 3600} if hit else None
 
 
 def save(store: Store, lines, now: float) -> dict[str, int]:
@@ -119,7 +135,7 @@ def save(store: Store, lines, now: float) -> dict[str, int]:
 
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
-    if not argv or argv[0] not in ("check", "reveal", "save"):
+    if not argv or argv[0] not in ("check", "reveal", "save", "limit"):
         print(__doc__, file=sys.stderr)
         return 2
     try:
@@ -127,10 +143,17 @@ def main(argv: list[str] | None = None) -> int:
     except ConfigError as error:
         print(f"creators: {error}", file=sys.stderr)
         return 2
-    limit = int(argv[1]) if len(argv) > 1 else (200 if argv[0] == "check" else 20)
+    limit = int(argv[1]) if len(argv) > 1 and argv[0] != "limit" else (200 if argv[0] == "check" else 20)
     store = Store(config.db_path)
     now = time.time()
     try:
+        if argv[0] == "limit":
+            limit_hit(store, float(argv[1]) if len(argv) > 1 else now)
+            from .export import write
+            write(config, store, now)  # so the dashboard's countdown shows now, not after the next hourly run
+            status = limit_status(store)
+            print("limit saved; try again from " + time.strftime("%Y-%m-%d %H:%M", time.localtime(status["ready"])))
+            return 0
         if argv[0] == "save":
             counts = save(store, sys.stdin, now)
             print(", ".join(f"{k}: {v}" for k, v in counts.items() if v) or "nothing to save")

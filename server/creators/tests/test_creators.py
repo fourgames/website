@@ -233,6 +233,15 @@ def test_reveal_queue_and_save(tmp_path):
     assert reveal.to_reveal(store, {99}, NOW, 10) == []
 
 
+def test_reveal_limit(tmp_path):
+    from creators import reveal
+    store = Store(str(tmp_path / "c.db"))
+    assert reveal.limit_status(store) is None
+    reveal.limit_hit(store, NOW - 86400)
+    reveal.limit_hit(store, NOW)
+    assert reveal.limit_status(store) == {"hit": int(NOW), "ready": int(NOW) + reveal.LIMIT_HOURS * 3600}
+
+
 def test_urls_and_followable():
     from creators.sites import followable
     text = "Biz: https://mysite.com/contact. Links: linktr.ee/somebody, (https://twitch.tv/x) www.beacons.ai/me!"

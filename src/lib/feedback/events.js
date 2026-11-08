@@ -6,7 +6,8 @@
 // The server keeps only each game's status and note per event and the events added here by hand
 // (server/creators/events.py, GET/POST /admin/events). Game "Studio" (appid 0) is for studio awards.
 
-import { EVENTS, AVOID, crestOf } from "./events-list.js";
+import { EVENTS, AVOID } from "./events-list.js";
+import { laurelSvg, saveLaurelPng } from "./laurel.js";
 
 const DAY = 86400000;
 const KINDS = [["all", "All"], ["steam", "Steam"], ["festival", "Festivals"], ["showcase", "Showcases"], ["award", "Awards"]];
@@ -71,10 +72,14 @@ export function sortKey(e) {
 }
 // The line under a laurel: "Official Selection · Tiny Teams 2027".
 export function laurelText(e, status) {
+  const { top, name, year } = laurelParts(e, status);
+  return `${top} · ${year && !name.includes(year) ? `${name} ${year}` : name}`;
+}
+// What the laurel says: Winner / Nominee once marked so, otherwise Official Selection.
+export function laurelParts(e, status) {
   const year = (e.when || e.deadline || "").slice(0, 4);
-  const base = e.name.replace(/\s*\([^)]*\)/g, "").trim() || e.name;
-  const name = year && !base.includes(year) ? `${base} ${year}` : base;
-  return `${SHELF[status][1]} · ${name}`;
+  const name = e.name.replace(/\s*\([^)]*\)/g, "").replace(/\s+20\d\d$/, "").trim() || e.name;
+  return { top: (SHELF[status] || SHELF.in)[1], name, year };
 }
 
 export function eventsView(ctx, d, redraw) {
@@ -112,7 +117,7 @@ export function eventsView(ctx, d, redraw) {
       ? h("div.ev-laurels", ...shelf.map(([e, m]) => {
           const text = laurelText(e, m.status);
           return h("button.ev-laurel", { type: "button", title: "Copy the laurel text", onclick: () => C.copy(text) },
-            crestOf(e) ? crest(e, "ev-laurel-c") : h("span.ev-laurel-i", SHELF[m.status][0]), h("span", h("span.ev-laurel-k", SHELF[m.status][1]), h("span.ev-laurel-n", e.name)));
+            laurel(e, m.status, "ev-laurel-c"), h("span", h("span.ev-laurel-k", SHELF[m.status][1]), h("span.ev-laurel-n", e.name)));
         }))
       : h("p.cr-muted", "Nothing yet. Pick a free one below and mark it Applied.")));
   if (es.msg) wrap.append(h("p.cr-alert", es.msg));
@@ -156,7 +161,7 @@ function row(e, m, appid, today, redraw) {
   const when = e.when ? h("span.ev-date", `Event ${fmt(e.when)}${e.when_est ? " (est.)" : ""}`) : null;
 
   return h("div", { class: `ev-item${status ? ` is-${status}` : ""}` },
-    h("div.ev-top", crest(e, "ev-crest"),
+    h("div.ev-top", laurel(e, status, "ev-crest", true),
       h("div.ev-name", e.url ? h("a", { href: e.url, target: "_blank", rel: "noopener" }, e.name) : e.name,
         h("span.ev-tag", KIND_NAME[e.kind] || e.kind), e.cost ? h("span", { class: `ev-tag${/^free/i.test(e.cost) ? " is-free" : ""}` }, e.cost) : null,
         e.custom ? h("span.ev-tag", "Yours") : null),
@@ -168,14 +173,17 @@ function row(e, m, appid, today, redraw) {
       e.custom ? h("button.btn", { type: "button", disabled: es.busy || undefined, onclick: () => { if (confirm(`Remove ${e.name} from the list?`)) save({ remove: e.key }, redraw); } }, "Remove") : null));
 }
 
-// The event's logo or laurel; a placeholder keeps the rows lined up when it has none (or it fails to load).
-function crest(e, cls) {
+// The laurel the game would put on its store page for this event, drawn white on Steam's dark blue.
+// In the list it's a button that saves it as a transparent PNG.
+function laurel(e, status, cls, saveable) {
   const { h } = C;
-  const src = crestOf(e);
-  if (!src) return h("span", { class: `${cls} is-none`, "aria-hidden": "true" });
-  const img = h("img", { class: cls, src, alt: "", loading: "lazy", title: `${e.name} crest` });
-  img.addEventListener("error", () => img.replaceWith(h("span", { class: `${cls} is-none`, "aria-hidden": "true" })));
-  return img;
+  const svg = laurelSvg(laurelParts(e, status));
+  const box = saveable
+    ? h("button", { class: cls, type: "button", title: "Save this laurel as a PNG",
+        onclick: () => saveLaurelPng(svg, `laurel-${e.key}.png`) })
+    : h("span", { class: cls, "aria-hidden": "true" });
+  box.innerHTML = svg;
+  return box;
 }
 
 function addForm(redraw) {
@@ -223,11 +231,11 @@ function injectCss() {
 .ev .ev-item.is-in, .ev .ev-item.is-nominated, .ev .ev-item.is-won { border-left-color: var(--fb-positive); }
 .ev .ev-item.is-rejected, .ev .ev-item.is-skipped { opacity: 0.65; }
 .ev .ev-top { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
-.ev .ev-crest { flex: none; width: 56px; height: 40px; object-fit: contain; border-radius: 6px; background: #fff; padding: 2px; box-sizing: border-box; }
-.ev .ev-crest.is-none { background: var(--fb-card-2); border: 1px dashed var(--fb-line); }
+.ev .ev-crest { flex: none; width: 150px; aspect-ratio: 280 / 180; padding: 0; border: 0; border-radius: 8px; background: #1b2838; cursor: pointer; }
+.ev .ev-crest:hover { outline: 2px solid var(--fb-accent); }
+.ev .ev-crest svg, .ev .ev-laurel-c svg { width: 100%; height: 100%; display: block; }
 .ev .ev-top .ev-name { flex: 1; }
-.ev .ev-laurel-c { width: 40px; height: 32px; object-fit: contain; border-radius: 4px; background: #fff; padding: 1px; flex: none; }
-.ev .ev-laurel-c.is-none { display: none; }
+.ev .ev-laurel-c { flex: none; width: 84px; aspect-ratio: 280 / 180; border-radius: 6px; background: #1b2838; }
 .ev .ev-top select { font: inherit; font-size: 0.85rem; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 8px; padding: 4px 6px; flex: none; }
 .ev .ev-name { font-weight: 700; color: var(--fb-title); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; min-width: 0; overflow-wrap: anywhere; }
 .ev .ev-name a { color: var(--fb-title); text-decoration: none; }

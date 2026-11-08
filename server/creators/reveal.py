@@ -162,6 +162,10 @@ def main(argv: list[str] | None = None) -> int:
         if argv[0] == "check":
             print("\n".join(to_check(store, own, now, limit)))
         else:
+            status = limit_status(store)
+            if status and status["ready"] > now:
+                print("YouTube's limit is on until " + time.strftime("%Y-%m-%d %H:%M", time.localtime(status["ready"])),
+                      file=sys.stderr)
             for row in to_reveal(store, own, now, limit):
                 print(json.dumps(row, ensure_ascii=False))
     finally:

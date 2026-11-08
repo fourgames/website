@@ -6,7 +6,7 @@
 // The server keeps only each game's status and note per event and the events added here by hand
 // (server/creators/events.py, GET/POST /admin/events). Game "Studio" (appid 0) is for studio awards.
 
-import { EVENTS, AVOID } from "./events-list.js";
+import { EVENTS, AVOID, crestOf } from "./events-list.js";
 
 const DAY = 86400000;
 const KINDS = [["all", "All"], ["steam", "Steam"], ["festival", "Festivals"], ["showcase", "Showcases"], ["award", "Awards"]];
@@ -112,7 +112,7 @@ export function eventsView(ctx, d, redraw) {
       ? h("div.ev-laurels", ...shelf.map(([e, m]) => {
           const text = laurelText(e, m.status);
           return h("button.ev-laurel", { type: "button", title: "Copy the laurel text", onclick: () => C.copy(text) },
-            h("span.ev-laurel-i", SHELF[m.status][0]), h("span", h("span.ev-laurel-k", SHELF[m.status][1]), h("span.ev-laurel-n", e.name)));
+            crestOf(e) ? crest(e, "ev-laurel-c") : h("span.ev-laurel-i", SHELF[m.status][0]), h("span", h("span.ev-laurel-k", SHELF[m.status][1]), h("span.ev-laurel-n", e.name)));
         }))
       : h("p.cr-muted", "Nothing yet. Pick a free one below and mark it Applied.")));
   if (es.msg) wrap.append(h("p.cr-alert", es.msg));
@@ -156,7 +156,7 @@ function row(e, m, appid, today, redraw) {
   const when = e.when ? h("span.ev-date", `Event ${fmt(e.when)}${e.when_est ? " (est.)" : ""}`) : null;
 
   return h("div", { class: `ev-item${status ? ` is-${status}` : ""}` },
-    h("div.ev-top",
+    h("div.ev-top", crest(e, "ev-crest"),
       h("div.ev-name", e.url ? h("a", { href: e.url, target: "_blank", rel: "noopener" }, e.name) : e.name,
         h("span.ev-tag", KIND_NAME[e.kind] || e.kind), e.cost ? h("span", { class: `ev-tag${/^free/i.test(e.cost) ? " is-free" : ""}` }, e.cost) : null,
         e.custom ? h("span.ev-tag", "Yours") : null),
@@ -166,6 +166,16 @@ function row(e, m, appid, today, redraw) {
     e.note ? h("div.ev-why", e.note) : null,
     h("div.ev-foot", note,
       e.custom ? h("button.btn", { type: "button", disabled: es.busy || undefined, onclick: () => { if (confirm(`Remove ${e.name} from the list?`)) save({ remove: e.key }, redraw); } }, "Remove") : null));
+}
+
+// The event's logo or laurel; a placeholder keeps the rows lined up when it has none (or it fails to load).
+function crest(e, cls) {
+  const { h } = C;
+  const src = crestOf(e);
+  if (!src) return h("span", { class: `${cls} is-none`, "aria-hidden": "true" });
+  const img = h("img", { class: cls, src, alt: "", loading: "lazy", title: `${e.name} crest` });
+  img.addEventListener("error", () => img.replaceWith(h("span", { class: `${cls} is-none`, "aria-hidden": "true" })));
+  return img;
 }
 
 function addForm(redraw) {
@@ -213,6 +223,11 @@ function injectCss() {
 .ev .ev-item.is-in, .ev .ev-item.is-nominated, .ev .ev-item.is-won { border-left-color: var(--fb-positive); }
 .ev .ev-item.is-rejected, .ev .ev-item.is-skipped { opacity: 0.65; }
 .ev .ev-top { display: flex; gap: 10px; align-items: flex-start; justify-content: space-between; }
+.ev .ev-crest { flex: none; width: 56px; height: 40px; object-fit: contain; border-radius: 6px; background: #fff; padding: 2px; box-sizing: border-box; }
+.ev .ev-crest.is-none { background: var(--fb-card-2); border: 1px dashed var(--fb-line); }
+.ev .ev-top .ev-name { flex: 1; }
+.ev .ev-laurel-c { width: 40px; height: 32px; object-fit: contain; border-radius: 4px; background: #fff; padding: 1px; flex: none; }
+.ev .ev-laurel-c.is-none { display: none; }
 .ev .ev-top select { font: inherit; font-size: 0.85rem; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 8px; padding: 4px 6px; flex: none; }
 .ev .ev-name { font-weight: 700; color: var(--fb-title); display: flex; flex-wrap: wrap; gap: 4px 8px; align-items: center; min-width: 0; overflow-wrap: anywhere; }
 .ev .ev-name a { color: var(--fb-title); text-decoration: none; }
@@ -231,7 +246,7 @@ function injectCss() {
 .ev .ev-form { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px 12px; margin-top: 12px; background: var(--fb-card); border: 1px solid var(--fb-line); border-radius: 12px; padding: 12px 14px; }
 .ev .ev-form select { font: inherit; font-size: 0.9rem; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 8px; padding: 6px 8px; }
 .ev .ev-form .cr-row { grid-column: 1 / -1; margin: 0; }
-@media (max-width: 560px) { .ev .ev-top { flex-direction: column; } }
+@media (max-width: 560px) { .ev .ev-top { flex-wrap: wrap; } .ev .ev-top select { flex-basis: 100%; } }
 `;
   document.head.append(C.h("style", css));
 }

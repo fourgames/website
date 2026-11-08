@@ -85,3 +85,52 @@ export const BADGES = {
   "indiecade-next": "indiecade-next.png", // the Nominee seal
   "indie-game-awards-2027": "indie-game-awards-2027.png", // the Game of the Year one
 };
+
+// How hard each event is to get into: "open" (sign up or pay and you're in, if the game fits),
+// "curated" (they pick, but take lots of games), "selective" (few get in). A judgment call from each
+// event's numbers and rules (Nov 2026); Valve's own fests (steam-…) are all open opt-ins.
+export const ODDS = {
+  "tiny-teams-2027": "selective", // ~200 of 3,500+ in 2026
+  "igda-download-for-charity-2027": "open",
+  "games-made-in-sweden-sale-2027": "open",
+  "nordic-game-steam-sale-2027": "open", // comes with a paid demo station
+  "fun-dark-cozy-2027": "open",
+  "laughs-and-smiles-2027": "open",
+  "wholesome-games-celebration-2027": "curated", // 150+ games
+  "cozy-family-friendly-fest-2027": "open",
+  "cozy-after-dark-2027": "curated",
+  "strategems-2027": "open",
+  "tacticon-2027": "open",
+  "mobidictum-steam-showcase-2027": "curated",
+  "godot-showcase-website": "open", // any released Godot game with 25+ reviews
+  "godot-showreel-2027": "curated",
+  "six-one-indie-showcase-2027": "curated",
+  "indie-live-expo-2027": "open", // one free title per studio, hundreds shown
+  "wholesome-direct-2027": "selective",
+  "day-of-the-devs-sgf-2027": "selective",
+  "future-games-show-summer-2027": "selective",
+  "pc-gaming-show-2027": "selective",
+  "the-mix-summer-2027": "curated",
+  "secret-sauce-2027": "curated",
+  "otk-games-expo-2027": "curated",
+  "big-indie-pitch-pgc-london-2027": "open", // anyone with a ticket pitches; winning is the hard part
+  "develop-brighton-indie-showcase-2027": "selective", // 10 finalists
+  "igf-2028": "selective",
+  "big-festival-2027": "curated",
+  "bitsummit-2027": "curated",
+  "tgs-selected-indie-80-2027": "selective",
+  "bic-festival-2027": "curated",
+  "a-maze-berlin-2027": "selective",
+  "indiecade-next": "curated",
+  "nordic-game-awards-2027": "selective", // a jury nominates, no entry form
+  "nordic-game-2027-showcase": "open", // paid demo station
+  "digital-vikings-awards-2027": "curated", // small regional pool
+  "devgamm-awards-2027": "curated",
+  "indie-arena-booth-gamescom-2027": "curated",
+  "pax-rising-showcase-2027": "selective",
+  "dreamhack-stockholm-indie-playground-2027": "open",
+  "sweden-game-conference-2027": "open",
+  "indie-game-awards-2027": "selective",
+  "indie-prize-2027": "curated",
+};
+export const oddsOf = (e) => ODDS[e.key] || (e.key.startsWith("steam-") ? "open" : null);

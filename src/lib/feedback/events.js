@@ -6,10 +6,12 @@
 // The server keeps only each game's status and note per event and the events added here by hand
 // (server/creators/events.py, GET/POST /admin/events). Game "Studio" (appid 0) is for studio awards.
 
-import { EVENTS, AVOID, BADGES } from "./events-list.js";
+import { EVENTS, AVOID, BADGES, oddsOf } from "./events-list.js";
 import { laurelSvg, saveLaurelPng } from "./laurel.js";
 
 const DAY = 86400000;
+const ODDS = [["any", "Any"], ["open", "Open"], ["curated", "Curated"], ["selective", "Selective"]];
+const ODDS_TIP = { open: "Sign up (or pay) and you're in, if the game fits", curated: "They pick, but take lots of games", selective: "Few get in" };
 const KINDS = [["all", "All"], ["steam", "Steam"], ["festival", "Festivals"], ["showcase", "Showcases"], ["award", "Awards"]];
 const KIND_NAME = { steam: "Steam", festival: "Festival", showcase: "Showcase", award: "Award" };
 const STATUSES = [["", "Not yet"], ["planned", "Planning to"], ["applied", "Applied"], ["in", "Got in / took part"],
@@ -17,7 +19,7 @@ const STATUSES = [["", "Not yet"], ["planned", "Planning to"], ["applied", "Appl
 const SHELF = { won: ["🏆", "Winner"], nominated: ["🏅", "Nominee"], in: ["🎖️", "Official Selection"] };
 
 let C = null;
-const es = { data: null, error: null, loading: false, game: null, kind: "all", show: "open", free: false, busy: false, msg: null, adding: false };
+const es = { data: null, error: null, loading: false, game: null, kind: "all", odds: "any", show: "open", free: false, busy: false, msg: null, adding: false };
 
 async function load(redraw) {
   if (es.loading) return;
@@ -129,9 +131,13 @@ export function eventsView(ctx, d, redraw) {
     C.chips(KINDS, es.kind, (v) => { es.kind = v; redraw(); }, "Kind"),
     C.chips([["open", "Open"], ["mine", "Marked"], ["all", "All"]], es.show, (v) => { es.show = v; redraw(); }, "Show"),
     h("label.cr-select", freeBox, h("span", "Free only"))));
+  wrap.append(h("div.cr-row", h("span.cr-label", "How hard"),
+    C.chips(ODDS, es.odds, (v) => { es.odds = v; redraw(); }, "How hard to get in"),
+    es.odds !== "any" ? h("span.cr-muted", ODDS_TIP[es.odds]) : null));
 
   const list = all.filter((e) => (es.kind === "all" || e.kind === es.kind)
     && (!es.free || /^free/i.test(e.cost || ""))
+    && (es.odds === "any" || oddsOf(e) === es.odds)
     && (es.show === "all" || (es.show === "mine" ? !!mine(e) : isOpen(e, today) && mine(e)?.status !== "skipped")))
     .sort((a, b) => sortKey(a) - sortKey(b) || a.name.localeCompare(b.name));
 
@@ -164,6 +170,7 @@ function row(e, m, appid, today, redraw) {
     h("div.ev-top", laurel(e, status, "ev-crest", true),
       h("div.ev-name", e.url ? h("a", { href: e.url, target: "_blank", rel: "noopener" }, e.name) : e.name,
         h("span.ev-tag", KIND_NAME[e.kind] || e.kind), e.cost ? h("span", { class: `ev-tag${/^free/i.test(e.cost) ? " is-free" : ""}` }, e.cost) : null,
+        oddsOf(e) ? h("span", { class: `ev-tag is-${oddsOf(e)}`, title: ODDS_TIP[oddsOf(e)] }, ODDS.find(([v]) => v === oddsOf(e))[1]) : null,
         e.custom ? h("span.ev-tag", "Yours") : null),
       sel),
     h("div.ev-dates", deadline, when),
@@ -252,6 +259,9 @@ function injectCss() {
 .ev .ev-name a:hover { text-decoration: underline; }
 .ev .ev-tag { font-size: 0.72rem; font-weight: 600; color: var(--fb-ink-2); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 999px; padding: 1px 8px; }
 .ev .ev-tag.is-free { color: var(--fb-positive); border-color: var(--fb-positive); }
+.ev .ev-tag.is-open { color: var(--fb-positive); }
+.ev .ev-tag.is-curated { color: var(--fb-accent); }
+.ev .ev-tag.is-selective { color: var(--fb-negative); }
 .ev .ev-dates { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 4px; font-size: 0.85rem; color: var(--fb-ink-2); }
 .ev .ev-date.is-soon { color: var(--fb-negative); font-weight: 600; }
 .ev .ev-meta { display: flex; flex-wrap: wrap; gap: 2px 14px; margin-top: 4px; font-size: 0.85rem; color: var(--fb-ink-2); }

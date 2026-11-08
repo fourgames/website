@@ -133,13 +133,15 @@ export const ODDS = {
 };
 export const oddsOf = (e) => ODDS[e.key] || (e.key.startsWith("steam-") ? "open" : null);
 
-// Events held in Sweden (the Nordic Game ones are in Malmö, Sweden).
-const SWEDEN = new Set([
-  "games-made-in-sweden-sale-2027",
-  "nordic-game-steam-sale-2027",
-  "nordic-game-awards-2027",
-  "nordic-game-2027-showcase",
-  "dreamhack-stockholm-indie-playground-2027",
-  "sweden-game-conference-2027",
-]);
-export const inSweden = (e) => SWEDEN.has(e.key);
+// Where an event is: "se" (only Swedish games or studios), "nordic" (only Nordic ones), or "in-se"
+// (held in Sweden, open to anyone).
+const REGION = {
+  "games-made-in-sweden-sale-2027": "se",
+  "nordic-game-awards-2027": "nordic",
+  "digital-vikings-awards-2027": "nordic",
+  "nordic-game-steam-sale-2027": "in-se",
+  "nordic-game-2027-showcase": "in-se",
+  "dreamhack-stockholm-indie-playground-2027": "in-se",
+  "sweden-game-conference-2027": "in-se",
+};
+export const regionOf = (e) => REGION[e.key] || null;

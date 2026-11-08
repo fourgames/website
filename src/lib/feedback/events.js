@@ -6,20 +6,22 @@
 // The server keeps only each game's status and note per event and the events added here by hand
 // (server/creators/events.py, GET/POST /admin/events). Game "Studio" (appid 0) is for studio awards.
 
-import { EVENTS, AVOID, BADGES, oddsOf, inSweden } from "./events-list.js";
+import { EVENTS, AVOID, BADGES, oddsOf, regionOf } from "./events-list.js";
 import { laurelSvg, saveLaurelPng } from "./laurel.js";
 
 const DAY = 86400000;
 const ODDS = [["any", "Any"], ["open", "Open"], ["curated", "Curated"], ["selective", "Selective"]];
 const ODDS_TIP = { open: "Sign up (or pay) and you're in, if the game fits", curated: "They pick, but take lots of games", selective: "Few get in" };
 const KINDS = [["all", "All"], ["steam", "Steam"], ["festival", "Festivals"], ["showcase", "Showcases"], ["award", "Awards"]];
-const KIND_NAME = { steam: "Steam", festival: "Festival", showcase: "Showcase", award: "Award" };
+const WHERE = [["any", "Any"], ["se", "Swedish only"], ["nordic", "Nordic only"], ["in-se", "Held in Sweden"]];
+const WHERE_TIP = { se: "Only Swedish games or studios", nordic: "Only Nordic games or studios", "in-se": "Held in Sweden, open to anyone" };
+const KIND_NAME ={ steam: "Steam", festival: "Festival", showcase: "Showcase", award: "Award" };
 const STATUSES = [["", "Not yet"], ["planned", "Planning to"], ["applied", "Applied"], ["in", "Got in / took part"],
   ["nominated", "Nominated"], ["won", "Won"], ["rejected", "Not picked"], ["skipped", "Skip"]];
 const SHELF = { won: ["🏆", "Winner"], nominated: ["🏅", "Nominee"], in: ["🎖️", "Official Selection"] };
 
 let C = null;
-const es = { data: null, error: null, loading: false, game: null, kind: "all", odds: "any", badgeFirst: true, show: "open", free: false, sweden: false, busy: false, msg: null, adding: false };
+const es = { data: null, error: null, loading: false, game: null, kind: "all", odds: "any", badgeFirst: true, show: "open", free: false, where: "any", busy: false, msg: null, adding: false };
 
 async function load(redraw) {
   if (es.loading) return;
@@ -127,23 +129,23 @@ export function eventsView(ctx, d, redraw) {
   // Filters.
   const freeBox = h("input", { type: "checkbox", checked: es.free || undefined });
   const badgeBox = h("input", { type: "checkbox", checked: es.badgeFirst || undefined });
-  const swedenBox = h("input", { type: "checkbox", checked: es.sweden || undefined });
   badgeBox.addEventListener("change", () => { es.badgeFirst = badgeBox.checked; redraw(); });
   freeBox.addEventListener("change", () => { es.free = freeBox.checked; redraw(); });
-  swedenBox.addEventListener("change", () => { es.sweden = swedenBox.checked; redraw(); });
   wrap.append(h("div.cr-row",
     C.chips(KINDS, es.kind, (v) => { es.kind = v; redraw(); }, "Kind"),
     C.chips([["open", "Open"], ["mine", "Marked"], ["all", "All"]], es.show, (v) => { es.show = v; redraw(); }, "Show"),
     h("label.cr-select", freeBox, h("span", "Free only")),
-    h("label.cr-select", swedenBox, h("span", "Swedish only")),
     h("label.cr-select", { title: "Events that hand out their own badge art, before the ones you'd make a laurel for yourself" }, badgeBox, h("span", "Own badge first"))));
   wrap.append(h("div.cr-row", h("span.cr-label", "How hard"),
     C.chips(ODDS, es.odds, (v) => { es.odds = v; redraw(); }, "How hard to get in"),
     es.odds !== "any" ? h("span.cr-muted", ODDS_TIP[es.odds]) : null));
+  wrap.append(h("div.cr-row", h("span.cr-label", "Where"),
+    C.chips(WHERE, es.where, (v) => { es.where = v; redraw(); }, "Where"),
+    es.where !== "any" ? h("span.cr-muted", WHERE_TIP[es.where]) : null));
 
   const list = all.filter((e) => (es.kind === "all" || e.kind === es.kind)
     && (!es.free || /^free/i.test(e.cost || ""))
-    && (!es.sweden || inSweden(e))
+    && (es.where === "any" || regionOf(e) === es.where)
     && (es.odds === "any" || oddsOf(e) === es.odds)
     && (es.show === "all" || (es.show === "mine" ? !!mine(e) : isOpen(e, today) && mine(e)?.status !== "skipped")))
     .sort((a, b) => (es.badgeFirst ? !BADGES[a.key] - !BADGES[b.key] : 0) || sortKey(a) - sortKey(b) || a.name.localeCompare(b.name));
@@ -178,7 +180,7 @@ function row(e, m, appid, today, redraw) {
       h("div.ev-name", e.url ? h("a", { href: e.url, target: "_blank", rel: "noopener" }, e.name) : e.name,
         h("span.ev-tag", KIND_NAME[e.kind] || e.kind), e.cost ? h("span", { class: `ev-tag${/^free/i.test(e.cost) ? " is-free" : ""}` }, e.cost) : null,
         oddsOf(e) ? h("span", { class: `ev-tag is-${oddsOf(e)}`, title: ODDS_TIP[oddsOf(e)] }, ODDS.find(([v]) => v === oddsOf(e))[1]) : null,
-        inSweden(e) ? h("span.ev-tag", "Sweden") : null,
+        regionOf(e) ? h("span.ev-tag", { title: WHERE_TIP[regionOf(e)] }, WHERE.find(([v]) => v === regionOf(e))[1]) : null,
         e.custom ? h("span.ev-tag", "Yours") : null),
       sel),
     h("div.ev-dates", deadline, when),

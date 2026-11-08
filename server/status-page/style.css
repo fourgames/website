@@ -222,6 +222,24 @@ h2 {
 	background: transparent;
 	border: 2px solid currentColor;
 }
+/* Before a part's first answer: grey like Unknown, with a pulsing dot, so a slow answer doesn't read as a fault. */
+.pill[data-state="checking"] {
+	color: var(--unknown-fg);
+	background: var(--unknown-bg);
+}
+.pill[data-state="checking"]::before {
+	animation: pill-pulse 1.2s ease-in-out infinite;
+}
+@keyframes pill-pulse {
+	50% {
+		opacity: 0.25;
+	}
+}
+@media (prefers-reduced-motion: reduce) {
+	.pill[data-state="checking"]::before {
+		animation: none;
+	}
+}
 
 /* The 90-day history (status.js, showHistory): one bar a day, oldest left, today right, the whole
    row wide under the text and the pill. Phones get the last 30 days. */

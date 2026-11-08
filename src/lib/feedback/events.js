@@ -6,7 +6,7 @@
 // The server keeps only each game's status and note per event and the events added here by hand
 // (server/creators/events.py, GET/POST /admin/events). Game "Studio" (appid 0) is for studio awards.
 
-import { EVENTS, AVOID, BADGES, oddsOf } from "./events-list.js";
+import { EVENTS, AVOID, BADGES, oddsOf, inSweden } from "./events-list.js";
 import { laurelSvg, saveLaurelPng } from "./laurel.js";
 
 const DAY = 86400000;
@@ -19,7 +19,7 @@ const STATUSES = [["", "Not yet"], ["planned", "Planning to"], ["applied", "Appl
 const SHELF = { won: ["🏆", "Winner"], nominated: ["🏅", "Nominee"], in: ["🎖️", "Official Selection"] };
 
 let C = null;
-const es = { data: null, error: null, loading: false, game: null, kind: "all", odds: "any", badgeFirst: true, show: "open", free: false, busy: false, msg: null, adding: false };
+const es = { data: null, error: null, loading: false, game: null, kind: "all", odds: "any", badgeFirst: true, show: "open", free: false, sweden: false, busy: false, msg: null, adding: false };
 
 async function load(redraw) {
   if (es.loading) return;
@@ -127,12 +127,15 @@ export function eventsView(ctx, d, redraw) {
   // Filters.
   const freeBox = h("input", { type: "checkbox", checked: es.free || undefined });
   const badgeBox = h("input", { type: "checkbox", checked: es.badgeFirst || undefined });
+  const swedenBox = h("input", { type: "checkbox", checked: es.sweden || undefined });
   badgeBox.addEventListener("change", () => { es.badgeFirst = badgeBox.checked; redraw(); });
   freeBox.addEventListener("change", () => { es.free = freeBox.checked; redraw(); });
+  swedenBox.addEventListener("change", () => { es.sweden = swedenBox.checked; redraw(); });
   wrap.append(h("div.cr-row",
     C.chips(KINDS, es.kind, (v) => { es.kind = v; redraw(); }, "Kind"),
     C.chips([["open", "Open"], ["mine", "Marked"], ["all", "All"]], es.show, (v) => { es.show = v; redraw(); }, "Show"),
     h("label.cr-select", freeBox, h("span", "Free only")),
+    h("label.cr-select", swedenBox, h("span", "Swedish only")),
     h("label.cr-select", { title: "Events that hand out their own badge art, before the ones you'd make a laurel for yourself" }, badgeBox, h("span", "Own badge first"))));
   wrap.append(h("div.cr-row", h("span.cr-label", "How hard"),
     C.chips(ODDS, es.odds, (v) => { es.odds = v; redraw(); }, "How hard to get in"),
@@ -140,6 +143,7 @@ export function eventsView(ctx, d, redraw) {
 
   const list = all.filter((e) => (es.kind === "all" || e.kind === es.kind)
     && (!es.free || /^free/i.test(e.cost || ""))
+    && (!es.sweden || inSweden(e))
     && (es.odds === "any" || oddsOf(e) === es.odds)
     && (es.show === "all" || (es.show === "mine" ? !!mine(e) : isOpen(e, today) && mine(e)?.status !== "skipped")))
     .sort((a, b) => (es.badgeFirst ? !BADGES[a.key] - !BADGES[b.key] : 0) || sortKey(a) - sortKey(b) || a.name.localeCompare(b.name));
@@ -174,6 +178,7 @@ function row(e, m, appid, today, redraw) {
       h("div.ev-name", e.url ? h("a", { href: e.url, target: "_blank", rel: "noopener" }, e.name) : e.name,
         h("span.ev-tag", KIND_NAME[e.kind] || e.kind), e.cost ? h("span", { class: `ev-tag${/^free/i.test(e.cost) ? " is-free" : ""}` }, e.cost) : null,
         oddsOf(e) ? h("span", { class: `ev-tag is-${oddsOf(e)}`, title: ODDS_TIP[oddsOf(e)] }, ODDS.find(([v]) => v === oddsOf(e))[1]) : null,
+        inSweden(e) ? h("span.ev-tag", "Sweden") : null,
         e.custom ? h("span.ev-tag", "Yours") : null),
       sel),
     h("div.ev-dates", deadline, when),

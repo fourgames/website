@@ -132,3 +132,14 @@ export const ODDS = {
   "indie-game-awards-2027": "selective",
 };
 export const oddsOf = (e) => ODDS[e.key] || (e.key.startsWith("steam-") ? "open" : null);
+
+// Events held in Sweden (the Nordic Game ones are in Malmö, Sweden).
+const SWEDEN = new Set([
+  "games-made-in-sweden-sale-2027",
+  "nordic-game-steam-sale-2027",
+  "nordic-game-awards-2027",
+  "nordic-game-2027-showcase",
+  "dreamhack-stockholm-indie-playground-2027",
+  "sweden-game-conference-2027",
+]);
+export const inSweden = (e) => SWEDEN.has(e.key);

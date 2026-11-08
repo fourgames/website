@@ -19,7 +19,7 @@ const STATUSES = [["", "Not yet"], ["planned", "Planning to"], ["applied", "Appl
 const SHELF = { won: ["🏆", "Winner"], nominated: ["🏅", "Nominee"], in: ["🎖️", "Official Selection"] };
 
 let C = null;
-const es = { data: null, error: null, loading: false, game: null, kind: "all", odds: "any", show: "open", free: false, busy: false, msg: null, adding: false };
+const es = { data: null, error: null, loading: false, game: null, kind: "all", odds: "any", badgeFirst: true, show: "open", free: false, busy: false, msg: null, adding: false };
 
 async function load(redraw) {
   if (es.loading) return;
@@ -126,11 +126,14 @@ export function eventsView(ctx, d, redraw) {
 
   // Filters.
   const freeBox = h("input", { type: "checkbox", checked: es.free || undefined });
+  const badgeBox = h("input", { type: "checkbox", checked: es.badgeFirst || undefined });
+  badgeBox.addEventListener("change", () => { es.badgeFirst = badgeBox.checked; redraw(); });
   freeBox.addEventListener("change", () => { es.free = freeBox.checked; redraw(); });
   wrap.append(h("div.cr-row",
     C.chips(KINDS, es.kind, (v) => { es.kind = v; redraw(); }, "Kind"),
     C.chips([["open", "Open"], ["mine", "Marked"], ["all", "All"]], es.show, (v) => { es.show = v; redraw(); }, "Show"),
-    h("label.cr-select", freeBox, h("span", "Free only"))));
+    h("label.cr-select", freeBox, h("span", "Free only")),
+    h("label.cr-select", { title: "Events that hand out their own badge art, before the ones you'd make a laurel for yourself" }, badgeBox, h("span", "Own badge first"))));
   wrap.append(h("div.cr-row", h("span.cr-label", "How hard"),
     C.chips(ODDS, es.odds, (v) => { es.odds = v; redraw(); }, "How hard to get in"),
     es.odds !== "any" ? h("span.cr-muted", ODDS_TIP[es.odds]) : null));
@@ -139,7 +142,7 @@ export function eventsView(ctx, d, redraw) {
     && (!es.free || /^free/i.test(e.cost || ""))
     && (es.odds === "any" || oddsOf(e) === es.odds)
     && (es.show === "all" || (es.show === "mine" ? !!mine(e) : isOpen(e, today) && mine(e)?.status !== "skipped")))
-    .sort((a, b) => sortKey(a) - sortKey(b) || a.name.localeCompare(b.name));
+    .sort((a, b) => (es.badgeFirst ? !BADGES[a.key] - !BADGES[b.key] : 0) || sortKey(a) - sortKey(b) || a.name.localeCompare(b.name));
 
   wrap.append(list.length ? h("div.ev-list", ...list.map((e) => row(e, mine(e), appid, today, redraw)))
     : h("p.empty", es.show === "mine" ? `Nothing marked for ${gameName} yet.` : "Nothing matches."));

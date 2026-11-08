@@ -11,7 +11,8 @@ import re
 EMAIL = re.compile(r"(?<![\w.+-])[A-Za-z0-9][A-Za-z0-9._%+-]{0,63}@[A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,24}(?![\w-])")
 _AT = re.compile(r"\s*[\[\(\{<]\s*(?:at|@)\s*[\]\)\}>]\s*", re.IGNORECASE)
 _DOT = re.compile(r"\s*[\[\(\{<]\s*(?:dot|\.)\s*[\]\)\}>]\s*", re.IGNORECASE)
-_WORDS = re.compile(r"\b([A-Za-z0-9._%+-]+)\s+at\s+([A-Za-z0-9-]+)\s+dot\s+([A-Za-z]{2,24})\b", re.IGNORECASE)
+# Lengths are capped: unbounded runs made this quadratic on long dotted text (minified JS on a creator's site).
+_WORDS = re.compile(r"\b([A-Za-z0-9._%+-]{1,64})\s+at\s+([A-Za-z0-9-]{1,63})\s+dot\s+([A-Za-z]{2,24})\b", re.IGNORECASE)
 # Not real contact addresses: file names like icon@2x.png, and placeholders.
 _FILE_ENDINGS = (".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg")
 _SKIP_DOMAINS = {"example.com", "email.com", "domain.com", "sentry.io"}

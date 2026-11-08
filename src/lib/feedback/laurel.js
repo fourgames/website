@@ -1,7 +1,6 @@
-// A Steam-store-style laurel: two leafy branches around "OFFICIAL SELECTION", the event's name and
-// the year, in one colour on a transparent background (white for the dark store page). Events only send
-// their own laurel art to games that got in; this shows what that badge will roughly look like, and the
-// PNG is fine to use until the official one arrives.
+// A Steam-store-style laurel, the kind most developers make themselves: a white wreath around the
+// event's name, "Official Selection" / "NOMINEE" / "WINNER" and the year, on a transparent background
+// (for the dark store page). Used for events that hand out no badge art of their own.
 
 const W = 280, H = 180, CX = 140, CY = 92, RX = 110, RY = 76;
 
@@ -13,15 +12,15 @@ function branch(side) {
     return [CX + side * RX * Math.sin(a), CY + RY * Math.cos(a)];
   };
   const [x0, y0] = pt(18), [x1, y1] = pt(150);
-  parts.push(`<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${RX} ${RY} 0 0 ${side > 0 ? 0 : 1} ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/>`);
-  for (let deg = 26; deg <= 150; deg += 12.5) {
+  parts.push(`<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${RX} ${RY} 0 0 ${side > 0 ? 0 : 1} ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"/>`);
+  for (let deg = 24; deg <= 150; deg += 11.5) {
     const [x, y] = pt(deg);
-    const size = 1 - (deg - 26) / 300; // leaves shrink a little towards the tips
+    const size = 1 - (deg - 26) / 360; // leaves shrink a little towards the tips
     // Tangent direction (going up the branch), in SVG degrees.
     const tan = (Math.atan2(-RY * Math.sin((deg * Math.PI) / 180), side * RX * Math.cos((deg * Math.PI) / 180)) * 180) / Math.PI;
-    for (const off of [-38, 38]) {
+    for (const off of [-34, 40]) {
       const rot = tan + side * off * -1;
-      const rx = 11 * size, ry = 4.2 * size;
+      const rx = 13.5 * size, ry = 5.6 * size;
       const a = (rot * Math.PI) / 180;
       const lx = x + Math.cos(a) * rx * 0.85, ly = y + Math.sin(a) * rx * 0.85;
       parts.push(`<ellipse cx="${lx.toFixed(1)}" cy="${ly.toFixed(1)}" rx="${rx.toFixed(1)}" ry="${ry.toFixed(1)}" transform="rotate(${rot.toFixed(1)} ${lx.toFixed(1)} ${ly.toFixed(1)})" fill="currentColor"/>`);
@@ -30,7 +29,7 @@ function branch(side) {
   // A leaf at the very tip.
   const [tx, ty] = pt(156);
   const tipRot = side > 0 ? -150 : -30;
-  parts.push(`<ellipse cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" rx="9" ry="3.6" transform="rotate(${tipRot} ${tx.toFixed(1)} ${ty.toFixed(1)})" fill="currentColor"/>`);
+  parts.push(`<ellipse cx="${tx.toFixed(1)}" cy="${ty.toFixed(1)}" rx="11" ry="4.6" transform="rotate(${tipRot} ${tx.toFixed(1)} ${ty.toFixed(1)})" fill="currentColor"/>`);
   return parts.join("");
 }
 
@@ -49,21 +48,37 @@ function wrap(text, max) {
 
 const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
 
-// {top: "OFFICIAL SELECTION", name: "Tiny Teams", year: "2027"} → an SVG string.
+// {top: "Official Selection" | "Nominee" | "Winner", name: "Tiny Teams", year: "2027"} → an SVG string.
+// Like most store-page laurels: Official Selection puts the event's name big with the label under it;
+// Nominee and Winner put the label big with the event's name small above.
+const FONT = "'Helvetica Neue', Helvetica, Arial, sans-serif";
+const AVAIL = 160; // px between the branches
+const fit = (lines, max, em = 0.6) => Math.min(max, Math.floor(AVAIL / (Math.max(...lines.map((l) => l.length)) * em)));
+
 export function laurelSvg({ top, name, year }, color = "#fff") {
-  const lines = wrap(name.toUpperCase(), 14);
-  // Fit the longest line in the ~150px between the branches (Georgia caps run about 0.72em wide).
-  const nameSize = Math.min(18, Math.floor(150 / (Math.max(...lines.map((l) => l.length)) * 0.72)));
-  const gap = nameSize + 3;
-  const block = 12 + 8 + lines.length * gap + (year ? 16 : 0);
-  let y = CY - block / 2 + 10;
-  const text = [`<text x="${CX}" y="${y}" font-size="9" letter-spacing="1.4" font-weight="600">${esc(top.toUpperCase())}</text>`];
-  y += 8;
-  for (const l of lines) { y += gap; text.push(`<text x="${CX}" y="${y - 3}" font-size="${nameSize}" font-weight="800" letter-spacing="0.5">${esc(l)}</text>`); }
-  if (year) { y += 16; text.push(`<text x="${CX}" y="${y - 2}" font-size="12" font-weight="600" letter-spacing="2">${esc(year)}</text>`); }
+  const rows = []; // [text, size, weight, letterSpacing]
+  if (/selection/i.test(top)) {
+    const lines = wrap(name, 15);
+    const size = fit(lines, 26);
+    for (const l of lines) rows.push([l, size, 800, 0]);
+    rows.push([top, Math.min(16, fit([top], 16, 0.55)), 500, 0]);
+  } else {
+    const lines = wrap(name, 22);
+    const size = fit(lines, 12, 0.55);
+    for (const l of lines) rows.push([l, size, 500, 0]);
+    rows.push([top.toUpperCase(), fit([top.toUpperCase()], 30, 0.7), 800, 0.5]);
+  }
+  if (year) rows.push([year, 12, 700, 1]);
+  const gap = (sz) => sz * 1.12;
+  const height = rows.reduce((t, [, sz]) => t + gap(sz), 0) + (year ? 4 : 0);
+  let y = CY - height / 2 - 4;
+  const text = rows.map(([t, sz, w, ls], i) => {
+    y += gap(sz) + (year && i === rows.length - 1 ? 4 : 0);
+    return `<text x="${CX}" y="${y.toFixed(1)}" font-size="${sz}" font-weight="${w}" letter-spacing="${ls}">${esc(t)}</text>`;
+  });
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" style="color:${color}">`
     + `<g>${branch(-1)}${branch(1)}</g>`
-    + `<g fill="currentColor" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif">${text.join("")}</g></svg>`;
+    + `<g fill="currentColor" text-anchor="middle" font-family="${FONT}">${text.join("")}</g></svg>`;
 }
 
 // The SVG drawn onto a canvas at 4x and saved as a transparent PNG.

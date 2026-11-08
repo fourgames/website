@@ -6,7 +6,7 @@
 // The server keeps only each game's status and note per event and the events added here by hand
 // (server/creators/events.py, GET/POST /admin/events). Game "Studio" (appid 0) is for studio awards.
 
-import { EVENTS, AVOID } from "./events-list.js";
+import { EVENTS, AVOID, BADGES } from "./events-list.js";
 import { laurelSvg, saveLaurelPng } from "./laurel.js";
 
 const DAY = 86400000;
@@ -173,13 +173,21 @@ function row(e, m, appid, today, redraw) {
       e.custom ? h("button.btn", { type: "button", disabled: es.busy || undefined, onclick: () => { if (confirm(`Remove ${e.name} from the list?`)) save({ remove: e.key }, redraw); } }, "Remove") : null));
 }
 
-// The laurel the game would put on its store page for this event, drawn white on Steam's dark blue.
-// In the list it's a button that saves it as a transparent PNG.
+// The laurel the game would put on its store page for this event, on Steam's dark blue: the event's own
+// badge art when it hands one out (BADGES), otherwise one drawn the way most developers make theirs.
+// In the list it's a button: the official one opens full size, a drawn one saves as a transparent PNG.
 function laurel(e, status, cls, saveable) {
   const { h } = C;
+  const badge = BADGES[e.key];
+  if (badge) {
+    const img = h("img", { src: `/images/badges/${badge}`, alt: `${e.name} badge`, loading: "lazy" });
+    return saveable
+      ? h("a", { class: `${cls} is-official`, href: `/images/badges/${badge}`, target: "_blank", rel: "noopener", title: "The event's own badge: open it full size" }, img)
+      : h("span", { class: `${cls} is-official` }, img);
+  }
   const svg = laurelSvg(laurelParts(e, status));
   const box = saveable
-    ? h("button", { class: cls, type: "button", title: "Save this laurel as a PNG",
+    ? h("button", { class: cls, type: "button", title: "Drawn here, the way most developers make theirs: save it as a PNG",
         onclick: () => saveLaurelPng(svg, `laurel-${e.key}.png`) })
     : h("span", { class: cls, "aria-hidden": "true" });
   box.innerHTML = svg;
@@ -234,6 +242,8 @@ function injectCss() {
 .ev .ev-crest { flex: none; width: 150px; aspect-ratio: 280 / 180; padding: 0; border: 0; border-radius: 8px; background: #1b2838; cursor: pointer; }
 .ev .ev-crest:hover { outline: 2px solid var(--fb-accent); }
 .ev .ev-crest svg, .ev .ev-laurel-c svg { width: 100%; height: 100%; display: block; }
+.ev .ev-crest.is-official, .ev .ev-laurel-c.is-official { display: block; padding: 4px; box-sizing: border-box; }
+.ev .ev-crest img, .ev .ev-laurel-c img { width: 100%; height: 100%; object-fit: contain; display: block; }
 .ev .ev-top .ev-name { flex: 1; }
 .ev .ev-laurel-c { flex: none; width: 84px; aspect-ratio: 280 / 180; border-radius: 6px; background: #1b2838; }
 .ev .ev-top select { font: inherit; font-size: 0.85rem; color: var(--fb-ink); background: var(--fb-card-2); border: 1px solid var(--fb-line); border-radius: 8px; padding: 4px 6px; flex: none; }

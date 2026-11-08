@@ -42,6 +42,7 @@ export const EVENTS = [
   {"key": "future-games-show-summer-2027", "name": "Future Games Show (Summer)", "kind": "showcase", "url": "https://www.futuregamesshow.com", "cost": "Free", "deadline": "2027-04", "deadline_est": true, "when": "2027-06", "when_est": true, "needs": "upcoming game", "prize": "Trailer in a large stream", "note": "Nominating a game is free, but many slots are paid publisher deals. Also has gamescom shows in August."},
   {"key": "pc-gaming-show-2027", "name": "PC Gaming Show", "kind": "showcase", "url": "https://www.pcgamingshow.com", "cost": "Free", "deadline": "2027-04", "deadline_est": true, "when": "2027-06", "when_est": true, "needs": "upcoming PC game", "prize": "Trailer in a large stream", "note": "Has a submission form (one per game). Mostly bigger titles, but some indies get in."},
   {"key": "the-mix-summer-2027", "name": "The MIX Summer Showcase (was Guerrilla Collective)", "kind": "showcase", "url": "https://mediaindieexchange.com", "cost": "Paid (varies)", "deadline": "2027-04", "deadline_est": true, "when": "2027-06", "when_est": true, "needs": "indie game", "prize": "Showcase slot + press", "note": "Guerrilla Collective was renamed The MIX. Check the cost before you submit."},
+  {"key": "secret-sauce-2027", "name": "Secret Sauce Showcase (Open Sauce)", "kind": "showcase", "url": "https://opensauce.com", "cost": "", "deadline": null, "deadline_est": false, "when": "2027-07", "when_est": true, "needs": "indie game; ask secretsauce@offbrand.gg", "prize": "Livestream slot, Steam event and expo booth at Open Sauce", "note": "Run by offbrand games and Open Sauce. 2026: show Jul 16, Steam event Jul 17-23, expo in the SF Bay Area. No public form found; email them."},
   {"key": "otk-games-expo-2027", "name": "OTK Games Expo", "kind": "showcase", "url": "https://www.otknetwork.com", "cost": "Free", "deadline": "2027-04", "deadline_est": true, "when": "2027-06", "when_est": true, "needs": "indie game", "prize": "Streamer showcase; past cash grants", "note": "Mostly small and solo devs. Also has a winter edition in November. Cost not confirmed."},
   {"key": "big-indie-pitch-pgc-london-2027", "name": "Big Indie Pitch at PG Connects London", "kind": "award", "url": "https://www.bigindiepitch.com", "cost": "Paid (varies)", "deadline": "2027-01-05", "deadline_est": false, "when": "2027-01-18", "when_est": false, "needs": "any indie game; attend in person", "prize": "Pitch to judges; prizes and press", "note": "Pitching is free but needs a PG Connects ticket. Editions run in many cities all year."},
   {"key": "develop-brighton-indie-showcase-2027", "name": "Develop:Brighton Indie Showcase", "kind": "showcase", "url": "https://www.developconference.com/whats-on/indie-showcase-competition", "cost": "Free", "deadline": "2027-05", "deadline_est": true, "when": "2027-07", "when_est": true, "needs": "small studio (under 15), no publisher", "prize": "10 finalists get free passes + demo slot", "note": "Free. The 2026 deadline was May 6. Means a trip to Brighton."},
@@ -67,3 +68,20 @@ export const EVENTS = [
 // Shown under the list: what not to spend money on.
 export const AVOID = "Skip pay-for-a-laurel sites (a fee, and almost everyone gets \"Official Selection\" or \"Winner\"; players and press can tell). Not open to you: Develop:Star (UK teams), Swedish Game Awards and Gotland Game Awards (students), Frosty Games Fest (AU/NZ).";
 
+// Events that hand out their own badge art (an "Official Selection" laurel or similar), in
+// public/images/badges/, found on each event's site or on Steam pages of games that took part (Nov 2026).
+// The others get a laurel drawn on the tab, the way most developers make theirs.
+export const BADGES = {
+  "secret-sauce-2027": "secret-sauce.png",
+  "cozy-after-dark-2027": "cozy-after-dark-2027.png",
+  "tacticon-2027": "tacticon-2027.png",
+  "six-one-indie-showcase-2027": "six-one-indie-showcase-2027.png",
+  "indie-live-expo-2027": "indie-live-expo-2027.png",
+  "wholesome-direct-2027": "wholesome-direct-2027.png",
+  "day-of-the-devs-sgf-2027": "day-of-the-devs-sgf-2027.png", // the San Francisco edition's; same style
+  "the-mix-summer-2027": "the-mix-summer-2027.png",
+  "otk-games-expo-2027": "otk-games-expo-2027.png", // a Chat Choice Award badge; no plain one found
+  "big-indie-pitch-pgc-london-2027": "big-indie-pitch-pgc-london-2027.png", // the Winner one
+  "indiecade-next": "indiecade-next.png", // the Nominee seal
+  "indie-game-awards-2027": "indie-game-awards-2027.png", // the Game of the Year one
+};

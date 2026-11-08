@@ -145,3 +145,39 @@ const REGION = {
   "sweden-game-conference-2027": "in-se",
 };
 export const regionOf = (e) => REGION[e.key] || null;
+
+// Whether you attend or take part from home: "online" (no travel: Steam events, streams, online
+// voting), "in-person" (you go there), or "mixed" (both). Steam fests are all online.
+const FORMAT = {
+  "cozy-after-dark-2027": "online",
+  "godot-showcase-website": "online",
+  "godot-showreel-2027": "online",
+  "six-one-indie-showcase-2027": "online",
+  "indie-live-expo-2027": "online",
+  "wholesome-direct-2027": "online",
+  "day-of-the-devs-sgf-2027": "online",
+  "future-games-show-summer-2027": "online",
+  "pc-gaming-show-2027": "online",
+  "the-mix-summer-2027": "online",
+  "secret-sauce-2027": "mixed",
+  "otk-games-expo-2027": "online",
+  "igf-2028": "online",
+  "indiecade-next": "online",
+  "indie-game-awards-2027": "online",
+  "big-indie-pitch-pgc-london-2027": "in-person",
+  "develop-brighton-indie-showcase-2027": "in-person",
+  "big-festival-2027": "in-person",
+  "bitsummit-2027": "in-person",
+  "tgs-selected-indie-80-2027": "in-person",
+  "bic-festival-2027": "in-person",
+  "a-maze-berlin-2027": "in-person",
+  "nordic-game-awards-2027": "in-person",
+  "nordic-game-2027-showcase": "in-person",
+  "digital-vikings-awards-2027": "in-person",
+  "devgamm-awards-2027": "in-person",
+  "indie-arena-booth-gamescom-2027": "in-person",
+  "pax-rising-showcase-2027": "in-person",
+  "dreamhack-stockholm-indie-playground-2027": "in-person",
+  "sweden-game-conference-2027": "in-person",
+};
+export const formatOf = (e) => FORMAT[e.key] || (e.kind === "steam" ? "online" : null);

@@ -86,6 +86,19 @@ MENTION_PAGE = """{{Infobox game
 """
 
 
+def store_page_html(appid, ai=""):
+    """A store page cut down to what's read from it. ai: the disclosure text ("" none, None: the
+    store sent its front page instead)."""
+    if ai is None:
+        return '<html><link rel="canonical" href="https://store.steampowered.com/"></html>'
+    box = ('<div class="game_page_autocollapse"> <div id="game_area_content_descriptors" class="game_area_description">'
+           ' <h2>AI Generated Content Disclosure</h2> <p>The developers describe how their game uses AI Generated'
+           f' Content like this:</p> <p><i> {ai} </i> </p> </div> </div>') if ai else ""
+    return (f'<html><link rel="canonical" href="https://store.steampowered.com/app/{appid}/Some_Game/">'
+            f'<div id="appHubAppName" class="apphub_AppName">Some Game</div>{box}'
+            '<div class="game_page_autocollapse sys_req"><h2>System Requirements</h2></div></html>')
+
+
 class FakeWeb:
     """The transport for Http: routes by path to a small fake Steam and PCGamingWiki."""
 
@@ -98,6 +111,7 @@ class FakeWeb:
         self.list_modified: dict[int, int] = {}
         self.players: dict[int, int] = {}
         self.details: dict[int, dict | None] = {}
+        self.ai: dict[int, str | None] = {}  # appid -> its AI disclosure text (None: no store page)
         self.pcgw_pages: dict[int, tuple[str, int, str]] = {}  # pageid -> (title, revid, text)
         self.fail: dict[str, list] = {}  # path -> replies to give before the normal one
         self.page_size = 10000
@@ -120,6 +134,8 @@ class FakeWeb:
             "/api/appdetails": self.app_details,
             "/w/api.php": self.wiki,
         }.get(parts.path)
+        if handler is None and parts.path.startswith("/app/"):
+            return self.store_page(int(parts.path.split("/")[2]))
         if handler is None:
             return 404, {}, b"<html>not found</html>"
         out = handler(params)
@@ -159,6 +175,9 @@ class FakeWeb:
     def tag_list(self, p):
         return {"response": {"version_hash": "1", "tags": [{"tagid": 19, "name": "Action"},
                                                            {"tagid": 492, "name": "Indie"}]}}
+
+    def store_page(self, appid):
+        return 200, {"content-type": "text/html"}, store_page_html(appid, self.ai.get(appid, "")).encode()
 
     def app_details(self, p):
         appid = int(p["appids"])

@@ -8,7 +8,8 @@ JSON files to MARKET_DIR, which the game-data server hands to the signed-in owne
 (GET /v1/admin/market/<name>, see server/gamedata/admin.py). Nothing here is public.
 
 - growth.json: Steam's releases per year and per month, and each user tag's releases and the reviews
-  they earned, for "how Steam grows and how each genre grows next to it".
+  they earned, for "how Steam grows and how each genre grows next to it"; and per release month, how
+  many of the games read disclose AI on their store page (ai).
 - games.json: every game released in the last RECENT_DAYS, one compact row each, with its hit index.
   The dashboard's gap finder, hit list and goal search all work on this in the browser.
 - godot.json: every game in the Godot set (released or not), with everything the Godot finder and the
@@ -70,6 +71,8 @@ TAG_ALERTS = 8              # at most this many "heating up" alerts a day, the h
 ALERT_REPEAT_DAYS = 30
 REVIEW_BARS = (10, 50, 100)  # growth.json: releases per year that reached this many reviews
 INDIE = 492  # the Indie user tag
+AI_MIN_REVIEWS = 10          # growth.json ai.mq: the AI share among games that reached this many reviews
+AI_SINCE_MONTH = "2023-01"   # the collector reads the AI disclosure of games released from here on
 
 # Steam's users logged in at once: its all-time record as reported at the time (Valve's own number,
 # quoted in the press; SteamDB's charts can't be used, its terms forbid scraping). The years before
@@ -151,7 +154,7 @@ def users_by(periods: list[int], period_of, end_of, measured: dict[int, int]) ->
 
 # Flags in a games.json row (a bit field, so the rows stay small).
 # F_SELF: self-published (no publisher besides the developers).
-F_LINUX, F_MAC, F_DECK_OK, F_DECK_VERIFIED, F_EARLY, F_FREE, F_GODOT, F_DEMO, F_SELF = (1 << i for i in range(9))
+F_LINUX, F_MAC, F_DECK_OK, F_DECK_VERIFIED, F_EARLY, F_FREE, F_GODOT, F_DEMO, F_SELF, F_AI = (1 << i for i in range(10))
 
 
 # ---------------------------------------------------------------------------
@@ -168,7 +171,8 @@ class Game:
                  "languages",      # how many languages (None: metadata not fetched yet)
                  "full_audio", "linux", "mac", "deck", "godot", "developers", "publishers", "players_max",
                  "achievements", "controller", "demos", "dlc_count", "metacritic", "details",
-                 "release_display", "hit", "gain7", "gain28")
+                 "release_display", "hit", "gain7", "gain28",
+                 "ai")             # the store page's AI disclosure: True, False, None (not read)
 
     def __init__(self, **values: Any):
         for name in self.__slots__:
@@ -205,12 +209,14 @@ def connect(db_path: str) -> sqlite3.Connection:
 
 def read_games(db: sqlite3.Connection) -> list[Game]:
     games = []
+    # The AI disclosure columns came later: a file the collector hasn't opened since has none.
+    has_ai = "ai" in {r[1] for r in db.execute("PRAGMA table_info(apps)")}
     ids: dict[int, int] = {}  # one int object per tag id, not one per game (millions of them)
-    for r in db.execute("""SELECT appid, name, release_ts, coming_soon, early_access, is_free, reviews,
+    for r in db.execute(f"""SELECT appid, name, release_ts, coming_soon, early_access, is_free, reviews,
                                   positive_pct, price, price_original, original_release_ts, tags, genres, languages, linux, mac,
                                   deck, godot, developers, publishers, players_max, achievements,
                                   controller_support, demos, dlc_count, metacritic, details_at,
-                                  release_display
+                                  release_display, {"ai" if has_ai else "NULL AS ai"}
                            FROM apps WHERE type = 'game' AND snapshot_at IS NOT NULL
                              AND COALESCE(visible, 1) = 1"""):
         langs, audio = _languages(r["languages"])
@@ -230,7 +236,7 @@ def read_games(db: sqlite3.Connection) -> list[Game]:
             players_max=r["players_max"], achievements=r["achievements"],
             controller=r["controller_support"], demos=len(_json_list(r["demos"])) if r["demos"] else (0 if r["details_at"] else None),
             dlc_count=r["dlc_count"], metacritic=r["metacritic"], details=bool(r["details_at"]),
-            release_display=r["release_display"]))
+            release_display=r["release_display"], ai=None if r["ai"] is None else bool(r["ai"])))
     return games
 
 
@@ -316,6 +322,9 @@ def growth(games: list[Game], tag_names: dict[int, str], genre_names: dict[int, 
     total = series()
     # Releases per year that reached N reviews: real competition, not every low-effort upload.
     total["q"] = {str(n): [0] * len(years) for n in REVIEW_BARS}
+    # The AI disclosure per release month: games read, and how many disclose AI; the same for the
+    # games that reached AI_MIN_REVIEWS reviews (the ones players found).
+    ai = {"m": [0] * len(months), "mRead": [0] * len(months), "mq": [0] * len(months), "mqRead": [0] * len(months)}
     per_tag: dict[int, dict] = defaultdict(series)
     per_genre: dict[int, dict] = defaultdict(series)
     for g in released:
@@ -324,6 +333,12 @@ def growth(games: list[Game], tag_names: dict[int, str], genre_names: dict[int, 
         yi = y - first_year if y >= first_year else None
         mi = m - months[0] if m >= months[0] else None
         targets = [total] + [per_tag[t] for t in g.tags[:TOP_TAGS]] + [per_genre[x] for x in g.genres]
+        if mi is not None and g.ai is not None:
+            ai["mRead"][mi] += 1
+            ai["m"][mi] += g.ai
+            if g.reviews >= AI_MIN_REVIEWS:
+                ai["mqRead"][mi] += 1
+                ai["mq"][mi] += g.ai
         if yi is not None:
             for n in REVIEW_BARS:
                 if g.reviews >= n:
@@ -346,6 +361,7 @@ def growth(games: list[Game], tag_names: dict[int, str], genre_names: dict[int, 
         "yearDone": round((today - start_of_year + 1) / 365, 3),
         "monthDone": round(time.gmtime(today * DAY).tm_mday / 30.4, 3),
         "total": total,
+        "ai": {**ai, "minReviews": AI_MIN_REVIEWS, "since": AI_SINCE_MONTH},
         # Steam's users logged in at once: per period, the measured peak or the all-time record by its end.
         "users": {"y": users_y, "yKind": users_y_kind, "m": users_m, "mKind": users_m_kind,
                   "records": [{"date": d, "users": v, "source": src} for d, v, src in USER_RECORDS]},
@@ -366,6 +382,7 @@ def flags(g: Game) -> int:
     if g.godot: f |= F_GODOT
     if g.demos: f |= F_DEMO
     if self_published(g): f |= F_SELF
+    if g.ai: f |= F_AI
     return f
 
 
@@ -386,7 +403,7 @@ def recent_rows(games: list[Game], today: int) -> dict[str, Any]:
     rows.sort(key=lambda r: -r[2])
     return {"columns": GAME_COLUMNS, "rows": rows, "topTags": TOP_TAGS,
             "flags": {"linux": F_LINUX, "mac": F_MAC, "deckOk": F_DECK_OK, "deckVerified": F_DECK_VERIFIED,
-                      "earlyAccess": F_EARLY, "free": F_FREE, "godot": F_GODOT, "demo": F_DEMO, "self": F_SELF}}
+                      "earlyAccess": F_EARLY, "free": F_FREE, "godot": F_GODOT, "demo": F_DEMO, "self": F_SELF, "ai": F_AI}}
 
 
 def godot_rows(db: sqlite3.Connection, games: list[Game]) -> list[dict[str, Any]]:

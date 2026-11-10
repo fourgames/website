@@ -1,8 +1,8 @@
 """The collector: one thread, one request at a time, each host at its own pace.
 
 Work is split into lanes (the app list, tag names, the daily snapshot, player counts, the monthly
-metadata, PCGamingWiki). Each lane takes what's due from the database a small batch at a time.
-The loop picks the lane whose host may be asked soonest (lanes sharing a host go in the order
+metadata, the store pages' AI disclosure, PCGamingWiki). Each lane takes what's due from the
+database a small batch at a time. The loop picks the lane whose host may be asked soonest (lanes sharing a host go in the order
 below, so the daily snapshot goes before player counts), sleeps until then, and does one request.
 """
 
@@ -182,6 +182,23 @@ class DetailsLane(Lane):
         self.store.delay("details", [appid], now + cadence.DAY)
 
 
+class AiLane(Lane):
+    """The store page's AI disclosure: recent and upcoming games (db.AI_SINCE), never-read first
+    (newest first), then each every AI_DAYS. Shares the store's pace with the metadata, after it."""
+
+    name = "ai"
+
+    def refill(self, now):
+        return self.store.due("ai", now, 20)
+
+    def run(self, appid, now):
+        page = steam.store_page(self.c.http, appid, self.c.cfg.country)
+        self.store.save_ai(appid, steam.parse_ai_disclosure(page, appid), now, self.c.rng, self.c.cfg.ai_days)
+
+    def give_up(self, appid, now):
+        self.store.delay("ai", [appid], now + cadence.DAY)
+
+
 class PcgwLane(Lane):
     """PCGamingWiki, weekly: the pages linking each engine, then the changed pages' wikitext."""
 
@@ -262,7 +279,7 @@ class Collector:
         wiki = Limiter("www.pcgamingwiki.com", cfg.pcgw_seconds, throttle_pause=300)
         # Order matters for lanes sharing a host: earlier ones go first.
         all_lanes = [AppListLane(self, webapi), TagsLane(self, webapi), SnapshotLane(self, webapi),
-                     PlayersLane(self, webapi), DetailsLane(self, store_api), PcgwLane(self, wiki)]
+                     PlayersLane(self, webapi), DetailsLane(self, store_api), AiLane(self, store_api), PcgwLane(self, wiki)]
         self.lanes = [lane for lane in all_lanes if lanes is None or lane.name in lanes]
         self.next_summary = 0.0
         self.day: int | None = None
@@ -402,7 +419,7 @@ class Collector:
         trouble = sum(lane.counts["throttled"] + lane.counts["failed"] for lane in self.lanes)
         try:
             due = ", ".join(f"{name} {self.store.count_due(name, now):,}"
-                            for name in ("snapshot", "players", "details")
+                            for name in ("snapshot", "players", "details", "ai")
                             if any(lane.name == name for lane in self.lanes))
         except Exception:
             due = "?"

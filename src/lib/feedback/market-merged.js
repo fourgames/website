@@ -6,7 +6,7 @@
 //      rows open a line in plain words; and the gap finder from market-gaps.js.
 //   2. Who should I sign?        market-sign.js (its own state and CSS).
 //   3. How is Steam doing?       games released vs Steam's peak players (this year as a dashed pace),
-//      what's doing well right now (releases by hit index), and all of today's alerts, folded.
+//      how many new games disclose AI on their store page (by month), what's doing well right now (releases by hit index), and all of today's alerts, folded.
 //   4. My game ideas             market-ideas.js: score an idea against the market.
 //   5. Tag my game               market-tags.js: a game's tags against the games most like it.
 //      ctx.openTags({ tags, about }) opens it on an idea's tags (used by My game ideas).
@@ -39,7 +39,7 @@ const TABS = [
   ["tags", "Tag my game", "Better tags, from games like yours"],
 ];
 const SEEN_DAYS = 30;      // the Today box forgets a seen item after this long
-const F = { linux: 1, mac: 2, deckOk: 4, godot: 64, demo: 128, self: 256 };
+const F = { linux: 1, mac: 2, deckOk: 4, godot: 64, demo: 128, self: 256, ai: 512 };
 const REVIEW_STEPS = [10, 50, 100];
 
 // Plain words for jargon tags, keyed by the tag's lowercase name. Shown on a niche's card and as a
@@ -480,6 +480,36 @@ export function steamGrowth(g, minReviews = 10) {
       : per > 1.05 ? `Players are arriving faster than games: about ${pct(per - 1)} more players per new game than in ${years[0]}.` : `Players and games have grown about as fast as each other.`);
   return { years, rel, users, relIdx: idx(rel), usersIdx: idx(users), gr, ur, per, sentence, partial, sofar: g.total.y.at(-1),
     q, qIdx: q ? idx(q) : null, qMin: minReviews, qSofar: q ? qRaw.at(-1) : null };
+}
+
+// The share of each month's new games whose store page has an AI Generated Content Disclosure
+// (growth.json ai). Months with fewer than AI_MIN_READ games read are left out (null): the collector
+// reads store pages slowly, newest first, and a handful of games makes a noisy share.
+const AI_MIN_READ = 30;
+export function aiShare(g, from = "2024-01") {
+  const a = g?.ai;
+  if (!a?.mRead || !g.months) return null;
+  const start = Math.max(0, g.months.indexOf(from));
+  // The current month is still going: its few games so far would make a jumpy last point.
+  const end = g.monthDone > 0 && g.monthDone < 0.5 ? g.months.length - 1 : g.months.length;
+  const share = (k, read) => (i) => a[read][i] >= AI_MIN_READ ? a[k][i] / a[read][i] : null;
+  const idx = [...Array(end - start).keys()].map((i) => i + start);
+  const all = idx.map(share("m", "mRead")), top = idx.map(share("mq", "mqRead"));
+  if (!all.some((v) => v != null)) return null;
+  const sum = (k) => idx.reduce((t, i) => t + (a[k][i] || 0), 0);
+  const released = idx.reduce((t, i) => t + (g.total?.m?.[i] || 0), 0);
+  const first = all.findIndex((v) => v != null), last = all.findLastIndex((v) => v != null);
+  const label = (m) => { const [y, mo] = m.split("-"); return `${MONTHS[Number(mo) - 1]} ${y}`; };
+  const lastTop = top.findLastIndex((v) => v != null);
+  const sentence = `${pct(all[last])} of the games released in ${label(g.months[idx[last]])} say on their store page that they use AI`
+    + (first < last ? `, against ${pct(all[first])} in ${label(g.months[idx[first]])}` : "") + "."
+    + (lastTop >= 0 ? ` Among the games that reached ${a.minReviews || 10}+ reviews (the ones players found) it's ${pct(top[lastTop])}.` : "");
+  return {
+    labels: idx.map((i) => label(g.months[i])), all, top, sentence, minReviews: a.minReviews || 10,
+    disclosed: idx.map((i) => a.m[i]), read: idx.map((i) => a.mRead[i]),
+    topDisclosed: idx.map((i) => a.mq[i]), topRead: idx.map((i) => a.mqRead[i]),
+    readTotal: sum("mRead"), released, from: label(g.months[start]),
+  };
 }
 
 // Recent releases ranked by the hit index (review-count percentile among games out within ±7 days).
@@ -1273,8 +1303,33 @@ function steamView() {
         h("p.mm-line", "Steam's all-time record of users online at once as of each year's end, as Valve reported it at the time (quoted in the press). From November 2026 the server keeps each day's peak from Steam's own stats feed."),
         h("ul.mm-sources", ...(g.users.records || []).map((r) => h("li", `${r.date}: ${short(r.users)} `, link(r.source, "source")))))));
   }
-  out.push(releasesSection(), alertsFold());
+  out.push(aiSection(), releasesSection(), alertsFold());
   return h("div", ...out);
+}
+
+function aiSection() {
+  const h = C.h, title = "How many new games use AI?";
+  const a = memo("aiShare", () => aiShare(st.files.growth));
+  const about = fold("ai-about", "Where these numbers come from",
+    h("p.mm-line", "Since January 2024 Steam asks developers to say if their game uses AI-generated content, and shows it on the store page as an \"AI Generated Content Disclosure\". No Steam API has it, so the server reads the store page of each game released since 2023 (and each upcoming one), newest first, and again every 60 days. A game counts for the month it first came out. Games that use AI but don't say so aren't counted, so this is the least it could be."));
+  if (!a) return section(title, null, h("p.mm-note", "No AI numbers yet: the server has only just started reading the store pages. They show here once it has read at least 30 games of a month."), about);
+  const fmt = (v) => v == null ? "–" : `${Math.round(v * 100)}%`;
+  const top = a.top.some((v) => v != null);
+  const chart = lineChart({
+    labels: a.labels, yLabel: "Share that disclose AI", fmt, indexed: false,
+    // Four even steps of whole percents (0.12: 3, 6, 9, 12%).
+    max: [0.04, 0.08, 0.12, 0.2, 0.24, 0.4, 0.6, 0.8, 1].find((m) => m >= Math.max(...a.all, ...a.top, 0.02) * 1.1) || 1,
+    series: [
+      { name: "All new games", color: "var(--sw-1)", values: a.all, raw: a.read.map((r, i) => [a.disclosed[i], r]), rawFmt: ([d, r]) => `${num(d)} of ${num(r)}` },
+      top ? { name: `Games with ${a.minReviews}+ reviews`, color: "var(--sw-2)", values: a.top, raw: a.topRead.map((r, i) => [a.topDisclosed[i], r]), rawFmt: ([d, r]) => `${num(d)} of ${num(r)}` } : null,
+    ].filter(Boolean),
+    note: [
+      a.readTotal < a.released * 0.9 ? `Still reading: ${num(a.readTotal)} of the ${num(a.released)} games released since ${a.from} so far, newest first.` : null,
+      `Months with fewer than ${AI_MIN_READ} games read are left out.`,
+      top ? `Recent games have had less time to reach ${a.minReviews} reviews, so the last months of the second line are thin.` : null,
+    ].filter(Boolean).join(" "),
+  });
+  return section(title, null, h("p.mm-big", a.sentence), chartCard(chart), about);
 }
 
 function releasesSection() {
@@ -1286,14 +1341,14 @@ function releasesSection() {
   const names = tagNames();
   const set = (k, v) => { f[k] = v; st.relShown = 25; save("rel", f); };
   const rows = list.slice(0, st.relShown).map((g) => h("tr",
-    h("td", link(storeUrl(g.appid), g.name), g.flags & F.godot ? badge("Godot", "godot") : null),
+    h("td", link(storeUrl(g.appid), g.name), g.flags & F.godot ? badge("Godot", "godot") : null, g.flags & F.ai ? badge("AI", "ai") : null),
     barCell(g.hit / 100, String(g.hit), g.hit >= 99 ? "var(--sw-3)" : "var(--sw-1)"),
     h("td.mm-num", fmtK(g.reviews)), h("td.mm-num", g.pos ? `${g.pos}%` : "–"),
     h("td", dayDate(g.day), h("span.mm-dim", ` · ${d - g.day} d`)), h("td.mm-num", money(g.price)),
     h("td", g.flags & F.self ? badge("Self", "self") : h("span.mm-dim", "publisher")),
     h("td.mm-dim", g.top.filter((t) => t !== INDIE).slice(0, 3).map((t) => names[t]).filter(Boolean).join(", "))));
   const cols = [
-    { label: "Game", tip: "The release, with a Godot mark when detected." },
+    { label: "Game", tip: "The release, with a Godot mark when detected, and AI when its store page says it uses AI-generated content." },
     { label: "Hit index", num: true, tip: "Its review count as a percentile among games released within a week of it: 99 = more reviews than 99% of them. 90+ counts as a hit." },
     { label: "Reviews", num: true }, { label: "Positive", num: true }, { label: "Released" }, { label: "Price", num: true },
     { label: "Publisher", tip: "Self = self-published." }, { label: "Tags" },
@@ -1334,11 +1389,11 @@ function chartCard(chart) {
 
 // Lines over evenly spaced labels, labeled at their ends, with a crosshair readout and a data table.
 // A series with `pace` draws its last step dashed (this year, extrapolated to a whole year).
-function lineChart({ labels, series, fmt, yLabel, note }) {
+function lineChart({ labels, series, fmt, yLabel, note, indexed = true, max: fixedMax }) {
   const h = C.h, svgEl = C.svgEl;
   const W = 760, H = 280, M = { top: 18, right: 200, bottom: 30, left: 50 };
   const vals = series.flatMap((s) => s.values).filter((v) => v != null);
-  const max = niceMax(Math.max(...vals, 0) * 1.05 || 1);
+  const max = fixedMax || niceMax(Math.max(...vals, 0) * 1.05 || 1);
   const n = labels.length;
   const x = (i) => M.left + (n === 1 ? 0 : (i / (n - 1)) * (W - M.left - M.right));
   const y = (v) => H - M.bottom - (v / max) * (H - M.top - M.bottom);
@@ -1351,7 +1406,8 @@ function lineChart({ labels, series, fmt, yLabel, note }) {
   }
   text({ x: M.left, y: 12, class: "mm-axis mm-axis-title" }, yLabel || "");
   const every = Math.max(1, Math.ceil(n / 9));
-  labels.forEach((l, i) => { if (i % every === 0 || i === n - 1) text({ x: x(i), y: H - 8, "text-anchor": "middle", class: "mm-axis" }, l); });
+  // The last label always shows; a regular one too close to it is left out.
+  labels.forEach((l, i) => { if ((i % every === 0 && n - 1 - i >= every / 2) || i === n - 1) text({ x: x(i), y: H - 8, "text-anchor": "middle", class: "mm-axis" }, l); });
   const isPace = (s, i) => s.pace && i === n - 1;
   // End labels, pushed apart when they'd overlap.
   const ends = series.map((s) => { const i = s.values.findLastIndex((v) => v != null); return { s, i, y: y(s.values[i]) }; }).sort((a, b) => a.y - b.y);
@@ -1370,7 +1426,7 @@ function lineChart({ labels, series, fmt, yLabel, note }) {
     // An index alone reads like a count ("256" games?): say it as times-2018 with the real number next to it.
     const v = e.s.values[e.i];
     text({ x: x(e.i) + 10, y: e.y + 4, class: "mm-endlabel" }, e.s.raw && v != null
-      ? `×${(v / 100).toFixed(1)} · ${e.s.rawFmt(e.s.raw[e.i])}` : `${fmt(v)}`);
+      ? (indexed ? `×${(v / 100).toFixed(1)} · ${e.s.rawFmt(e.s.raw[e.i])}` : `${fmt(v)} · ${e.s.rawFmt(e.s.raw[e.i])}`) : `${fmt(v)}`);
     text({ x: x(e.i) + 10, y: e.y + 18, class: "mm-endname" }, paced ? `${e.s.name} (pace)` : e.s.name);
   }
   const cross = svgEl("line", { y1: M.top, y2: H - M.bottom, class: "mm-cross", visibility: "hidden" });

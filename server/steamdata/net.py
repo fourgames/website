@@ -1,4 +1,4 @@
-"""HTTP GETs that return JSON, with the errors sorted into what the collector does about them.
+"""HTTP GETs that return JSON (or a page's text), with the errors sorted into what the collector does about them.
 
 Nothing here sleeps or retries: the collector's rate limiters decide when to try again. Errors and
 logs name the host and path only, never the query string, so the Web API key can't end up in a log.
@@ -75,12 +75,34 @@ class Http:
 
     def get_json(self, url: str, params: dict | None = None, *,
                  throttle_codes: tuple[int, ...] = (429,)) -> Any:
+        body, host, where = self._get(url, params, {"Accept": "application/json"}, throttle_codes)
+        try:
+            data = json.loads(body.decode("utf-8", errors="replace"))
+        except ValueError:
+            # E.g. a retired endpoint that redirects to an HTML page.
+            self._count(host, "failed")
+            raise Transient("non-JSON reply", where) from None
+        self._count(host, "ok")
+        return data
+
+    def get_text(self, url: str, params: dict | None = None, *, cookies: dict | None = None,
+                 throttle_codes: tuple[int, ...] = (429,)) -> str:
+        """An HTML page as text (a store page)."""
+        extra = {"Accept": "text/html"}
+        if cookies:
+            extra["Cookie"] = "; ".join(f"{k}={v}" for k, v in cookies.items())
+        body, host, _ = self._get(url, params, extra, throttle_codes)
+        self._count(host, "ok")
+        return body.decode("utf-8", errors="replace")
+
+    def _get(self, url: str, params: dict | None, extra: dict,
+             throttle_codes: tuple[int, ...]) -> tuple[bytes, str, str]:
+        """The reply's body (un-gzipped), or the error it amounts to. Counts everything but "ok"."""
         parts = urllib.parse.urlsplit(url)
         host, where = parts.netloc, parts.netloc + parts.path.rstrip("/")
         if params:
             url = f"{url}?{urllib.parse.urlencode(params)}"
-        headers = {"User-Agent": self.user_agent, "Accept": "application/json",
-                   "Accept-Encoding": "gzip"}
+        headers = {"User-Agent": self.user_agent, "Accept-Encoding": "gzip", **extra}
         try:
             status, res_headers, body = self.transport(url, headers, self.timeout)
         except (urllib.error.URLError, http.client.HTTPException, OSError) as error:
@@ -107,14 +129,7 @@ class Http:
             except (OSError, EOFError):
                 self._count(host, "failed")
                 raise Transient("broken gzip", where) from None
-        try:
-            data = json.loads(body.decode("utf-8", errors="replace"))
-        except ValueError:
-            # E.g. a retired endpoint that redirects to an HTML page.
-            self._count(host, "failed")
-            raise Transient("non-JSON reply", where) from None
-        self._count(host, "ok")
-        return data
+        return body, host, where
 
 
 def _retry_after(value: str | None) -> float | None:

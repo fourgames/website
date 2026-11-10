@@ -7,7 +7,7 @@ import pytest
 from steamdata import steam
 from steamdata.net import Throttled, Transient
 
-from .conftest import details, item
+from .conftest import details, item, store_page_html
 
 # Trimmed from a real IStoreBrowseService/GetItems reply.
 BROTATO = {
@@ -125,3 +125,21 @@ def test_clean_languages(raw, clean):
 
 def test_tag_list(http):
     assert steam.tag_list(http) == [(19, "Action"), (492, "Indie")]
+
+
+def test_parse_ai_disclosure():
+    # Cut from inZOI's store page (November 2026).
+    page = store_page_html(2456740, "Players can generate unique textures<br /> All content was reviewed &amp; refined.")
+    got = steam.parse_ai_disclosure(page, 2456740)
+    assert got.disclosed and got.text == "Players can generate unique textures All content was reviewed & refined."
+    assert steam.parse_ai_disclosure(store_page_html(10), 10) == steam.AiDisclosure(False)
+    # The front page (gone or region-locked), or another app's page.
+    assert steam.parse_ai_disclosure(store_page_html(10, None), 10) is None
+    assert steam.parse_ai_disclosure(store_page_html(20), 10) is None
+
+
+def test_store_page_request(http, web):
+    web.ai = {2456740: "AI textures."}
+    assert steam.parse_ai_disclosure(steam.store_page(http, 2456740, "US"), 2456740).disclosed
+    _, host, path, params = web.calls[-1]
+    assert (host, path, params) == ("store.steampowered.com", "/app/2456740/", {"l": "english", "cc": "us"})

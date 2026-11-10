@@ -19,7 +19,8 @@ def test_report_after_a_run(config, store, http, web, clock, rng, db_path):
     assert "Godot set: 3 apps (pcgamingwiki 2, store_legal 1); 1 more only mention Godot" in text
     assert "Rows: daily 4 (4 today) since 2026-11-04" in text
     assert "Due now: snapshot 0" in text
-    assert "Requests today (UTC): api.steampowered.com" in text
+    assert "AI disclosure: 4 of 5 recent and upcoming games read, 1 disclose AI (25%)" in text
+    assert "Requests today (UTC): store.steampowered.com 10 ok" in text and "api.steampowered.com" in text
 
 
 def test_main_without_a_database(tmp_path, monkeypatch, capsys):

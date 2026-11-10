@@ -3,7 +3,7 @@
 import json
 
 from steamdata import cadence, steam
-from steamdata.db import Store
+from steamdata.db import SCHEMA_VERSION, Store
 from steamdata.engine import Signal
 from steamdata.pcgw import PageInfo
 from steamdata.steam import ListApp
@@ -35,7 +35,7 @@ def test_wal_and_reopening(db_path):
     s.close()
     s = Store(db_path)  # the schema again is a no-op; the data is there
     assert app(s, 10)["name"] == "App 10"
-    assert s.db.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert s.db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
     s.close()
 
 
@@ -237,3 +237,36 @@ def test_http_log_and_pruning(store):
     add(store, 10)
     store.db.execute("INSERT INTO players VALUES (10, 100, 1), (10, 200, 2)")
     assert store.prune_samples(150) == 1
+
+
+def test_an_older_file_gets_the_ai_columns(tmp_path):
+    import sqlite3
+    from steamdata import db as dbmod
+    path = str(tmp_path / "old.db")
+    # The first version's schema: the same without the AI columns.
+    first = "\n".join(l for l in dbmod.SCHEMA.splitlines() if not l.strip().startswith(("ai", "-- ai", "-- The store page's AI")))
+    first = first.replace("details_at          INTEGER,\n);", "details_at          INTEGER\n);")
+    old = sqlite3.connect(path)
+    old.executescript(first)
+    assert "ai" not in {r[1] for r in old.execute("PRAGMA table_info(apps)")}
+    old.close()
+    s = Store(path)
+    assert {"ai", "ai_text", "ai_at", "ai_due"} <= {r[1] for r in s.db.execute("PRAGMA table_info(apps)")}
+    s.close()
+
+
+def test_ai_due_and_save(store):
+    store.add_stub_apps([10, 20, 30], NOW)
+    store.save_snapshot({10: steam.parse_item(item(10, "New")), 20: steam.parse_item(item(20, "Old", release=1_500_000_000)),
+                         30: steam.parse_item(item(30, "Soon", coming_soon=True, release=None))}, NOW)
+    assert set(store.due("ai", NOW, 10)) == {10, 30} and store.count_due("ai", NOW) == 2
+    rng = __import__("random").Random(1)
+    store.save_ai(10, steam.AiDisclosure(True, "Voices."), NOW, rng, 60)
+    store.save_ai(30, None, NOW, rng, 60)
+    assert store.due("ai", NOW, 10) == []
+    row = store.db.execute("SELECT ai, ai_text, ai_due FROM apps WHERE appid = 10").fetchone()
+    assert (row["ai"], row["ai_text"]) == (1, "Voices.") and row["ai_due"] > NOW + 50 * cadence.DAY
+    store.save_ai(10, steam.AiDisclosure(False), NOW + 61 * cadence.DAY, rng, 60)
+    assert store.db.execute("SELECT field, old, new FROM app_changes WHERE appid = 10 AND field = 'ai'").fetchone()[:] == ("ai", "1", "0")
+    store.delay("ai", [30], NOW + 30 * cadence.DAY)
+    assert store.db.execute("SELECT ai_due FROM apps WHERE appid = 30").fetchone()[0] == int(NOW + 30 * cadence.DAY)

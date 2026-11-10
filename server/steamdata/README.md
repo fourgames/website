@@ -8,8 +8,9 @@ endpoints for one thing at a time, slowly, and writes everything to one SQLite f
 dashboard's Market section shows from it (trends and alerts, Steam's growth, the gap finder, the hit
 index, the Godot finder and leads): see *The Market numbers*.
 
-Only official Steam endpoints and PCGamingWiki's public API, nothing scraped (no SteamDB: its terms
-forbid it). The data is for our own analysis: don't republish it (see *Using the data*).
+Official Steam endpoints and PCGamingWiki's public API, plus one thing no API has: the "AI Generated
+Content Disclosure" box on a recent game's own store page (read slowly, at the store's pace). No
+SteamDB: its terms forbid it. The data is for our own analysis: don't republish it (see *Using the data*).
 
 ## What it collects
 
@@ -19,6 +20,7 @@ forbid it). The data is for our own analysis: don't republish it (see *Using the
 | **The daily snapshot** of every game: review count, % positive and score, price, discount, user tags, release date (and coming soon / early access), platforms, Steam Deck rating, developers, publishers | `IStoreBrowseService/GetItems`, 100 games per request | once per UTC day, from 00:05 |
 | Players right now | `ISteamUserStats/GetNumberOfCurrentPlayers` | from hourly to monthly, by how many play (below) |
 | Full metadata: genres, languages, age rating, controller support, Metacritic, achievements, DLC count, demos, the store's release-date text | store `api/appdetails` | new games first (newest first), then every 30 days |
+| Whether the game discloses AI-generated content, and how the developer says it uses it | the store page, `store.steampowered.com/app/<appid>/` | games first released since 2023 and games coming soon: newest first, then every 60 days (`AI_DAYS`) |
 | User tag names | `IStoreService/GetTagList` | weekly |
 | Which games are made with Godot | PCGamingWiki, and the store text above | weekly / with the metadata |
 
@@ -77,6 +79,13 @@ allow 100,000.
 **store.steampowered.com/api/appdetails**, `APPDETAILS_PER_5MIN=120` (Steam allows about 200): at
 most 34,560 a day. The first pass over 150,000 games takes about 4.5 days, newest first. After that:
 every game every 30 days (~5,000 a day) plus new games and fresh releases: about 15% of the budget.
+
+**store.steampowered.com/app/<appid>/** (the AI disclosure) shares that pace with appdetails, after it:
+~80,000 games released since 2023 or coming soon, so the first pass takes a few days once appdetails
+has caught up; after that ~1,300 a day (every 60 days) plus the new ones. A page that isn't the
+game's (gone, region-locked, adults-only age gate) is tried again in a week; a disclosure that
+appears or goes away is written to `app_changes` as `ai`. The dashboard's "How many new games use AI?"
+chart counts per release month how many of the games read disclose it (`growth.json` `ai`).
 
 **www.pcgamingwiki.com**, one request per 10 s, weekly: one request lists the pages linking
 Engine:Godot (259 in November 2026), and only new or edited pages are read, 20 per request. The first

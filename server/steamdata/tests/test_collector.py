@@ -21,6 +21,7 @@ def world(web):
     web.players = {10: 300, 1942280: 17523, 555: 4}
     web.details = {10: details("Ten"), 20: details("Twenty", legal="Godot Engine, MIT license"),
                    30: details("Soon"), 1942280: details("Brotato"), 555: details("Godot Only")}
+    web.ai = {1942280: "Some <b>item icons</b> were made with AI.", 555: None}
     web.pcgw_pages = {1: ("Brotato", 11, GODOT_PAGE % 1942280), 2: ("Godot Only", 12, GODOT_PAGE % 555),
                       3: ("Victoria II", 13, MENTION_PAGE % 42960)}
 
@@ -93,8 +94,16 @@ def test_an_hour_of_collecting(config, store, http, web, clock, rng):
     assert store.meta_float("applist_full_due") == pytest.approx(NOW + cadence.DAY, abs=60)
     assert store.meta_float("pcgw_due") > NOW + 6 * cadence.DAY
     assert app(store, 10)["snapshot_due"] == cadence.next_snapshot(NOW)
+    # The AI disclosure: every game here is recent (Nov 2023), so all 5 store pages are read once.
+    assert len(web.calls_to("/app/")) == 5
+    assert (app(store, 1942280)["ai"], app(store, 1942280)["ai_text"]) == (1, "Some item icons were made with AI.")
+    assert app(store, 10)["ai"] == 0 and app(store, 30)["ai"] == 0
+    assert app(store, 555)["ai"] is None and app(store, 555)["ai_due"] == pytest.approx(NOW + cadence.HIDDEN_RETRY, abs=3600)
+    assert app(store, 10)["ai_due"] > NOW + 50 * cadence.DAY
+    store_calls = sorted(web.calls_to("/api/appdetails") + web.calls_to("/app/"))
+    assert min(gaps(store_calls)) >= 2.5 - 1e-6  # one pace for the whole store host
     log = {r["host"]: r["ok"] for r in store.db.execute("SELECT * FROM http_log")}
-    assert log["api.steampowered.com"] == len(webapi) and log["store.steampowered.com"] == 5
+    assert log["api.steampowered.com"] == len(webapi) and log["store.steampowered.com"] == 10
 
 
 def test_the_next_day_gets_its_own_snapshot(config, store, http, web, clock, rng):

@@ -8,6 +8,8 @@
 - api.steampowered.com/IStoreService/GetTagList: the user tags' names.
 - store.steampowered.com/api/appdetails: one app's full store data (genres, languages, legal notice,
   description...). Strictly rate limited, so only for the monthly metadata refresh.
+- store.steampowered.com/app/<appid>/: the store page itself, only for its "AI Generated Content
+  Disclosure" box, which no API has. Recent games only, every AI_DAYS (see collector.py).
 """
 
 from __future__ import annotations
@@ -320,3 +322,35 @@ def parse_details(data: dict) -> Details:
             "requirements": strip_html(requirements),
         },
     )
+
+
+# The AI disclosure (the store page)
+
+# Past the age gate (mature games), as if born in 1970. Adults-only games may still be gated.
+PAGE_COOKIES = {"birthtime": "0", "lastagecheckage": "1-January-1970", "wants_mature_content": "1"}
+_AI_BOX = re.compile(r'<div id="game_area_content_descriptors"[^>]*>\s*<h2>\s*AI Generated Content Disclosure\s*</h2>(.*?)</div>',
+                     re.S | re.I)
+_AI_SAYS = re.compile(r"<i>(.*?)</i>", re.S | re.I)
+
+
+@dataclass(frozen=True)
+class AiDisclosure:
+    disclosed: bool
+    text: str = ""  # how the developer says the game uses AI, as written (cut to 1,000 characters)
+
+
+def store_page(http: Http, appid: int, country: str) -> str:
+    return http.get_text(f"{STORE}/app/{appid}/", {"l": LANGUAGE, "cc": country.lower()},
+                         cookies=PAGE_COOKIES, throttle_codes=(429, 403))
+
+
+def parse_ai_disclosure(page: str, appid: int) -> AiDisclosure | None:
+    """None when this isn't the app's store page (gone, region-locked, age-gated: the store sends
+    its front page or the age check instead)."""
+    if f"store.steampowered.com/app/{appid}/" not in page or 'id="appHubAppName"' not in page:
+        return None
+    box = _AI_BOX.search(page)
+    if not box:
+        return AiDisclosure(False)
+    says = _AI_SAYS.search(box.group(1))
+    return AiDisclosure(True, strip_html(says.group(1) if says else box.group(1))[:1000])

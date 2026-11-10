@@ -50,6 +50,9 @@ def make_steam(db_path, rng):
         for a in (6000, 7000):
             s._upsert_signal(a, Signal("godot", "store_legal", 2, "Godot Engine"), int(NOW))
     s.refresh_godot(None, NOW)
+    # The AI disclosure: the breakout and 2 of the small releases disclose AI, the rest of those read don't.
+    for a in [5000, 2000, 2001] + list(range(2002, 2010)):
+        s.save_ai(a, steam.AiDisclosure(a in (5000, 2000, 2001), "AI art." if a in (5000, 2000, 2001) else ""), NOW, rng, 60)
     # A week of history: the breakout gained 1,000 reviews this week.
     s.db.execute("INSERT INTO app_daily (day, appid, reviews) VALUES (?, 5000, 2000)", (TODAY - 7,))
     s.db.commit()
@@ -96,6 +99,10 @@ def test_build(tmp_path, rng):
     growth = read(out, "growth")
     assert sum(growth["total"]["y"]) == 182
     assert sum(growth["total"]["q"]["100"]) == sum(1 for r in games["rows"] if r[4] >= 100)
+    ai = growth["ai"]
+    assert sum(ai["mRead"]) == 11 and sum(ai["m"]) == 3 and sum(ai["mqRead"]) == 1 and sum(ai["mq"]) == 1
+    assert ai["minReviews"] == 10 and len(ai["m"]) == len(growth["months"])
+    assert rows[5000]["flags"] & games["flags"]["ai"] and not rows[6000]["flags"] & games["flags"]["ai"]
     assert growth["tags"][str(COZY)]["name"] == "Cozy" and sum(growth["tags"][str(COZY)]["y"]) == 10 + 30 + 1
 
 

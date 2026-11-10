@@ -17,11 +17,22 @@ from typing import Iterable, Iterator
 from . import cadence
 from .engine import STRONG, Signal
 from .pcgw import PageInfo
-from .steam import Details, ListApp, Snapshot
+from .steam import AiDisclosure, Details, ListApp, Snapshot
 
 log = logging.getLogger("steamdata.db")
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
+
+# Columns added after the first version: (column, its definition). Added to an older file on open.
+ADDED_COLUMNS = [
+    ("ai", "INTEGER"), ("ai_text", "TEXT"), ("ai_at", "INTEGER"), ("ai_due", "INTEGER"),
+]
+
+# The store page's AI disclosure is read for games first released from this day on (unix time,
+# 2023-01-01: Steam asked for disclosures from January 2024) and for games coming soon.
+AI_SINCE = 1672531200
+AI_WANTED = ("snapshot_due IS NOT NULL AND type = 'game' AND (coming_soon = 1 "
+             f"OR MIN(COALESCE(release_ts, original_release_ts), COALESCE(original_release_ts, release_ts)) >= {AI_SINCE})")
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS meta (
@@ -78,6 +89,9 @@ CREATE TABLE IF NOT EXISTS apps (
     demos               TEXT,               -- JSON list of demo appids
     release_text        TEXT,               -- the store's release date as written
     details_status      TEXT,               -- ok, or unavailable (the store had nothing for COUNTRY)
+    -- The store page's "AI Generated Content Disclosure" (recent games only, see AI_SINCE)
+    ai                  INTEGER,            -- 1 disclosed, 0 no disclosure, NULL not read (or no page)
+    ai_text             TEXT,               -- how the developer says the game uses AI
     -- Players
     players_last        INTEGER,
     players_at          INTEGER,
@@ -91,7 +105,10 @@ CREATE TABLE IF NOT EXISTS apps (
     snapshot_at         INTEGER,
     players_due         INTEGER,
     details_due         INTEGER,
-    details_at          INTEGER
+    details_at          INTEGER,
+    -- ai_due NULL: due now, once the game is recent enough (AI_SINCE)
+    ai_due              INTEGER,
+    ai_at               INTEGER
 );
 CREATE INDEX IF NOT EXISTS apps_snapshot_due ON apps(snapshot_due) WHERE snapshot_due IS NOT NULL;
 CREATE INDEX IF NOT EXISTS apps_players_due ON apps(players_due) WHERE players_due IS NOT NULL;
@@ -200,7 +217,7 @@ SELECT a.appid, a.name, a.type, date(a.release_ts, 'unixepoch') AS release_date,
 FROM apps a WHERE a.godot = 1;
 """
 
-DUE_COLUMNS = {"snapshot": "snapshot_due", "players": "players_due", "details": "details_due"}
+DUE_COLUMNS = {"snapshot": "snapshot_due", "players": "players_due", "details": "details_due", "ai": "ai_due"}
 
 # Snapshot fields that go into app_changes when they change (not on the first fill).
 TRACKED = ("name", "visible", "unlisted", "release_ts", "coming_soon", "early_access",
@@ -233,6 +250,10 @@ class Store:
         # Keeps the -wal file from staying big after a checkpoint.
         self.db.execute("PRAGMA journal_size_limit=67108864")
         self.db.executescript(SCHEMA)
+        have = {r[1] for r in self.db.execute("PRAGMA table_info(apps)")}
+        for column, kind in ADDED_COLUMNS:
+            if column not in have:
+                self.db.execute(f"ALTER TABLE apps ADD COLUMN {column} {kind}")
         self.db.executescript(VIEWS)
         if self.db.execute("PRAGMA user_version").fetchone()[0] < SCHEMA_VERSION:
             self.db.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
@@ -351,18 +372,26 @@ class Store:
             "players": "SELECT appid FROM apps WHERE players_due <= ? ORDER BY players_due LIMIT ?",
             # New apps (details_due 0) first, newest appid first.
             "details": "SELECT appid FROM apps WHERE details_due <= ? ORDER BY details_due, appid DESC LIMIT ?",
+            # Never read first, newest appid first.
+            "ai": f"SELECT appid FROM apps WHERE {AI_WANTED} AND COALESCE(ai_due, 0) <= ? "
+                  "ORDER BY COALESCE(ai_due, 0), appid DESC LIMIT ?",
         }[lane]
         return [r[0] for r in self.db.execute(query, (int(now), limit))]
 
     def count_due(self, lane: str, now: float) -> int:
         column = DUE_COLUMNS[lane]
+        if lane == "ai":
+            return self.db.execute(f"SELECT COUNT(*) FROM apps WHERE {AI_WANTED} AND COALESCE(ai_due, 0) <= ?",
+                                   (int(now),)).fetchone()[0]
         return self.db.execute(f"SELECT COUNT(*) FROM apps WHERE {column} <= ?", (int(now),)).fetchone()[0]
 
     def delay(self, lane: str, appids: Iterable[int], until: float) -> None:
         """Tries these again later (after a failed request)."""
         column = DUE_COLUMNS[lane]
+        # ai_due starts NULL (due now) instead of 0, so it doesn't need to be set.
+        where = "" if lane == "ai" else f" AND {column} IS NOT NULL"
         with self.transaction() as db:
-            db.executemany(f"UPDATE apps SET {column} = MAX({column}, ?) WHERE appid = ? AND {column} IS NOT NULL",
+            db.executemany(f"UPDATE apps SET {column} = MAX(COALESCE({column}, 0), ?) WHERE appid = ?{where}",
                            [(int(until), a) for a in appids])
 
     # The daily snapshot
@@ -548,6 +577,24 @@ class Store:
                            [c for c in details.categories if c[1]])
             self._replace_signals(appid, ("store_legal", "store_text"), signals, now)
         self.refresh_godot([appid], now)
+
+    # The AI disclosure
+
+    def save_ai(self, appid: int, result: AiDisclosure | None, now: float, rng: random.Random, days: int) -> None:
+        """result None: no store page this time (gone, region-locked, age-gated): what was read
+        before stays, and it's tried again in a week."""
+        now = int(now)
+        with self.transaction() as db:
+            prev = db.execute("SELECT ai, ai_at FROM apps WHERE appid = ?", (appid,)).fetchone()
+            if prev is None:
+                return
+            if result is None:
+                db.execute("UPDATE apps SET ai_due = ? WHERE appid = ?", (now + cadence.HIDDEN_RETRY, appid))
+                return
+            if prev["ai_at"] is not None and prev["ai"] is not None and bool(prev["ai"]) != result.disclosed:
+                self._change(appid, now, "ai", prev["ai"], int(result.disclosed))
+            db.execute("UPDATE apps SET ai = ?, ai_text = ?, ai_at = ?, ai_due = ? WHERE appid = ?",
+                       (int(result.disclosed), result.text or None, now, cadence.next_details(now, days, rng), appid))
 
     # Engine signals
 

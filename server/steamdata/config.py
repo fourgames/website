@@ -34,6 +34,8 @@ class Config:
     pcgw_seconds: float = 10.0
     # The full metadata (appdetails) is refreshed this often; new apps are fetched first.
     details_days: int = 30
+    # The store page's AI disclosure is read again this often (recent and upcoming games only).
+    ai_days: int = 60
     # PCGamingWiki engine pages to read the games of, e.g. "Godot" for Engine:Godot.
     pcgw_engines: tuple[str, ...] = ("Godot",)
     # Raw player-count samples older than this many days are deleted (the daily peak stays in
@@ -76,6 +78,7 @@ class Config:
             appdetails_per_5min=number("APPDETAILS_PER_5MIN", 120, 1, 200),
             pcgw_seconds=number("PCGW_SECONDS", 10, 2, 3600),
             details_days=int(number("DETAILS_DAYS", 30, 1, 365)),
+            ai_days=int(number("AI_DAYS", 60, 1, 365)),
             pcgw_engines=engines,
             samples_keep_days=int(number("SAMPLES_KEEP_DAYS", 0, 0, 100000)),
             log_level=level,

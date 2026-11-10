@@ -74,6 +74,16 @@ def report(db: sqlite3.Connection, path: Path, now: float | None = None) -> str:
     if engines:
         lines.append("Engine signals: " + ", ".join(f"{e} {n:,}" for e, n in engines))
 
+    try:
+        from .db import AI_WANTED
+        wanted = one(f"SELECT COUNT(*) FROM apps WHERE {AI_WANTED}")
+        read = one(f"SELECT COUNT(*) FROM apps WHERE {AI_WANTED} AND ai IS NOT NULL")
+        disclosed = one(f"SELECT COUNT(*) FROM apps WHERE {AI_WANTED} AND ai = 1")
+        lines.append(f"AI disclosure: {read:,} of {wanted:,} recent and upcoming games read, {disclosed:,} disclose AI"
+                     + (f" ({disclosed / read:.0%})" if read else ""))
+    except sqlite3.OperationalError:
+        pass  # a file the collector hasn't opened since the AI columns were added
+
     daily_today = one("SELECT COUNT(*) FROM app_daily WHERE day = ?", today)
     # From app_daily (keyed by day, so quick) rather than counting today's samples.
     sampled_today = one("SELECT COUNT(*) FROM app_daily WHERE day = ? AND players_peak IS NOT NULL", today)

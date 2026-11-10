@@ -81,7 +81,7 @@ most 34,560 a day. The first pass over 150,000 games takes about 4.5 days, newes
 every game every 30 days (~5,000 a day) plus new games and fresh releases: about 15% of the budget.
 
 **store.steampowered.com/app/<appid>/** (the AI disclosure) shares that pace with appdetails, after it:
-~80,000 games released since 2023 or coming soon, so the first pass takes a few days once appdetails
+~140,000 games released since 2023 or coming soon (139,145 in November 2026), so the first pass takes about four days once appdetails
 has caught up; after that ~1,300 a day (every 60 days) plus the new ones. A page that isn't the
 game's (gone, region-locked, adults-only age gate) is tried again in a week; a disclosure that
 appears or goes away is written to `app_changes` as `ai`. The dashboard's "How many new games use AI?"

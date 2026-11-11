@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<link rel="icon" href="data:,">
+<title>Four Games · home page in the Daily brief look</title>
+<link rel="stylesheet" href="brief.css">
+<style>
+/* The public home page (src/views/HomeView.vue) in the same editorial direction: same sections, same copy,
+   same order. Art is a flat placeholder; the video titles are invented. */
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+.note { background: var(--card); border-bottom: 1px solid var(--rule); font: 13px var(--sans); color: var(--soft); padding: 7px 20px; text-align: center; }
+.top { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 16px 0 12px; border-bottom: 3px double var(--ink); flex-wrap: wrap; }
+.top .name { font: 700 26px var(--serif); letter-spacing: -0.01em; text-decoration: none; }
+.top nav { display: flex; gap: 20px; font-size: 15px; flex-wrap: wrap; }
+.top nav a { text-decoration: none; color: var(--soft); }
+section.hero { display: grid; gap: 30px 48px; padding: 48px 0 44px; align-items: center; }
+.hero h1 { font-size: clamp(38px, 6.4vw, 68px); line-height: 1.04; letter-spacing: -0.025em; }
+.hero .sub { font-size: 22px; color: var(--soft); margin-top: 16px; }
+.hero .cta { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 24px; }
+.hero .cta .btn { padding: 10px 20px; font-size: 16px; }
+.hero .also { font: 14.5px var(--sans); color: var(--soft); margin-top: 16px; }
+.art { aspect-ratio: 16 / 9; border-radius: 3px; background: linear-gradient(135deg, hsl(var(--hue, 30) 30% 34%), hsl(var(--hue, 30) 34% 18%)); color: rgb(255 255 255 / 0.75); display: grid; place-items: center; font: italic 15px var(--serif); text-align: center; padding: 8px; }
+.art.capsule { aspect-ratio: 460 / 215; }
+figure figcaption { font: 12.5px var(--sans); color: var(--faint); margin-top: 6px; }
+.sec { border-top: 1px solid var(--rule); padding: 34px 0 44px; }
+.sec > h2 { font: 600 13px var(--sans); letter-spacing: 0.12em; text-transform: uppercase; color: var(--soft); margin-bottom: 6px; }
+.sec > .intro { font-size: 26px; line-height: 1.3; letter-spacing: -0.01em; max-width: 30em; margin-bottom: 26px; }
+.games { display: grid; gap: 30px 48px; }
+.games h3 { font-size: 30px; line-height: 1.15; margin: 14px 0 6px; letter-spacing: -0.01em; }
+.row { display: grid; grid-template-columns: 150px minmax(0, 1fr); gap: 18px; padding: 16px 0; border-top: 1px solid var(--rule-soft); text-decoration: none; }
+.row:first-child { border-top: 0; padding-top: 0; }
+.row h3, .row h4 { font-size: 21px; line-height: 1.25; margin: 0 0 3px; }
+.new { color: var(--good); font-weight: 600; }
+.perks { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 0 32px; counter-reset: p; }
+.perks li { border-top: 2px solid var(--ink); padding: 12px 0 22px; counter-increment: p; }
+.perks li::before { content: counter(p, decimal-leading-zero); font: 13px var(--sans); color: var(--faint); }
+.perks h3 { font-size: 22px; margin: 2px 0 6px; }
+.three { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 28px 40px; }
+.three h3 { font-size: 26px; margin-bottom: 6px; }
+.three .linkbtn { font: 600 15px var(--sans); display: inline-block; margin-top: 10px; }
+.bandjoin { border-top: 3px double var(--ink); border-bottom: 1px solid var(--rule); padding: 30px 0; display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+.bandjoin p { font-size: 26px; line-height: 1.3; max-width: 24em; letter-spacing: -0.01em; }
+@media (min-width: 860px) { .hero { grid-template-columns: 1.15fr 1fr; } .games { grid-template-columns: 1fr 1fr; } }
+@media (max-width: 560px) { .row { grid-template-columns: 96px minmax(0, 1fr); gap: 12px; } }
+</style>
+</head>
+<body>
+<p class="note">The public home page restyled in the Daily brief direction. Same sections and order as today; art, numbers and most descriptions are placeholders. <a href="./">Back to the brief</a> · <button class="linkbtn" type="button" id="theme">Light / dark</button></p>
+<div class="wrap">
+  <header class="top">
+    <a class="name" href="#">Four Games</a>
+    <nav aria-label="Main"><a href="#games">Games</a><a href="#videos">Videos</a><a href="#membership">Membership</a><a href="#community">Community</a><a href="#">Open source</a><a href="#">Work with us</a></nav>
+  </header>
+
+  <section class="hero" style="border:0;margin:0">
+    <div>
+      <p class="kicker">Indie games · Free tutorials · Open-source tools</p>
+      <h1>We make games in Godot and teach you how.</h1>
+      <p class="sub">Indie games, free tutorials and open-source tools!</p>
+      <div class="cta"><a class="btn" href="#games">Play latest: Reforge Front</a><a class="btn ghost" href="#community">Join our Discord</a></div>
+      <p class="also">Looking for our <a href="#videos">videos</a>, <a href="#">open source</a>, or <a href="#">work with us</a>?</p>
+    </div>
+    <figure>
+      <div class="art" style="--hue:18">A screenshot from the latest game, picked at random on every visit</div>
+      <figcaption>Reforge Front</figcaption>
+    </figure>
+  </section>
+
+  <section class="sec" id="games" style="margin:0">
+    <h2>Games</h2>
+    <p class="intro">What we've made, newest first.</p>
+    <div class="games">
+      <a href="#" style="text-decoration:none">
+        <div class="art capsule" style="--hue:18">Reforge Front key art</div>
+        <h3>Reforge Front</h3>
+        <p>The newest game gets the big card: its one-line description from Steam goes here.</p>
+        <p class="meta" style="margin-top:8px"><span class="new">NEW · Out now</span> · Strategy · Windows, macOS, Linux · <b>$9.99</b></p>
+      </a>
+      <div>
+        <a class="row" href="#"><div class="art capsule" style="--hue:140">Pomo Valley</div><div><h3>Pomo Valley</h3><p class="meta">Out now · Cosy · Simulation</p></div></a>
+        <a class="row" href="#"><div class="art capsule" style="--hue:350">Deadstop</div><div><h3>Deadstop</h3><p class="meta">Coming soon · Action</p></div></a>
+        <a class="row" href="#"><div class="art capsule" style="--hue:262">?</div><div><h3>Unannounced</h3><p class="meta">Something new is in the forge. Join the Discord to be first to see it.</p></div></a>
+        <p style="margin-top:14px"><a class="btn ghost" href="#">View all games</a></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="videos" style="margin:0">
+    <h2>Latest videos</h2>
+    <p class="intro">Free Godot tutorials and devlogs, every week.</p>
+    <div class="games">
+      <div>
+        <a class="row" href="#"><div class="art" style="--hue:205">▶</div><div><h4>Placeholder: how we built the save system</h4><p class="meta"><span class="new">NEW</span> · 2 days ago</p></div></a>
+        <a class="row" href="#"><div class="art" style="--hue:205">▶</div><div><h4>Placeholder: shaders for a paper look</h4><p class="meta">9 days ago</p></div></a>
+        <a class="row" href="#"><div class="art" style="--hue:205">▶</div><div><h4>Placeholder: shipping a patch in a day</h4><p class="meta">3 weeks ago</p></div></a>
+      </div>
+      <div>
+        <a class="row" href="#"><div class="art" style="--hue:205">▶</div><div><h4>Placeholder: a first enemy in 20 minutes</h4><p class="meta">1 month ago</p></div></a>
+        <a class="row" href="#"><div class="art" style="--hue:205">▶</div><div><h4>Placeholder: what a year of sales taught us</h4><p class="meta">1 month ago</p></div></a>
+        <a class="row" href="#"><div class="art" style="--hue:205">▶</div><div><h4>Placeholder: UI that scales to Steam Deck</h4><p class="meta">2 months ago</p></div></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="sec" id="membership" style="margin:0">
+    <h2>Four Games membership</h2>
+    <p class="intro">Support Four Games on YouTube and get every game we make for free.</p>
+    <ol class="perks">
+      <li><h3>Every game, free</h3><p>A Steam key for each game we release while you're a member.</p></li>
+      <li><h3>Videos early</h3><p>Watch tutorials and devlogs before everyone else.</p></li>
+      <li><h3>A Discord role</h3><p>Your own role and channel on our server.</p></li>
+      <li><h3>Badges</h3><p>A member badge next to your name in chat and comments.</p></li>
+    </ol>
+    <p style="margin-top:8px"><a class="btn" href="#" style="padding:10px 20px;font-size:16px">Join on YouTube</a></p>
+  </section>
+
+  <section class="sec" id="community" style="margin:0">
+    <h2>Get involved</h2>
+    <p class="intro">Join the community and help shape the games and tutorials we make.</p>
+    <div class="three">
+      <div><h3>Chat</h3><p>Talk to us and other players on Discord. <span class="up">128 online now.</span></p><a class="linkbtn" href="#">Join the Discord →</a></div>
+      <div><h3>Learn</h3><p>Follow along on YouTube and build your own game in Godot.</p><a class="linkbtn" href="#">Subscribe →</a></div>
+      <div><h3>Collaborate</h3><p>Artists, composers and programmers: see what we're looking for.</p><a class="linkbtn" href="#">Work with us →</a></div>
+    </div>
+  </section>
+
+  <div class="bandjoin">
+    <p>Get every game we make for free, and see it first.</p>
+    <a class="btn" href="#" style="padding:10px 20px;font-size:16px">Join on YouTube</a>
+  </div>
+</div>
+<footer class="end">Four Games AB · Sweden · Privacy · Status · Contact. Prototype page: links go nowhere.</footer>
+<script>
+const key = "brief:theme";
+try { const t = JSON.parse(localStorage.getItem(key)); if (t) document.documentElement.dataset.theme = t; } catch {}
+document.getElementById("theme").onclick = () => {
+  const dark = (document.documentElement.dataset.theme || (matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")) === "dark";
+  document.documentElement.dataset.theme = dark ? "light" : "dark";
+  try { localStorage.setItem(key, JSON.stringify(dark ? "light" : "dark")); } catch {}
+};
+</script>
+</body>
+</html>

@@ -2863,3 +2863,111 @@
 	font: inherit;
 	font-size: 0.8125rem;
 }
+
+/* Side by side (this variant, dashboard.js panes): on a wide window the dashboard takes the
+   window's width instead of the site's 1200px column, and a view's list sits next to its open
+   item. The list stays on screen while the open item scrolls with the page. */
+.fb .about ul {
+	margin: 6px 0 0;
+	padding-left: 1.25em;
+	max-width: 65ch;
+	color: var(--fb-ink-2);
+}
+@media (width >= 75rem) {
+	.fb .fb-layout {
+		--fb-wide: min(100vw - 3rem, 105rem);
+		width: var(--fb-wide);
+		margin-left: calc((100% - var(--fb-wide)) / 2);
+	}
+	.fb .sbs {
+		display: grid;
+		grid-template-columns: min(var(--sbs-list, clamp(18rem, 30%, 26rem)), 60%) 14px minmax(0, 1fr);
+		align-items: start;
+	}
+	.fb .sbs-list {
+		position: sticky;
+		top: 12px;
+		max-height: calc(100vh - 24px);
+		overflow-y: auto;
+		margin-bottom: 0;
+	}
+	.fb .sbs-detail {
+		min-width: 0;
+	}
+	.fb .sbs-divider {
+		align-self: stretch;
+		cursor: col-resize;
+		touch-action: none;
+		position: relative;
+	}
+	.fb .sbs-divider::after {
+		content: "";
+		position: absolute;
+		inset: 8px 6px;
+		border-radius: 1px;
+		background: transparent;
+	}
+	.fb .sbs-divider:hover::after,
+	.fb .sbs-divider.dragging::after {
+		background: var(--fb-accent);
+	}
+}
+.fb .sbs-row {
+	cursor: pointer;
+	flex: none;
+}
+.fb .sbs-row[aria-current="true"] {
+	box-shadow: inset 3px 0 0 var(--fb-accent);
+}
+.fb .sbs-lead {
+	flex: none;
+	width: 20px;
+	display: grid;
+	place-items: center;
+}
+.fb .sbs-lead:has(.att-thumb) {
+	width: auto;
+}
+.fb .sbs-lead .thumb-inline {
+	margin: 0;
+}
+.fb .sbs-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+}
+.fb .sbs-list .more {
+	margin: 8px auto 4px;
+	flex: none;
+}
+/* Which game the open item is from (All games), with the way there */
+.fb .sbs-where {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 8px;
+	margin-bottom: 8px;
+}
+/* A video's YouTube comments, folded under it: a count that opens them */
+.fb .yt-fold {
+	border-top: 1px solid var(--fb-line);
+	margin-top: 10px;
+	padding-top: 8px;
+	color: var(--fb-ink-2);
+	font-size: 0.8125rem;
+}
+.fb .yt-fold > summary {
+	cursor: pointer;
+	width: fit-content;
+	font-weight: 600;
+}
+.fb .yt-comment {
+	font-size: 0.875rem;
+	color: var(--fb-ink);
+	margin-top: 10px;
+}
+.fb .yt-comment .post {
+	border-top: 0;
+	margin-top: 0;
+	padding-top: 2px;
+}

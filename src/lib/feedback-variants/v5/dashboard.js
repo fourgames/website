@@ -336,10 +336,10 @@ function askFix(issue) {
 
 // Marks an issue fixed (asking what and where), or undoes that. Shown at once, then saved.
 async function setFixed(issue, fixed) {
+  const appId = String(state.game.appId); // before the dialog: on All games the game is only set for the click
   const fix = fixed ? await askFix(issue) : {};
   if (!fix) return;
   const as = fixed ? "fixed" : null;
-  const appId = String(state.game.appId);
   const at = Math.max(now(), issue.lastSeen);
   await saveData("cleared", CLEARED_PATH, (data) => {
     const game = (data[appId] ||= {});
@@ -1210,11 +1210,13 @@ function renderStats() {
   const peaks = daily(14, (d) => Math.max(playersAt(series, d) ?? 0, ...series.filter(([ts]) => ts >= d && ts < d + DAY).map(([, n]) => n)));
   const reviewsPerDay = daily(14, (d) => items().filter((i) => i.kind === "review" && i.created >= d && i.created < d + DAY).length);
   const openBugsPerDay = daily(14, (d) => issues("bug").filter((i) => i.firstSeen < d + DAY && !(i.status === "likely_fixed" && i.fixedAt < d + DAY)).length);
-  const postsPerDay = daily(14, (d) => items().filter((i) => !i.dev && i.created >= d && i.created < d + DAY).length);
+  const postsPerDay = daily(14, (d) => items().filter((i) => !i.dev && !isComment(i) && i.created >= d && i.created < d + DAY).length);
   const bugs = issues("bug").filter(isActive);
   const urgent = bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high");
   const still = bugs.filter((i) => i.status === "still_happening");
-  const fresh = items().filter((i) => !i.dev && i.created >= t - DAY);
+  // YouTube comments are counted apart: they weigh less than a review, a thread or a video.
+  const recent = items().filter((i) => !i.dev && i.created >= t - DAY);
+  const fresh = recent.filter((i) => !isComment(i));
   // `chart` is the chart it opens below, or a function: then the card opens that view instead.
   const tile = (label, value, sub, trend, color, chart) => {
     const go = typeof chart === "function";
@@ -1249,7 +1251,7 @@ function renderStats() {
     revenue: salesDays().length ? tile("Gross all time", usd(grossAll), `${usd(revenue.slice(-7).reduce((a, b) => a + b, 0))} in the last 7 days`, revenue, "var(--fb-positive)",
       () => { state.tab = "sales"; render(); }) : null,
     bugs: tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent", openBugsPerDay, "var(--type-bug)"),
-    posts: tile("New posts", fresh.length, "last 24 h", postsPerDay),
+    posts: tile("New posts", fresh.length, `last 24 h${recent.length > fresh.length ? ` · + ${plural(recent.length - fresh.length, "YouTube comment")}` : ""}`, postsPerDay),
   };
   // Up front only what you can act on: before release, the following you're building; after it,
   // players, reviews, money and bugs. The rest waits behind "+ more" (remembered), and the card
@@ -1380,6 +1382,122 @@ const NAV = [
 // A view's explanation, folded away so the view itself comes first; one click opens it.
 const about = (...kids) => h("details.about", h("summary", "How this works"), h("p", ...kids));
 
+// ---------------------------------------------------------------------------
+// Side by side (this variant): on a wide window a view's list and its open item sit next to each
+// other, so opening something never leaves the list. The list is compact rows (paneRow), the open
+// item is the same card a narrow window lists; the first row is open to start with, ↑ ↓ or j k
+// move through the rows, and the divider drags (its place is remembered in this browser). Below
+// the wide width `panes` hands the list back untouched and the views draw their cards as before.
+// ---------------------------------------------------------------------------
+
+const WIDE = window.matchMedia("(min-width: 75rem)");
+const wide = () => WIDE.matches;
+const paneOpen = {}; // the row open in each list, by the list's key
+const paneScroll = {}; // how far each list is scrolled, kept over a redraw
+let paneActive = null; // the list the keys move in: the one last clicked
+
+// A list's row: `lead` (an icon or a picture), a title and a line of facts. `full` builds the item
+// as it shows when open.
+function paneRow(id, lead, title, facts, full) {
+  const row = h("button.att-row.sbs-row", { type: "button", "data-id": id },
+    lead ? h("span.sbs-lead", lead) : null,
+    h("span.att-text", h("span.att-title", title), h("span.att-meta", facts.flat().filter(Boolean).join(" · "))));
+  row.full = full;
+  return row;
+}
+
+// The list with the open item next to it. `list` is the element the view draws its rows into;
+// call `sync` after each draw (it opens the remembered row, or the first).
+function panes(key, list) {
+  if (!wide()) return { el: list, sync() {} };
+  list.classList.add("card", "att-list", "sbs-list");
+  const detail = h("div.sbs-detail");
+  const divider = h("div.sbs-divider", { role: "separator", "aria-orientation": "vertical", title: "Drag to resize · double-click to reset" });
+  const el = h("div.sbs", { "data-key": key }, list, divider, detail);
+  if (store.get("sbs-list")) el.style.setProperty("--sbs-list", `${store.get("sbs-list")}px`);
+  const rows = () => [...list.querySelectorAll(".sbs-row")];
+  const open = (row, { moved = false, keys = false } = {}) => {
+    for (const r of rows()) r.setAttribute("aria-current", String(r === row));
+    if (!row) { detail.dataset.id = ""; detail.replaceChildren(); return; }
+    paneOpen[key] = row.dataset.id;
+    if (detail.dataset.id !== row.dataset.id) {
+      detail.dataset.id = row.dataset.id;
+      detail.replaceChildren(row.full());
+    }
+    if (!moved) return;
+    paneActive = key;
+    // Keep the row in sight in its list, and the open item's top on screen (after reading far down
+    // a long one, or when the keys reach a list further down the page).
+    const lr = list.getBoundingClientRect(), rr = row.getBoundingClientRect();
+    if (rr.top < lr.top) list.scrollTop -= lr.top - rr.top + 8;
+    else if (rr.bottom > lr.bottom) list.scrollTop += rr.bottom - lr.bottom + 8;
+    const top = el.getBoundingClientRect().top;
+    if (top < 0 || (keys && top > window.innerHeight * 0.6)) window.scrollBy({ top: top - 12 });
+  };
+  list.addEventListener("click", (e) => { const row = e.target.closest(".sbs-row"); if (row && list.contains(row)) open(row, { moved: true }); });
+  list.addEventListener("scroll", () => { paneScroll[key] = list.scrollTop; }, { passive: true });
+  // The divider: drag to give the list more or less room, double-click for the usual split.
+  divider.addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    try { divider.setPointerCapture(e.pointerId); } catch {}
+    const from = e.clientX, was = list.getBoundingClientRect().width, room = el.getBoundingClientRect().width;
+    const move = (ev) => {
+      const w = Math.round(Math.max(220, Math.min(room * 0.6, was + ev.clientX - from)));
+      document.querySelectorAll(".fb .sbs").forEach((f) => f.style.setProperty("--sbs-list", `${w}px`));
+      store.set("sbs-list", w);
+    };
+    const stop = () => { divider.removeEventListener("pointermove", move); divider.classList.remove("dragging"); };
+    divider.classList.add("dragging");
+    divider.addEventListener("pointermove", move);
+    divider.addEventListener("pointerup", stop, { once: true });
+    divider.addEventListener("pointercancel", stop, { once: true });
+  });
+  divider.addEventListener("dblclick", () => {
+    store.del("sbs-list");
+    document.querySelectorAll(".fb .sbs").forEach((f) => f.style.removeProperty("--sbs-list"));
+  });
+  el.pane = { rows, open };
+  return { el, sync() {
+    const all = rows();
+    open(all.find((r) => r.dataset.id === paneOpen[key]) || all[0] || null);
+    // After a redraw the list is new: put it back where it was scrolled to, once it's on the page.
+    if (paneScroll[key] && !list.scrollTop) requestAnimationFrame(() => { list.scrollTop = paneScroll[key]; });
+  } };
+}
+
+// ↑ ↓ or j k: the next or previous row of the list last clicked (the first list to begin with),
+// going on into the next list on the page (All games has two). Not while typing or in a dialog.
+document.addEventListener("keydown", (e) => {
+  const step = { j: 1, ArrowDown: 1, k: -1, ArrowUp: -1 }[e.key];
+  if (!step || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return;
+  if (e.target.closest?.("input, textarea, select, [contenteditable]") || document.querySelector("dialog[open]")) return;
+  const frames = [...document.querySelectorAll(".fb #fb-view .sbs")].filter((f) => f.pane.rows().length);
+  if (!frames.length) return;
+  e.preventDefault();
+  let at = Math.max(0, frames.findIndex((f) => f.dataset.key === paneActive));
+  let rows = frames[at].pane.rows();
+  let i = rows.findIndex((r) => r.getAttribute("aria-current") === "true") + step;
+  if (i < 0 || i >= rows.length) {
+    if (!frames[at + step]) return;
+    at += step;
+    rows = frames[at].pane.rows();
+    i = step > 0 ? 0 : rows.length - 1;
+  }
+  frames[at].pane.open(rows[i], { moved: true, keys: true });
+});
+
+// Crossing the wide width (a window resized, a phone turned): draw the view again the other way.
+WIDE.addEventListener("change", () => { if (document.getElementById("fb-view") && state.index && (state.game || state.home)) redraw(); });
+
+// YouTube comments weigh less than a review, a thread, a video or a refund note (this variant):
+// they aren't rows of their own in All posts or on All games, but folded under their video as a
+// count that opens them, and they don't count as posts in the numbers.
+const isComment = (i) => i.kind === "comment";
+function commentFold(comments, open = false) {
+  if (!comments.length) return null;
+  return h("details.yt-fold", { open }, h("summary", plural(comments.length, "YouTube comment")), ...comments.map((c) => h("div.yt-comment", postView(c))));
+}
+
 function render() {
   state.drawn = drawnKey(); // what's on screen, so a refresh only redraws for new data
   renderGames();
@@ -1429,7 +1547,7 @@ function render() {
   const counts = {
     issues: issues("bug").filter(isActive).length,
     suggestions: issues("suggestion").filter(isActive).length,
-    feed: items().filter((i) => !i.dev).length,
+    feed: items().filter((i) => !i.dev && !isComment(i)).length,
     loved: issues("praise").length,
     achievements: state.game.achievements?.list?.length || null,
     curators: state.game.curators?.list?.length || null,
@@ -2276,7 +2394,7 @@ const NEWEST = {
   updates: () => (state.game.releases || []).map((r) => r.time),
   media: () => talk().filter((m) => !m.own).map((m) => m.at),
   curators: () => (state.game.curators?.list || []).map((c) => c.seen),
-  feed: () => items().filter((i) => !i.dev).map((i) => i.created),
+  feed: () => items().filter((i) => !i.dev && !isComment(i)).map((i) => i.created),
 };
 function hasNew(view) {
   const newest = Math.max(0, ...(NEWEST[view]?.() || []).filter(Boolean));
@@ -2287,6 +2405,7 @@ function issueView(kind) {
   const f = state.filters[kind === "bug" ? "issues" : "suggestions"];
   const wrap = h("div");
   const list = h("div");
+  const pane = panes(`${state.game.appId}:${kind}`, list);
   const draw = () => {
     const q = f.q.toLowerCase();
     const shown = issues(kind)
@@ -2296,15 +2415,28 @@ function issueView(kind) {
       .filter((i) => f.sort !== "first" || i.firstSession > 0)
       .filter((i) => f.sort !== "trending" || trend(i))
       .sort(SORTS[f.sort] || SORTS.priority);
-    list.replaceChildren(...(shown.length ? shown.map((i) => issueCard(i)) : [h("p.empty", kind === "bug" ? "No issues here." : "No suggestions here.")]));
+    list.replaceChildren(...(shown.length ? shown.map((i) => wide() ? issueRow(i) : issueCard(i)) : [h("p.empty", kind === "bug" ? "No issues here." : "No suggestions here.")]));
+    pane.sync();
   };
   const status = chips([["active", "Open"], ["still", "Still happening"], ["fixed", "Likely fixed"], ["cleared", "Marked fixed"], ["all", "All"]], f.status, (v) => { f.status = v; draw(); }, "Status");
   // What costs the most reviews, what most players hit, or what turns new players away.
   const sort = chips([["priority", "Priority"], ["trending", "Trending"], ["negative", "Negative reviews"], ["players", "Most players"], ["first", "First 2 hours"]], f.sort, (v) => { f.sort = v; draw(); }, "Sort");
   const search = h("input", { type: "search", placeholder: "Search issues", value: f.q, oninput: (e) => { f.q = e.target.value; draw(); } });
-  wrap.append(h("div.filters", status, h("span.zoom-label", "Sort"), sort, search), list);
+  wrap.append(h("div.filters", status, h("span.zoom-label", "Sort"), sort, search), pane.el);
   draw();
   return wrap;
+}
+
+// A bug, idea or praise as a row of the side-by-side list; open, it's its card with its posts shown.
+function issueRow(issue) {
+  const u = issue.kind === "praise" ? null : issue.urgency;
+  const game = state.game;
+  return paneRow(issue.id, u ? h(`span.bars4.pt-${u}`, ...[1, 2, 3, 4].map((n) => h(n <= PRIORITY_BARS[u] ? "i.on" : "i"))) : typeIcon(issue.kind), issue.title, [
+    clearedAs(issue) ? "✓ marked fixed" : issue.status === "likely_fixed" ? "✓ likely fixed" : issue.status === "still_happening" ? "↻ still happening" : null,
+    plural(issue.mentions, "player"),
+    issue.negativeReviews ? plural(issue.negativeReviews, "negative review") : null,
+    `last ${ago(issue.lastSeen)}`,
+  ], () => inGame(game, () => issueCard(issue, { open: true })));
 }
 
 // The players who raised an issue between two times (one per player, like its mention count).
@@ -2348,10 +2480,13 @@ const SORTS = {
 function lovedView() {
   const list = issues("praise").sort((a, b) => b.mentions - a.mentions || b.lastSeen - a.lastSeen);
   const copyAll = h("button.btn.primary", { onclick: (e) => copy(list.map((i) => `- ${i.title} (${plural(i.mentions, "player")})`).join("\n"), e.currentTarget) }, "Copy the list");
+  const rows = h("div", ...(list.length ? list.map((i) => wide() ? issueRow(i) : issueCard(i)) : [h("p.empty", "No praise grouped yet.")]));
+  const pane = panes(`${state.game.appId}:praise`, rows);
+  pane.sync();
   return h("div",
     about( "What players praise, grouped like ideas: things to keep, and wording for your store page and trailers."),
     list.length ? h("div.filters", copyAll) : null,
-    ...(list.length ? list.map((i) => issueCard(i)) : [h("p.empty", "No praise grouped yet.")]));
+    pane.el);
 }
 
 // How each update landed: negative reviews before and after it, what it fixed and whether those
@@ -2365,13 +2500,14 @@ function updatesView() {
     return { n: list.length, neg: list.filter((r) => !r.votedUp).length };
   };
   // How players took the update, from the reviews written after it (until the next update).
+  const mood = (w) => { const share = (w.n - w.neg) / w.n; return share >= 0.7 ? ["Liked", ".good"] : share >= 0.4 ? ["Mixed", ".warn"] : ["Disliked", ".bad"]; };
   const reception = (w, last) => {
     if (!w.n) return h("div.impact-stat", h("b", "–"), h("span", last ? "no reviews since yet" : "no reviews before the next update"));
-    const pos = w.n - w.neg, share = pos / w.n;
-    const [word, cls] = share >= 0.7 ? ["Liked", ".good"] : share >= 0.4 ? ["Mixed", ".warn"] : ["Disliked", ".bad"];
+    const pos = w.n - w.neg;
+    const [word, cls] = mood(w);
     return h(`div.impact-stat${cls}`, h("b", word), h("span", w.n === 1 ? `the 1 review since was ${pos ? "positive" : "negative"}` : `${pos} of ${w.n} reviews since were positive`));
   };
-  const cards = all.slice().reverse().map((r) => {
+  const card = (r) => {
     const i = all.indexOf(r);
     const next = all[i + 1]?.time ?? now();
     const after = tally(r.time, next);
@@ -2394,10 +2530,21 @@ function updatesView() {
       since.length ? h("div.upd-section", h("b", "New since this update"),
         h("ul.pc-points", ...since.map((x) => sinceLine(x)))) : null,
       h("div.meta", h("a", { href: r.url, target: "_blank", rel: "noopener" }, "Patch notes ↗")));
-  });
+  };
+  // The same update as a row of the side-by-side list.
+  const row = (r) => {
+    const after = tally(r.time, all[all.indexOf(r) + 1]?.time ?? now());
+    const label = isLaunch(r) ? "Launch" : r.version ? `v${r.version}` : r.name;
+    return paneRow(String(r.gid || r.url || r.time), null, r.name && r.name !== label ? `${label} · ${r.name}` : label,
+      [fmtDate(r.time), after.n ? `${mood(after)[0]} (${after.n - after.neg} of ${plural(after.n, "review")} positive)` : "no reviews since", (r.matched || []).length ? `${r.matched.length} fixed` : null], () => card(r));
+  };
+  const newest = all.slice().reverse();
+  const list = h("div", ...(newest.length ? newest.map((r) => wide() ? row(r) : card(r)) : [h("p.empty", "No updates yet.")]));
+  const pane = panes(`${state.game.appId}:updates`, list);
+  pane.sync();
   return h("div",
     about( "Each update: how players took it (the reviews written after it), what it fixed (and whether those reports stopped), what it only partly addressed, and what came up since (crossed out once a later update fixed it)."),
-    ...(cards.length ? cards : [h("p.empty", "No updates yet.")]));
+    pane.el);
 }
 
 // A bug or idea that came up after an update: crossed out, with where, once a later update fixed it
@@ -2469,13 +2616,17 @@ function thumbImg(up) {
 }
 
 // A bug or idea in the post cards' style: type and priority on the left, the rest to the right.
-function issueCard(issue) {
-  const posts = issue.items.map((id) => state.game.items[id]).filter(Boolean).sort((a, b) => b.created - a.created);
+// `open` (the side-by-side pane) shows its posts right away. The game is kept for the clicks that come
+// later, since on All games the card is another game's than the one picked.
+function issueCard(issue, { open = false } = {}) {
+  const game = state.game;
+  // YouTube comments after everything else: they weigh less than a review, a thread or a video.
+  const posts = issue.items.map((id) => state.game.items[id]).filter(Boolean).sort((a, b) => isComment(a) - isComment(b) || b.created - a.created);
   const postList = h("div", { hidden: true });
   let filled = false;
   const toggle = h("button.btn", { onclick: () => {
     if (!filled) {
-      postList.append(...posts.map((p) => postCard(p, { clamp: false, focus: issue.id })));
+      postList.append(...inGame(game, () => posts.map((p) => postCard(p, { clamp: false, focus: issue.id }))));
       filled = true;
     }
     postList.hidden = !postList.hidden;
@@ -2493,6 +2644,7 @@ function issueCard(issue) {
   const summary = issue.summary ? h("span", issue.summary) : null;
   const summaryLabel = summary ? h(`button.pk.pk-${issue.kind}`, { type: "button", title: "Select this sentence" }, POINT_LABEL[issue.kind] || kind) : null;
   summaryLabel?.addEventListener("click", (e) => { e.stopPropagation(); selectText(summary); });
+  if (open && posts.length) toggle.click();
   return h("article.card.issue-card",
     h("div.post.pc.neutral",
       h("div.pc-top",
@@ -2540,11 +2692,12 @@ function fixVerdict(issue) {
 
 // The check: ticks a bug or idea off as fixed, or (ticked) undoes that.
 function checkButton(issue) {
+  const game = state.game;
   if (issue.status === "likely_fixed" && !ticked(issue)) return null; // an update already fixed it
   const on = ticked(issue);
   return h(`button.check-btn${on ? ".on" : ""}`, { type: "button", "aria-pressed": String(on),
     title: on ? "Marked fixed. Click to undo" : "Mark fixed", "aria-label": on ? "Undo marked fixed" : "Mark fixed",
-    onclick: () => setFixed(issue, !on) }, svgCheck());
+    onclick: () => inGame(game, () => setFixed(issue, !on)) }, svgCheck());
 }
 function svgCheck() {
   const svg = svgEl("svg", { viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", "stroke-width": 2.5, "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" });
@@ -2803,9 +2956,11 @@ function feedView({ everyGame = false } = {}) {
   const f = everyGame ? state.filters.home : state.filters.feed;
   const wrap = h("div");
   const list = h("div");
+  const pane = panes(everyGame ? "all:feed" : `${state.game.appId}:feed`, list);
   const games = everyGame ? gamesLoaded() : [state.game];
   // Before or since the newest update: what players said about the build they're on now.
   const update = everyGame ? null : latestUpdate();
+  const time = (i) => Math.max(i.created, i.updated || 0);
   const draw = () => {
     const q = f.q.toLowerCase();
     const all = games.filter((g) => !f.game || f.game === "all" || g.appId === f.game)
@@ -2815,11 +2970,48 @@ function feedView({ everyGame = false } = {}) {
       .filter(([, i]) => f.category === "all" || (f.category === "pending" ? !i.triage && !i.dev : i.triage?.category === f.category))
       .filter(([, i]) => f.version === "all" || !update || (f.version === "since") === (i.created >= update.time))
       .filter(([, i]) => !q || (english(i) + " " + (i.text || "") + " " + (i.title || "")).toLowerCase().includes(q))
-      .sort(([, a], [, b]) => Math.max(b.created, b.updated || 0) - Math.max(a.created, a.updated || 0));
-    const shown = all.slice(0, f.shown);
-    const card = ([g, i]) => everyGame ? h("div.card", gameTag(g), inGame(g, () => postView(i))) : h("div.card", postView(i));
-    list.replaceChildren(...(shown.length ? shown.map(card) : [h("p.empty", "Nothing here yet.")]));
-    if (all.length > shown.length) list.append(h("button.btn.more", { onclick: () => { f.shown += 50; draw(); } }, `Show more (${all.length - shown.length} left)`));
+      .sort(([, a], [, b]) => time(b) - time(a));
+    // YouTube comments go under their video, as a count that opens them (the YouTube comments
+    // filter still lists them one by one). A video that isn't in the list itself (not reviewed, or
+    // filtered away) gets a line of its own for its comments, at the newest one's time.
+    const fold = f.kind === "all";
+    const entries = [], videos = new Map();
+    for (const [g, i] of all) {
+      if (fold && isComment(i)) continue;
+      const entry = { g, i, at: time(i), comments: [] };
+      entries.push(entry);
+      if (i.kind === "video") videos.set(`${g.appId}:${i.media}`, entry);
+    }
+    if (fold) for (const [g, i] of all) {
+      if (!isComment(i)) continue;
+      const key = `${g.appId}:${i.media}`;
+      if (!videos.has(key)) { videos.set(key, { g, i: null, at: time(i), comments: [] }); entries.push(videos.get(key)); }
+      videos.get(key).comments.push(i);
+    }
+    entries.sort((a, b) => b.at - a.at);
+    const shown = entries.slice(0, f.shown);
+    const videoTitle = (e) => e.comments[0].videoTitle || e.g.media?.items?.[e.comments[0].media]?.title || "a video";
+    const body = (e, open) => e.i ? [postView(e.i), commentFold(e.comments)]
+      : [h("div.post.pc.neutral", h("div.pc-top", h("div.pc-main", h("span.pc-type.pc-kind", "YouTube comments"))), h("div", h("b", videoTitle(e)))), commentFold(e.comments, open)];
+    const card = (e, open = false) => everyGame ? h("div.card", gameTag(e.g), ...inGame(e.g, () => body(e, open))) : h("div.card", ...body(e, open));
+    // The same post as a row of the side-by-side list: what it says, then what it is and who wrote it.
+    const row = (e) => {
+      const i = e.i, t = i?.triage || {};
+      const lead = everyGame ? (e.g.meta.capsule ? h("img.att-thumb", { src: e.g.meta.capsule, alt: "", loading: "lazy" }) : h("span.att-thumb"))
+        : i?.kind === "review" ? thumbImg(i.votedUp) : t.category && TYPE_ICON[t.category] ? h(`span.tt-text-${t.category}`, typeIcon(t.category)) : null;
+      const title = i ? (i.title || english(i).trim().split("\n")[0] || KIND[i.kind]).slice(0, 140) : videoTitle(e);
+      return paneRow(i ? i.id : `yc:${e.g.appId}:${e.comments[0].media}`, lead, title, [
+        everyGame ? e.g.meta.name : null,
+        i ? (i.kind === "review" ? (i.votedUp ? "👍 Review" : "👎 Review") : KIND[i.kind]) : KIND.video,
+        i && (CATEGORY[t.category] || [])[1],
+        i?.author?.name,
+        ago(e.at),
+        e.comments.length ? plural(e.comments.length, "YouTube comment") : null,
+      ], () => card(e, true));
+    };
+    list.replaceChildren(...(shown.length ? shown.map((e) => wide() ? row(e) : card(e)) : [h("p.empty", "Nothing here yet.")]));
+    if (entries.length > shown.length) list.append(h("button.btn.more", { onclick: () => { f.shown += 50; draw(); } }, `Show more (${entries.length - shown.length} left)`));
+    pane.sync();
   };
   const sel = (label, key, options) => chips(options, f[key], (v) => { f[key] = v; f.shown = 50; draw(); }, label);
   wrap.append(
@@ -2829,7 +3021,7 @@ function feedView({ everyGame = false } = {}) {
       sel("Category", "category", [["all", "Any category"], ["bug", "Bugs"], ["suggestion", "Suggestions"], ["question", "Questions"], ["praise", "Praise"], ["pending", "Not triaged yet"]]),
       update ? sel("Update", "version", [["all", "Any version"], ["since", `Since ${updateName(update)}`], ["before", `Before ${updateName(update)}`]]) : null,
       h("input", { type: "search", placeholder: "Search posts", value: f.q, oninput: (e) => { f.q = e.target.value; f.shown = 50; draw(); } })),
-    list);
+    pane.el);
   draw();
   return wrap;
 }
@@ -2870,10 +3062,10 @@ async function pickHome(sales) {
 // reviews from the last few days you haven't answered (replying early is what turns them around).
 function homeAttention() {
   return gamesLoaded().flatMap((g) => inGame(g, () => [
-    ...attention().map((i) => ({ g, at: i.lastSeen, rank: 2, open: () => { state.tab = "issues"; pickGame(g.appId); },
+    ...attention().map((i) => ({ g, at: i.lastSeen, rank: 2, id: i.id, tab: "issues", full: () => issueCard(i, { open: true }), open: () => { state.tab = "issues"; pickGame(g.appId); },
       title: i.title, what: [i.status === "still_happening" ? "came back after a fix" : `${URGENCY[i.urgency]} priority bug`, plural(i.mentions, "player"), `last ${ago(i.lastSeen)}`] })),
     ...items().filter((i) => i.kind === "review" && !i.dev && !i.votedUp && now() - i.created < NEW_REVIEW_DAYS * DAY && !replied(i))
-      .map((i) => ({ g, at: i.created, rank: 1, href: i.url, title: (english(i).split("\n")[0] || "Negative review").slice(0, 140),
+      .map((i) => ({ g, at: i.created, rank: 1, id: i.id, tab: "feed", full: () => h("div.card", postView(i)), href: i.url, title: (english(i).split("\n")[0] || "Negative review").slice(0, 140),
         what: [`👎 ${i.author?.name || "a player"}`, i.playtime != null ? `${i.playtime} h` : null, ago(i.created), "not answered yet"] })),
   ])).sort((a, b) => b.rank - a.rank || b.at - a.at);
 }
@@ -2887,11 +3079,28 @@ function homeView() {
     return a.href ? h("a.att-row", { href: a.href, target: "_blank", rel: "noopener" }, ...kids)
       : h("button.att-row", { type: "button", onclick: () => { a.open(); window.scrollTo({ top: 0 }); } }, ...kids);
   };
+  // Side by side: a row opens its bug (with its posts) or its review next to the list, without
+  // leaving All games; "Open in its game" goes there, with the same item open.
+  const openIn = (a) => {
+    const f = state.filters[a.tab];
+    Object.assign(f, a.tab === "issues" ? { status: "active", q: "" } : { kind: "all", category: "all", version: "all", q: "" });
+    paneOpen[`${a.g.appId}:${a.tab === "issues" ? "bug" : "feed"}`] = a.id;
+    state.tab = a.tab;
+    pickGame(a.g.appId);
+    window.scrollTo({ top: 0 });
+  };
+  const paneLine = (a) => paneRow(`${a.g.appId}:${a.id}`, a.g.meta.capsule ? h("img.att-thumb", { src: a.g.meta.capsule, alt: "", loading: "lazy" }) : h("span.att-thumb"),
+    a.title, [a.g.meta.name, ...a.what], () => h("div",
+      h("div.sbs-where", gameTag(a.g), h("button.btn", { type: "button", onclick: () => openIn(a) }, "Open in its game →")),
+      inGame(a.g, a.full)));
+  const needList = h("div.card.att-list", ...need.map(wide() ? paneLine : row));
+  const needPane = panes("all:need", needList);
+  needPane.sync();
   return h("div",
     live.length ? h("section.ov-section", h("h3", "🔴 Live now", h("span.ov-count", live.length)), ...live) : null,
     h("section.ov-section",
       h("h3", "Needs attention", need.length ? h("span.ov-count", need.length) : null),
-      need.length ? h("div.card.att-list", ...need.map(row))
+      need.length ? needPane.el
         : h("p.ov-calm", `Nothing right now: no urgent bugs, nothing came back after a fix, and every negative review from the last ${NEW_REVIEW_DAYS} days is answered.`)),
     h("section.ov-section", h("h3", "All posts"), feedView({ everyGame: true })));
 }
@@ -2907,7 +3116,8 @@ function renderHomeTop() {
   const sum = (k, since = 0) => sales.filter(([d]) => dayTime(d) >= since).reduce((a, [, apps]) => a + Object.values(apps).reduce((b, t) => b + (t[k] || 0), 0), 0);
   const gross = daily(14, (d) => Object.values(state.sales?.days?.[isoDay(d)] || {}).reduce((a, t) => a + (t.gross || 0), 0));
   const bugs = games.flatMap((g) => inGame(g, () => issues("bug").filter(isActive)));
-  const fresh = games.flatMap((g) => Object.values(g.items || {}).filter((i) => !i.dev && i.created >= now() - DAY));
+  const recent = games.flatMap((g) => Object.values(g.items || {}).filter((i) => !i.dev && !i.offTopic && i.created >= now() - DAY));
+  const fresh = recent.filter((i) => !isComment(i));
   const tile = (label, value, sub, trend, color) => h("div.kpi", h("div.label", label), h("div.value", value), h("div.sub", sub), trend ? spark(trend, color) : null);
   // The money cards open (and close again) every game's sales added up.
   const money = (label, value, sub, trend, color) => h("button.kpi.kpi-open", { type: "button", "aria-expanded": String(!!state.homeSales), title: state.homeSales ? "Back to all posts" : "Sales, every game together", onclick: () => {
@@ -2918,7 +3128,7 @@ function renderHomeTop() {
     sales.length ? money("Gross all time", usd(sum("gross")), `${usd(sum("net"))} net · every game`) : null,
     sales.length ? money("Gross, 7 days", usd(sum("gross", now() - 7 * DAY)), `${usd(sum("net", now() - 7 * DAY))} net`, gross, "var(--fb-positive)") : null,
     tile("Open bugs", bugs.length, `${bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high").length} high or urgent`),
-    tile("New posts", fresh.length, "last 24 h"),
+    tile("New posts", fresh.length, `last 24 h${recent.length > fresh.length ? ` · + ${plural(recent.length - fresh.length, "YouTube comment")}` : ""}`),
   ].filter(Boolean));
   document.getElementById("fb-expand").replaceChildren();
 }
@@ -2990,6 +3200,8 @@ function mediaCard(m) {
       facts.length ? h("div.md-facts", facts.join(" · ")) : null,
       m.text && m.source !== "youtube" ? h("p.md-text", m.text) : null,
       m.review ? videoReview(m) : null,
+      // What viewers wrote under it, sorted by Claude like any post: folded, a count that opens them.
+      m.source === "youtube" && state.game?.items ? commentFold(items().filter((i) => isComment(i) && i.media === m.id).sort((a, b) => b.created - a.created)) : null,
       link({ class: `btn${live ? " primary" : ""} md-go` }, action, " ↗"),
       m.source === "copy" ? h("a.btn.md-go", { href: REMOVAL_FORM, target: "_blank", rel: "noopener", title: "Google's form to remove a copyright-infringing page from its search results" }, "Ask Google to remove it ↗") : null));
 }
@@ -3031,11 +3243,16 @@ function mediaView() {
   const all = mediaItems();
   const live = liveNow();
   const list = h("div");
+  const pane = panes(`${state.game.appId}:media`, list);
+  // A stream, video or article as a row of the side-by-side list.
+  const row = (m) => paneRow(m.id || m.url, m.thumb && m.source !== "twitch" ? h("img.att-thumb", { src: m.thumb, alt: "", loading: "lazy" }) : h("span.sbs-dot", { style: `background:${MEDIA[m.source].color}` }),
+    m.title || "(no title)", [MEDIA[m.source].name, m.author, ago(m.at), mediaFacts(m)[0], m.review && VERDICT[m.review.verdict]], () => mediaCard(m));
   const draw = () => {
     // What's live is already at the top.
     const shown = all.filter((m) => !isLive(m) && (f.source === "all" || m.source === f.source)).sort((a, b) => b.at - a.at);
-    list.replaceChildren(...(shown.length ? shown.slice(0, f.shown).map(mediaCard) : [h("p.empty", "Nothing found yet.")]));
+    list.replaceChildren(...(shown.length ? shown.slice(0, f.shown).map((m) => wide() ? row(m) : mediaCard(m)) : [h("p.empty", "Nothing found yet.")]));
     if (shown.length > f.shown) list.append(h("button.btn.more", { onclick: () => { f.shown += 30; draw(); } }, `Show more (${shown.length - f.shown} left)`));
+    pane.sync();
   };
   const count = (s) => all.filter((m) => m.source === s).length;
   const filter = chips([["all", `All (${all.length})`], ...MEDIA_SOURCES.map((s) => [s, `${MEDIA[s].name} (${count(s)})`])], f.source, (v) => { f.source = v; f.shown = 30; draw(); }, "Source");
@@ -3049,7 +3266,7 @@ function mediaView() {
     alertSetup(),
     names(),
     h("div.filters", filter),
-    list);
+    pane.el);
 }
 
 // The names it searches for: English and every localized name Steam has (or had) for the game.
@@ -3987,6 +4204,16 @@ const SHELL = `
     <div class="side-card" id="fb-research-side"></div>
   </aside>
   <div class="fb-main">
+    <details class="about">
+      <summary>What this variant changes</summary>
+      <ul>
+        <li>On a wide window, Bugs, Ideas, Loved, All posts, Media and Updates show the list on the left and the open item on the right.</li>
+        <li>The first item is open; ↑ ↓ or j k move through the list. Drag the line between the two to resize (remembered).</li>
+        <li>A bug opens with its posts already showing.</li>
+        <li>On All games, a Needs attention row opens in place, with “Open in its game”.</li>
+        <li>YouTube comments are folded under their video and no longer count as posts.</li>
+      </ul>
+    </details>
     <div class="strip" id="fb-games-strip" aria-label="Games"></div>
     <header class="top">
       <img id="fb-capsule" alt="" hidden>

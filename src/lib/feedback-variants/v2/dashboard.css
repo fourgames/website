@@ -2863,3 +2863,48 @@
 	font: inherit;
 	font-size: 0.8125rem;
 }
+
+/* Merged pages (dashboard.js PAGES): several views on one page, as sections. Two that belong
+   together sit side by side when the page is wide enough for both. */
+.fb .pg {
+	container-type: inline-size;
+}
+.fb .pg-cols {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr);
+	column-gap: 1.25rem;
+	align-items: start;
+}
+@container (min-width: 880px) {
+	.fb .pg-cols {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+.fb .pg-section {
+	scroll-margin-top: 5rem;
+}
+.fb .pg-section > h3 .count {
+	font-family: var(--font-sans);
+	font-size: 0.75rem;
+	color: var(--fb-muted);
+}
+/* A long section starts cut off, fading out, with "Show all" under it */
+.fb .pg-clip {
+	overflow: hidden;
+	-webkit-mask-image: linear-gradient(#000 calc(100% - 4rem), transparent);
+	mask-image: linear-gradient(#000 calc(100% - 4rem), transparent);
+}
+.fb .about-list {
+	list-style: disc;
+	margin: 6px 0 0;
+	padding-left: 1.25rem;
+	max-width: 65ch;
+	color: var(--fb-ink-2);
+}
+/* A video's YouTube comments, folded under it (dashboard.js commentsFold) */
+.fb .yc-fold {
+	margin: 10px 0 0;
+}
+.fb .yc-fold > div > .card {
+	margin-top: 8px;
+}

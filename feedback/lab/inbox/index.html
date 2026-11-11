@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Inbox · dashboard redesign variant 1</title>
+<!-- Redesign variant 1, "Inbox": the dashboard as one triage inbox with a reading pane.
+     Run with the fb-lab launch config (python3 -m http.server from feedback/), then open
+     http://localhost:5180/lab/inbox/. Uses feedback/data when it is on this machine, else the
+     invented data in sample.js. Local only, never deployed. -->
+<script>try { const t = localStorage.getItem("inbox-lab:theme"); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+<link rel="stylesheet" href="inbox.css">
+</head>
+<body>
+<div class="app" id="app">
+  <nav class="rail" aria-label="Scope and filters">
+    <div class="brand"><i></i><span>Four Games</span></div>
+    <div><h2>Scope</h2><div class="nav" id="scopes"></div></div>
+    <div><h2>Filters</h2><div class="nav" id="filters"></div></div>
+    <div><h2>Put away</h2><div class="nav" id="away"></div></div>
+    <div class="foot">
+      <span id="source"></span>
+      <a href="home.html">Public home page, restyled →</a>
+    </div>
+  </nav>
+  <div class="work">
+    <header class="top">
+      <div class="strip" id="strip"></div>
+      <div class="tools">
+        <label class="search"><span class="muted">⌕</span><input id="q" type="search" placeholder="Search" aria-label="Search"><kbd class="hide-phone">/</kbd></label>
+        <button class="btn" id="diff">What's different</button>
+        <button class="btn quiet" id="theme" aria-label="Switch light or dark">◐</button>
+      </div>
+    </header>
+    <div class="split">
+      <section class="stream" id="stream" aria-label="Inbox"></section>
+      <article class="reader" id="reader" aria-live="polite"></article>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script src="sample.js"></script>
+<script src="inbox.js"></script>
+</body>
+</html>

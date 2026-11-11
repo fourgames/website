@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Four Games · home page in the Inbox style</title>
+<!-- The public home page (src/views/HomeView.vue: hero, games, videos, membership, get involved,
+     support band) restyled in variant 1's direction: calm, light, one accent. A static mock-up with
+     the site's own English copy; video titles and the two unreleased cards are placeholders. -->
+<script>try { const t = localStorage.getItem("inbox-lab:theme"); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
+<link rel="stylesheet" href="inbox.css">
+<style>
+html, body { height: auto; }
+body { font-size: 16px; line-height: 1.6; }
+.wrap { max-width: 1080px; margin: 0 auto; padding: 0 24px; }
+.site-nav { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+.site-nav .wrap { display: flex; align-items: center; gap: 22px; height: 56px; }
+.site-nav .brand { padding: 0; font-size: 15px; text-decoration: none; }
+.site-nav nav { display: flex; gap: 18px; font-size: 14px; }
+.site-nav nav a { color: var(--ink2); text-decoration: none; }
+.site-nav nav a:hover { color: var(--ink); }
+.site-nav .end { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+.btn.lg { height: 44px; padding: 0 18px; border-radius: 10px; font-size: 15px; font-weight: 600; }
+.hero { display: grid; grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr); gap: 56px; align-items: center; padding: 88px 0 96px; }
+.hero h1 { font-size: clamp(34px, 5vw, 54px); line-height: 1.08; letter-spacing: -.035em; margin: 0 0 18px; text-wrap: balance; }
+.hero .sub { font-size: 19px; color: var(--ink2); margin: 0 0 30px; }
+.hero .cta { display: flex; gap: 10px; flex-wrap: wrap; }
+.hero .also { margin: 22px 0 0; font-size: 14px; color: var(--muted); }
+.hero .also a { color: var(--ink2); }
+.shot { border-radius: 16px; overflow: hidden; border: 1px solid var(--line); box-shadow: var(--shadow); background: var(--panel); }
+.shot .bar { display: flex; gap: 6px; padding: 10px 12px; border-bottom: 1px solid var(--line); }
+.shot .bar i { width: 9px; height: 9px; border-radius: 50%; background: var(--line); }
+.shot figcaption { display: flex; justify-content: space-between; gap: 10px; padding: 10px 14px; font-size: 13px; color: var(--ink2); }
+.art { display: block; width: 100%; aspect-ratio: 460 / 215; object-fit: cover; background: linear-gradient(135deg, hsl(var(--hue, 240) 40% 62%), hsl(calc(var(--hue, 240) + 40) 45% 42%)); }
+section.block { padding: 72px 0; border-top: 1px solid var(--line); }
+.block > .wrap > h2 { font-size: 28px; letter-spacing: -.025em; margin: 0 0 6px; }
+.block > .wrap > .lead { margin: 0 0 32px; max-width: 560px; }
+.head-row { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 28px; }
+.head-row h2 { font-size: 28px; letter-spacing: -.025em; margin: 0; }
+.games { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 40px; }
+.card-link { text-decoration: none; display: block; }
+.card-link .art { border-radius: 12px; border: 1px solid var(--line); }
+.card-link h3 { font-size: 19px; letter-spacing: -.01em; margin: 14px 0 4px; }
+.card-link p { margin: 0; color: var(--ink2); font-size: 15px; }
+.tags { display: flex; gap: 6px 14px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: var(--muted); }
+.tags .new { color: var(--accent); font-weight: 600; }
+.list { display: grid; gap: 0; }
+.list a { display: grid; grid-template-columns: 148px minmax(0, 1fr); gap: 16px; align-items: center; padding: 14px 0; border-top: 1px solid var(--line); text-decoration: none; }
+.list a:first-child { border-top: 0; padding-top: 0; }
+.list .art { border-radius: 8px; }
+.list .art.v { aspect-ratio: 16 / 9; }
+.list h3 { font-size: 16px; margin: 0 0 2px; letter-spacing: -.01em; }
+.list span { font-size: 13px; color: var(--muted); }
+.videos { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 40px; }
+@media (min-width: 861px) { .videos a:nth-child(2) { border-top: 0; padding-top: 0; } }
+.perks { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; }
+.perks li, .cols li { list-style: none; }
+.perks, .cols { margin: 0; padding: 0; }
+.perks li { background: var(--panel); padding: 22px; }
+.perks .ic, .cols .ic { width: 34px; height: 34px; border-radius: 10px; background: var(--accent-soft); color: var(--accent); display: grid; place-items: center; font-size: 16px; margin-bottom: 14px; }
+.perks h3, .cols h3 { font-size: 16px; margin: 0 0 4px; letter-spacing: -.01em; }
+.perks p, .cols p { margin: 0; font-size: 14px; color: var(--ink2); }
+.center { text-align: center; margin-top: 28px; }
+.cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 40px; }
+.cols .btn { margin-top: 16px; }
+.band { text-align: center; padding: 88px 0; border-top: 1px solid var(--line); background: var(--sunk); }
+.band h2 { font-size: 30px; letter-spacing: -.03em; margin: 0 0 8px; }
+.band p { max-width: 560px; margin: 0 auto 24px; color: var(--ink2); }
+footer { border-top: 1px solid var(--line); padding: 28px 0 40px; font-size: 13px; color: var(--muted); }
+footer .wrap { display: flex; gap: 18px; flex-wrap: wrap; justify-content: space-between; }
+@media (max-width: 860px) {
+  .hero { grid-template-columns: 1fr; gap: 36px; padding: 48px 0 56px; }
+  .games, .videos, .cols { grid-template-columns: 1fr; }
+  .perks { grid-template-columns: 1fr 1fr; }
+  .site-nav nav { display: none; }
+  section.block { padding: 52px 0; }
+  .list a { grid-template-columns: 104px minmax(0, 1fr); }
+  .wrap { padding: 0 16px; }
+}
+</style>
+</head>
+<body>
+<header class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="#"><i></i><span>Four Games</span></a>
+    <nav aria-label="Main"><a href="#games">Games</a><a href="#videos">Videos</a><a href="#">Open Source</a><a href="#">Work with us</a></nav>
+    <div class="end">
+      <a class="btn quiet" href="index.html">← Dashboard</a>
+      <button class="btn quiet" id="theme" aria-label="Switch light or dark">◐</button>
+      <a class="btn primary" href="#membership">Donate</a>
+    </div>
+  </div>
+</header>
+
+<main>
+  <div class="wrap hero">
+    <div>
+      <h1>We make games in Godot and teach you how.</h1>
+      <p class="sub">Indie games, free tutorials and open-source tools!</p>
+      <div class="cta">
+        <a class="btn lg primary" href="https://store.steampowered.com/app/2807130/" target="_blank" rel="noopener">Play latest · Reforge Front</a>
+        <a class="btn lg" href="#community">Join our Discord</a>
+      </div>
+      <p class="also">Looking for our <a href="#videos">videos</a>, <a href="#">open source</a>, or <a href="#">work with us</a>?</p>
+    </div>
+    <figure class="shot" style="margin:0">
+      <div class="bar"><i></i><i></i><i></i></div>
+      <img class="art" style="--hue:18" src="https://cdn.akamai.steamstatic.com/steam/apps/2807130/header.jpg" alt="Reforge Front key art" onerror="this.removeAttribute('src')">
+      <figcaption><span>Reforge Front</span><span>Out now on Steam</span></figcaption>
+    </figure>
+  </div>
+
+  <section class="block" id="games">
+    <div class="wrap">
+      <div class="head-row"><h2>Our games</h2><a class="btn" href="#">View all</a></div>
+      <div class="games">
+        <a class="card-link" href="https://store.steampowered.com/app/2807130/" target="_blank" rel="noopener">
+          <img class="art" style="--hue:18" src="https://cdn.akamai.steamstatic.com/steam/apps/2807130/header.jpg" alt="" onerror="this.removeAttribute('src')">
+          <h3>Reforge Front</h3>
+          <p>Defend the furnace from waves of goblins by building and upgrading in an FPS tower defense.</p>
+          <div class="tags"><span>Out now</span><span>Tower defense · FPS</span><span>Windows · Steam Deck</span></div>
+        </a>
+        <div class="list">
+          <a href="#"><span class="art" style="--hue:140"></span><div><h3>Pomo Valley</h3><span>Out now · Cozy · Productivity</span></div></a>
+          <a href="#"><span class="art" style="--hue:262"></span><div><h3>Placeholder: next game</h3><span><b class="new" style="color:var(--accent)">Coming soon</b></span></div></a>
+          <a href="#"><span class="art" style="--hue:205"></span><div><h3>Unannounced project</h3><span>Something new is in the forge.</span></div></a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="videos">
+    <div class="wrap">
+      <div class="head-row"><h2>Latest videos</h2><a class="btn" href="#">More videos</a></div>
+      <div class="list videos">
+        <a href="#"><span class="art v" style="--hue:230"></span><div><h3>Placeholder: a new Godot tutorial</h3><span><b class="new" style="color:var(--accent)">New</b> · 2 days ago</span></div></a>
+        <a href="#"><span class="art v" style="--hue:300"></span><div><h3>Placeholder: quick tip</h3><span>1 week ago</span></div></a>
+        <a href="#"><span class="art v" style="--hue:170"></span><div><h3>Placeholder: beginner course, part 3</h3><span>2 weeks ago</span></div></a>
+        <a href="#"><span class="art v" style="--hue:40"></span><div><h3>Placeholder: devlog</h3><span>3 weeks ago</span></div></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" id="membership">
+    <div class="wrap">
+      <h2>Four Games Member</h2>
+      <p class="lead">Support Four Games on YouTube and get every game we make for free.</p>
+      <ul class="perks">
+        <li><div class="ic">⚿</div><h3>Keys to all our games</h3><p>Reforge Front and every game we release after it.</p></li>
+        <li><div class="ic">▶</div><h3>Early access to new videos</h3><p>Watch new Godot tutorials before everyone else.</p></li>
+        <li><div class="ic">◆</div><h3>Discord role</h3><p>A members role in our Discord server.</p></li>
+        <li><div class="ic">★</div><h3>Member badges</h3><p>Loyalty badges next to your name in comments and live chat.</p></li>
+      </ul>
+      <div class="center"><a class="btn lg primary" href="#">Join on YouTube</a></div>
+    </div>
+  </section>
+
+  <section class="block" id="community">
+    <div class="wrap">
+      <h2>Get involved</h2>
+      <p class="lead">Join the community and help shape the games and tutorials we make.</p>
+      <ul class="cols">
+        <li><div class="ic">✎</div><h3>Chat</h3><p>Ask questions, share what you're building and help shape our games on Discord.</p><a class="btn" href="#">Join Discord</a></li>
+        <li><div class="ic">▶</div><h3>Learn</h3><p>Free Godot tutorials on our YouTube channel, from quick tips to full beginner courses.</p><a class="btn" href="#">Watch on YouTube</a></li>
+        <li><div class="ic">⇄</div><h3>Collaborate</h3><p>Creators, studios and brands: let's build something together.</p><a class="btn" href="#">Work with us</a></li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="band">
+    <div class="wrap">
+      <h2>Support Four Games</h2>
+      <p>You don't need to be a game developer to help. Become a Member on YouTube and keep the games and free tutorials coming.</p>
+      <a class="btn lg primary" href="#">Donate</a>
+    </div>
+  </section>
+</main>
+
+<footer><div class="wrap"><span>Four Games · mock-up of the home page in the Inbox variant's style</span><a href="index.html">Back to the dashboard</a></div></footer>
+<script>
+document.getElementById("theme").addEventListener("click", () => {
+  const root = document.documentElement, dark = root.dataset.theme ? root.dataset.theme === "dark" : matchMedia("(prefers-color-scheme: dark)").matches;
+  root.dataset.theme = dark ? "light" : "dark"; try { localStorage.setItem("inbox-lab:theme", root.dataset.theme); } catch {}
+});
+</script>
+</body>
+</html>

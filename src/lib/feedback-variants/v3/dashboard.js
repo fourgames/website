@@ -26,7 +26,10 @@ let DATA = "main"; // the data commit on screen
 const DAY = 86400;
 const URGENCY = { urgent: "Urgent", high: "High", medium: "Medium", low: "Low" };
 const KIND = { review: "Review", topic: "Thread", reply: "Reply", video: "YouTube video", comment: "YouTube comment", refund: "Refund note" };
-const state = { index: null, games: {}, game: null, home: false, tab: "issues", filters: { home: { game: "all", kind: "all", category: "all", q: "", shown: 50 }, issues: { status: "active", q: "", sort: "priority" }, suggestions: { status: "active", q: "", sort: "priority" }, feed: { kind: "all", category: "all", version: "all", q: "", shown: 50 }, stats: { range: 0 }, media: { source: "all", shown: 30 }, sales: { range: 90 } }, sales: null };
+const state = { index: null, games: {}, game: null, home: false, tab: "issues", filters: { home: { game: "all", kind: "all", category: "all", q: "", shown: 50 }, issues: { status: "active", q: "", sort: "priority" }, suggestions: { status: "active", q: "", sort: "priority" }, feed: { kind: "all", category: "all", version: "all", q: "", shown: 50 }, stats: { range: 0 }, media: { source: "all", shown: 30 }, sales: { range: 90 } }, sales: null,
+  // One page per game: the sections with "Show all" open and where the reader was, per game; the
+  // sections drawn on the page on screen; and a jump waiting for a game to open.
+  opened: {}, place: {}, drawnSecs: new Set(), page: null, jump: null };
 
 const store = {
   get(k) { try { return localStorage.getItem("fb-dash:" + k); } catch { return null; } },
@@ -648,6 +651,8 @@ async function init() {
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = hash.get("app") || store.get("app");
   state.tab = NAV.some(([, tabs]) => tabs.some(([id]) => id === hash.get("tab"))) ? hash.get("tab") : state.tab;
+  // A section named in the link: the game opens scrolled to it.
+  if (state.tab === hash.get("tab") && state.tab !== NAV[0][1][0][0]) state.jump = { id: state.tab };
   // All games first, unless a game was asked for (or was the last one open), or the game data.
   if (wanted === "gamedata") pickGameData();
   else if (wanted === "status") pickUptime();
@@ -1210,11 +1215,13 @@ function renderStats() {
   const peaks = daily(14, (d) => Math.max(playersAt(series, d) ?? 0, ...series.filter(([ts]) => ts >= d && ts < d + DAY).map(([, n]) => n)));
   const reviewsPerDay = daily(14, (d) => items().filter((i) => i.kind === "review" && i.created >= d && i.created < d + DAY).length);
   const openBugsPerDay = daily(14, (d) => issues("bug").filter((i) => i.firstSeen < d + DAY && !(i.status === "likely_fixed" && i.fixedAt < d + DAY)).length);
-  const postsPerDay = daily(14, (d) => items().filter((i) => !i.dev && i.created >= d && i.created < d + DAY).length);
+  // (A YouTube comment weighs less than a review, thread or video: it isn't counted as a new post.)
+  const postsPerDay = daily(14, (d) => items().filter((i) => !i.dev && i.kind !== "comment" && i.created >= d && i.created < d + DAY).length);
   const bugs = issues("bug").filter(isActive);
   const urgent = bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high");
   const still = bugs.filter((i) => i.status === "still_happening");
-  const fresh = items().filter((i) => !i.dev && i.created >= t - DAY);
+  const fresh = items().filter((i) => !i.dev && i.kind !== "comment" && i.created >= t - DAY);
+  const freshComments = items().filter((i) => !i.dev && i.kind === "comment" && i.created >= t - DAY).length;
   // `chart` is the chart it opens below, or a function: then the card opens that view instead.
   const tile = (label, value, sub, trend, color, chart) => {
     const go = typeof chart === "function";
@@ -1247,9 +1254,9 @@ function renderStats() {
       : null,
     wishlists: wishlistDays().length ? wishlistTile(tile) : null,
     revenue: salesDays().length ? tile("Gross all time", usd(grossAll), `${usd(revenue.slice(-7).reduce((a, b) => a + b, 0))} in the last 7 days`, revenue, "var(--fb-positive)",
-      () => { state.tab = "sales"; render(); }) : null,
+      () => jumpTo("sales")) : null,
     bugs: tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent", openBugsPerDay, "var(--type-bug)"),
-    posts: tile("New posts", fresh.length, "last 24 h", postsPerDay),
+    posts: tile("New posts", fresh.length, freshComments ? `last 24 h · + ${plural(freshComments, "YouTube comment")}` : "last 24 h", postsPerDay),
   };
   // Up front only what you can act on: before release, the following you're building; after it,
   // players, reviews, money and bugs. The rest waits behind "+ more" (remembered), and the card
@@ -1380,8 +1387,163 @@ const NAV = [
 // A view's explanation, folded away so the view itself comes first; one click opens it.
 const about = (...kids) => h("details.about", h("summary", "How this works"), h("p", ...kids));
 
+// One page per game: every view is a section of the same page, in the order of the list above, which
+// is now a jump bar (it scrolls to a section and marks the one in view). A section starts with a
+// first cut (the top few) and "Show all" opens the rest in place; it's drawn when it comes near the
+// screen, so a game with many posts still opens fast.
+const SECTIONS = { issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: () => lovedView(), updates: () => updatesView(), media: () => mediaView(), achievements: () => achievementsView(), curators: () => curatorsView(), stats: () => steamStatsView(), bundles: () => bundlesView(), competitors: () => competitorsView(), sales: () => salesView(), soon: () => soonView(), more: () => moreView(), feed: () => feedView() };
+const CUT = 5;
+const secEl = (id) => document.querySelector(`#fb-view .gsec[data-sec="${id}"]`);
+const allOpen = (key) => !!state.opened[state.game.appId]?.has(key);
+const setAllOpen = (key, open) => { const set = (state.opened[state.game.appId] ||= new Set()); if (open) set.add(key); else set.delete(key); };
+// The button under a first cut. `key` is the section's id (or "id:part" for a second list in it);
+// `again` redraws what the button belongs to (the whole section unless given).
+function allButton(key, more, less = "Show fewer", again = () => drawSection(key.split(":")[0])) {
+  const open = allOpen(key);
+  return h("button.btn.more", { type: "button", "aria-expanded": String(open), onclick: () => {
+    setAllOpen(key, !open);
+    again();
+    // Folded again from far down the list: back to the section's top.
+    if (open && secEl(key.split(":")[0])?.getBoundingClientRect().top < 0) scrollToEl(secEl(key.split(":")[0]));
+  } }, open ? less : more);
+}
+// A list's first cut: the first `n` of `list` (each built by `make`), then "Show all" when there are more.
+function firstCut(key, list, make, noun, again, n = CUT) {
+  if (list.length <= n) return list.map(make);
+  return [...(allOpen(key) ? list : list.slice(0, n)).map(make), allButton(key, `Show all ${list.length} ${noun}`, "Show fewer", again)];
+}
+
+let secObserver = null;
+function drawSection(id) {
+  const sec = secEl(id);
+  if (!sec) return;
+  state.drawnSecs.add(id);
+  secObserver?.unobserve(sec);
+  const body = sec.querySelector(".gsec-body");
+  body.classList.remove("gsec-wait");
+  // A section that can't be drawn says so, and the rest of the page still works.
+  try { body.replaceChildren(SECTIONS[id]()); } catch (e) { console.error(e); body.replaceChildren(h("p.empty", "This section couldn't be drawn.")); }
+}
+// Draws every section down to this one, so nothing above it grows later and pushes it away.
+function drawThrough(id) {
+  for (const sec of document.querySelectorAll("#fb-view .gsec")) {
+    if (!state.drawnSecs.has(sec.dataset.sec)) drawSection(sec.dataset.sec);
+    if (sec.dataset.sec === id) break;
+  }
+}
+// The height the jump bar covers at the top of the screen (the phone's row of tabs; the side card covers nothing).
+const barHeight = () => (document.getElementById("fb-nav-top")?.offsetHeight || 0) + 12;
+let jumpHold = null;
+function scrollToEl(el) {
+  window.scrollTo(0, Math.max(0, el.getBoundingClientRect().top + window.scrollY - barHeight()));
+}
+// Scrolls to a section (what switching views used to be). `open` opens its "Show all"; `issue` lands
+// on that bug or idea's card, opening "Show all" when it's beyond the first cut.
+function jumpTo(id, { issue = null, open = false } = {}) {
+  if (!secEl(id)) return;
+  if (open) setAllOpen(id, true);
+  const drawn = state.drawnSecs.has(id);
+  drawThrough(id);
+  if (open && drawn) drawSection(id);
+  const card = () => (issue ? secEl(id).querySelector(`[data-issue="${CSS_ESCAPE(issue)}"]`) : null);
+  if (issue && !card()) {
+    Object.assign(state.filters[id], { status: "active", q: "" });
+    setAllOpen(id, true);
+    drawSection(id);
+  }
+  scrollToEl(card() || secEl(id));
+  // A short section at the very end can't reach the top of the screen: it's still the one asked for.
+  jumpHold = { id, y: window.scrollY };
+  setCurrent(id);
+}
+// (`CSS` in this file is the stylesheet's text, so the browser's own is asked for by its full name.)
+const CSS_ESCAPE = (v) => window.CSS.escape(String(v));
+
+// Marks a section as the one in view: in the jump bar, in the link, and as seen (its "New" goes).
+let hashTimer = null;
+function setCurrent(id) {
+  if (state.tab === id && document.querySelector(`.fb .nav-btn[data-sec="${id}"][aria-current="true"]`)) return;
+  state.tab = id;
+  store.set(`seen:${state.game.appId}:${id}`, now());
+  for (const b of document.querySelectorAll(".fb .nav-btn[data-sec]")) {
+    b.setAttribute("aria-current", String(b.dataset.sec === id));
+    if (b.dataset.sec === id) b.querySelector(".nav-new")?.remove();
+  }
+  // The phone's row of tabs follows along.
+  const bar = document.getElementById("fb-nav-top"), btn = bar?.querySelector(`.nav-btn[data-sec="${id}"]`);
+  if (btn && bar.scrollWidth > bar.clientWidth) bar.scrollLeft = btn.offsetLeft - (bar.clientWidth - btn.offsetWidth) / 2;
+  clearTimeout(hashTimer);
+  hashTimer = setTimeout(() => { if (state.game && state.page === state.game.appId) setHash(); }, 250);
+}
+// While scrolling: the last section whose heading passed the top is the one in view; and where the
+// reader is in this game is remembered, for coming back to it.
+let spyQueued = false;
+function onScroll() {
+  if (spyQueued) return;
+  spyQueued = true;
+  setTimeout(() => { spyQueued = false; spy(); }, 60);
+}
+function spy() {
+  const page = document.querySelector("#fb-view .gpage");
+  if (!page || !state.game || state.page !== state.game.appId || Number(page.dataset.app) !== state.game.appId) return;
+  const secs = [...page.querySelectorAll(".gsec")];
+  if (!secs.length) return;
+  const line = barHeight() + 80;
+  let current = null;
+  for (const sec of secs) { if (sec.getBoundingClientRect().top <= line) current = sec; else break; }
+  state.place[state.game.appId] = current ? { sec: current.dataset.sec, off: Math.round(-current.getBoundingClientRect().top) } : null;
+  if (jumpHold && Math.abs(window.scrollY - jumpHold.y) < 3) return setCurrent(jumpHold.id);
+  jumpHold = null;
+  // At the very end of the page the last section counts, however short.
+  if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) current = secs.at(-1);
+  setCurrent((current || secs[0]).dataset.sec);
+}
+
+// What this variant of the dashboard changes, folded like a view's explanation.
+const variantNote = () => h("details.about", h("summary", "What this variant changes"), h("ul",
+  h("li", "A game is one page: every view is a section, read by scrolling."),
+  h("li", "The list of views is a jump bar that stays on screen and marks the section in view."),
+  h("li", "Each section shows its top few; “Show all” opens the rest in place."),
+  h("li", "YouTube comments are folded under their video and aren't counted as new posts."),
+  h("li", "Coming back to a game returns to where you were on its page.")));
+
+// A game's page: its sections, drawn as they come near the screen. Redrawn for the same game (new
+// data, a save), the sections already drawn are drawn again at once, so the page keeps its length
+// and the reader their place.
+function gamePage(nav, counts) {
+  const appId = state.game.appId;
+  const same = state.page === appId;
+  if (!same) state.drawnSecs = new Set();
+  secObserver?.disconnect();
+  secObserver = new IntersectionObserver((entries) => { for (const e of entries) if (e.isIntersecting && e.target.isConnected) drawSection(e.target.dataset.sec); }, { rootMargin: "800px 0px" });
+  const section = ([id, label]) => h("section.ov-section.gsec", { "data-sec": id },
+    h("h3", icon(id), label, counts[id] != null ? h("span.ov-count", counts[id]) : null),
+    h("div.gsec-body.gsec-wait"));
+  document.getElementById("fb-view").replaceChildren(h("div.gpage", { "data-app": appId }, variantNote(), ...nav.flatMap(([, tabs]) => tabs.map(section))));
+  state.page = appId;
+  for (const sec of document.querySelectorAll("#fb-view .gsec")) {
+    if (state.drawnSecs.has(sec.dataset.sec)) drawSection(sec.dataset.sec);
+    else secObserver.observe(sec);
+  }
+  if (same && !state.jump) return;
+  // Just opened: at the section asked for (a row on All games, a link), else where the reader left
+  // this game, else at its top.
+  const jump = state.jump, place = state.place[appId];
+  state.jump = null;
+  if (jump && secEl(jump.id)) return jumpTo(jump.id, jump);
+  if (place && secEl(place.sec)) {
+    drawThrough(place.sec);
+    window.scrollTo(0, secEl(place.sec).getBoundingClientRect().top + window.scrollY + place.off);
+    return spy();
+  }
+  const main = document.querySelector(".fb .fb-main");
+  if (main.getBoundingClientRect().top < 0) window.scrollTo(0, main.getBoundingClientRect().top + window.scrollY - 12);
+  setCurrent(nav[0][1][0][0]);
+}
+
 function render() {
   state.drawn = drawnKey(); // what's on screen, so a refresh only redraws for new data
+  if (state.home || state.gameData || state.uptime || state.market || state.creators) { state.page = null; secObserver?.disconnect(); }
   renderGames();
   // On All games (and Game data) the views are one game's, so they're hidden.
   document.querySelector(".fb .side-views").hidden = state.home || state.gameData || state.uptime || state.market || state.creators;
@@ -1429,7 +1591,7 @@ function render() {
   const counts = {
     issues: issues("bug").filter(isActive).length,
     suggestions: issues("suggestion").filter(isActive).length,
-    feed: items().filter((i) => !i.dev).length,
+    feed: items().filter((i) => !i.dev && i.kind !== "comment").length,
     loved: issues("praise").length,
     achievements: state.game.achievements?.list?.length || null,
     curators: state.game.curators?.list?.length || null,
@@ -1439,19 +1601,19 @@ function render() {
     stats: belowAverage() || null,
     media: liveNow().length ? `${liveNow().length} live` : talk().filter((m) => m.at > now() - 7 * DAY).length || null,
   };
-  // The view on screen counts as seen now; any other view with something from the last 48 hours
-  // that's newer than when you last opened it gets "New", like a new post.
+  // The section in view counts as seen now; any other with something from the last 48 hours
+  // that's newer than when you last had it in view gets "New", like a new post.
+  if (!nav.some(([, tabs]) => tabs.some(([id]) => id === state.tab))) state.tab = nav[0][1][0][0];
   store.set(`seen:${state.game.appId}:${state.tab}`, now());
   const button = ([id, label]) =>
-    h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
+    h("button.nav-btn", { type: "button", "data-sec": id, "aria-current": String(state.tab === id), onclick: () => jumpTo(id) },
       icon(id), h("span", label), id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : id === "soon" ? ".count-soon" : id === "stats" ? ".count-bad" : ""}`, counts[id]) : null);
   // The side card lists the views under their group's name; the phone tabs keep them in one row,
   // with a gap between groups.
   document.getElementById("fb-nav-side").replaceChildren(...nav.flatMap(([group, tabs]) => [...(group ? [h("div.nav-group", group)] : []), ...tabs.map(button)]));
   document.getElementById("fb-nav-top").replaceChildren(...nav.flatMap(([, tabs], i) => [...(i ? [h("span.nav-gap")] : []), ...tabs.map(button)]));
   setHash();
-  const view = { issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, updates: updatesView, media: mediaView, achievements: achievementsView, curators: curatorsView, stats: steamStatsView, bundles: bundlesView, competitors: competitorsView, sales: salesView, soon: soonView, more: moreView, feed: feedView }[state.tab]();
-  document.getElementById("fb-view").replaceChildren(view);
+  gamePage(nav, counts);
 }
 
 // How far players get: the share who unlocked each achievement (feedback/community.py), most common
@@ -1467,7 +1629,7 @@ function achievementsView() {
     about( `The share of players who unlocked each achievement, from Steam, most common first. If they follow the game's progress, a big step down is where many players stop. Updated daily, last ${ago(a.at)}. `,
       "Steam's shares are over everyone who ever played, so an update moves them slowly. The change since an update is in points; the rough share among new players (copies sold and keys activated since, from sales) shows how the players who started on the new version are doing, without collecting anything from the game."),
     achievementsChart(a.history || []),
-    ...list.map((x, i) => h("div.card.ach",
+    ...firstCut("achievements", list.map((x, i) => [x, i]), ([x, i]) => h("div.card.ach",
       x.icon ? h("img.ach-icon", { src: x.icon, alt: "", loading: "lazy" }) : null,
       h("div.ach-body",
         h("div.ach-head", h("b", x.name),
@@ -1475,7 +1637,7 @@ function achievementsView() {
           h("span.ach-pct", `${x.percent.toFixed(1)}%`)),
         x.desc && x.desc !== x.name ? h("div.ach-desc", x.desc) : null,
         h("div.ach-bar", h("i", { style: `width:${Math.max(0.5, x.percent)}%` })),
-        since ? achievementChange(x, since) : null))));
+        since ? achievementChange(x, since) : null)), "achievements"));
 }
 
 // Copies sold plus keys activated up to a time: Steam's achievement shares count roughly these players.
@@ -1739,11 +1901,14 @@ function steamStatsView() {
   const intro = about("Steamworks' own reports for this game, which have no API: playtime, players, controllers, Steam Deck, downloads, and the hardware survey and Remote Play once Steam has numbers for them. ",
     "The task on your Mac reads them twice a day in your Chrome (signed in to Steamworks) and saves them to the private data repo.");
   if (!apps.length) return h("div", intro, h("p.empty", sw ? "Steamworks has no numbers for this game yet." : "Not read yet: the task on your Mac reads these pages twice a day."));
+  // First what Steam says against other games, and playtime; the other reports behind "Show all".
+  const all = allOpen("stats");
   return h("div", intro,
     ...apps.flatMap(([id, app]) => [
       apps.length > 1 ? h("h2.sw-app", id === String(state.game.appId) ? "The game" : "The demo") : null,
-      verdictStrip(app), swPlaytime(app), swPlayers(app), swControllers(app), swDeck(app, sw.deck), swDownloads(app), ...swOther(app),
+      verdictStrip(app), swPlaytime(app), ...(all ? [swPlayers(app), swControllers(app), swDeck(app, sw.deck), swDownloads(app), ...swOther(app)] : []),
     ]),
+    allButton("stats", "Show all: players, controllers, Steam Deck, downloads and the rest", "Show less"),
     h("p.meta", `Read from Steamworks ${sw.read ? ago(sw.read) : ""}.`));
 }
 
@@ -1771,7 +1936,7 @@ function curatorsView() {
       " page, checked every 6 hours", c?.at ? `, last change ${ago(c.at)}` : "", ". Discord pings you for each new one. To thank a curator or reply, use their full review if it links to one, or leave a comment in their Steam group. Steam has no official way to read this list, so it can stop working if Steam changes that page. ",
       h("a", { href: "https://partner.steamgames.com/doc/marketing/curators", target: "_blank", rel: "noopener" }, "Curators and Curator Connect ↗")),
     list.length ? h("p.ov-calm", { style: "margin:0 0 12px" }, `${plural(list.length, "curator")}: ${counts.map(([n, l]) => `${n} ${l}`).join(", ")}. ${fmtNum(reach)} followers in all.`) : null,
-    ...(list.length ? list.map(card) : [h("p.empty", c ? "No curator has reviewed this game yet." : "Looked up on the next run (within 5 min).")]));
+    ...(list.length ? firstCut("curators", list, card, "curators") : [h("p.empty", c ? "No curator has reviewed this game yet." : "Looked up on the next run (within 5 min).")]));
 }
 
 // Bundles: the ones on Steam the game is in (feedback/community.py reads them daily from its store
@@ -1828,11 +1993,11 @@ function bundlesView() {
       h("h3", "Bundles on Steam", h("span.ov-count", list.length)),
       about( "The bundles this game is in, from its store page, checked daily", state.game.bundles?.at ? `, last ${ago(state.game.bundles.at)}` : "", ". ",
         h("a", { href: "https://partner.steamgames.com/doc/store/application/bundles", target: "_blank", rel: "noopener" }, "How bundles work ↗")),
-      ...(list.length ? list.map(bundleCard) : [h("p.empty", "Not in any bundle yet.")])),
+      ...(list.length ? firstCut("bundles", list, bundleCard, "bundles") : [h("p.empty", "Not in any bundle yet.")])),
     h("section.ov-section",
       h("h3", "Games to bundle with", h("span.ov-count", wanted.length), h("button.btn", { type: "button", style: "margin-left:auto", onclick: () => askBundleWith() }, "+ Add a game")),
       about( "Games you'd like to bundle this one with. Contact the developer opens Steam's support page for that game, which lists how to reach them; mark where each one stands."),
-      ...(wanted.length ? wanted.map(wantCard) : [h("p.empty", "None yet: add a game by its store link or app id.")])));
+      ...(wanted.length ? firstCut("bundles:with", wanted, wantCard, "games") : [h("p.empty", "None yet: add a game by its store link or app id.")])));
 }
 
 // Adds a game to bundle with (by its store link or app id), or edits the note on one.
@@ -1974,7 +2139,7 @@ function competitorsView() {
       list.length ? competitorChart(own, rows) : null,
       about("Each game is read hourly from Steam: its player count (kept as the day's peak), its reviews and its update posts. \"This week\" is the average daily peak over the last 7 full days against the 7 before, so a game with 10 players and one with 10,000 compare fairly. Days are UTC."),
       row(own),
-      ...rows.map((r) => row({ ...r, ...(r.info || {}), name: r.name, peaks: r.peaks }))));
+      ...firstCut("competitors", rows, (r) => row({ ...r, ...(r.info || {}), name: r.name, peaks: r.peaks }), "games")));
 }
 
 // Daily peak players for this game and the median of the others, each as a share of its own average
@@ -2276,7 +2441,7 @@ const NEWEST = {
   updates: () => (state.game.releases || []).map((r) => r.time),
   media: () => talk().filter((m) => !m.own).map((m) => m.at),
   curators: () => (state.game.curators?.list || []).map((c) => c.seen),
-  feed: () => items().filter((i) => !i.dev).map((i) => i.created),
+  feed: () => items().filter((i) => !i.dev && i.kind !== "comment").map((i) => i.created),
 };
 function hasNew(view) {
   const newest = Math.max(0, ...(NEWEST[view]?.() || []).filter(Boolean));
@@ -2296,7 +2461,8 @@ function issueView(kind) {
       .filter((i) => f.sort !== "first" || i.firstSession > 0)
       .filter((i) => f.sort !== "trending" || trend(i))
       .sort(SORTS[f.sort] || SORTS.priority);
-    list.replaceChildren(...(shown.length ? shown.map((i) => issueCard(i)) : [h("p.empty", kind === "bug" ? "No issues here." : "No suggestions here.")]));
+    // The top few by the chosen sort; "Show all" opens the rest.
+    list.replaceChildren(...(shown.length ? firstCut(kind === "bug" ? "issues" : "suggestions", shown, (i) => issueCard(i), kind === "bug" ? "bugs" : "ideas", draw) : [h("p.empty", kind === "bug" ? "No issues here." : "No suggestions here.")]));
   };
   const status = chips([["active", "Open"], ["still", "Still happening"], ["fixed", "Likely fixed"], ["cleared", "Marked fixed"], ["all", "All"]], f.status, (v) => { f.status = v; draw(); }, "Status");
   // What costs the most reviews, what most players hit, or what turns new players away.
@@ -2351,7 +2517,7 @@ function lovedView() {
   return h("div",
     about( "What players praise, grouped like ideas: things to keep, and wording for your store page and trailers."),
     list.length ? h("div.filters", copyAll) : null,
-    ...(list.length ? list.map((i) => issueCard(i)) : [h("p.empty", "No praise grouped yet.")]));
+    ...(list.length ? firstCut("loved", list, (i) => issueCard(i), "things players love") : [h("p.empty", "No praise grouped yet.")]));
 }
 
 // How each update landed: negative reviews before and after it, what it fixed and whether those
@@ -2371,7 +2537,7 @@ function updatesView() {
     const [word, cls] = share >= 0.7 ? ["Liked", ".good"] : share >= 0.4 ? ["Mixed", ".warn"] : ["Disliked", ".bad"];
     return h(`div.impact-stat${cls}`, h("b", word), h("span", w.n === 1 ? `the 1 review since was ${pos ? "positive" : "negative"}` : `${pos} of ${w.n} reviews since were positive`));
   };
-  const cards = all.slice().reverse().map((r) => {
+  const card = (r) => {
     const i = all.indexOf(r);
     const next = all[i + 1]?.time ?? now();
     const after = tally(r.time, next);
@@ -2394,7 +2560,9 @@ function updatesView() {
       since.length ? h("div.upd-section", h("b", "New since this update"),
         h("ul.pc-points", ...since.map((x) => sinceLine(x)))) : null,
       h("div.meta", h("a", { href: r.url, target: "_blank", rel: "noopener" }, "Patch notes ↗")));
-  });
+  };
+  // The two newest updates; "Show all" opens the older ones.
+  const cards = firstCut("updates", all.slice().reverse(), card, "updates", undefined, 2);
   return h("div",
     about( "Each update: how players took it (the reviews written after it), what it fixed (and whether those reports stopped), what it only partly addressed, and what came up since (crossed out once a later update fixed it)."),
     ...(cards.length ? cards : [h("p.empty", "No updates yet.")]));
@@ -2470,7 +2638,8 @@ function thumbImg(up) {
 
 // A bug or idea in the post cards' style: type and priority on the left, the rest to the right.
 function issueCard(issue) {
-  const posts = issue.items.map((id) => state.game.items[id]).filter(Boolean).sort((a, b) => b.created - a.created);
+  // Newest first, YouTube comments after the reviews, threads, videos and refund notes.
+  const posts = issue.items.map((id) => state.game.items[id]).filter(Boolean).sort((a, b) => (a.kind === "comment") - (b.kind === "comment") || b.created - a.created);
   const postList = h("div", { hidden: true });
   let filled = false;
   const toggle = h("button.btn", { onclick: () => {
@@ -2493,7 +2662,7 @@ function issueCard(issue) {
   const summary = issue.summary ? h("span", issue.summary) : null;
   const summaryLabel = summary ? h(`button.pk.pk-${issue.kind}`, { type: "button", title: "Select this sentence" }, POINT_LABEL[issue.kind] || kind) : null;
   summaryLabel?.addEventListener("click", (e) => { e.stopPropagation(); selectText(summary); });
-  return h("article.card.issue-card",
+  return h("article.card.issue-card", { "data-issue": issue.id },
     h("div.post.pc.neutral",
       h("div.pc-top",
         h("div.pc-main",
@@ -2798,6 +2967,21 @@ function attention() {
     .sort((a, b) => b.priority - a.priority);
 }
 
+// A video's YouTube comments, folded under it: a count that opens them. A comment weighs less than
+// a review, thread or video, so it has no row of its own.
+function commentFold(g, comments) {
+  if (!comments.length) return null;
+  let filled = false;
+  const fold = h("details.issue-more.comment-fold", { ontoggle: () => {
+    if (filled || !fold.open) return;
+    filled = true;
+    fold.append(...comments.sort((a, b) => b.created - a.created).map((c) => h("div.fold-post", inGame(g, () => postView(c)))));
+  } }, h("summary", plural(comments.length, "YouTube comment"), comments.some((c) => isRecent(c.created)) ? h("span.pc-new", "New") : null));
+  // Clicks inside don't fold the video's card.
+  fold.addEventListener("click", (e) => e.stopPropagation());
+  return fold;
+}
+
 // Every post, newest first; on the All games page every game's posts together, each with its game.
 function feedView({ everyGame = false } = {}) {
   const f = everyGame ? state.filters.home : state.filters.feed;
@@ -2808,18 +2992,40 @@ function feedView({ everyGame = false } = {}) {
   const update = everyGame ? null : latestUpdate();
   const draw = () => {
     const q = f.q.toLowerCase();
-    const all = games.filter((g) => !f.game || f.game === "all" || g.appId === f.game)
-      .flatMap((g) => Object.values(g.items || {}).map((i) => [g, i]))
-      .filter(([, i]) => !i.dev || !(i.kind === "topic" && i.forum === "Events & Announcements"))
-      .filter(([, i]) => f.kind === "all" || i.kind === f.kind)
-      .filter(([, i]) => f.category === "all" || (f.category === "pending" ? !i.triage && !i.dev : i.triage?.category === f.category))
-      .filter(([, i]) => f.version === "all" || !update || (f.version === "since") === (i.created >= update.time))
-      .filter(([, i]) => !q || (english(i) + " " + (i.text || "") + " " + (i.title || "")).toLowerCase().includes(q))
-      .sort(([, a], [, b]) => Math.max(b.created, b.updated || 0) - Math.max(a.created, a.updated || 0));
-    const shown = all.slice(0, f.shown);
-    const card = ([g, i]) => everyGame ? h("div.card", gameTag(g), inGame(g, () => postView(i))) : h("div.card", postView(i));
+    // What the category, update and search filters let through (the type filter comes after).
+    const fits = (i) => (f.category === "all" || (f.category === "pending" ? !i.triage && !i.dev : i.triage?.category === f.category))
+      && (f.version === "all" || !update || (f.version === "since") === (i.created >= update.time))
+      && (!q || (english(i) + " " + (i.text || "") + " " + (i.title || "")).toLowerCase().includes(q));
+    // YouTube comments go under their video (its count opens them), unless the type filter asks
+    // for the comments themselves. A video shows when it fits the filters or one of its comments does.
+    const folded = f.kind !== "comment";
+    const rows = games.filter((g) => !f.game || f.game === "all" || g.appId === f.game).flatMap((g) => {
+      const posts = Object.values(g.items || {}).filter((i) => !i.dev || !(i.kind === "topic" && i.forum === "Events & Announcements"));
+      if (!folded) return posts.filter((i) => i.kind === "comment" && fits(i)).map((i) => ({ g, i, at: Math.max(i.created, i.updated || 0), comments: [] }));
+      const under = new Map();
+      for (const c of posts) if (c.kind === "comment" && fits(c)) under.set(c.media, [...(under.get(c.media) || []), c]);
+      const out = posts.filter((i) => i.kind !== "comment" && (f.kind === "all" || i.kind === f.kind))
+        .map((i) => ({ g, i, at: Math.max(i.created, i.updated || 0), comments: (i.kind === "video" && under.get(i.media)) || [] }))
+        .filter((r) => fits(r.i) || r.comments.length);
+      // Comments on a video Claude hasn't reviewed (it has no post): one row for the video, by its title.
+      const videos = new Set(posts.filter((i) => i.kind === "video").map((i) => i.media));
+      if (f.kind === "all" || f.kind === "video") for (const [media, comments] of under) if (!videos.has(media))
+        out.push({ g, i: null, media: g.media?.items?.[media], at: Math.max(...comments.map((c) => c.created)), comments });
+      return out;
+    }).sort((a, b) => b.at - a.at);
+    // On a game's page: the newest few, until "Show all" opens the list (then 50 at a time, as before).
+    const open = everyGame || allOpen("feed");
+    const shown = rows.slice(0, open ? f.shown : CUT);
+    const card = ({ g, i, media, comments }) => {
+      const fold = commentFold(g, comments);
+      if (!i) return h("div.card", everyGame ? gameTag(g) : null,
+        h("div.meta", "YouTube video", comments[0].videoTitle || media?.title ? `: “${comments[0].videoTitle || media.title}” ` : " ", media?.url ? h("a", { href: media.url, target: "_blank", rel: "noopener" }, "Watch on YouTube ↗") : null), fold);
+      return everyGame ? h("div.card", gameTag(g), inGame(g, () => postView(i)), fold) : h("div.card", postView(i), fold);
+    };
     list.replaceChildren(...(shown.length ? shown.map(card) : [h("p.empty", "Nothing here yet.")]));
-    if (all.length > shown.length) list.append(h("button.btn.more", { onclick: () => { f.shown += 50; draw(); } }, `Show more (${all.length - shown.length} left)`));
+    if (!open) { if (rows.length > shown.length) list.append(allButton("feed", `Show all ${plural(rows.length, "post")}`, "Show fewer", draw)); return; }
+    if (rows.length > shown.length) list.append(h("button.btn.more", { onclick: () => { f.shown += 50; draw(); } }, `Show more (${rows.length - shown.length} left)`));
+    if (!everyGame && rows.length > CUT) list.append(allButton("feed", "", "Show fewer", () => { f.shown = 50; draw(); }));
   };
   const sel = (label, key, options) => chips(options, f[key], (v) => { f[key] = v; f.shown = 50; draw(); }, label);
   wrap.append(
@@ -2870,7 +3076,7 @@ async function pickHome(sales) {
 // reviews from the last few days you haven't answered (replying early is what turns them around).
 function homeAttention() {
   return gamesLoaded().flatMap((g) => inGame(g, () => [
-    ...attention().map((i) => ({ g, at: i.lastSeen, rank: 2, open: () => { state.tab = "issues"; pickGame(g.appId); },
+    ...attention().map((i) => ({ g, at: i.lastSeen, rank: 2, open: () => { state.jump = { id: "issues", issue: i.id }; pickGame(g.appId); },
       title: i.title, what: [i.status === "still_happening" ? "came back after a fix" : `${URGENCY[i.urgency]} priority bug`, plural(i.mentions, "player"), `last ${ago(i.lastSeen)}`] })),
     ...items().filter((i) => i.kind === "review" && !i.dev && !i.votedUp && now() - i.created < NEW_REVIEW_DAYS * DAY && !replied(i))
       .map((i) => ({ g, at: i.created, rank: 1, href: i.url, title: (english(i).split("\n")[0] || "Negative review").slice(0, 140),
@@ -2885,9 +3091,10 @@ function homeView() {
     const kids = [a.g.meta.capsule ? h("img.att-thumb", { src: a.g.meta.capsule, alt: "", loading: "lazy" }) : h("span.att-thumb"),
       h("span.att-text", h("span.att-title", a.title), h("span.att-meta", [a.g.meta.name, ...a.what].filter(Boolean).join(" · "))), h("span.att-go", a.href ? "↗" : "→")];
     return a.href ? h("a.att-row", { href: a.href, target: "_blank", rel: "noopener" }, ...kids)
-      : h("button.att-row", { type: "button", onclick: () => { a.open(); window.scrollTo({ top: 0 }); } }, ...kids);
+      : h("button.att-row", { type: "button", onclick: () => a.open() }, ...kids); // lands on the bug's card
   };
   return h("div",
+    variantNote(),
     live.length ? h("section.ov-section", h("h3", "🔴 Live now", h("span.ov-count", live.length)), ...live) : null,
     h("section.ov-section",
       h("h3", "Needs attention", need.length ? h("span.ov-count", need.length) : null),
@@ -2907,7 +3114,7 @@ function renderHomeTop() {
   const sum = (k, since = 0) => sales.filter(([d]) => dayTime(d) >= since).reduce((a, [, apps]) => a + Object.values(apps).reduce((b, t) => b + (t[k] || 0), 0), 0);
   const gross = daily(14, (d) => Object.values(state.sales?.days?.[isoDay(d)] || {}).reduce((a, t) => a + (t.gross || 0), 0));
   const bugs = games.flatMap((g) => inGame(g, () => issues("bug").filter(isActive)));
-  const fresh = games.flatMap((g) => Object.values(g.items || {}).filter((i) => !i.dev && i.created >= now() - DAY));
+  const fresh = games.flatMap((g) => Object.values(g.items || {}).filter((i) => !i.dev && i.kind !== "comment" && i.created >= now() - DAY));
   const tile = (label, value, sub, trend, color) => h("div.kpi", h("div.label", label), h("div.value", value), h("div.sub", sub), trend ? spark(trend, color) : null);
   // The money cards open (and close again) every game's sales added up.
   const money = (label, value, sub, trend, color) => h("button.kpi.kpi-open", { type: "button", "aria-expanded": String(!!state.homeSales), title: state.homeSales ? "Back to all posts" : "Sales, every game together", onclick: () => {
@@ -3034,8 +3241,12 @@ function mediaView() {
   const draw = () => {
     // What's live is already at the top.
     const shown = all.filter((m) => !isLive(m) && (f.source === "all" || m.source === f.source)).sort((a, b) => b.at - a.at);
-    list.replaceChildren(...(shown.length ? shown.slice(0, f.shown).map(mediaCard) : [h("p.empty", "Nothing found yet.")]));
+    // The newest few, until "Show all" opens the list (then 30 at a time, as before).
+    const open = allOpen("media"), cap = open ? f.shown : 4;
+    list.replaceChildren(...(shown.length ? shown.slice(0, cap).map(mediaCard) : [h("p.empty", "Nothing found yet.")]));
+    if (!open) { if (shown.length > cap) list.append(allButton("media", `Show all ${shown.length}`, "Show fewer", draw)); return; }
     if (shown.length > f.shown) list.append(h("button.btn.more", { onclick: () => { f.shown += 30; draw(); } }, `Show more (${shown.length - f.shown} left)`));
+    if (shown.length > 4) list.append(allButton("media", "", "Show fewer", () => { f.shown = 30; draw(); }));
   };
   const count = (s) => all.filter((m) => m.source === s).length;
   const filter = chips([["all", `All (${all.length})`], ...MEDIA_SOURCES.map((s) => [s, `${MEDIA[s].name} (${count(s)})`])], f.source, (v) => { f.source = v; f.shown = 30; draw(); }, "Source");
@@ -3183,10 +3394,13 @@ function salesView(all = false) {
         tile("Units kept", units - refunded, `${units} sold, ${refunded} refunded (${units ? Math.round((100 * refunded) / units) : 0}%)`),
         sum(inRange, "activations") ? tile("Key activations", sum(inRange, "activations"), "keys from outside Steam") : null),
       revenueChart(inRange, start, end, all ? launchMarkers(start, end) : markers(start, end)),
-      all ? null : refundReasons(),
-      videoImpactCard({ h, fmtNum, usd, fmtDate }, all ? gamesLoaded().flatMap((g) => inGame(g, () => videoRows().map((r) => ({ ...r, game: g.meta.name })))) : videoRows()),
-      accountTotals(from, all),
-      countryBreakdown(inRange)].filter(Boolean));
+      // On a game's page the headline figures and the chart come first; the rest behind "Show all".
+      ...(all || allOpen("sales") ? [
+        all ? null : refundReasons(),
+        videoImpactCard({ h, fmtNum, usd, fmtDate }, all ? gamesLoaded().flatMap((g) => inGame(g, () => videoRows().map((r) => ({ ...r, game: g.meta.name })))) : videoRows()),
+        accountTotals(from, all),
+        countryBreakdown(inRange)] : []),
+      all ? null : allButton("sales", "Show all: refunds, videos, the account and countries", "Show less", draw)].filter(Boolean));
   };
   const range = chips([[7, "1w"], [30, "1m"], [90, "3m"], [365, "1y"], [0, "max"]], f.range, (v) => { f.range = v; draw(); }, "Zoom");
   draw();
@@ -3217,7 +3431,7 @@ function refundReasons() {
       original ? h("div.meta", original) : null);
   };
   const rate = stats?.sold ? `${stats.refunded} of ${stats.sold} sold refunded (${Math.round((1000 * stats.refunded) / stats.sold) / 10}%), all time` : null;
-  const showCards = notes.length ? h("a", { href: "#", onclick: (e) => { e.preventDefault(); Object.assign(state.filters.feed, { kind: "refund", category: "all", version: "all", q: "" }); state.tab = "feed"; render(); } }, "Show notes as cards") : null;
+  const showCards = notes.length ? h("a", { href: "#", onclick: (e) => { e.preventDefault(); Object.assign(state.filters.feed, { kind: "refund", category: "all", version: "all", q: "" }); jumpTo("feed", { open: true }); } }, "Show notes as cards") : null;
   return h("div.chart-card", h("h3", "Why players refunded"),
     h("div.sub", [rate, notes.length ? `${plural(notes.length, "player")} left a note` : "no one left a note"].filter(Boolean).join(" · ") + ". ",
       showCards, showCards ? " · " : null,
@@ -4083,6 +4297,9 @@ export function mount(root) {
   // which the browser held back meanwhile.
   document.removeEventListener("visibilitychange", onVisible);
   document.addEventListener("visibilitychange", onVisible);
+  // One page per game: the jump bar follows the scrolling.
+  window.removeEventListener("scroll", onScroll);
+  window.addEventListener("scroll", onScroll, { passive: true });
   clearInterval(clockTimer);
   clockTimer = setInterval(() => {
     if (!document.getElementById("fb-view")) return clearInterval(clockTimer);

@@ -2863,3 +2863,50 @@
 	font: inherit;
 	font-size: 0.8125rem;
 }
+
+/* One page per game (dashboard.js gamePage): every view is a section of the game's page, and the
+   list of views is a jump bar that stays on screen. In the side column it goes last, so it can
+   stick below the top of the window while the cards above it scroll away. */
+.fb .fb-side .side-views {
+	order: 1;
+	position: sticky;
+	top: 1rem;
+	max-height: calc(100vh - 2rem);
+	overflow-y: auto;
+}
+.fb .gsec {
+	margin-bottom: 2.5rem;
+}
+/* A section not drawn yet holds some room, so the sections below aren't all on screen at once */
+.fb .gsec-wait {
+	min-height: 16rem;
+}
+.fb .about ul {
+	margin: 6px 0 0 1.2em;
+	padding: 0;
+	max-width: 65ch;
+	color: var(--fb-ink-2);
+}
+/* A video's YouTube comments, folded under it (dashboard.js commentFold) */
+.fb details.comment-fold {
+	margin-top: 10px;
+	padding-top: 8px;
+	border-top: 1px solid var(--fb-line);
+}
+.fb details.comment-fold > summary .pc-new {
+	margin-left: 8px;
+}
+.fb .fold-post {
+	margin-top: 10px;
+	padding-top: 10px;
+	border-top: 1px solid var(--fb-line);
+}
+@media (width < 56.25rem) {
+	.fb .nav-top {
+		position: sticky;
+		top: 0;
+		z-index: 5;
+		background: var(--background-color);
+		padding-top: 8px;
+	}
+}

@@ -646,13 +646,15 @@ async function init() {
   renderStatus();
   const games = [...(state.index.games || []), ...researchGames()];
   const hash = new URLSearchParams(location.hash.slice(1));
-  const wanted = hash.get("app") || store.get("app");
+  // Variant 1: the main page opens by default; only a link's own #app= (kept on a reload) opens elsewhere.
+  const wanted = hash.get("app");
   state.tab = NAV.some(([, tabs]) => tabs.some(([id]) => id === hash.get("tab"))) ? hash.get("tab") : state.tab;
   // All games first, unless a game was asked for (or was the last one open), or the game data.
   if (wanted === "gamedata") pickGameData();
   else if (wanted === "status") pickUptime();
   else if (wanted === "market") pickMarket();
   else if (wanted === "creators") pickCreators();
+  else if (wanted === "events") pickCreators("events");
   else if (games.some((g) => g.appId === Number(wanted))) pickGame(Number(wanted));
   else if (games.length) pickHome(wanted === "all" && hash.get("tab") === "sales");
 }
@@ -871,6 +873,8 @@ function renderStatus() {
     return mark;
   };
   const STATE = { ok: "Working", bad: "Needs attention", idle: "Unknown" };
+  // For the main page's Status card.
+  state.services = { total: Object.keys(SERVICES).length, working: Object.keys(SERVICES).filter((k) => kindOf(k) === "ok").length, bad: Object.keys(SERVICES).filter((k) => kindOf(k) === "bad").length };
   // Folded into one line while everything works (they're mostly a distraction then); open by
   // themselves when anything needs attention, or when you've opened them (remembered).
   const keys = Object.keys(SERVICES);
@@ -1105,7 +1109,8 @@ async function pickMarket() {
 // Creators: the YouTube creators the server found (server/creators), with emails and the best ones
 // for each of our games; its own file, creators.js, loaded the first time it opens.
 let creatorsModule = null;
-async function pickCreators() {
+// `view` (only when passed as text, not a click event) opens one of its tabs, e.g. "events".
+async function pickCreators(view) {
   store.set("app", "creators");
   state.home = false;
   state.gameData = false;
@@ -1115,6 +1120,7 @@ async function pickCreators() {
   state.picked = null;
   state.creators = true;
   creatorsModule ??= await import("./creators.js");
+  if (typeof view === "string") creatorsModule.showTab(view);
   if (state.creators) render();
 }
 const marketHelpers = () => ({ h, svgEl, chips, about, adminGet, adminSend, fmtNum, fmtDate, fmtDateTime, plural, copy, store, dataOverride: DATA_OVERRIDE });
@@ -1214,7 +1220,8 @@ function renderStats() {
   const bugs = issues("bug").filter(isActive);
   const urgent = bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high");
   const still = bugs.filter((i) => i.status === "still_happening");
-  const fresh = items().filter((i) => !i.dev && i.created >= t - DAY);
+  const fresh = items().filter((i) => !i.dev && !isComment(i) && i.created >= t - DAY);
+  const freshComments = items().filter((i) => !i.dev && isComment(i) && i.created >= t - DAY).length;
   // `chart` is the chart it opens below, or a function: then the card opens that view instead.
   const tile = (label, value, sub, trend, color, chart) => {
     const go = typeof chart === "function";
@@ -1249,7 +1256,7 @@ function renderStats() {
     revenue: salesDays().length ? tile("Gross all time", usd(grossAll), `${usd(revenue.slice(-7).reduce((a, b) => a + b, 0))} in the last 7 days`, revenue, "var(--fb-positive)",
       () => { state.tab = "sales"; render(); }) : null,
     bugs: tile("Open bugs", bugs.length, still.length ? `${still.length} still happening` : urgent.length ? `${urgent.length} high or urgent` : "none high or urgent", openBugsPerDay, "var(--type-bug)"),
-    posts: tile("New posts", fresh.length, "last 24 h", postsPerDay),
+    posts: tile("New posts", fresh.length, `last 24 h${freshComments ? ` · + ${plural(freshComments, "comment")}` : ""}`, postsPerDay),
   };
   // Up front only what you can act on: before release, the following you're building; after it,
   // players, reviews, money and bugs. The rest waits behind "+ more" (remembered), and the card
@@ -2798,6 +2805,36 @@ function attention() {
     .sort((a, b) => b.priority - a.priority);
 }
 
+// YouTube comments (kind `comment`) count for less than reviews, threads, videos and refund notes.
+const isComment = (i) => i.kind === "comment";
+
+// The comments under a video's card, behind a count that opens them (like an issue's posts).
+function commentFold(comments) {
+  if (!comments?.length) return null;
+  const sorted = comments.slice().sort((a, b) => b.created - a.created);
+  const box = h("div", { hidden: true });
+  const label = () => `${box.hidden ? "Show" : "Hide"} ${plural(sorted.length, "YouTube comment")}`;
+  const g = state.game;
+  const toggle = h("button.btn", { type: "button", onclick: () => {
+    if (!box.childElementCount) box.append(...inGame(g, () => sorted.map((c) => postView(c))));
+    box.hidden = !box.hidden;
+    toggle.textContent = label();
+  } }, label());
+  // What's in them, so the count says whether they're worth opening.
+  const kinds = ["bug", "suggestion", "question", "praise"].map((c) => [c, sorted.filter((i) => i.triage?.category === c).length]).filter(([, n]) => n);
+  return [h("div.actions", toggle, h("span.meta", [kinds.map(([c, n]) => (c === "praise" ? `${n} praise` : plural(n, CATEGORY[c][1].toLowerCase()))).join(" · "), sorted.some((c) => isRecent(c.created)) ? h("span.pc-new", "New") : null])), box];
+}
+
+// The line above comments whose video has no post of its own (not reviewed yet): the video they're under.
+function commentsHead(comment) {
+  const video = mediaItems().find((m) => m.id === comment.media) || state.game.media?.items?.[comment.media];
+  const url = video?.url || (comment.url || "").replace(/&lc=.*/, "");
+  return h("div.post.pc.neutral",
+    h("div.pc-top", h("div.pc-main", h("span.pc-type.pc-kind", "YouTube comments"))),
+    h("div", h("b", video?.title || "A YouTube video")),
+    h("div.meta", video?.author ? h("span", video.author) : null, url ? h("a", { href: url, target: "_blank", rel: "noopener" }, "Watch on YouTube ↗") : null));
+}
+
 // Every post, newest first; on the All games page every game's posts together, each with its game.
 function feedView({ everyGame = false } = {}) {
   const f = everyGame ? state.filters.home : state.filters.feed;
@@ -2808,16 +2845,40 @@ function feedView({ everyGame = false } = {}) {
   const update = everyGame ? null : latestUpdate();
   const draw = () => {
     const q = f.q.toLowerCase();
-    const all = games.filter((g) => !f.game || f.game === "all" || g.appId === f.game)
+    const posts = games.filter((g) => !f.game || f.game === "all" || g.appId === f.game)
       .flatMap((g) => Object.values(g.items || {}).map((i) => [g, i]))
-      .filter(([, i]) => !i.dev || !(i.kind === "topic" && i.forum === "Events & Announcements"))
-      .filter(([, i]) => f.kind === "all" || i.kind === f.kind)
+      .filter(([, i]) => !i.dev || !(i.kind === "topic" && i.forum === "Events & Announcements"));
+    const matching = posts
       .filter(([, i]) => f.category === "all" || (f.category === "pending" ? !i.triage && !i.dev : i.triage?.category === f.category))
       .filter(([, i]) => f.version === "all" || !update || (f.version === "since") === (i.created >= update.time))
-      .filter(([, i]) => !q || (english(i) + " " + (i.text || "") + " " + (i.title || "")).toLowerCase().includes(q))
-      .sort(([, a], [, b]) => Math.max(b.created, b.updated || 0) - Math.max(a.created, a.updated || 0));
+      .filter(([, i]) => !q || (english(i) + " " + (i.text || "") + " " + (i.title || "")).toLowerCase().includes(q));
+    const when = (i) => Math.max(i.created, i.updated || 0);
+    // A YouTube comment isn't a row of its own: it's folded under its video (or, when the video has
+    // no post, under a line for that video), so it doesn't weigh as much as a review, thread or video.
+    // Only the "YouTube comments" filter lists them one by one.
+    let all;
+    if (f.kind === "comment") all = matching.filter(([, i]) => isComment(i)).map(([g, i]) => ({ g, i, at: when(i) }));
+    else {
+      const key = (g, i) => `${g.appId}:${i.media}`;
+      const under = new Map();
+      for (const [g, i] of matching) if (isComment(i)) under.set(key(g, i), [...(under.get(key(g, i)) || []), i]);
+      all = matching.filter(([, i]) => !isComment(i) && (f.kind === "all" || i.kind === f.kind))
+        .map(([g, i]) => ({ g, i, at: when(i), comments: i.kind === "video" ? under.get(key(g, i)) : null }));
+      if (f.kind === "all" || f.kind === "video") {
+        // A video that doesn't match the filters itself still shows when comments under it do.
+        const listed = new Set(all.filter((r) => r.i.kind === "video").map((r) => key(r.g, r.i)));
+        const videos = new Map(posts.filter(([, i]) => i.kind === "video").map(([g, i]) => [key(g, i), [g, i]]));
+        for (const [k, comments] of under) {
+          if (listed.has(k)) continue;
+          const [g, i] = videos.get(k) || [games.find((g) => String(g.appId) === k.split(":")[0]), null];
+          all.push({ g, i, at: i ? when(i) : Math.max(...comments.map(when)), comments });
+        }
+      }
+    }
+    all.sort((a, b) => b.at - a.at);
     const shown = all.slice(0, f.shown);
-    const card = ([g, i]) => everyGame ? h("div.card", gameTag(g), inGame(g, () => postView(i))) : h("div.card", postView(i));
+    const card = ({ g, i, comments }) => h("div.card", everyGame ? gameTag(g) : null,
+      ...inGame(g, () => [i ? postView(i) : commentsHead(comments[0]), ...(commentFold(comments) || [])]));
     list.replaceChildren(...(shown.length ? shown.map(card) : [h("p.empty", "Nothing here yet.")]));
     if (all.length > shown.length) list.append(h("button.btn.more", { onclick: () => { f.shown += 50; draw(); } }, `Show more (${all.length - shown.length} left)`));
   };
@@ -2878,6 +2939,78 @@ function homeAttention() {
   ])).sort((a, b) => b.rank - a.rank || b.at - a.at);
 }
 
+// Opens a game straight on one of its views (`tab`) or with one of its charts open (`chart`): one
+// click from the main page instead of game, then view.
+function openGame(appId, { tab, chart } = {}) {
+  if (tab) state.tab = tab;
+  state.expanded = chart || null;
+  pickGame(appId);
+  window.scrollTo({ top: 0 });
+}
+
+// The main page's row for a game (built with it as `state.game`): its key numbers, each a link to
+// that view of the game.
+function gameRow() {
+  const g = state.game, id = g.appId, t = now();
+  const series = g.players || [];
+  const totalsKey = Object.keys(g.reviewTotals || {}).sort().pop();
+  const score = reviewScore(totalsKey ? g.reviewTotals[totalsKey] : null);
+  const wishes = wishlistDays().length ? wishlistBalance() : null;
+  const days = salesDays();
+  const week = days.filter(([d]) => dayTime(d) >= t - 7 * DAY).reduce((a, [, s]) => a + (s.gross || 0), 0);
+  const bugs = issues("bug").filter(isActive);
+  const urgent = bugs.filter((i) => i.status === "still_happening" || i.urgency === "urgent" || i.urgency === "high").length;
+  const posts = items().filter((i) => !i.dev && !isComment(i) && i.created >= t - DAY).length;
+  const media = talk().filter((m) => m.at > t - 7 * DAY).length;
+  const live = liveNow().length;
+  // A number with nothing behind it (not released, no data) is shown, but isn't a link.
+  const num = (value, label, to, title) => to
+    ? h("button.hg-num", { type: "button", title, onclick: () => openGame(id, to) }, h("b", value), h("span", label))
+    : h("div.hg-num", h("b", value), h("span", label));
+  return h("div.hg-row",
+    h("button.hg-game", { type: "button", title: `Open ${g.meta.name}`, onclick: () => pickGame(id) },
+      g.meta.capsule ? h("img.att-thumb", { src: g.meta.capsule, alt: "", loading: "lazy" }) : h("span.att-thumb"),
+      h("span", g.meta.name, g.meta.status === "upcoming" ? h("span.hg-sub", "Coming soon") : null)),
+    num(series.length ? series.at(-1)[1] : "–", series.length ? "players now" : "not released", series.length ? { chart: "players" } : null, "Players chart"),
+    num(score ? `${score.rating.toFixed(0)}%` : "–", score ? plural(score.total, "review") : "no reviews yet", { chart: "reviews" }, "Reviews chart"),
+    num(wishes ? wishes.at(-1)[1].toLocaleString("en-US") : "–", "wishlists", wishes ? { chart: "wishlists" } : null, "Wishlists chart"),
+    num(days.length ? usd(week) : "–", "sales, 7 days", days.length ? { tab: "sales" } : null, "Sales"),
+    num(bugs.length, urgent ? `bugs · ${urgent} high` : bugs.length === 1 ? "open bug" : "open bugs", { tab: "issues" }, "Bugs"),
+    num(posts, posts === 1 ? "new post" : "new posts", { tab: "feed" }, "All posts · new in the last 24 h"),
+    num(live ? `${live} live` : media, live ? "media" : "new media", { tab: "media" }, "Media · new in the last 7 days"));
+}
+
+// The other apps, one click away, each with one figure that's already at hand: the collector's
+// services (renderStatus), the Market's small overview file, the creator count from the last time
+// Creators was open, and the open events in the list that ships with the page.
+const apps = { market: null, events: null, asked: false };
+async function loadApps() {
+  if (apps.asked) return;
+  apps.asked = true;
+  const redraw = () => { const el = document.getElementById("fb-apps"); if (el) el.replaceWith(appCards()); };
+  (DATA_OVERRIDE ? fetch(`${DATA_OVERRIDE}/market/overview.json`, { cache: "no-store" }).then((res) => (res.ok ? res.json() : null)) : adminGet("market/overview").then((res) => res.json()))
+    .then((o) => { apps.market = o; redraw(); }).catch(() => {});
+  Promise.all([import("./events-list.js"), import("./events.js")]).then(([{ EVENTS }, { isOpen, sortKey, dateOf }]) => {
+    const today = new Date(new Date().toDateString());
+    const open = EVENTS.filter((e) => isOpen(e, today)).sort((a, b) => sortKey(a) - sortKey(b));
+    const next = open.find((e) => dateOf(e.deadline));
+    apps.events = { open: open.length, next: next ? `next: ${fmtShort(dateOf(next.deadline).getTime() / 1000)}, ${next.name}` : null };
+    redraw();
+  }).catch(() => {});
+}
+function appCards() {
+  loadApps();
+  const card = (label, value, sub, open) => h("button.kpi.kpi-open", { type: "button", title: `Open ${label}`, onclick: open },
+    h("div.label", label, h("span.kpi-more", "Open →")), h("div.value", value), h("div.sub", { title: sub }, sub));
+  const sv = state.services, o = apps.market, creators = Number(store.get("creators-count")) || 0;
+  return h("section.kpis", { id: "fb-apps", "aria-label": "Studio" },
+    card("Market", o?.games ? fmtNum(o.games) : "–", o?.games ? `games on Steam · ${fmtNum(o.comingSoon || 0)} to come out` : "all of Steam: trends, gaps, Godot games", pickMarket),
+    card("Creators", creators ? fmtNum(creators) : "–", creators ? "YouTubers who play games like ours" : "YouTubers who play games like ours, with emails", pickCreators),
+    card("Events", apps.events ? apps.events.open : "–", apps.events?.next || "festivals, showcases and awards to enter", () => pickCreators("events")),
+    card("Status", sv ? (sv.working === sv.total ? "All working" : `${sv.working} of ${sv.total}`) : "–", sv?.bad ? `${plural(sv.bad, "service")} need${sv.bad === 1 ? "s" : ""} attention` : "whether the site, server and bots run", pickUptime));
+}
+
+// The main page: what needs you, who's live, every game's numbers, the other apps, then every post.
 function homeView() {
   const need = homeAttention();
   const live = gamesLoaded().flatMap((g) => inGame(g, () => liveNow().map((m) => h("div", gameTag(g), mediaCard(m)))));
@@ -2888,11 +3021,13 @@ function homeView() {
       : h("button.att-row", { type: "button", onclick: () => { a.open(); window.scrollTo({ top: 0 }); } }, ...kids);
   };
   return h("div",
-    live.length ? h("section.ov-section", h("h3", "🔴 Live now", h("span.ov-count", live.length)), ...live) : null,
     h("section.ov-section",
       h("h3", "Needs attention", need.length ? h("span.ov-count", need.length) : null),
       need.length ? h("div.card.att-list", ...need.map(row))
         : h("p.ov-calm", `Nothing right now: no urgent bugs, nothing came back after a fix, and every negative review from the last ${NEW_REVIEW_DAYS} days is answered.`)),
+    live.length ? h("section.ov-section", h("h3", "🔴 Live now", h("span.ov-count", live.length)), ...live) : null,
+    h("section.ov-section", h("h3", "Games"), h("div.card.att-list", ...gamesLoaded().map((g) => inGame(g, gameRow)))),
+    h("section.ov-section", h("h3", "Studio"), appCards()),
     h("section.ov-section", h("h3", "All posts"), feedView({ everyGame: true })));
 }
 
@@ -2900,25 +3035,32 @@ function homeView() {
 function renderHomeTop() {
   document.getElementById("fb-capsule").hidden = true;
   document.getElementById("fb-title").replaceChildren("All games");
-  document.getElementById("fb-updated").replaceChildren(`${plural(gamesLoaded().length, "game")} · newest posts first`);
+  document.getElementById("fb-updated").replaceChildren(`${plural(gamesLoaded().length, "game")} · what needs you, every game's numbers, then every post`);
   document.getElementById("fb-links").replaceChildren();
   const games = gamesLoaded();
   const sales = Object.entries(state.sales?.days || {});
   const sum = (k, since = 0) => sales.filter(([d]) => dayTime(d) >= since).reduce((a, [, apps]) => a + Object.values(apps).reduce((b, t) => b + (t[k] || 0), 0), 0);
   const gross = daily(14, (d) => Object.values(state.sales?.days?.[isoDay(d)] || {}).reduce((a, t) => a + (t.gross || 0), 0));
   const bugs = games.flatMap((g) => inGame(g, () => issues("bug").filter(isActive)));
-  const fresh = games.flatMap((g) => Object.values(g.items || {}).filter((i) => !i.dev && i.created >= now() - DAY));
+  const fresh = games.flatMap((g) => Object.values(g.items || {}).filter((i) => !i.dev && !isComment(i) && i.created >= now() - DAY));
+  const freshComments = games.flatMap((g) => Object.values(g.items || {}).filter((i) => !i.dev && isComment(i) && !i.offTopic && i.created >= now() - DAY)).length;
+  // Yesterday is Steam's last whole day (its days are Pacific time); today's is still filling in.
+  const pacific = (t) => new Date(t * 1000).toLocaleDateString("en-CA", { timeZone: "America/Los_Angeles" });
+  const day = (d, k) => Object.values(state.sales?.days?.[d] || {}).reduce((a, t) => a + (t[k] || 0), 0);
+  const yesterday = pacific(now() - DAY);
   const tile = (label, value, sub, trend, color) => h("div.kpi", h("div.label", label), h("div.value", value), h("div.sub", sub), trend ? spark(trend, color) : null);
   // The money cards open (and close again) every game's sales added up.
-  const money = (label, value, sub, trend, color) => h("button.kpi.kpi-open", { type: "button", "aria-expanded": String(!!state.homeSales), title: state.homeSales ? "Back to all posts" : "Sales, every game together", onclick: () => {
+  const money = (label, value, sub, trend, color) => h("button.kpi.kpi-open", { type: "button", "aria-expanded": String(!!state.homeSales), title: state.homeSales ? "Back to all games" : "Sales, every game together", onclick: () => {
     state.homeSales = !state.homeSales;
     render();
   } }, h("div.label", label, h("span.kpi-more", state.homeSales ? "Close ▴" : "Sales →")), h("div.value", value), h("div.sub", sub), trend ? spark(trend, color) : null);
   document.getElementById("fb-stats").replaceChildren(...[
     sales.length ? money("Gross all time", usd(sum("gross")), `${usd(sum("net"))} net · every game`) : null,
+    sales.length ? money("Gross, yesterday", usd(day(yesterday, "gross")), `${usd(day(yesterday, "net"))} net · today ${usd(day(pacific(now()), "gross"))}`) : null,
     sales.length ? money("Gross, 7 days", usd(sum("gross", now() - 7 * DAY)), `${usd(sum("net", now() - 7 * DAY))} net`, gross, "var(--fb-positive)") : null,
+    sales.length ? money("Gross, 30 days", usd(sum("gross", now() - 30 * DAY)), `${usd(sum("net", now() - 30 * DAY))} net`) : null,
     tile("Open bugs", bugs.length, `${bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high").length} high or urgent`),
-    tile("New posts", fresh.length, "last 24 h"),
+    tile("New posts", fresh.length, `last 24 h${freshComments ? ` · + ${plural(freshComments, "comment")}` : ""}`),
   ].filter(Boolean));
   document.getElementById("fb-expand").replaceChildren();
 }
@@ -3148,7 +3290,7 @@ function allSalesDays() {
 
 // All games: what every game earned together, with each game's launch marked and its share below.
 function allSalesView() {
-  const back = h("a", { href: "#", onclick: (e) => { e.preventDefault(); state.homeSales = false; render(); } }, "← All posts");
+  const back = h("a", { href: "#", onclick: (e) => { e.preventDefault(); state.homeSales = false; render(); } }, "← All games");
   return h("div", h("p.meta", back, " · Sales, every game added up"), salesView(true));
 }
 
@@ -3988,6 +4130,7 @@ const SHELL = `
   </aside>
   <div class="fb-main">
     <div class="strip" id="fb-games-strip" aria-label="Games"></div>
+    <div id="fb-variant"></div>
     <header class="top">
       <img id="fb-capsule" alt="" hidden>
       <div class="top-text"><h2 id="fb-title">Loading…</h2><div class="updated" id="fb-updated"></div></div>
@@ -4073,6 +4216,13 @@ export function mount(root) {
     document.head.append(h("style", { id: "fb-dash-css" }, CSS));
   }
   root.innerHTML = SHELL;
+  // Variant 1 ("Main page"): what differs from the current dashboard, folded to one line.
+  document.getElementById("fb-variant").replaceChildren(h("details.about", h("summary", "What this variant changes"), h("p",
+    ...["All games is now the main page and opens first: sales for yesterday, 7 and 30 days, then what needs you and who's live.",
+      "A row per game: every number opens that view of the game in one click.",
+      "Market, Creators, Events and Status are cards on the main page.",
+      "YouTube comments are folded under their video, behind a count that opens them.",
+      "New posts no longer counts YouTube comments (shown as “+ n comments”)."].flatMap((line, i) => [i ? h("br") : null, "• " + line]))));
   // Lets the site's header show a "Feedback" link in this browser from now on (SiteHeader.vue).
   store.set("visited", "1");
   init();

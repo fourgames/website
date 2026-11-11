@@ -105,6 +105,8 @@ async function load() {
     st.data.metaSet = new Set(st.data.meta || []);
     st.data.streamers ||= [];
     for (const c of [...st.data.creators, ...st.data.streamers]) { c.e ||= []; c.g ||= []; c.p ||= []; c.k ||= {}; }
+    // For the main page's Creators card (variant 1), which doesn't load this list itself.
+    C.store.set("creators-count", st.data.creators.length);
   } catch (e) {
     if (e.signedOut) return;
     st.error = /not_built|404/.test(e.message) ? "The creator list isn't built yet: the server writes it after its next hourly run." : `Couldn't load the creator list: ${e.message}`;
@@ -114,6 +116,9 @@ async function load() {
   creatorsTop(C);
   draw();
 }
+
+// Opens on one of the tabs (variant 1: the main page's Events card).
+export function showTab(view) { st.view = view; }
 
 export function creatorsTop(ctx) {
   C = ctx;

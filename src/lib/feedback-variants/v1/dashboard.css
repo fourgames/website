@@ -2863,3 +2863,78 @@
 	font: inherit;
 	font-size: 0.8125rem;
 }
+
+/* Variant 1, the main page (dashboard.js gameRow): a row per game inside an attention-style card,
+   each number a link to that view of the game */
+.fb .hg-row {
+	display: grid;
+	grid-template-columns: minmax(180px, 2.2fr) repeat(7, minmax(0, 1fr));
+	align-items: center;
+	gap: 2px;
+	padding: 2px;
+}
+.fb .hg-row + .hg-row {
+	border-top: 1px solid var(--fb-line);
+}
+.fb .hg-game,
+.fb .hg-num {
+	min-width: 0;
+	background: none;
+	border: 0;
+	border-radius: 0.5rem;
+	padding: 6px 8px;
+	font: inherit;
+	text-align: left;
+	color: var(--fb-ink);
+}
+.fb .hg-game {
+	display: flex;
+	align-items: center;
+	gap: 10px;
+	font-weight: 600;
+	color: var(--fb-title);
+}
+.fb .hg-game > span:last-child,
+.fb .hg-num span {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.fb .hg-num {
+	display: flex;
+	flex-direction: column;
+}
+.fb .hg-num b {
+	font-family: var(--font-heading);
+	font-size: 1.0625rem;
+	font-weight: 800;
+	line-height: 1.25;
+	color: var(--fb-title);
+	white-space: nowrap;
+}
+.fb .hg-num span,
+.fb .hg-sub {
+	display: block;
+	font-size: 0.6875rem;
+	font-weight: 400;
+	color: var(--fb-muted);
+}
+.fb button.hg-game,
+.fb button.hg-num {
+	cursor: pointer;
+}
+.fb button.hg-game:hover,
+.fb button.hg-num:hover {
+	background: var(--fb-hover);
+}
+.fb button.hg-num:hover b {
+	color: var(--fb-link);
+}
+@media (width < 56.25rem) {
+	.fb .hg-row {
+		grid-template-columns: repeat(4, minmax(0, 1fr));
+	}
+	.fb .hg-game {
+		grid-column: 1 / -1;
+	}
+}

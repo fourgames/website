@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Columns · dashboard lab</title>
+<!-- Redesign variant 4, "Columns": the dashboard as a deck of side-by-side columns.
+     Run with the fb-lab launch config (python3 -m http.server from feedback/) and open /lab/columns/.
+     Reads feedback/data when a local copy exists, otherwise the invented sample in data.js. Never deployed. -->
+<link rel="stylesheet" href="style.css">
+</head>
+<body class="deckpage">
+<nav class="topbar">
+	<a class="brand" href="./"><span class="mark"><i style="--h:20"></i><i style="--h:200"></i><i style="--h:135"></i><i style="--h:328"></i></span>Four Games</a>
+	<div class="segs" id="views"></div>
+	<div class="chips" id="games"></div>
+	<span class="spacer"></span>
+	<span class="sample" id="sample" hidden title="No local copy of the real data was found, so everything shown is invented.">Sample data</span>
+	<button class="btn primary" id="btn-add" type="button">+ <span class="long">Column</span></button>
+	<button class="btn" id="btn-diff" type="button">What's different</button>
+	<a class="btn long" href="home.html">Home page →</a>
+	<button class="btn round" id="btn-theme" type="button" aria-label="Switch light and dark">🌙</button>
+</nav>
+<div class="strip" id="strip"></div>
+<main class="deck" id="deck" aria-label="Columns"></main>
+<div class="dots" id="dots"></div>
+
+<dialog id="add"><div class="inner"></div></dialog>
+
+<dialog id="diff">
+	<div class="inner">
+		<h2>What's different</h2>
+		<ol>
+			<li><b>Side by side.</b> Every view is a column, so comparing games or kinds never needs a click. Columns scroll on their own.</li>
+			<li><b>Nothing leaves the deck.</b> A bug opens to its posts, a video to Claude's summary, right where it sits.</li>
+			<li><b>Size says how much it matters.</b> Reviews, threads, videos and refund notes are full cards, replies one line, YouTube comments a count on their video.</li>
+		</ol>
+		<div>
+			<h3>Clicks</h3>
+			<table class="clicks">
+				<tr><th>Task</th><th>Today</th><th>Columns</th></tr>
+				<tr><td>See what needs attention across all games</td><td>1 <small>All games</small></td><td>0 <small>Top of every game column, or the Needs attention column in By kind</small></td></tr>
+				<tr><td>Open the top bug of one game and read its posts</td><td>3 <small>Game, Bugs, the bug</small></td><td>1 <small>Click the bug card in the game's column</small></td></tr>
+				<tr><td>See yesterday's sales for one game</td><td>2 <small>Game, Sales</small></td><td>0 <small>💰 on the game's column head; all games in the Money column</small></td></tr>
+				<tr><td>Find new videos about a game</td><td>3 <small>Game, Media, YouTube filter</small></td><td>0–1 <small>Media column, newest first with a game tag; 1 to filter to YouTube</small></td></tr>
+			</table>
+		</div>
+		<div>
+			<h3>Where things went</h3>
+			<ul>
+				<li><b>All games home</b> is the deck: By game or By kind. Live streams sit in Needs attention.</li>
+				<li><b>Bugs, Ideas, Loved, Media, Sales, Updates</b> are a game's preset columns. Click a game chip.</li>
+				<li><b>All posts</b> is the Reviews &amp; threads column.</li>
+				<li><b>Achievements, Steam stats, Curators, Bundles, Competitors</b> are columns under + Column.</li>
+				<li>Move, widen and remove columns from ⋯ or by dragging. The layout is remembered in this browser.</li>
+			</ul>
+		</div>
+		<div class="actions"><button class="btn" type="button" data-close>Close</button></div>
+	</div>
+</dialog>
+<div class="toast" id="toast" role="status"></div>
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

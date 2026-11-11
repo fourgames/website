@@ -125,6 +125,13 @@ export function creatorsTop(ctx) {
   for (const id of ["fb-links", "fb-stats", "fb-expand"]) set(id);
 }
 
+// Which part is open ("creators", "twitch", "press", "outreach", "launch", "events"); with a value,
+// opens that part (the dashboard's sidebar lists Events as its own app).
+export function creatorsSection(view) {
+  if (view && view !== st.view) { st.view = view; draw(); }
+  return st.view;
+}
+
 export function creatorsView(ctx) {
   C = ctx;
   injectCss();
@@ -144,7 +151,7 @@ function draw() {
   }
   const d = st.data;
   const switcher = h("div.cr-row.cr-switch", C.chips([["creators", `YouTube creators (${num(d.creators.length)})`], ["twitch", `Twitch streamers (${num(d.streamers.length)})`], ["press", `Press & trailers (${num((d.press || []).length)})`], ["outreach", "Outreach"], ["launch", "Launch checklist"], ["events", "Events & awards"]],
-    st.view, (v) => { st.view = v; draw(); }, "Show"), newsBadge(C));
+    st.view, (v) => { st.view = v; C.onSection?.(v); draw(); }, "Show"), newsBadge(C));
   if (st.view === "press") {
     root.replaceChildren(switcher, pressView(d));
     return;

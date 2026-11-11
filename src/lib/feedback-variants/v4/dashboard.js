@@ -647,14 +647,19 @@ async function init() {
   const games = [...(state.index.games || []), ...researchGames()];
   const hash = new URLSearchParams(location.hash.slice(1));
   const wanted = hash.get("app") || store.get("app");
-  state.tab = NAV.some(([, tabs]) => tabs.some(([id]) => id === hash.get("tab"))) ? hash.get("tab") : state.tab;
+  // The view asked for, else the one open last time.
+  const isTab = (t) => NAV.some(([, tabs]) => tabs.some(([id]) => id === t));
+  state.tab = isTab(hash.get("tab")) ? hash.get("tab") : isTab(store.get("v4:tab")) ? store.get("v4:tab") : state.tab;
   // All games first, unless a game was asked for (or was the last one open), or the game data.
   if (wanted === "gamedata") pickGameData();
   else if (wanted === "status") pickUptime();
   else if (wanted === "market") pickMarket();
-  else if (wanted === "creators") pickCreators();
+  else if (wanted === "creators" || wanted === "events") pickCreators(wanted);
   else if (games.some((g) => g.appId === Number(wanted))) pickGame(Number(wanted));
-  else if (games.length) pickHome(wanted === "all" && hash.get("tab") === "sales");
+  else if (games.length) pickHome(wanted === "sales" || (wanted === "all" && hash.get("tab") === "sales"));
+  else renderGames();
+  // Every game of yours is read in the background, for the sidebar's counts.
+  Promise.all((state.index.games || []).map((g) => loadGame(g.appId).catch(() => {}))).then(renderGames);
 }
 
 // Brand marks for the service cards: Steam, Discord and GitHub as in the site's Icon.vue, Claude
@@ -1004,39 +1009,196 @@ function setResearch(appId, fields, done) {
   }, `Feedback: research game ${appId} ${fields ? ("paused" in fields ? (fields.paused ? "paused" : "resumed") : "added") : "removed"} [skip ci]`, done);
 }
 
+// Variant 4: one sidebar, always on screen (a drawer on a narrow window), with everything in it.
+// Home on top; each game with its views under it (the open game's always, any other's behind its
+// arrow); the other apps; the research games. Collapsed, it shows only the pictures and icons.
+const sideMin = () => store.get("v4:side") === "min";
+const sideOpen = () => { try { return new Set(JSON.parse(store.get("v4:open") || "[]")); } catch { return new Set(); } };
+function setDrawer(open) {
+  document.querySelector(".fb .fb-layout")?.classList.toggle("side-open", open);
+}
+// The games in the sidebar's order, yours then the research ones: what the number keys pick from.
+const sideGames = () => [...orderedGames(), ...researchGames()];
+// The views a game has: all of them for yours, the ones that mean anything for a research game.
+const navFor = (meta) => meta?.research ? NAV.map(([group, tabs]) => [group, tabs.filter(([id]) => RESEARCH_TABS.includes(id))]).filter(([, tabs]) => tabs.length) : NAV;
+// A game's data, read once however many places ask for it (the page, the sidebar's counts).
+const gameLoads = new Map();
+function loadGame(appId) {
+  if (state.games[appId]) return Promise.resolve(state.games[appId]);
+  if (!gameLoads.has(appId)) gameLoads.set(appId, getJson(`games/${appId}.json`).then((data) => { state.games[appId] = data; return data; }).finally(() => gameLoads.delete(appId)));
+  return gameLoads.get(appId);
+}
+// Opens a view of a game, from anywhere.
+function openView(appId, tab) {
+  state.tab = tab;
+  state.wantTab = null;
+  setDrawer(false);
+  if (state.game?.appId === appId && !state.home) render();
+  else pickGame(appId);
+}
+// The small count on a game: what needs you there (urgent or returned bugs, unanswered negative
+// reviews), else the posts since you last opened it. YouTube comments don't count.
+function gameBadge(meta) {
+  const data = state.games[meta.appId];
+  if (!data || meta.research) return null;
+  return inGame({ ...data, meta }, () => {
+    const need = attention().length + items().filter((i) => i.kind === "review" && !i.dev && !i.votedUp && now() - i.created < NEW_REVIEW_DAYS * DAY && !replied(i)).length;
+    if (need) return h("span.count.count-bad", { title: `${need} need${need === 1 ? "s" : ""} attention` }, need);
+    const seen = Math.max(Number(store.get(`v4:seen:${meta.appId}`) || 0), now() - 2 * DAY);
+    const unread = items().filter((i) => !i.dev && i.kind !== "comment" && i.created > seen).length;
+    return unread ? h("span.count", { title: `${plural(unread, "new post")} since you last opened it` }, unread) : null;
+  });
+}
+// The counts next to the open game's views.
+function viewCounts() {
+  return {
+    issues: issues("bug").filter(isActive).length,
+    suggestions: issues("suggestion").filter(isActive).length,
+    // YouTube comments are folded under their video, so they aren't counted as posts.
+    feed: items().filter((i) => !i.dev && i.kind !== "comment").length,
+    loved: issues("praise").length,
+    achievements: state.game.achievements?.list?.length || null,
+    curators: state.game.curators?.list?.length || null,
+    bundles: bundleWith().length || null,
+    competitors: competitors().length || null,
+    soon: soonCount(),
+    stats: belowAverage() || null,
+    media: liveNow().length ? `${liveNow().length} live` : talk().filter((m) => m.at > now() - 7 * DAY).length || null,
+  };
+}
+
 function renderGames() {
+  const side = document.getElementById("fb-sidebar");
+  if (!side || !state.index) return;
   const games = orderedGames();
   const research = researchGames();
+  const min = sideMin();
+  const open = sideOpen();
+  document.querySelector(".fb .fb-layout").classList.toggle("side-min", min);
+  const current = state.game && !state.home ? state.game.appId : null;
   const players = (g) => g.lastPost ? `last player post ${ago(g.lastPost)}` : g.status === "upcoming" ? "coming soon, no player posts yet" : "no player posts yet";
   const sub = (g) => players(g) + (g.lastDevPost > (g.lastPost || 0) ? ` · you posted ${ago(g.lastDevPost)}` : "");
-  const item = (g) => h("button.g-item", { type: "button", title: g.name, "aria-current": String(!state.home && state.game?.appId === g.appId), onclick: () => pickGame(g.appId) },
-    g.capsule ? h("img.g-thumb", { src: g.capsule, alt: "", loading: "lazy" }) : h("span.g-thumb"),
-    h("span.g-name", g.name, h("span.g-sub", sub(g))));
-  const home = () => h("button.g-item", { type: "button", "aria-current": String(state.home), onclick: pickHome },
-    h("span.g-thumb.g-all", "All"), h("span.g-name", "All games", h("span.g-sub", "needs attention and every post")));
-  const data = () => h("button.g-item", { type: "button", "aria-current": String(!!state.gameData), onclick: pickGameData },
-    h("span.g-thumb.g-all", "Data"), h("span.g-name", "Game data", h("span.g-sub", "players' sessions, for replays")));
-  const uptime = () => h("button.g-item", { type: "button", "aria-current": String(!!state.uptime), onclick: pickUptime },
-    h("span.g-thumb.g-all", "Up"), h("span.g-name", "Status", h("span.g-sub", "whether the site, server and bots run")));
-  const market = () => h("button.g-item", { type: "button", "aria-current": String(!!state.market), onclick: pickMarket },
-    h("span.g-thumb.g-all", "Mkt"), h("span.g-name", "Market", h("span.g-sub", "all of Steam: trends, gaps, Godot games")));
-  const creators = () => h("button.g-item", { type: "button", "aria-current": String(!!state.creators), onclick: pickCreators },
-    h("span.g-thumb.g-all", "YT"), h("span.g-name", "Creators", h("span.g-sub", "YouTubers who play games like ours, with emails")));
-  const researchItem = (g) => h("button.g-item", { type: "button", title: g.name, "aria-current": String(!state.home && state.game?.appId === g.appId), onclick: () => pickGame(g.appId) },
-    g.capsule ? h("img.g-thumb", { src: g.capsule, alt: "", loading: "lazy" }) : h("span.g-thumb"),
-    h("span.g-name", g.name, h("span.g-sub", researchStatus(g))));
-  const add = () => h("button.g-item.g-add", { type: "button", onclick: askResearch }, h("span.g-thumb.g-all", "+"), h("span.g-name", "Add a research game", h("span.g-sub", "another studio's game, to learn from")));
+  const go = (pick) => () => { setDrawer(false); pick(); };
+  // The views of a game, in their groups: with counts and "New" for the open game.
+  const views = (g) => {
+    const mine = current === g.appId;
+    const counts = mine ? viewCounts() : {};
+    const button = ([id, label]) =>
+      h("button.nav-btn", { type: "button", title: `${g.name} · ${label}`, "aria-current": String(mine && state.tab === id), onclick: () => openView(g.appId, id) },
+        icon(id), h("span", label), mine && id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : id === "soon" ? ".count-soon" : id === "stats" ? ".count-bad" : ""}`, counts[id]) : null);
+    return h(`div.nav-side.g-views${mine ? ".g-mine" : ""}`, ...navFor(g).flatMap(([group, tabs]) => [...(group ? [h("div.nav-group", group)] : []), ...tabs.map(button)]));
+  };
+  // A game: its picture, name and count; the arrow lists its views without opening it. Picking
+  // another game keeps the view you're on.
+  const item = (g, i, line) => {
+    const mine = current === g.appId;
+    const listed = mine || open.has(g.appId);
+    return [h("div.g-row",
+      h("button.g-item", { type: "button", title: `${g.name}${i < 9 ? ` (press ${i + 1})` : ""}`, "aria-current": String(mine), onclick: go(() => pickGame(g.appId)) },
+        // Without a picture (a research game just added): its initials, so it's told apart when collapsed.
+        g.capsule ? h("img.g-thumb", { src: g.capsule, alt: "", loading: "lazy" }) : h("span.g-thumb.g-all", g.name.split(/\s+/).map((w) => w[0]).join("").slice(0, 3).toUpperCase()),
+        h("span.g-name", g.name, h("span.g-sub", line(g))), gameBadge(g)),
+      mine ? null : h("button.g-more", { type: "button", "aria-expanded": String(listed), title: listed ? `Hide ${g.name}'s views` : `List ${g.name}'s views`, onclick: () => {
+        const listedNow = sideOpen();
+        listedNow.has(g.appId) ? listedNow.delete(g.appId) : listedNow.add(g.appId);
+        store.set("v4:open", JSON.stringify([...listedNow]));
+        renderGames();
+      } }, listed ? "▾" : "▸")),
+    listed ? views(g) : null];
+  };
+  const app = (mark, name, line, on, pick) => h("button.g-item", { type: "button", title: name, "aria-current": String(!!on), onclick: go(pick) },
+    h("span.g-thumb.g-all", mark), h("span.g-name", name, h("span.g-sub", line)));
+  const add = () => h("button.g-item.g-add", { type: "button", title: "Add a research game", onclick: go(askResearch) }, h("span.g-thumb.g-all", "+"), h("span.g-name", "Add a research game", h("span.g-sub", "another studio's game, to learn from")));
   // Ungrouped research games under "Research", then each group under its own heading.
   const groups = [...new Set(research.map((g) => g.group))].sort((a, b) => (a || "").localeCompare(b || ""));
-  // Status and Market aren't about one of your games, so they get their own card above the games.
-  document.getElementById("fb-studio-side").replaceChildren(h("div.side-label", "Studio"), uptime(), market(), creators());
-  document.getElementById("fb-games-side").replaceChildren(h("div.side-label", "Games"), home(), data(), ...games.map(item));
-  // Research games go in their own card at the bottom, under the views.
-  document.getElementById("fb-research-side").replaceChildren(
-    ...groups.flatMap((name) => [h("div.side-label", name ? `Research · ${name}` : "Research"), ...research.filter((g) => g.group === name).map(researchItem)]),
-    add());
-  document.getElementById("fb-games-strip").replaceChildren(uptime(), market(), creators(), home(), data(), ...games.map(item), ...research.map(researchItem), add());
+  const y = side.parentElement.scrollTop;
+  side.replaceChildren(...[
+    h("div.side-tools",
+      h("button.btn.side-jump", { type: "button", title: "Jump to a game, view or app (Ctrl+K or ⌘K)", onclick: () => jumpBox() }, "Jump to…", h("kbd", "⌘K")),
+      h("button.btn.side-fold", { type: "button", title: min ? "Show names" : "Collapse to icons", "aria-label": min ? "Show names" : "Collapse to icons", onclick: () => { store.set("v4:side", min ? "" : "min"); renderGames(); } }, min ? "»" : "«")),
+    app("All", "Home", "all games: needs attention and every post", state.home && !state.homeSales, () => pickHome()),
+    h("div.side-label", "Games"),
+    ...games.flatMap((g, i) => item(g, i, sub)),
+    // Not about one of your games.
+    h("div.side-label", "Studio"),
+    app("$", "All sales", "every game's sales together", state.home && state.homeSales, () => pickHome(true)),
+    app("Mkt", "Market", "all of Steam: trends, gaps, Godot games", state.market, pickMarket),
+    app("YT", "Creators", "YouTubers who play games like ours, with emails", state.creators && !state.events, () => pickCreators()),
+    app("Ev", "Events", "events and awards to enter", state.creators && state.events, () => pickCreators("events")),
+    app("Data", "Game data", "players' sessions, for replays", state.gameData, pickGameData),
+    app("Up", "Status", "whether the site, server and bots run", state.uptime, pickUptime),
+    ...groups.flatMap((name) => [h("div.side-label", name ? `Research · ${name}` : "Research"), ...research.filter((g) => g.group === name).flatMap((g) => item(g, games.length + research.indexOf(g), researchStatus))]),
+    research.length ? null : h("div.side-label", "Research"),
+    add()].filter(Boolean));
+  side.parentElement.scrollTop = y;
+  // The bar a narrow window has instead: the menu, and where you are.
+  const here = state.market ? "Market" : state.creators ? (state.events ? "Events" : "Creators") : state.uptime ? "Status" : state.gameData ? "Game data"
+    : state.home ? (state.homeSales ? "All sales" : "Home") : state.game ? `${state.game.meta?.name || ""} · ${NAV.flatMap(([, tabs]) => tabs).find(([id]) => id === state.tab)?.[1] || ""}` : "";
+  document.getElementById("fb-menu-bar").replaceChildren(
+    h("button.btn", { type: "button", "aria-label": "Open the menu", onclick: () => setDrawer(true) }, "☰ Menu"),
+    h("span.menu-here", here),
+    h("button.btn", { type: "button", onclick: () => jumpBox() }, "Jump to…"));
 }
+
+// The jump box (Ctrl+K or ⌘K): type a few letters of a game, a view or an app; Enter opens the
+// first match, the arrow keys pick another.
+function jumpBox() {
+  if (document.querySelector(".fb-dialog.jump") || !state.index) return;
+  const tabs = (g) => navFor(g).flatMap(([, list]) => list);
+  const current = state.game && !state.home ? state.game.appId : null;
+  const games = sideGames();
+  const entries = [
+    ["Home", () => pickHome()],
+    ...games.map((g) => [g.name, () => pickGame(g.appId), g.capsule]),
+    ["All sales", () => pickHome(true)], ["Market", pickMarket], ["Creators", () => pickCreators()], ["Events", () => pickCreators("events")], ["Game data", pickGameData], ["Status", pickUptime],
+    // The open game's views first, then every other game's.
+    ...[...games].sort((a, b) => (b.appId === current) - (a.appId === current)).flatMap((g) => tabs(g).map(([id, label]) => [`${g.name} · ${label}`, () => openView(g.appId, id), g.capsule, id])),
+    ["Add a research game", askResearch],
+  ];
+  const input = h("input.dlg-input", { type: "search", placeholder: "Game, view or app", spellcheck: "false", autocomplete: "off", "aria-label": "Jump to" });
+  const list = h("div.nav-side.jump-list");
+  let found = [], at = 0;
+  const dlg = h("dialog.fb-dialog.jump", h("h3", "Jump to"), input, list,
+    h("p.gd-note", "Enter opens · ↑ ↓ pick · Esc closes · 1–9 switch game · [ and ] previous and next view"));
+  const pick = (entry) => { dlg.close(); setDrawer(false); entry[1](); };
+  const draw = () => {
+    const words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
+    found = entries.filter(([label]) => words.every((w) => label.toLowerCase().includes(w))).slice(0, 12);
+    at = Math.min(at, Math.max(0, found.length - 1));
+    list.replaceChildren(...(found.length ? found.map((entry, i) => h("button.nav-btn", { type: "button", "aria-current": String(i === at), onclick: () => pick(entry) },
+      entry[2] ? h("img.chip-thumb", { src: entry[2], alt: "" }) : entry[3] ? null : h("span.jump-dot"), entry[3] ? icon(entry[3]) : null, h("span", entry[0]))) : [h("p.empty", "Nothing by that name.")]));
+  };
+  input.addEventListener("input", () => { at = 0; draw(); });
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); at = (at + (e.key === "ArrowDown" ? 1 : found.length - 1)) % Math.max(1, found.length); draw(); }
+    else if (e.key === "Enter") { e.preventDefault(); if (found[at]) pick(found[at]); }
+  });
+  dlg.addEventListener("close", () => dlg.remove());
+  dlg.addEventListener("click", (e) => { if (e.target === dlg) dlg.close(); });
+  document.querySelector(".fb:has(#fb-view)").append(dlg);
+  draw();
+  dlg.showModal();
+  input.focus();
+}
+
+// The keys: Ctrl+K or ⌘K for the jump box, 1–9 for a game (the sidebar's order), [ and ] for the
+// previous and next view. Not while typing in a box, or with a dialog open.
+document.addEventListener("keydown", (e) => {
+  if (!document.getElementById("fb-sidebar") || !state.index) return;
+  if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && e.key.toLowerCase() === "k") { e.preventDefault(); jumpBox(); return; }
+  if (e.key === "Escape") return setDrawer(false);
+  if (e.metaKey || e.ctrlKey || e.target.closest?.("input, textarea, select, [contenteditable]") || document.querySelector("dialog[open]")) return;
+  // [ and ] need Alt on some keyboards (a Swedish one), so Alt is fine for those.
+  if (e.key === "[" || e.key === "]") {
+    if (!state.game || state.home) return;
+    const tabs = navFor(state.game.meta).flatMap(([, list]) => list.map(([id]) => id));
+    e.preventDefault();
+    openView(state.game.appId, tabs[(tabs.indexOf(state.tab) + (e.key === "]" ? 1 : tabs.length - 1)) % tabs.length]);
+  } else if (/^[1-9]$/.test(e.key) && !e.altKey) {
+    const g = sideGames()[Number(e.key) - 1];
+    if (g) { e.preventDefault(); pickGame(g.appId); }
+  }
+});
 
 async function pickGame(appId) {
   store.set("app", appId);
@@ -1046,6 +1208,8 @@ async function pickGame(appId) {
   state.uptime = false;
   state.market = false;
   state.creators = false;
+  // Back from a research game (which has fewer views): the view you were on before it.
+  if (state.wantTab) { state.tab = state.wantTab; state.wantTab = null; }
   const meta = metaOf(appId);
   if (!state.games[appId]) {
     // A research game's file can be tens of MB: say which game is coming instead of leaving the last
@@ -1054,8 +1218,7 @@ async function pickGame(appId) {
     document.getElementById("fb-stats").replaceChildren();
     document.getElementById("fb-view").replaceChildren(h("p.empty", `Loading ${meta.name || "the game"}…${meta.research ? " (a research game has every post, so this can take a few seconds)" : ""}`));
     try {
-      const data = await getJson(`games/${appId}.json`);
-      state.games[appId] = data;
+      await loadGame(appId);
       if (state.picked !== appId || state.home) return;
     } catch (e) {
       if (state.picked !== appId || state.home) return;
@@ -1105,8 +1268,10 @@ async function pickMarket() {
 // Creators: the YouTube creators the server found (server/creators), with emails and the best ones
 // for each of our games; its own file, creators.js, loaded the first time it opens.
 let creatorsModule = null;
-async function pickCreators() {
-  store.set("app", "creators");
+// `section` "events" opens its Events & awards part, which the sidebar lists as its own app.
+async function pickCreators(section) {
+  state.events = section === "events";
+  store.set("app", state.events ? "events" : "creators");
   state.home = false;
   state.gameData = false;
   state.uptime = false;
@@ -1115,9 +1280,13 @@ async function pickCreators() {
   state.picked = null;
   state.creators = true;
   creatorsModule ??= await import("./creators.js");
-  if (state.creators) render();
+  if (!state.creators) return;
+  if (state.events !== (creatorsModule.creatorsSection() === "events")) creatorsModule.creatorsSection(state.events ? "events" : "creators");
+  render();
 }
-const marketHelpers = () => ({ h, svgEl, chips, about, adminGet, adminSend, fmtNum, fmtDate, fmtDateTime, plural, copy, store, dataOverride: DATA_OVERRIDE });
+const marketHelpers = () => ({ h, svgEl, chips, about, adminGet, adminSend, fmtNum, fmtDate, fmtDateTime, plural, copy, store, dataOverride: DATA_OVERRIDE,
+  // Creators tells the sidebar when its Events part opens or closes, so the right entry is marked.
+  onSection: (v) => { state.events = v === "events"; store.set("app", state.events ? "events" : "creators"); setHash(); renderGames(); } });
 function renderUptimeTop() {
   document.getElementById("fb-capsule").hidden = true;
   document.getElementById("fb-title").replaceChildren("Status");
@@ -1129,7 +1298,7 @@ const uptimeView = () => h("iframe.uptime-frame", { src: STATUS_PAGE, title: "Fo
 
 function setHash() {
   // Keep vue-router's history state; only the hash changes.
-  history.replaceState(history.state, "", `${location.pathname}${location.search}${state.market ? "#app=market" : state.creators ? "#app=creators" : state.uptime ? "#app=status" : state.gameData ? "#app=gamedata" : state.home ? `#app=all${state.homeSales ? "&tab=sales" : ""}` : `#app=${state.game.appId}&tab=${state.tab}`}`);
+  history.replaceState(history.state, "", `${location.pathname}${location.search}${state.market ? "#app=market" : state.creators ? (state.events ? "#app=events" : "#app=creators") : state.uptime ? "#app=status" : state.gameData ? "#app=gamedata" : state.home ? `#app=all${state.homeSales ? "&tab=sales" : ""}` : `#app=${state.game.appId}&tab=${state.tab}`}`);
 }
 
 // ---------------------------------------------------------------------------
@@ -1210,11 +1379,12 @@ function renderStats() {
   const peaks = daily(14, (d) => Math.max(playersAt(series, d) ?? 0, ...series.filter(([ts]) => ts >= d && ts < d + DAY).map(([, n]) => n)));
   const reviewsPerDay = daily(14, (d) => items().filter((i) => i.kind === "review" && i.created >= d && i.created < d + DAY).length);
   const openBugsPerDay = daily(14, (d) => issues("bug").filter((i) => i.firstSeen < d + DAY && !(i.status === "likely_fixed" && i.fixedAt < d + DAY)).length);
-  const postsPerDay = daily(14, (d) => items().filter((i) => !i.dev && i.created >= d && i.created < d + DAY).length);
+  // YouTube comments are folded under their video, so they aren't counted as posts.
+  const postsPerDay = daily(14, (d) => items().filter((i) => !i.dev && i.kind !== "comment" && i.created >= d && i.created < d + DAY).length);
   const bugs = issues("bug").filter(isActive);
   const urgent = bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high");
   const still = bugs.filter((i) => i.status === "still_happening");
-  const fresh = items().filter((i) => !i.dev && i.created >= t - DAY);
+  const fresh = items().filter((i) => !i.dev && i.kind !== "comment" && i.created >= t - DAY);
   // `chart` is the chart it opens below, or a function: then the card opens that view instead.
   const tile = (label, value, sub, trend, color, chart) => {
     const go = typeof chart === "function";
@@ -1382,10 +1552,19 @@ const about = (...kids) => h("details.about", h("summary", "How this works"), h(
 
 function render() {
   state.drawn = drawnKey(); // what's on screen, so a refresh only redraws for new data
+  const inGameView = state.game && !state.home && !state.gameData && !state.uptime && !state.market && !state.creators;
+  // A research game has fewer views: the one you were on is kept for the next game of yours.
+  if (inGameView && isResearch() && !RESEARCH_TABS.includes(state.tab)) { state.wantTab = state.tab; state.tab = "issues"; }
+  if (inGameView) {
+    // The view on screen counts as seen now; any other view with something from the last 48 hours
+    // that's newer than when you last opened it gets "New", like a new post.
+    store.set(`seen:${state.game.appId}:${state.tab}`, now());
+    store.set(`v4:seen:${state.game.appId}`, now());
+    // Where to open next time.
+    store.set("v4:tab", state.tab);
+  }
+  if (state.home) store.set("app", state.homeSales ? "sales" : "all");
   renderGames();
-  // On All games (and Game data) the views are one game's, so they're hidden.
-  document.querySelector(".fb .side-views").hidden = state.home || state.gameData || state.uptime || state.market || state.creators;
-  document.getElementById("fb-nav-top").hidden = state.home || state.gameData || state.uptime || state.market || state.creators;
   if (state.creators) {
     creatorsModule.creatorsTop(marketHelpers());
     setHash();
@@ -1422,33 +1601,8 @@ function render() {
     document.getElementById("fb-view").replaceChildren(state.homeSales ? allSalesView() : homeView());
     return;
   }
-  if (isResearch() && !RESEARCH_TABS.includes(state.tab)) state.tab = "issues";
-  const nav = isResearch() ? NAV.map(([group, tabs]) => [group, tabs.filter(([id]) => RESEARCH_TABS.includes(id))]).filter(([, tabs]) => tabs.length) : NAV;
   renderHeader();
   renderStats();
-  const counts = {
-    issues: issues("bug").filter(isActive).length,
-    suggestions: issues("suggestion").filter(isActive).length,
-    feed: items().filter((i) => !i.dev).length,
-    loved: issues("praise").length,
-    achievements: state.game.achievements?.list?.length || null,
-    curators: state.game.curators?.list?.length || null,
-    bundles: bundleWith().length || null,
-    competitors: competitors().length || null,
-    soon: soonCount(),
-    stats: belowAverage() || null,
-    media: liveNow().length ? `${liveNow().length} live` : talk().filter((m) => m.at > now() - 7 * DAY).length || null,
-  };
-  // The view on screen counts as seen now; any other view with something from the last 48 hours
-  // that's newer than when you last opened it gets "New", like a new post.
-  store.set(`seen:${state.game.appId}:${state.tab}`, now());
-  const button = ([id, label]) =>
-    h("button.nav-btn", { type: "button", "aria-current": String(state.tab === id), onclick: () => { state.tab = id; render(); } },
-      icon(id), h("span", label), id !== state.tab && hasNew(id) ? h("span.pc-new.nav-new", "New") : null, counts[id] != null ? h(`span.count${id === "media" && liveNow().length ? ".count-live" : id === "soon" ? ".count-soon" : id === "stats" ? ".count-bad" : ""}`, counts[id]) : null);
-  // The side card lists the views under their group's name; the phone tabs keep them in one row,
-  // with a gap between groups.
-  document.getElementById("fb-nav-side").replaceChildren(...nav.flatMap(([group, tabs]) => [...(group ? [h("div.nav-group", group)] : []), ...tabs.map(button)]));
-  document.getElementById("fb-nav-top").replaceChildren(...nav.flatMap(([, tabs], i) => [...(i ? [h("span.nav-gap")] : []), ...tabs.map(button)]));
   setHash();
   const view = { issues: () => issueView("bug"), suggestions: () => issueView("suggestion"), loved: lovedView, updates: updatesView, media: mediaView, achievements: achievementsView, curators: curatorsView, stats: steamStatsView, bundles: bundlesView, competitors: competitorsView, sales: salesView, soon: soonView, more: moreView, feed: feedView }[state.tab]();
   document.getElementById("fb-view").replaceChildren(view);
@@ -2276,7 +2430,7 @@ const NEWEST = {
   updates: () => (state.game.releases || []).map((r) => r.time),
   media: () => talk().filter((m) => !m.own).map((m) => m.at),
   curators: () => (state.game.curators?.list || []).map((c) => c.seen),
-  feed: () => items().filter((i) => !i.dev).map((i) => i.created),
+  feed: () => items().filter((i) => !i.dev && i.kind !== "comment").map((i) => i.created),
 };
 function hasNew(view) {
   const newest = Math.max(0, ...(NEWEST[view]?.() || []).filter(Boolean));
@@ -2470,7 +2624,8 @@ function thumbImg(up) {
 
 // A bug or idea in the post cards' style: type and priority on the left, the rest to the right.
 function issueCard(issue) {
-  const posts = issue.items.map((id) => state.game.items[id]).filter(Boolean).sort((a, b) => b.created - a.created);
+  // Newest first, YouTube comments after the reviews, threads and videos.
+  const posts = issue.items.map((id) => state.game.items[id]).filter(Boolean).sort((a, b) => (a.kind === "comment") - (b.kind === "comment") || b.created - a.created);
   const postList = h("div", { hidden: true });
   let filled = false;
   const toggle = h("button.btn", { onclick: () => {
@@ -2816,10 +2971,47 @@ function feedView({ everyGame = false } = {}) {
       .filter(([, i]) => f.version === "all" || !update || (f.version === "since") === (i.created >= update.time))
       .filter(([, i]) => !q || (english(i) + " " + (i.text || "") + " " + (i.title || "")).toLowerCase().includes(q))
       .sort(([, a], [, b]) => Math.max(b.created, b.updated || 0) - Math.max(a.created, a.updated || 0));
-    const shown = all.slice(0, f.shown);
-    const card = ([g, i]) => everyGame ? h("div.card", gameTag(g), inGame(g, () => postView(i))) : h("div.card", postView(i));
+    // YouTube comments don't get rows of their own: they're folded under their video's card, as a
+    // count that opens them. A video with no post of its own here (not reviewed, or filtered out)
+    // gets a one-line card where its newest comment would be. Asking for comments only lists them.
+    const under = new Map();
+    let rows = all;
+    if (f.kind === "all") {
+      const key = (g, i) => `${g.appId}:${i.media}`;
+      const videos = new Set(all.filter(([, i]) => i.kind === "video").map(([g, i]) => key(g, i)));
+      rows = [];
+      for (const [g, i] of all) {
+        if (i.kind !== "comment") { rows.push([g, i]); continue; }
+        if (!under.has(key(g, i))) {
+          under.set(key(g, i), []);
+          if (!videos.has(key(g, i))) rows.push([g, { kind: "comments", media: i.media, videoTitle: i.videoTitle }]);
+        }
+        under.get(key(g, i)).push(i);
+      }
+    }
+    const shown = rows.slice(0, f.shown);
+    const comments = (g, i) => {
+      const found = under.get(`${g.appId}:${i.media}`);
+      if (!found || (i.kind !== "video" && i.kind !== "comments")) return null;
+      const box = h("div", { hidden: true });
+      const toggle = h("button.btn", { type: "button", onclick: () => {
+        if (!box.childNodes.length) box.append(...inGame(g, () => found.map((c) => postCard(c, { clamp: false }))));
+        box.hidden = !box.hidden;
+        toggle.textContent = box.hidden ? `Show ${plural(found.length, "YouTube comment")}` : "Hide comments";
+      } }, `Show ${plural(found.length, "YouTube comment")}`);
+      return [h("div.actions", toggle), box];
+    };
+    // The one-line card of a video that has only comments here.
+    const videoLine = (g, i) => {
+      const video = g.media?.items?.[i.media];
+      return h("div.post.pc.neutral", h("div.pc-top", h("div.pc-main", h("span.pc-type.pc-kind", KIND.video))),
+        h("div", h("b", video?.title || i.videoTitle || "A video")),
+        h("div.meta", video?.author ? h("span", video.author) : null, video?.url ? h("a", { href: video.url, target: "_blank", rel: "noopener" }, "Watch on YouTube ↗") : null));
+    };
+    const post = (g, i) => i.kind === "comments" ? videoLine(g, i) : postView(i);
+    const card = ([g, i]) => everyGame ? h("div.card", gameTag(g), inGame(g, () => post(g, i)), comments(g, i)) : h("div.card", post(g, i), comments(g, i));
     list.replaceChildren(...(shown.length ? shown.map(card) : [h("p.empty", "Nothing here yet.")]));
-    if (all.length > shown.length) list.append(h("button.btn.more", { onclick: () => { f.shown += 50; draw(); } }, `Show more (${all.length - shown.length} left)`));
+    if (rows.length > shown.length) list.append(h("button.btn.more", { onclick: () => { f.shown += 50; draw(); } }, `Show more (${rows.length - shown.length} left)`));
   };
   const sel = (label, key, options) => chips(options, f[key], (v) => { f[key] = v; f.shown = 50; draw(); }, label);
   wrap.append(
@@ -2861,9 +3053,10 @@ async function pickHome(sales) {
   state.creators = false;
   state.game = null;
   document.getElementById("fb-view").replaceChildren(h("p.empty", "Loading…"));
-  await Promise.all(state.index.games.filter((g) => !state.games[g.appId])
-    .map((g) => getJson(`games/${g.appId}.json`).then((data) => { state.games[g.appId] = data; }).catch(() => {})));
-  render();
+  setDrawer(false);
+  renderGames();
+  await Promise.all(state.index.games.map((g) => loadGame(g.appId).catch(() => {})));
+  if (state.home) render();
 }
 
 // Things to act on, from every game: bugs that are urgent or came back after a fix, and negative
@@ -2908,6 +3101,8 @@ function renderHomeTop() {
   const gross = daily(14, (d) => Object.values(state.sales?.days?.[isoDay(d)] || {}).reduce((a, t) => a + (t.gross || 0), 0));
   const bugs = games.flatMap((g) => inGame(g, () => issues("bug").filter(isActive)));
   const fresh = games.flatMap((g) => Object.values(g.items || {}).filter((i) => !i.dev && i.created >= now() - DAY));
+  // YouTube comments are folded under their video, so they're told apart from the posts.
+  const freshComments = fresh.filter((i) => i.kind === "comment").length;
   const tile = (label, value, sub, trend, color) => h("div.kpi", h("div.label", label), h("div.value", value), h("div.sub", sub), trend ? spark(trend, color) : null);
   // The money cards open (and close again) every game's sales added up.
   const money = (label, value, sub, trend, color) => h("button.kpi.kpi-open", { type: "button", "aria-expanded": String(!!state.homeSales), title: state.homeSales ? "Back to all posts" : "Sales, every game together", onclick: () => {
@@ -2918,7 +3113,7 @@ function renderHomeTop() {
     sales.length ? money("Gross all time", usd(sum("gross")), `${usd(sum("net"))} net · every game`) : null,
     sales.length ? money("Gross, 7 days", usd(sum("gross", now() - 7 * DAY)), `${usd(sum("net", now() - 7 * DAY))} net`, gross, "var(--fb-positive)") : null,
     tile("Open bugs", bugs.length, `${bugs.filter((i) => i.urgency === "urgent" || i.urgency === "high").length} high or urgent`),
-    tile("New posts", fresh.length, "last 24 h"),
+    tile("New posts", fresh.length - freshComments, freshComments ? `last 24 h · + ${plural(freshComments, "YouTube comment")}` : "last 24 h"),
   ].filter(Boolean));
   document.getElementById("fb-expand").replaceChildren();
 }
@@ -3977,17 +4172,19 @@ function fillSlot(slot, p) {
 
 const SHELL = `
 <div class="fb-layout">
-  <aside class="fb-side" aria-label="Games and views">
-    <div class="side-card" id="fb-studio-side"></div>
-    <div class="side-card" id="fb-games-side"></div>
-    <div class="side-card side-views">
-      <div class="side-label">Views</div>
-      <nav class="nav-side" id="fb-nav-side" aria-label="Views"></nav>
-    </div>
-    <div class="side-card" id="fb-research-side"></div>
+  <aside class="fb-side" aria-label="Games, views and apps">
+    <div class="side-card" id="fb-sidebar"></div>
   </aside>
+  <button class="side-shade" type="button" aria-label="Close the menu" id="fb-side-shade"></button>
   <div class="fb-main">
-    <div class="strip" id="fb-games-strip" aria-label="Games"></div>
+    <div class="menu-bar" id="fb-menu-bar"></div>
+    <details class="about"><summary>What this variant changes</summary><ul>
+      <li>One sidebar, always on screen: Home, every game with its views, the other apps, research games.</li>
+      <li>Switching game keeps the view you're on. The arrow by a game lists its views without opening it.</li>
+      <li>« collapses the sidebar to icons. On a phone it's a menu that slides in.</li>
+      <li>Keys: Ctrl+K or ⌘K jumps anywhere, 1–9 switch game, [ and ] go to the previous and next view.</li>
+      <li>It reopens where you left off. YouTube comments are folded under their video and aren't counted as posts.</li>
+    </ul></details>
     <header class="top">
       <img id="fb-capsule" alt="" hidden>
       <div class="top-text"><h2 id="fb-title">Loading…</h2><div class="updated" id="fb-updated"></div></div>
@@ -3995,7 +4192,6 @@ const SHELL = `
     </header>
     <section class="kpis" id="fb-stats" aria-label="Summary"></section>
     <div id="fb-expand"></div>
-    <nav class="nav-top" id="fb-nav-top" aria-label="Views"></nav>
     <div id="fb-view"></div>
   </div>
 </div>
@@ -4040,8 +4236,11 @@ async function refresh() {
       const games = Object.fromEntries(await Promise.all(ids.map(async (id) => [id, isResearch() && same(id) ? state.games[id] : await getJson(`games/${id}.json`)])));
       await loadCleared();
       await loadSales();
+      // The other games of yours stay loaded, for the sidebar's counts: read again too, or kept as they were.
+      const rest = index.games.map((g) => g.appId).filter((id) => !(id in games) && state.games[id]);
+      const others = Object.fromEntries(await Promise.all(rest.map(async (id) => [id, await getJson(`games/${id}.json`).catch(() => state.games[id])])));
       state.index = index;
-      state.games = games;
+      state.games = { ...others, ...games };
       if (!state.home) state.game = { ...games[ids[0]], meta: metaOf(ids[0]) };
     } catch {
       DATA = loaded;
@@ -4073,6 +4272,7 @@ export function mount(root) {
     document.head.append(h("style", { id: "fb-dash-css" }, CSS));
   }
   root.innerHTML = SHELL;
+  document.getElementById("fb-side-shade").addEventListener("click", () => setDrawer(false));
   // Lets the site's header show a "Feedback" link in this browser from now on (SiteHeader.vue).
   store.set("visited", "1");
   init();

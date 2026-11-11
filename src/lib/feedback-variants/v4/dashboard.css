@@ -59,20 +59,174 @@
 	flex: none;
 }
 
-/* Layout: games and views in a card on the left, the selected game on the right */
+/* Layout (variant 4): one sidebar on the left with everything in it, always on screen; the
+   selected game, app or Home on the right */
 .fb .fb-layout {
 	display: grid;
 	grid-template-columns: 15rem minmax(0, 1fr);
 	gap: 1.5rem;
 	align-items: start;
 }
-/* The side column runs the page's full height: the games card scrolls away with the page and the
-   views card stays on screen below it, so every view is in reach however long the page is. */
+/* The sidebar stays put while the page scrolls, and scrolls by itself when it's taller than the
+   window. */
 .fb .fb-side {
-	align-self: stretch;
+	position: sticky;
+	top: 0.75rem;
+	max-height: calc(100vh - 1.5rem);
+	overflow-y: auto;
+	scrollbar-width: thin;
+	border-radius: var(--radius-card);
+}
+.fb .side-card:empty,
+.fb .menu-bar:empty {
+	display: none;
+}
+.fb .side-shade,
+.fb .menu-bar {
+	display: none;
+}
+/* Jump to… and the collapse button, on top of the sidebar */
+.fb .side-tools {
 	display: flex;
-	flex-direction: column;
-	gap: 1rem;
+	gap: 6px;
+	padding: 0.25rem 0 0.375rem;
+}
+.fb .side-jump {
+	flex: 1;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	color: var(--fb-muted);
+}
+.fb kbd {
+	font: inherit;
+	font-size: 0.7rem;
+	color: var(--fb-muted);
+}
+/* A game's row: the game, and the arrow that lists its views */
+.fb .g-row {
+	display: flex;
+	align-items: center;
+	position: relative;
+}
+.fb .g-row .g-item {
+	min-width: 0;
+	flex: 1;
+}
+.fb .g-more {
+	flex: none;
+	background: none;
+	border: 0;
+	border-radius: 0.5rem;
+	padding: 6px;
+	color: var(--fb-muted);
+	font-size: 0.875rem;
+	line-height: 1;
+}
+.fb .g-more:hover {
+	background: var(--fb-hover);
+	color: var(--fb-ink);
+}
+.fb .g-item .count {
+	margin-left: auto;
+	flex: none;
+	font-size: 0.7rem;
+	color: var(--fb-muted);
+}
+.fb .g-item .count.count-bad {
+	color: #fff;
+	background: var(--fb-negative);
+	padding: 0 6px;
+	border-radius: 99px;
+	font-weight: 700;
+}
+/* A game's views, under it */
+.fb .g-views {
+	margin: 0 0 0.375rem 0.75rem;
+	padding-left: 0.5rem;
+	border-left: 1px solid var(--fb-line);
+}
+.fb .g-views .nav-btn {
+	padding: 5px 8px;
+	font-size: 0.8125rem;
+}
+/* Collapsed to icons: the pictures and the views' icons only (names show on hover) */
+@media (width >= 56.25rem) {
+	.fb .fb-layout.side-min {
+		grid-template-columns: 4.25rem minmax(0, 1fr);
+	}
+	.fb .side-min .side-card {
+		padding: 0.5rem 0.375rem;
+	}
+	.fb .side-min .side-tools {
+		flex-direction: column;
+	}
+	.fb .side-min .side-jump {
+		justify-content: center;
+		font-size: 0;
+		padding-inline: 0;
+	}
+	.fb .side-min .side-fold {
+		padding-inline: 0;
+	}
+	.fb .side-min .g-name,
+	.fb .side-min .g-more,
+	.fb .side-min .g-views:not(.g-mine),
+	.fb .side-min .nav-group,
+	.fb .side-min .nav-btn > span {
+		display: none;
+	}
+	.fb .side-min .side-label {
+		padding: 0.375rem 0 0;
+		height: 0;
+		overflow: hidden;
+		border-bottom: 1px solid var(--fb-line);
+		margin-bottom: 0.375rem;
+	}
+	.fb .side-min .g-item {
+		padding: 4px;
+		justify-content: center;
+	}
+	.fb .side-min .g-item[aria-current="true"]::before {
+		left: -0.375rem;
+	}
+	.fb .side-min .g-thumb {
+		width: 100%;
+	}
+	.fb .side-min .g-item .count {
+		position: absolute;
+		top: 0;
+		right: 0;
+		background: var(--fb-card);
+		border-radius: 99px;
+		padding: 0 5px;
+		box-shadow: var(--fb-shadow);
+	}
+	.fb .side-min .g-views {
+		margin-left: 0;
+		padding-left: 0;
+		border-left: 0;
+	}
+	.fb .side-min .g-views .nav-btn {
+		justify-content: center;
+		padding: 6px 0;
+	}
+}
+/* The jump box (Ctrl+K or ⌘K) */
+.fb-dialog.jump {
+	margin-top: 12vh;
+}
+.fb-dialog .jump-list {
+	margin-top: 8px;
+	max-height: 50vh;
+	overflow-y: auto;
+}
+.fb-dialog .jump-list .nav-btn {
+	padding: 6px 8px;
+}
+.fb-dialog .jump-dot {
+	width: 32px;
+	flex: none;
 }
 .fb .side-card {
 	background: var(--fb-card);
@@ -155,9 +309,6 @@
 	font-size: 0.7rem;
 	font-weight: 400;
 }
-.fb .strip {
-	display: none;
-}
 
 /* The selected game's header */
 .fb .top {
@@ -236,9 +387,6 @@
 	font-weight: 600;
 	padding: 0.5rem 0.625rem 0.125rem;
 }
-.fb .nav-top {
-	display: none;
-}
 
 /* A view's explanation (dashboard.js about), folded to one line until opened */
 .fb .about {
@@ -253,10 +401,15 @@
 .fb .about summary:hover {
 	color: var(--fb-ink-2);
 }
-.fb .about p {
+.fb .about p,
+.fb .about ul {
 	margin: 6px 0 0;
 	max-width: 65ch;
 	color: var(--fb-ink-2);
+}
+.fb .about ul {
+	padding-left: 1.2em;
+	list-style: disc;
 }
 
 /* KPI cards */
@@ -680,75 +833,66 @@
 	opacity: 1;
 }
 
-/* Phones and narrow windows: no side card; games and views become scrolling chips */
+/* Phones and narrow windows: the sidebar is a drawer that slides in from the left, opened with
+   the Menu button on top */
 @media (width < 56.25rem) {
 	.fb .fb-layout {
 		grid-template-columns: minmax(0, 1fr);
 	}
 	.fb .fb-side {
+		position: fixed;
+		z-index: 60;
+		top: 0;
+		bottom: 0;
+		left: 0;
+		width: min(19rem, 86vw);
+		max-height: none;
+		border-radius: 0;
+		background: var(--fb-card);
+		transform: translateX(-102%);
+		transition: transform 0.18s ease;
+		overscroll-behavior: contain;
+	}
+	.fb .fb-side .side-card {
+		box-shadow: none;
+		border-radius: 0;
+	}
+	.fb .side-open .fb-side {
+		transform: none;
+		box-shadow: 0 0 40px rgb(0 0 0 / 0.35);
+	}
+	.fb .side-open .side-shade {
+		display: block;
+		position: fixed;
+		z-index: 59;
+		inset: 0;
+		border: 0;
+		background: rgb(0 0 0 / 0.45);
+	}
+	.fb .side-fold {
 		display: none;
 	}
-	.fb .strip {
+	/* Stays on top while the page scrolls, so the menu is always in reach */
+	.fb .menu-bar {
 		display: flex;
-		overflow-x: auto;
-		scrollbar-width: none;
+		align-items: center;
 		gap: 8px;
-		margin: 0 -1rem 1rem;
-		padding: 2px 1rem 6px;
+		position: sticky;
+		top: 0;
+		z-index: 20;
+		margin: 0 -1rem 0.75rem;
+		padding: 0.5rem 1rem;
+		background: var(--fb-card-2);
 	}
-	.fb .strip .g-item {
-		width: auto;
-		flex: none;
-		border-radius: 99px;
-		padding: 4px 14px 4px 4px;
-		background: var(--fb-card);
-		box-shadow: var(--fb-shadow);
-	}
-	.fb .strip .g-item::before {
-		display: none;
-	}
-	.fb .strip .g-item[aria-current="true"] {
-		background: var(--fb-accent);
-		color: #fff;
-	}
-	.fb .strip .g-thumb {
-		width: 30px;
-		height: 30px;
-		aspect-ratio: auto;
-		border-radius: 50%;
-	}
-	.fb .strip .g-sub {
-		display: none;
-	}
-	.fb .nav-top {
-		display: flex;
-		gap: 6px;
-		margin: 0 -1rem 1.125rem;
-		padding: 2px 1rem 6px;
-		overflow-x: auto;
-		scrollbar-width: none;
-	}
-	.fb .nav-top .nav-btn {
-		width: auto;
+	.fb .menu-here {
+		flex: 1;
+		min-width: 0;
+		overflow: hidden;
+		text-overflow: ellipsis;
 		white-space: nowrap;
-		border-radius: 99px;
-		padding: 7px 14px;
-		background: var(--fb-card);
-		box-shadow: var(--fb-shadow);
-	}
-	.fb .nav-top .nav-btn[aria-current="true"] {
-		background: var(--fb-accent);
-		color: #fff;
-	}
-	.fb .nav-top .nav-gap {
-		flex: none;
-		width: 1px;
-		margin: 6px 4px;
-		background: var(--fb-line);
-	}
-	.fb .nav-top .nav-btn .count {
-		margin-left: 4px;
-		color: inherit;
+		color: var(--fb-ink-2);
+		font-family: var(--font-heading);
+		font-weight: 600;
 	}
 	.fb .top img {
 		display: none;

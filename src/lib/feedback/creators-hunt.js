@@ -14,15 +14,19 @@ export function dayKey(t) {
 }
 const shift = (key, days) => { const [y, m, d] = key.split("-").map(Number); return dayKey(new Date(y, m - 1, d + days, 12).getTime() / 1000); };
 
-// Streaks over days with at least one reveal: { current, best, today } (current stays alive through
-// today until it ends without one).
+// Streaks over days with at least one reveal: { current, best, today, atRisk }. One missed day
+// doesn't end a streak, two in a row do: YouTube's limit is a rolling 24 hours, so the round slides
+// later each day and now and then skips a calendar day. Missed days aren't counted. atRisk: yesterday
+// was missed and today has no round yet, so the streak ends tonight.
 export function streaks(days, now) {
   const today = dayKey(now);
+  const near = (a, b) => shift(a, 1) === b || shift(a, 2) === b;
   let best = 0, run = 0, prev = null;
-  for (const k of [...days.keys()].sort()) { run = prev && shift(prev, 1) === k ? run + 1 : 1; best = Math.max(best, run); prev = k; }
+  for (const k of [...days.keys()].sort()) { run = prev && near(prev, k) ? run + 1 : 1; best = Math.max(best, run); prev = k; }
+  const last = [today, shift(today, -1), shift(today, -2)].find((k) => days.has(k));
   let current = 0;
-  for (let k = days.has(today) ? today : shift(today, -1); days.has(k); k = shift(k, -1)) current++;
-  return { current, best, today: days.has(today) };
+  for (let k = last; k; k = [shift(k, -1), shift(k, -2)].find((p) => days.has(p))) current++;
+  return { current, best, today: days.has(today), atRisk: !!last && last === shift(today, -2) };
 }
 
 // "3h 05m" / "12m" until t.
@@ -70,7 +74,7 @@ export function huntStrip(d, C) {
   const num = (n) => C.fmtNum(n);
   const command = "/yt-email-unlock 10";
 
-  const { current, best, today: doneToday } = s.streak;
+  const { current, best, atRisk } = s.streak;
   const limit = d.reveal_limit && d.reveal_limit.ready > now ? d.reveal_limit : null;
 
   return h("div.hn",
@@ -80,7 +84,7 @@ export function huntStrip(d, C) {
         h("div.hn-bar", h("div.hn-fill", { style: `width:${(s.looked / total) * 100}%` }))),
       h("div.hn-streak", h("b.hn-big", { class: current ? "is-hot" : null }, current ? `🔥 ${current}` : "0"),
         h("div", h("div.cr-muted", `${current === 1 ? "day" : "days"} in a row · best ${best}`),
-          current && !doneToday && !limit ? h("div.hn-keep", "Do a round today to keep it") : null)),
+          atRisk && !limit ? h("div.hn-keep", "Do a round today to keep it") : null)),
       s.left && !limit ? h("button.btn", { type: "button", title: "Paste it into Claude Code to start a round of 10", onclick: (e) => C.copy(command, e.currentTarget) }, `Copy ${command}`) : null),
     limit ? limitNote(h, limit) : null);
 }

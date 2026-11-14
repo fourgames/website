@@ -38,8 +38,11 @@ class Config:
     lookback_days: int = 180
     # Only games with at least this many reviews are searched (fewer: hardly any videos).
     min_reviews: int = 30
-    # Games with more reviews than this are skipped: their creators are too big to answer a small studio.
+    # Games with more reviews than this are skipped (Counter-Strike 2 and the like spend the quota on
+    # channels that won't answer)...
     max_reviews: int = 50_000
+    # ...unless they're like our games (games.py LOOKALIKE_SIM): those are searched up to this many.
+    lookalike_max_reviews: int = 1_000_000
     # Games over this full price (cents, US) are skipped: AAA releases too new to have many reviews.
     max_price: int = 3000
     # Games whose developer or publisher is exactly this name count as ours too.
@@ -84,6 +87,7 @@ class Config:
             lookback_days=number("LOOKBACK_DAYS", 180, 7, 3650),
             min_reviews=number("MIN_REVIEWS", 30, 0, 1_000_000),
             max_reviews=number("MAX_REVIEWS", 50_000, 1, 100_000_000),
+            lookalike_max_reviews=number("LOOKALIKE_MAX_REVIEWS", 1_000_000, 1, 100_000_000),
             own_studio=get("OWN_STUDIO", "Four Games"),
             max_price=number("MAX_PRICE", 3000, 0, 100_000),
             channel_refresh_days=number("CHANNEL_REFRESH_DAYS", 30, 1, 365),

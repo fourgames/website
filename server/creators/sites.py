@@ -29,7 +29,7 @@ from . import contacts
 from .config import USER_AGENT, Config, ConfigError
 from .db import Store
 from .games import own_appids
-from .reveal import _order
+from .reveal import CANDIDATES, rank
 
 log = logging.getLogger("creators.sites")
 
@@ -128,8 +128,10 @@ def page_emails(text: str, page_host: str) -> list[str]:
 
 
 class Follower:
-    def __init__(self, store: Store, transport: Transport | None = None, pause: float = 1.0):
+    def __init__(self, store: Store, transport: Transport | None = None, pause: float = 1.0,
+                 steam_db: str | None = None):
         self.store = store
+        self.steam_db = steam_db  # our games' tags, for the best-first order (reveal.rank)
         self.transport = transport or urllib_transport
         self.pause = pause
 
@@ -203,19 +205,22 @@ class Follower:
         return added
 
     def due(self, own: set[int], now: float, limit: int) -> list[str]:
-        """Links not followed yet (or long ago) of channels without an email, best channels first."""
-        sql, order, a, b = _order(own, now)
+        """Links not followed yet (or long ago) of channels without an email, best channels first
+        (reveal.rank: our games' creators, then expected value)."""
         rows = self.store.db.execute(
-            f"""SELECT l.url {sql.replace('FROM youtube_channels c', 'FROM youtube_channels c JOIN channel_links l ON l.channel_id = c.channel_id')}
+            f"""SELECT l.url, c.channel_id {CANDIDATES.replace('FROM youtube_channels c', 'FROM youtube_channels c JOIN channel_links l ON l.channel_id = c.channel_id')}
                 AND l.url NOT IN (SELECT url FROM sites WHERE fetched_at >= ?)
-                AND c.channel_id NOT IN (SELECT channel_id FROM site_emails)
-                {order}""", (*a, now - REFETCH_DAYS * 86400, *b))
+                AND c.channel_id NOT IN (SELECT channel_id FROM site_emails)""", (now - REFETCH_DAYS * 86400,)).fetchall()
+        by_channel: dict[str, list[str]] = {}
+        for url, channel in rows:
+            by_channel.setdefault(channel, []).append(url)
         seen: list[str] = []
-        for (url,) in rows:
-            if url not in seen:
-                seen.append(url)
-                if len(seen) >= limit:
-                    break
+        for channel in rank(self.store, list(by_channel), own, now, self.steam_db):
+            for url in by_channel[channel]:
+                if url not in seen:
+                    seen.append(url)
+                    if len(seen) >= limit:
+                        return seen
         return seen
 
     def run(self, own: set[int], limit: int = 150, now: float | None = None) -> dict[str, int]:

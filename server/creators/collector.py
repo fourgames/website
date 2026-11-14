@@ -34,7 +34,7 @@ def quota_day(now: float) -> tuple[str, float]:
     return local.strftime("%Y-%m-%d"), min(1.0, (local - midnight).total_seconds() / DAY)
 
 
-# How often each channel's newest upload is read again.
+# How often each channel's newest uploads are read again.
 UPLOAD_CHECK_DAYS = 14
 # A video's views are read once more when it's this old (most are found in their first days).
 VIEWS_AFTER_DAYS = 7
@@ -100,7 +100,8 @@ class Collector:
         now = int(self.clock())
         done = self.store.searches()
         for game in games_mod.read(self.config.steam_db, self.config.own_appids, self.config.min_reviews,
-                                   self.config.max_reviews, self.config.own_studio, self.config.max_price):
+                                   self.config.max_reviews, self.config.own_studio, self.config.max_price,
+                                   self.config.lookalike_max_reviews):
             if max_searches is not None and self.summary["searches"] >= max_searches:
                 return
             prior = done.get(game.appid)
@@ -212,8 +213,9 @@ class Collector:
             self.summary["trailers"] += 1
 
     def _check_uploads(self) -> None:
-        """Each channel's newest upload of any kind (is it still active?), every UPLOAD_CHECK_DAYS, 1 unit
-        each. A 403 can be a private uploads playlist or the quota: three in a row count as the quota."""
+        """Each channel's newest 50 uploads of any kind (is it still active, and how often does it upload?),
+        every UPLOAD_CHECK_DAYS, 1 unit each: the newest upload and how many in 90 days. A 403 can be a
+        private uploads playlist or the quota: three in a row count as the quota."""
         now = int(self.clock())
         refused = 0
         while self._can(LIST_COST):
@@ -224,7 +226,7 @@ class Collector:
                 if not self._can(LIST_COST):
                     return
                 try:
-                    last = self.youtube.latest_upload(channel_id)
+                    last, recent = self.youtube.recent_uploads(channel_id, now)
                     refused = 0
                 except HttpError as error:
                     if error.status != 403:
@@ -232,9 +234,9 @@ class Collector:
                     refused += 1
                     if refused >= 3:
                         raise QuotaExceeded(str(error)) from None
-                    last = None
+                    last = recent = None
                 self._pay(LIST_COST)
-                self.store.save_upload(channel_id, last, now)
+                self.store.save_upload(channel_id, last, now, recent)
                 self.summary["uploads"] += 1
 
     def _refresh_channels(self, stale: bool) -> None:

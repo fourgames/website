@@ -6,9 +6,15 @@ Written after every hourly run, gzipped: /srv/fourgames/creators/export/creators
 (EXPORT_DIR in creators.env). `python -m creators.export` writes it now.
 
 Per creator (short keys, the file grows to thousands): id, t title, h handle, s subscribers, n videos
-on the channel, c country, l language, e [[email, source]] (source: description, revealed, links),
-k links {twitch, x, ...}, b hidden-email button (1/0/null), lu newest upload, lv newest video of a
-game we searched, g [[appid, videos, newest, views]], cat category, p genre profile [[tagid, weight]],
+on the channel, c country, l language (what most of their videos are in; the channel's setting when
+none says), e [[email, source]] (source: description, revealed, links), k links {twitch, x, ...},
+b hidden-email button (1/0/null), lu newest upload, u90 uploads in the 90 days before it was read
+(of the newest 50), lv newest video of a game we searched, g [[appid, videos, newest, views, typical
+views of those videos (null: none 3+ minutes and a week old)]], cat category, p genre profile
+[[tagid, weight]] (score.genre_profile: each game weighted by its videos and how they did against mv),
+pn how many games stand behind p, sm/smn typical views of their videos of small games (under
+SMALL_GAME reviews) and how many (2+ only), fa a soft fake-audience flag: likes + comments per view
+of their long videos when very low on a big channel (FLAG_RATE, FLAG_VIEWS; not a score),
 mv typical views: the median views of their game videos of 3 minutes or more (no Shorts, whose
 views count people scrolling past) that are at least a week old, and mvn how many videos that is
 (absent when none), ra when the hidden email was looked at (only once it was; with or without an email behind it), for
@@ -44,22 +50,16 @@ from .db import Store
 from .games import _json, connect, own_appids
 from .press import key as press_key, rows as press_rows
 from .reveal import limit_status
+from .score import LONG_VIDEO, META_TAGS, SETTLED_DAYS, TOP_TAGS, genre_profile, typical as median_of
 from . import twitch as twitch_mod
 
 DEFAULT_DIR = "/srv/fourgames/creators/export"
-# Tags that say how a game is sold or felt about, not what it is: left out of genre profiles.
-META_TAGS = {"Indie", "Singleplayer", "Casual", "Free to Play", "Early Access", "Great Soundtrack", "Addictive",
-             "Replay Value", "Classic", "Masterpiece", "Beautiful", "Funny", "Family Friendly", "Atmospheric",
-             "Colorful", "Cute", "2D", "3D", "Stylized", "Pixel Graphics", "Cartoony", "Multiplayer",
-             "Controller", "Steam Achievements", "Full controller support", "Short", "Difficult", "Relaxing",
-             "Moddable", "Fantasy", "Realistic", "First-Person", "Third Person", "Third-Person", "Story Rich",
-             "Mature", "Violent", "Gore", "Nudity", "Sexual Content", "Retro", "Old School", "Minimalist",
-             "Hand-drawn", "Cartoon", "Comedy", "Memes", "Psychological"}
-TOP_TAGS = 10
-# Typical views count only videos this long (Shorts' views count people scrolling past) and this old.
-LONG_VIDEO = 180
-SETTLED_DAYS = 7
-PROFILE_TAGS = 8
+# A game this small (reviews) counts as a small game: their videos of those say how our games may do.
+SMALL_GAME = 5000
+# The fake-audience flag: a channel this big (typical views) whose long videos get fewer likes and
+# comments than this per view. Only a flag on the page, not a score.
+FLAG_VIEWS = 5000
+FLAG_RATE = 0.004
 
 
 def category(games: list[tuple[int, int]], reviews: dict[int, int]) -> str:
@@ -101,7 +101,8 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
         covered[r["channel_id"]].append([r["appid"], r["n"], r["last"], r["views"]])
         appids.add(r["appid"])
     langs: dict[str, Counter] = defaultdict(Counter)
-    for cid, lang in db.execute("SELECT channel_id, language FROM youtube_videos WHERE language IS NOT NULL"):
+    for cid, lang in db.execute("SELECT channel_id, MAX(language) FROM youtube_videos WHERE language IS NOT NULL "
+                                "GROUP BY video_id"):
         langs[cid][lang.split("-")[0].lower()] += 1
     twitch_mod.ensure(db)
     tw_covered: dict[str, list[list]] = defaultdict(list)
@@ -110,10 +111,26 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
         tw_covered[r["user_id"]].append([r["appid"], r["n"], r["last"], r["views"]])
         appids.add(r["appid"])
     long_views: dict[str, list[int]] = defaultdict(list)
-    for cid, views in db.execute("""SELECT channel_id, MAX(views) FROM youtube_videos
-                                    WHERE views IS NOT NULL AND duration >= ? AND published <= ?
-                                    GROUP BY video_id""", (LONG_VIDEO, now - SETTLED_DAYS * 86400)):
+    engage: dict[str, list[int]] = defaultdict(lambda: [0, 0, 0])  # likes + comments, views, videos
+    for cid, views, likes, comments in db.execute(
+            """SELECT channel_id, MAX(views), MAX(likes), MAX(comments) FROM youtube_videos
+               WHERE views IS NOT NULL AND duration >= ? AND published <= ?
+               GROUP BY video_id""", (LONG_VIDEO, now - SETTLED_DAYS * 86400)):
         long_views[cid].append(views)
+        if likes is not None and views:
+            e = engage[cid]
+            e[0] += likes + (comments or 0)
+            e[1] += views
+            e[2] += 1
+    # Per channel and game: the views of its long, settled videos (how each game did for them).
+    game_views: dict[tuple[str, int], list[int]] = defaultdict(list)
+    for cid, appid, views in db.execute(
+            """SELECT channel_id, appid, views FROM youtube_videos
+               WHERE views IS NOT NULL AND duration >= ? AND published <= ?""", (LONG_VIDEO, now - SETTLED_DAYS * 86400)):
+        game_views[(cid, appid)].append(views)
+    for cid, g in covered.items():  # each game's typical views for them (null: no long video a week old)
+        for x in g:
+            x.append(median_of(game_views.get((cid, x[0]), [])))
     tw_live: dict[str, list[int]] = defaultdict(list)
     tw_vod: dict[str, list[int]] = defaultdict(list)
     for uid, sid, views, started in db.execute("SELECT user_id, stream_id, MAX(views), started FROM twitch_streams "
@@ -149,14 +166,26 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
     meta = {t for t, name in tag_names.items() if name in META_TAGS}
     reviews = {a: g["r"] for a, g in games.items()}
 
-    def genre_profile(g: list[list]) -> list[list]:
-        profile: Counter = Counter()
-        for appid, n, _, _ in g:
-            for i, tag in enumerate((games.get(appid) or {}).get("t", [])):
-                if tag not in meta:
-                    profile[tag] += min(n, 3) * (1 - i / (TOP_TAGS + 2))
-        total = sum(profile.values()) or 1
-        return [[t, round(w / total, 3)] for t, w in profile.most_common(PROFILE_TAGS)]
+    game_tags = {a: g["t"] for a, g in games.items()}
+
+    def profile(g: list[list], mv: int | None) -> dict:
+        """Genre profile (p) and how many games stand behind it (pn), each game weighted by how its
+        videos did against their typical views (score.genre_profile)."""
+        p, n = genre_profile([(x[0], x[1], x[4] if len(x) > 4 else None) for x in g], game_tags, meta, mv)
+        return {"p": p, "pn": n}
+
+    small_by: dict[str, list[int]] = defaultdict(list)
+    for (c, a), vs in game_views.items():
+        if a in reviews and reviews[a] < SMALL_GAME:
+            small_by[c] += vs
+
+    def flag(cid: str, mv: int | None) -> dict:
+        """fa: a soft fake-audience flag, very few likes and comments per view on a big channel."""
+        likes, views, n = engage.get(cid, (0, 0, 0))
+        if mv is None or mv < FLAG_VIEWS or n < 3 or not views:
+            return {}
+        rate = likes / views
+        return {"fa": round(rate, 4)} if rate < FLAG_RATE else {}
 
     creators = []
     yt_emails: dict[str, list[str]] = {}
@@ -176,15 +205,21 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
         if r["handle"]:
             by_handle[r["handle"].lower()] = cid
         by_handle[f"channel/{cid}".lower()] = cid
-        lang = r["language"].split("-")[0].lower() if r["language"] else (langs[cid].most_common(1)[0][0] if langs[cid] else None)
+        # Most of their videos' language; the channel's own setting (often left at the default) when none is set.
+        lang = langs[cid].most_common(1)[0][0] if langs[cid] else (r["language"].split("-")[0].lower() if r["language"] else None)
+        mv = median_of(long_views.get(cid, []))
+        small = small_by.get(cid, [])
         creators.append({
             "id": cid, "t": r["title"], "h": r["handle"], "s": r["subscribers"], "n": r["videos"],
             "c": r["country"], "l": lang, "e": emails, "k": links,
             "b": r["email_button"], "lu": r["last_upload"], "lv": max((x[2] or 0 for x in g), default=None) or None,
+            **({"u90": r["uploads_90d"]} if r["uploads_90d"] is not None else {}),
             "v30": v30.get(cid, 0), "g": g, "cat": category([(x[0], x[1]) for x in g], reviews),
-            "p": genre_profile(g),
+            **profile(g, mv),
             "own": any(x[0] in own for x in g), "first": r["first_seen"],
-            **({"mv": int(statistics.median(long_views[cid])), "mvn": len(long_views[cid])} if long_views[cid] else {}),
+            **({"mv": mv, "mvn": len(long_views[cid])} if mv is not None else {}),
+            **({"sm": median_of(small), "smn": len(small)} if len(small) >= 2 else {}),
+            **flag(cid, mv),
             **({"ra": r["revealed_at"]} if r["revealed_at"] else {}),
         })
     streamers = []
@@ -202,7 +237,8 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
             **({"yt": yt} if yt else {}), "pk": r["kind"] or "", "b": None,
             "lu": r["last_stream"] or None, "lv": r["last_stream"] or None,
             "v30": sum(1 for x in g if (x[2] or 0) >= now - 30 * 86400),
-            "g": g, "cat": category([(x[0], x[1]) for x in g], reviews), "p": genre_profile(g),
+            "g": g, "cat": category([(x[0], x[1]) for x in g], reviews),
+            **profile(g, None),
             "own": any(x[0] in own for x in g), "first": r["first_seen"],
             **typical(tw_live.get(uid), tw_vod.get(uid)),
         })

@@ -6,9 +6,11 @@ Each run:
      a reply to one of our emails marks it replied; a reply that says no ("no", "no thanks", "not
      interested", "unsubscribe", "stop", "remove me") marks it opted out and the address is never
      emailed again; a bounce marks it bounced, with the same effect.
-  2. In sending hours (SEND_HOURS, TIMEZONE) and under DAILY_MAX for the day across all campaigns
-     (and each campaign's own daily limit), sends the next few queued messages of approved
-     campaigns, oldest campaign first, a short random pause between them. A campaign with nothing
+  2. Under DAILY_MAX for the day (TIMEZONE's day) across all campaigns (and each campaign's own daily
+     limit), sends the next few queued messages of approved campaigns, oldest campaign first, a short
+     random pause between them. Each message goes in SEND_HOURS on a weekday in the recipient's own
+     time zone (the message's zone: their channel's or outlet's country, else their language, see
+     zones.py; TIMEZONE when neither says), so it's near the top of their inbox when they work. A campaign with nothing
      left to send becomes done. An email with {key} gets its Steam key from the key bot's pool right
      before it goes out (keys.py); if it can't be sent or it bounces, the key goes back. A campaign
      whose game runs out of keys pauses itself.
@@ -299,8 +301,13 @@ class Sender:
         return "replied"
 
     # Sending
-    def in_hours(self) -> bool:
-        local = datetime.fromtimestamp(self.clock(), ZoneInfo(self.s.timezone))
+    def in_hours(self, zone: str | None = None) -> bool:
+        """A weekday in SEND_HOURS in that zone (the recipient's), or in TIMEZONE."""
+        try:
+            tz = ZoneInfo(zone or self.s.timezone)
+        except (KeyError, ValueError):
+            tz = ZoneInfo(self.s.timezone)
+        local = datetime.fromtimestamp(self.clock(), tz)
         return self.s.hours[0] <= local.hour < self.s.hours[1] and local.weekday() < 5
 
     def day_start(self) -> int:
@@ -309,12 +316,14 @@ class Sender:
 
     def send_due(self) -> dict[str, int]:
         counts = {"sent": 0, "failed": 0}
-        if not self.in_hours():
-            return counts
         db = self.store.db
         start = self.day_start()
         today = db.execute("SELECT COUNT(*) FROM outreach_messages WHERE sent_at >= ?", (start,)).fetchone()[0]
-        runs_left = max(1, math.ceil((self.s.hours[1] * 3600 - (self.clock() - start)) / 3600 * RUNS_PER_HOUR))
+        # Spread the day's rest over the runs left in TIMEZONE's sending hours, or, after them (recipients
+        # further west), over the runs left in the day.
+        into = self.clock() - start
+        end = self.s.hours[1] * 3600 if into < self.s.hours[1] * 3600 else 86400
+        runs_left = max(1, math.ceil((end - into) / 3600 * RUNS_PER_HOUR))
         budget = min(self.s.daily_max - today, max(1, math.ceil((self.s.daily_max - today) / runs_left)))
         smtp = None
         try:
@@ -324,10 +333,15 @@ class Sender:
                     break
                 mine = db.execute("SELECT COUNT(*) FROM outreach_messages WHERE campaign_id = ? AND sent_at >= ?",
                                   (c["id"], start)).fetchone()[0]
-                queue = db.execute("SELECT * FROM outreach_messages WHERE campaign_id = ? AND status = 'queued' ORDER BY id LIMIT ?",
-                                   (c["id"], max(0, min(budget, c["daily_limit"] - mine)))).fetchall()
+                room = max(0, min(budget, c["daily_limit"] - mine))
+                queue = db.execute("SELECT * FROM outreach_messages WHERE campaign_id = ? AND status = 'queued' ORDER BY id",
+                                   (c["id"],)).fetchall() if room else []
                 for msg in queue:
                     msg = dict(msg)
+                    if room <= 0:
+                        break
+                    if not self.in_hours(msg.get("zone")):
+                        continue  # not their working hours: a later run
                     # Checked again at sending time: an opt-out or another campaign may have come since the draft.
                     why = outreach.blocked(self.store, msg["email"], self.clock(), exclude=msg["id"], sent_only=True)
                     if why:
@@ -376,6 +390,7 @@ class Sender:
                         db.execute("DELETE FROM outreach_state WHERE key = 'last_error'")
                     counts["sent"] += 1
                     budget -= 1
+                    room -= 1
                     if budget <= 0:
                         break
                 left = db.execute("SELECT COUNT(*) FROM outreach_messages WHERE campaign_id = ? AND status = 'queued'",

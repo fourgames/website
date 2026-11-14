@@ -176,6 +176,9 @@ def test_run_collects_channels_and_emails(tmp_path, steam_db):
     uploads = dict(store.db.execute("SELECT channel_id, last_upload FROM youtube_channels WHERE upload_checked_at = ?",
                                     (int(NOW),)).fetchall())
     assert uploads == {"UCa": datetime(2026, 11, 3, 8, tzinfo=timezone.utc).timestamp(), "UCb": None}
+    # The newest 50 uploads in the same 1-unit call: how many in 90 days, too.
+    assert store.db.execute("SELECT uploads_90d FROM youtube_channels WHERE channel_id = 'UCa'").fetchone()[0] == 1
+    assert all(q["maxResults"] == "50" for kind, q in fake.calls if kind == "playlistItems")
     search = [q for kind, q in fake.calls if kind == "search"][0]
     assert search["q"] == '"Our Ice Game"' and search["publishedAfter"] == "2026-05-10T12:00:00Z"
     # Everything is due later now: a second run searches nothing.
@@ -380,13 +383,18 @@ def test_emailed_creators_videos_are_found(tmp_path, steam_db):
     assert [w["channel_id"] for w in coverage.due(store, NOW)] == ["UCd"]
     summary = collector.run(spend_all=True)
     assert summary["emailed"] == 1 and summary["made_video"] == 1
-    playlist = [q for kind, q in fake.calls if kind == "playlistItems" and q.get("maxResults") == "50"]
-    assert playlist == [playlist[0]] and playlist[0]["playlistId"] == "UUd"
+    playlist = [q for kind, q in fake.calls if kind == "playlistItems"]
+    assert playlist[0]["playlistId"] == "UUd"  # the emailed channel first, before the newest-uploads reads
     # The fake publishes every video on 2026-11-01, so move v5 after the email like the playlist said.
     store.db.execute("UPDATE youtube_videos SET published = ? WHERE video_id = 'v5'", (sent + 86400,))
     found = coverage.videos_by_message(store, 1)
     assert list(found) == [1] and [v["id"] for v in found[1]] == ["v5"]
-    assert coverage.totals(store, 1) == {"creators": 1, "videos": 1, "views": 1234}
+    assert coverage.totals(store, 1) == {"creators": 1, "new": 1, "repeat": 0, "videos": 1, "views": 1234}
+    # A video of the game from before the email makes them a repeat, not new coverage.
+    store.db.execute("INSERT INTO youtube_videos (video_id, appid, channel_id, published, views, found_at) "
+                     "VALUES ('old', 1, 'UCd', ?, 10, 0)", (sent - 86400,))
+    assert coverage.totals(store, 1)["repeat"] == 1 and coverage.videos_by_message(store, 1)[1][0]["repeat"]
+    store.db.execute("DELETE FROM youtube_videos WHERE video_id = 'old'")
     assert outreach.summary(store, 1)["videos"]["creators"] == 1
     assert [m["videos"] for m in outreach.messages(store, 1) if m["id"] == 1][0][0]["title"] == "氷に穴を掘る #1"
     assert coverage.due(store, NOW) == []  # checked; again in 3 days

@@ -55,7 +55,7 @@ def main(argv: list[str] | None = None) -> int:
                 logging.getLogger("creators").exception("the Twitch part failed")
         if args.links:
             try:
-                Follower(store).run(own_appids(config.steam_db, config.own_appids, config.own_studio), args.links)
+                Follower(store, steam_db=config.steam_db).run(own_appids(config.steam_db, config.own_appids, config.own_studio), args.links)
             except Exception:  # never let the link follower break the YouTube runs
                 logging.getLogger("creators").exception("following links failed")
         try:

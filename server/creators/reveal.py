@@ -15,9 +15,10 @@ and saves what's revealed. This module is its side on the server (from the serve
         {"channel_id": "UC...", "email": null}               the button was there but showed nothing
         {"channel_id": "UC...", "links": ["throne.com/x"]}   the About panel's links (with or without the above)
 
-Best first, until per-game matching exists: channels with a video of one of our games, then 1k-300k
-subscribers (big enough to sell, small enough to answer), then a video in the last 30 days, then
-videos of more games, then more subscribers. Only channels without an email in their description.
+Best first: channels with a video of one of our games, then by expected value (score.py): typical
+views per video (the median of their game videos of 3+ minutes, a week old or more; subscribers
+stand in until that's known) x how active they are x how well their genres fit any of our games.
+Only channels without an email in their description.
 """
 
 from __future__ import annotations
@@ -30,6 +31,7 @@ import time
 from .config import Config, ConfigError
 from .db import Store
 from .games import own_appids
+from .score import channel_values
 
 # The button is checked again after this long (creators add and remove it).
 RECHECK_DAYS = 180
@@ -39,38 +41,45 @@ LIMIT_HOURS = 24
 EMAIL = re.compile(r"^[a-z0-9._%+'-]+@[a-z0-9-]+(\.[a-z0-9-]+)*\.[a-z]{2,}$")
 
 
-def _order(own: set[int], now: float) -> tuple[str, str, list, list]:
-    marks = ",".join("?" * len(own)) or "NULL"
-    sql = f"""
+# The channels both queues pick from: no email in their description and none revealed yet.
+CANDIDATES = """
         FROM youtube_channels c
-        LEFT JOIN (SELECT channel_id, COUNT(DISTINCT appid) AS games, MAX(published) AS last_video,
-                          MAX(appid IN ({marks})) AS own
-                   FROM youtube_videos GROUP BY channel_id) v ON v.channel_id = c.channel_id
         WHERE c.gone = 0 AND (c.emails IS NULL OR c.emails = '[]') AND c.revealed_email IS NULL"""
-    order = """
-        ORDER BY COALESCE(v.own, 0) DESC,
-                 COALESCE(c.subscribers BETWEEN 1000 AND 300000, 0) DESC,
-                 COALESCE(v.last_video >= ?, 0) DESC,
-                 COALESCE(v.games, 0) DESC,
-                 COALESCE(c.subscribers, 0) DESC"""
-    return sql, order, [*own], [now - 30 * 86400]
 
 
-def to_check(store: Store, own: set[int], now: float, limit: int) -> list[str]:
-    sql, order, a, b = _order(own, now)
-    return [r[0] for r in store.db.execute(
-        f"SELECT c.channel_id {sql} AND (c.email_button IS NULL OR c.button_checked_at < ?) {order} LIMIT ?",
-        (*a, now - RECHECK_DAYS * 86400, *b, limit))]
+def rank(store: Store, ids: list[str], own: set[int], now: float, steam_db: str | None = None) -> list[str]:
+    """Best first: a video of one of our games, then expected value (score.py: typical views x
+    activity x best genre fit to any of our games)."""
+    ids = list(dict.fromkeys(ids))
+    if not ids:
+        return []
+    ours: set[str] = set()
+    if own:
+        ours = {r[0] for r in store.db.execute(
+            f"SELECT DISTINCT channel_id FROM youtube_videos WHERE appid IN ({','.join('?' * len(own))})", [*own])}
+    values = channel_values(store.db, ids, own, now, steam_db)
+    return sorted(ids, key=lambda c: (c not in ours, -values.get(c, 0.0)))
 
 
-def to_reveal(store: Store, own: set[int], now: float, limit: int) -> list[dict]:
-    sql, order, a, b = _order(own, now)
-    rows = store.db.execute(
-        f"""SELECT c.channel_id, c.handle, c.title, c.subscribers, COALESCE(v.own, 0) AS own
-            {sql} AND c.email_button = 1 AND c.revealed_at IS NULL
-                AND c.channel_id NOT IN (SELECT channel_id FROM site_emails) {order} LIMIT ?""", (*a, *b, limit))
-    return [{**dict(r), "own": bool(r["own"]),
-             "url": f"https://www.youtube.com/{r['handle'] or 'channel/' + r['channel_id']}/about"} for r in rows]
+def to_check(store: Store, own: set[int], now: float, limit: int, steam_db: str | None = None) -> list[str]:
+    ids = [r[0] for r in store.db.execute(
+        f"SELECT c.channel_id {CANDIDATES} AND (c.email_button IS NULL OR c.button_checked_at < ?)",
+        (now - RECHECK_DAYS * 86400,))]
+    return rank(store, ids, own, now, steam_db)[:limit]
+
+
+def to_reveal(store: Store, own: set[int], now: float, limit: int, steam_db: str | None = None) -> list[dict]:
+    rows = {r["channel_id"]: r for r in store.db.execute(
+        f"""SELECT c.channel_id, c.handle, c.title, c.subscribers {CANDIDATES}
+                AND c.email_button = 1 AND c.revealed_at IS NULL
+                AND c.channel_id NOT IN (SELECT channel_id FROM site_emails)""")}
+    order = rank(store, list(rows), own, now, steam_db)[:limit]
+    ours = set()
+    if own and order:
+        ours = {r[0] for r in store.db.execute(
+            f"SELECT DISTINCT channel_id FROM youtube_videos WHERE appid IN ({','.join('?' * len(own))})", [*own])}
+    return [{**dict(rows[c]), "own": c in ours,
+             "url": f"https://www.youtube.com/{rows[c]['handle'] or 'channel/' + c}/about"} for c in order]
 
 
 def limit_hit(store: Store, at: float) -> None:
@@ -160,13 +169,13 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         own = own_appids(config.steam_db, config.own_appids, config.own_studio)
         if argv[0] == "check":
-            print("\n".join(to_check(store, own, now, limit)))
+            print("\n".join(to_check(store, own, now, limit, config.steam_db)))
         else:
             status = limit_status(store)
             if status and status["ready"] > now:
                 print("YouTube's limit is on until " + time.strftime("%Y-%m-%d %H:%M", time.localtime(status["ready"])),
                       file=sys.stderr)
-            for row in to_reveal(store, own, now, limit):
+            for row in to_reveal(store, own, now, limit, config.steam_db):
                 print(json.dumps(row, ensure_ascii=False))
     finally:
         store.close()

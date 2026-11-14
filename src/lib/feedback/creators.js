@@ -5,11 +5,15 @@
 // The data is one file, server/creators/export.py's creators.json.gz, read through the game-data
 // server's admin API (signed in as the owner only; it holds creators' emails). Everything else is
 // worked out here in the browser:
-//   - Active: from the channel's newest upload of any kind (lu; the collector reads it every 14 days),
-//     or, until that's read, its newest video of a game we searched (lv).
+//   - Active: from the channel's newest 50 uploads (the collector reads them every 14 days): active = an
+//     upload in 30 days and 3+ in 90 (u90), quiet = 30-90 days or fewer uploads, inactive = 90+ days.
+//     Until that's read, its newest video of a game we searched (lv). Twitch: we only see broadcasts of
+//     games we searched, so after 30 days it's "not known", not inactive.
 //   - Type (the server's cat): indie variety = 4+ games, mostly small ones (median under 5,000 reviews);
 //     variety = 4+ games; one game = one game in 3+ videos; a few games = the rest.
-//   - Genres (p): the Steam tags of the games they covered, weighted by videos, generic tags left out.
+//   - Genres (p): the Steam tags of the games they covered, weighted by videos and by how each game's
+//     videos did against their typical views; generic tags left out. pn = how many games stand behind
+//     it: an overlap counts x pn/(pn+2) (1 game 0.33, 4 games 0.67), so one video isn't a sure fit.
 //   - Reach (YouTube): typical views per video (mv, the median of their game videos of 3+ minutes, a
 //     week old or more), not subscribers: an 85k channel whose videos get 500 views sells nothing.
 //     5k-300k typical views is the sweet spot for a small studio (big enough to sell, small enough to
@@ -17,9 +21,17 @@
 //   - Reach (Twitch): typical viewers (mv, mvk "live": the median viewer count seen while they were live
 //     in a searched game; 50-2,000 is the sweet spot), or past broadcasts' views when never seen live
 //     (mvk "vod", a weaker sign, at most 0.8). Until then followers stand in, at most 0.6.
-//   - Fit for a game: how much their genres overlap the game's tags (its first tags count most), times
-//     how active they are and their reach, a little more for indie-variety channels. Anyone who
-//     already made a video of that game goes first.
+//   - Views tier (badge and filter): Bronze 1k+, Silver 5k+, Gold 25k+, Diamond 100k+ typical views;
+//     Twitch by typical live viewers: Bronze 10+, Silver 50+, Gold 200+, Diamond 1,000+.
+//   - Fit for a game: how much their genres overlap the game's tags (its first tags count most, shrunk
+//     by pn), times how active they are, their reach, and how their videos of small games do against
+//     their typical views (sm, 0.7-1.3). Anyone who already covered the game gets a boost the size of
+//     what that coverage did: their reach x how its videos did against their typical views, so a
+//     60-view demo video doesn't beat a 50k-view channel that fits.
+//   - Best overall: our games' creators first, then reach x activity x pn/(pn+2) (more games behind
+//     their genres, more sure). Having an email is a filter, not a score.
+//   - fa: a soft flag for very few likes and comments per view on a big channel (maybe a bought or
+//     auto-played audience). Shown only; not in any score.
 //
 // Contract (like market-merged.js): creatorsTop(ctx) fills the header, creatorsView(ctx) returns one
 // root that redraws itself. ctx = the dashboard's helpers (h, chips, adminGet, copy, fmtNum, plural...).
@@ -28,6 +40,10 @@ const DAY = 86400;
 const PAGE = 100;
 const SIZES = [["all", "Any size"], ["s0", "Under 1k"], ["s1", "1k–10k"], ["s2", "10k–100k"], ["s3", "100k–1M"], ["s4", "1M+"]];
 const SIZE_RANGE = { s0: [0, 1e3], s1: [1e3, 1e4], s2: [1e4, 1e5], s3: [1e5, 1e6], s4: [1e6, Infinity] };
+// Views tiers: typical views per video (YouTube) or typical live viewers (Twitch), lowest first.
+export const TIERS = ["bronze", "silver", "gold", "diamond"];
+const TIER_NAME = { bronze: "Bronze", silver: "Silver", gold: "Gold", diamond: "Diamond" };
+export const TIER_MIN = { yt: { bronze: 1e3, silver: 5e3, gold: 25e3, diamond: 1e5 }, tw: { bronze: 10, silver: 50, gold: 200, diamond: 1000 } };
 const TYPES = { "indie-variety": "Indie variety", variety: "Variety", "one-game": "One game", "few-games": "A few games" };
 const TYPE_HELP = {
   "indie-variety": "Plays lots of different games, mostly small ones",
@@ -44,7 +60,7 @@ import { eventsView } from "./events.js";
 import { newsBadge } from "./news.js";
 
 let C = null;
-const st = { view: "creators", pf: { q: "", kind: "all", lang: "all", country: "all", reach: "all", email: "any" }, pshown: PAGE, data: null, error: null, loading: false, root: null, f: { q: "", email: "any", active: "all", size: "all", type: "all", lang: "all", genre: "all", game: "all", sort: "best" }, shown: PAGE, open: new Set() };
+const st = { view: "creators", pf: { q: "", kind: "all", lang: "all", country: "all", reach: "all", email: "any" }, pshown: PAGE, data: null, error: null, loading: false, root: null, f: { q: "", email: "any", active: "all", size: "all", views: "all", type: "all", lang: "all", genre: "all", game: "all", sort: "best" }, shown: PAGE, open: new Set() };
 
 const now = () => Math.floor(Date.now() / 1000);
 const num = (n) => (n == null ? "–" : C.fmtNum(n));
@@ -57,7 +73,11 @@ export function activity(c, today = now()) {
   const t = lastActive(c);
   if (!t) return "unknown";
   const d = (today - t) / DAY;
-  return d <= 30 ? "active" : d <= 90 ? "quiet" : "inactive";
+  // Twitch: we only see their broadcasts of games we searched, so an old one doesn't mean they stopped.
+  if (c.pl === "tw") return d <= 30 ? "active" : "unknown";
+  if (d > 90) return "inactive";
+  // One upload lately (a lone Short) isn't a habit: active needs 3+ uploads in 90 days, once that's read.
+  return d > 30 || (c.u90 != null && c.u90 < 3) ? "quiet" : "active";
 }
 export function sizeFactor(s) {
   if (s == null) return 0.5;
@@ -86,6 +106,42 @@ export function reach(c) {
   return c.mv != null ? viewsFactor(c.mv) : 0.6 * sizeFactor(c.s);
 }
 const ACTIVE_FACTOR = { active: 1, quiet: 0.6, inactive: 0.15, unknown: 0.5 };
+// The views tier (TIERS) or null: below Bronze, not known, or Twitch never seen live.
+export function tier(c) {
+  if (c.mv == null || (c.pl === "tw" && c.mvk !== "live")) return null;
+  const m = TIER_MIN[c.pl === "tw" ? "tw" : "yt"];
+  return [...TIERS].reverse().find((t) => c.mv >= m[t]) || null;
+}
+// The small colored badge next to a channel's name, with what it means in its title.
+function tierBadge(c) {
+  const t = tier(c);
+  if (!t) return null;
+  const tw = c.pl === "tw";
+  const min = TIER_MIN[tw ? "tw" : "yt"][t];
+  return C.h(`span.cr-tier.is-${t}`, { title: `${TIER_NAME[t]}: typical ${num(c.mv)} ${tw ? "live viewers" : "views per video"} (${TIER_NAME[t]} is ${num(min)}+)` }, TIER_NAME[t]);
+}
+// How sure a genre overlap is with n games behind it: 1 -> 0.33, 2 -> 0.5, 4 -> 0.67, 10 -> 0.83.
+export function confidence(n) { return n > 0 ? n / (n + 2) : 0; }
+// How their videos of small games (under 5,000 reviews, like ours) do against their typical views,
+// damped to 0.7-1.3; 1 when not known.
+export function smallGameFactor(c) {
+  if (c.sm == null || !c.mv) return 1;
+  return Math.min(1.3, Math.max(0.7, Math.sqrt(c.sm / c.mv)));
+}
+// For a creator who already covered the game: their reach x activity x how that coverage did against
+// their typical views (at most 1.5x). Without typical views, how many views it got (viewsFactor).
+export function playedBoost(c, appid, today = now()) {
+  const g = c.g.find((x) => x[0] === appid);
+  if (!g) return 0;
+  const views = g[4] ?? (g[1] ? g[3] / g[1] : 0);  // typical views of their videos of it, else the average
+  const perf = c.mv ? Math.min(1.5, views / c.mv) : c.pl === "tw" ? viewersFactor(views) : viewsFactor(views);
+  return reach(c) * ACTIVE_FACTOR[activity(c, today)] * perf;
+}
+// Best overall: reach x activity x how many games stand behind their genres. Our games' creators
+// first (callers add that); an email is a filter, not a score.
+export function overallScore(c, today = now()) {
+  return reach(c) * ACTIVE_FACTOR[activity(c, today)] * confidence(c.pn ?? c.g.length);
+}
 
 // A game's tags as weights: its first (non-generic) tags count most.
 export function gameWeights(game, meta) {
@@ -93,14 +149,16 @@ export function gameWeights(game, meta) {
   (game?.t || []).filter((t) => !meta.has(t)).forEach((t, i) => w.set(t, Math.max(0.2, 1 - i / 8)));
   return w;
 }
-// How well a creator fits a game: { score, base, genre, played }. Higher is better; anyone who already
-// made a video of the game is above everyone else (base stays under 2).
+// How well a creator fits a game: { score, base, bonus, genre, overlap, played }. Higher is better.
+// genre = overlap shrunk by the games behind it; bonus = playedBoost when they already covered it.
 export function fit(c, appid, weights, today = now()) {
   const played = c.g.some((g) => g[0] === appid);
-  let genre = 0;
-  for (const [t, pw] of c.p) genre += pw * (weights.get(t) || 0);
-  const base = Math.pow(Math.min(1, genre), 0.8) * ACTIVE_FACTOR[activity(c, today)] * reach(c) * (c.cat === "indie-variety" ? 1.15 : 1);
-  return { score: base + (played ? 2 : 0), base, genre, played };
+  let overlap = 0;
+  for (const [t, pw] of c.p) overlap += pw * (weights.get(t) || 0);
+  const genre = Math.min(1, overlap) * confidence(c.pn ?? c.g.length);
+  const base = Math.pow(genre, 0.8) * ACTIVE_FACTOR[activity(c, today)] * reach(c) * smallGameFactor(c);
+  const bonus = played ? playedBoost(c, appid, today) : 0;
+  return { score: base + bonus, base, bonus, genre, overlap, played };
 }
 
 export function filterCreators(list, f, data, today = now()) {
@@ -113,6 +171,7 @@ export function filterCreators(list, f, data, today = now()) {
     if (f.email === "hidden" && (c.e.length || c.b !== 1)) return false;
     if (f.active !== "all" && activity(c, today) !== f.active) return false;
     if (f.size !== "all") { const [lo, hi] = SIZE_RANGE[f.size]; if (c.s == null || c.s < lo || c.s >= hi) return false; }
+    if (f.views && f.views !== "all" && TIERS.indexOf(tier(c)) < TIERS.indexOf(f.views)) return false;
     if (f.type !== "all" && c.cat !== f.type) return false;
     if (f.lang !== "all" && (c.l || "?") !== f.lang) return false;
     if (genre != null && !c.p.slice(0, 4).some(([t]) => t === genre)) return false;
@@ -231,6 +290,7 @@ function draw() {
       select("Genre", st.f.genre, [["all", "Any"], ...genres.map(([t, n]) => [t, `${d.tags[t]} (${n})`])], "genre"),
       select("Sort", st.f.sort, [...(gameId ? [["fit", "Best fit for the game"]] : []), ["best", "Best overall"], ["views", tw ? "Most viewers" : "Most views per video"], ["subs", tw ? "Most followers" : "Most subscribers"], ["active", "Newest upload"], ["games", "Most games"], ["new", "Newest found"]], "sort")),
     h("div.cr-row", C.chips(SIZES, st.f.size, (v) => setF({ size: v }), "Size"),
+      C.chips([["all", tw ? "Any viewers" : "Any views"], ["bronze", "Bronze+"], ["silver", "Silver+"], ["gold", "Gold+"], ["diamond", "Diamond"]], st.f.views, (v) => setF({ views: v }), tw ? "Typical live viewers" : "Typical views per video"),
       C.chips([["all", "Any type"], ...Object.entries(TYPES)], st.f.type, (v) => setF({ type: v }), "Type")));
 
   const list = h("div.cr-list");
@@ -238,7 +298,7 @@ function draw() {
     let rows = filterCreators(all, st.f, d, today);
     const scored = new Map();
     if (gameId) for (const c of rows) scored.set(c.id, fit(c, gameId, weights, today));
-    const overall = (c) => ACTIVE_FACTOR[activity(c, today)] * reach(c) * (c.e.length ? 1.3 : 1) * (1 + Math.min(c.g.length, 10) / 10) * (c.own ? 2 : 1);
+    const overall = (c) => (c.own ? 10 : 0) + overallScore(c, today);  // our games' creators first
     const key = {
       fit: (c) => scored.get(c.id)?.score || 0,
       best: overall,
@@ -249,7 +309,7 @@ function draw() {
       new: (c) => c.first || 0,
     }[st.f.sort] || overall;
     rows = rows.map((c) => [key(c), c]).sort((a, b) => b[0] - a[0]).map(([, c]) => c);
-    const top = gameId ? Math.max(...rows.map((c) => scored.get(c.id).base), 0.0001) : 1;
+    const top = gameId ? Math.max(...rows.map((c) => scored.get(c.id).score), 0.0001) : 1;
     const shown = rows.slice(0, st.shown);
     const emails = rows.filter((c) => c.e.length);
     const head = h("div.cr-listhead",
@@ -276,18 +336,21 @@ function draw() {
       : c.b === 1 ? h("span.cr-muted", { title: "Has a business email behind YouTube's View email address button (needs a captcha)" }, "hidden")
       : h("span.cr-muted", "–");
     const main = h("tr.cr-main", { class: open ? "is-open" : null, onclick: toggle },
-      ...(f ? [h("td.cr-num", h("span.cr-fit", { title: f.played ? "Already made a video of this game" : `Genre overlap ${Math.round(f.genre * 100)}%` }, f.played ? "played" : Math.round(f.base / top * 100)))] : []),
+      ...(f ? [h("td.cr-num", h("span.cr-fit", { title: `Genre overlap ${Math.round(f.overlap * 100)}%, ${Math.round(f.genre * 100)}% after how sure it is (${C.plural(c.pn ?? c.g.length, "game")} behind it)${f.played ? `. Already ${tw ? "streamed" : "made a video of"} this game: +${Math.round(f.bonus / top * 100)} for how that did` : ""}` }, Math.round(f.score / top * 100)),
+        f.played ? h("div.cr-muted", tw ? "streamed" : "played") : null)] : []),
       h("td.cr-chan", h("a", { href: url, target: "_blank", rel: "noopener", onclick: (e) => e.stopPropagation() }, c.t || c.id),
+        tierBadge(c),
         c.own ? h("span.cr-badge", { title: tw ? "Streamed one of our games" : "Made a video of one of our games" }, "ours") : null,
         c.pk ? h("span.cr-badge", { title: "Twitch partner or affiliate" }, c.pk) : null,
         c.h ? h("div.cr-muted", c.h) : null),
       h("td.cr-num", subs(c.s)),
       tw ? h("td.cr-num", c.mv != null ? { title: c.mvk === "live" ? `Median viewers in ${C.plural(c.mvn, "live stream")} we saw` : `Never seen live: median views of ${C.plural(c.mvn, "past broadcast")}`, class: c.mv < 20 ? "cr-low" : null } : { title: "Not known yet: never seen live, no past broadcast a week old" },
           c.mv != null ? subs(c.mv) : h("span.cr-muted", "–"), c.mv != null && c.mvk !== "live" ? h("span.cr-muted", " vod") : null)
-        : h("td.cr-num", c.mv != null ? { title: `Median of ${C.plural(c.mvn, "long video")}${c.s ? `, ${Math.round(c.mv / c.s * 100)}% of subscribers` : ""}`, class: c.mv < 1000 ? "cr-low" : null } : { title: "Not known yet: no game video of 3+ minutes a week old" }, c.mv != null ? subs(c.mv) : h("span.cr-muted", "–")),
+        : h("td.cr-num", c.mv != null ? { title: `Median of ${C.plural(c.mvn, "long video")}${c.s ? `, ${Math.round(c.mv / c.s * 100)}% of subscribers` : ""}`, class: c.mv < 1000 ? "cr-low" : null } : { title: "Not known yet: no game video of 3+ minutes a week old" }, c.mv != null ? subs(c.mv) : h("span.cr-muted", "–"),
+          c.fa != null ? h("span.cr-flag", { title: `Few likes and comments for the views: ${(c.fa * 1000).toFixed(1)} per 1,000 views (most channels get 20+). The audience may be bought or auto-played. Only a flag: it isn't in any score.` }, " ⚠") : null),
 
       h("td", { title: LANGS[c.l] || "" }, (c.l || "–").toUpperCase(), c.c ? h("span.cr-muted", ` ${c.c}`) : null),
-      h("td", h("span.cr-act", { class: `is-${act}`, title: tw ? "Newest broadcast of a game we searched" : c.lu ? "Newest upload of any kind" : c.lv ? "Newest video of a game we searched (the newest upload isn't read yet)" : "" }, ago(lastActive(c)))),
+      h("td", h("span.cr-act", { class: `is-${act}`, title: tw ? "Newest broadcast of a game we searched. We only see those, so after 30 days it says not known, not inactive: they may stream other games." : c.lu ? `Newest upload of any kind${c.u90 != null ? ` · ${c.u90 >= 50 ? "50+" : c.u90} uploads in 90 days` : ""}` : c.lv ? "Newest video of a game we searched (the newest upload isn't read yet)" : "" }, ago(lastActive(c)))),
       h("td.cr-gamescol", { title: games.join(", ") }, h("b", c.g.length), " ", h("span.cr-muted", games.slice(0, 2).join(", "))),
       h("td", h("span.cr-type", { title: TYPE_HELP[c.cat] }, TYPES[c.cat] || c.cat)),
       h("td.cr-genres", c.p.slice(0, 3).map(([t]) => d.tags[t]).filter(Boolean).join(", ")),
@@ -307,12 +370,13 @@ function draw() {
             `Newest broadcast: ${ago(c.lu)} · ${C.plural(c.v30 || 0, "broadcast")} in 30 days`)
           : h("p", `${subs(c.s)} subscribers · ${num(c.n)} videos`, h("br"),
           c.mv != null ? `Typical views: ${num(c.mv)} per video (median of ${C.plural(c.mvn, "game video")} of 3+ minutes)` : "Typical views: not known yet", h("br"),
-          `Newest upload: ${c.lu ? ago(c.lu) : "not read yet"} · ${C.plural(c.v30 || 0, "video")} of searched games in 30 days`),
+          `Newest upload: ${c.lu ? ago(c.lu) : "not read yet"}${c.u90 != null ? ` · ${c.u90 >= 50 ? "50+" : c.u90} uploads in 90 days` : ""} · ${C.plural(c.v30 || 0, "video")} of searched games in 30 days`,
+          c.sm != null ? h("br") : null, c.sm != null ? `Small games: ${num(c.sm)} typical views (${C.plural(c.smn, "video")})` : null),
           links.length ? h("p", "Also on ", ...links.flatMap((a, i) => [i ? " · " : null, a])) : null),
-        h("div", h("div.cr-dh", `Games (${c.g.length})`), h("ul.cr-games", ...c.g.slice(0, 12).map(([id, n, last, views]) =>
+        h("div", h("div.cr-dh", `Games (${c.g.length})`), h("ul.cr-games", ...c.g.slice(0, 12).map(([id, n, last, views, typ]) =>
           h("li", h("a", { href: `https://store.steampowered.com/app/${id}/`, target: "_blank", rel: "noopener" }, d.games[id]?.n || `App ${id}`), d.games[id]?.own ? h("span.cr-badge", "ours") : null,
-            h("span.cr-muted", ` ${C.plural(n, tw ? "broadcast" : "video")}, ${num(views)} views, ${ago(last)}`))), c.g.length > 12 ? h("li.cr-muted", `and ${c.g.length - 12} more`) : null)),
-        h("div", h("div.cr-dh", "Genres"), h("p", c.p.map(([t, w]) => `${d.tags[t] || t} ${Math.round(w * 100)}%`).join(" · ") || "–")))));
+            h("span.cr-muted", ` ${C.plural(n, tw ? "broadcast" : "video")}, ${num(views)} views${typ != null ? ` (typical ${num(typ)})` : ""}, ${ago(last)}`))), c.g.length > 12 ? h("li.cr-muted", `and ${c.g.length - 12} more`) : null)),
+        h("div", h("div.cr-dh", `Genres (from ${C.plural(c.pn ?? c.g.length, "game")})`), h("p", c.p.map(([t, w]) => `${d.tags[t] || t} ${Math.round(w * 100)}%`).join(" · ") || "–")))));
     return [main, detail];
   }
 
@@ -330,9 +394,10 @@ function draw() {
   drawList();
   root.replaceChildren(...[switcher, tw ? null : huntStrip(d, C), cards, collecting, gamePick, filters, list,
     h("details.about", h("summary", "How this works"),
-      h("p", "The server searches YouTube every hour for videos of Steam games (ours every week, then games with 30 to 50,000 reviews, those like ours first) and keeps the channels that made them. Emails come from the channel description, from pages they link to (Linktree, their website; the server follows those), or from YouTube's hidden View email button, which needs a captcha (the creator-emails skill)."),
-      h("p", "Last upload is the channel's newest upload of any kind, read every 14 days. Type comes from the games they covered: indie variety plays 4+ different, mostly small games; one game is mostly one title. Genres are the Steam tags of those games."),
-      h("p", "Best for a game ranks creators by how much their genres overlap the game's tags (its first tags count most), how active they are, and reach: typical views per video (the median of their game videos of 3+ minutes, a week old or more; Shorts left out), not subscribers. 5k–300k views is the sweet spot for a small studio. Anyone who already made a video of the game is first. Contact status (emailed, replied, made a video) comes with sending: for 60 days after an email, the server looks at the creator's new uploads every 3 days for videos of the game."))].filter(Boolean));
+      h("p", "The server searches YouTube every hour for videos of Steam games (ours every week, then games with 30 to 50,000 reviews, those like ours first; games like ours also when bigger, up to 1M reviews) and keeps the channels that made them. Emails come from the channel description, from pages they link to (Linktree, their website; the server follows those), or from YouTube's hidden View email button, which needs a captcha (the creator-emails skill)."),
+      h("p", "Last upload: the channel's newest upload, read every 14 days with its newest 50. Active means an upload in 30 days and 3+ in 90 days (one lone Short isn't enough). Twitch: we only see streams of games we searched, so after 30 days it says not known, not inactive. Type comes from the games they covered: indie variety plays 4+ different, mostly small games; one game is mostly one title. Genres are the Steam tags of those games; a game whose videos did well for them counts more."),
+      h("p", "Views badge: typical views per video. Bronze 1k+, Silver 5k+, Gold 25k+, Diamond 100k+. Twitch: typical live viewers. Bronze 10+, Silver 50+, Gold 200+, Diamond 1,000+. ⚠ next to views: very few likes and comments for the views (maybe a bought audience). Only a flag."),
+      h("p", "Best for a game: how much their genres overlap the game's tags (its first tags count most; less sure with few games behind it), how active they are, reach (typical views per video: the median of their game videos of 3+ minutes, a week old or more; not subscribers; 5k–300k is the sweet spot), and how their videos of small games do. Someone who already covered the game gets a boost as big as what that video did. Best overall: our games' creators first, then reach, activity and how many games we know them from. Contact status (emailed, replied, made a video) comes with sending: for 60 days after an email, the server looks at the creator's new uploads every 3 days for videos of the game."))].filter(Boolean));
 }
 
 // Press, aggregators and trailer channels (server/creators/press.py), worldwide.
@@ -488,8 +553,8 @@ function outreachView(d) {
       card("Sent", num(sum("sent") + sum("replied") + sum("opted_out") + sum("bounced")), `${num(o.sent_24h)} in the last 24 hours`),
       card("Waiting", num(sum("queued")), "approved or draft, not sent yet"),
       card("Replied", num(sum("replied")), `${num(sum("opted_out"))} said no`),
-      card("Made a video", num(o.campaigns.reduce((a, c) => a + (c.videos?.creators || 0), 0)),
-        `${num(o.campaigns.reduce((a, c) => a + (c.videos?.views || 0), 0))} views so far`),
+      card("Made a video", num(o.campaigns.reduce((a, c) => a + (c.videos?.new || 0), 0)),
+        `new coverage · ${num(o.campaigns.reduce((a, c) => a + (c.videos?.repeat || 0), 0))} more had covered it before · ${num(o.campaigns.reduce((a, c) => a + (c.videos?.views || 0), 0))} views`),
       card("Never email again", num(o.suppressed), "opted out or bounced")),
     ot.msg ? h("p.cr-alert", ot.msg) : null);
   add(healthBox(o));
@@ -501,13 +566,16 @@ function outreachView(d) {
       h("td.cr-chan", h("b", c.game), h("div.cr-muted", `${c.audience === "press" ? "Press" : c.audience === "streamers" ? "Streamers" : "YouTubers"} · from ${c.from_name} · ${C.fmtDate(c.created_at)}`)),
       h("td", h("span.cr-type", { title: c.paused_reason || "" }, c.paused_reason ? "Paused by the safety brake" : CAMPAIGN_STATUS[c.status] || c.status)),
       h("td.cr-num", num(n.queued || 0)), h("td.cr-num", num((n.sent || 0) + (n.replied || 0) + (n.opted_out || 0) + (n.bounced || 0))),
-      h("td.cr-num", num(n.replied || 0)), h("td.cr-num", { title: v?.views ? `${num(v.views)} views` : "" }, num(v?.creators || 0)),
+      h("td.cr-num", num(n.replied || 0)), h("td.cr-num", { title: `${num(v?.new || 0)} new (no video of the game before the email), ${num(v?.repeat || 0)} repeat${v?.views ? ` · ${num(v.views)} views` : ""}` }, num(v?.new || 0), v?.repeat ? h("span.cr-muted", ` +${v.repeat}`) : null),
       h("td.cr-num", `${num(n.opted_out || 0)} / ${num(n.bounced || 0)}`),
       h("td", h("span.cr-muted", "Open ›")))))))
     : h("p.empty", "No campaigns yet."));
   wrap.append(h("details.about", h("summary", "How this works"),
     h("p", "Make a draft: a game, who to email (the best creators for it, or the press list with the Press tab's filters), and a short message. Each person gets their own copy with their name filled in. People who said no, bounced or were emailed in the last 90 days are left out, and every email ends with how to say no."),
     h("p", "Read the previews, then Approve. The server sends slowly on weekdays during the day, at most DAILY_MAX a day in all, through your Strato mailbox, and reads the inbox: replies show here, and anyone who answers \"no\" is never emailed again."),
+    h("p", "Made a video: new = they had no video (or stream) of the game before the email, the email's real result. +N = repeat creators, who had covered it before. Twitch streamers count when we see them stream the game."),
+    h("p", "Each email goes out in the person's own working hours (their channel's or outlet's country, else their language; Stockholm when neither says)."),
+    h("p", "The {steam} link has UTM tags (utm_source = creators, streamers or press; utm_campaign = outreach-<number>). Steamworks' UTM report (Marketing & Visibility → UTM Analytics) shows the visits and wishlists from each campaign. UTM doesn't change the store's language."),
     h("p", "To send from the game's address (e.g. pomovalley@fourgames.se), add it in Strato as an alias of your mailbox first, so replies land in your inbox.")));
   return wrap;
 }
@@ -593,7 +661,7 @@ function formView(d, contacted) {
     input("Subject", "subject"),
     area("Message", "body", 14),
     translateView(f, people, leftover),
-    h("p.cr-muted", "{name} = the channel or outlet, {game}, {steam} = the store link, {press} = the game's press page, {their_game} = a game the creator made a video of, {key} = a Steam key from the key bot (taken when the email is sent; the game needs its Steam app id in the bot and enough keys to approve). Replace the [bracketed] parts. Keep it short and simple (creators skim, and many read English as a second language), and true. The game's GIF goes in after the second paragraph, and an opt-out line at the end."),
+    h("p.cr-muted", "{name} = the channel or outlet, {game}, {steam} = the store link (with this campaign's UTM tags, for Steamworks' UTM report), {press} = the game's press page, {their_game} = a game the creator made a video of, {key} = a Steam key from the key bot (taken when the email is sent; the game needs its Steam app id in the bot and enough keys to approve). Replace the [bracketed] parts. Keep it short and simple (creators skim, and many read English as a second language), and true. The game's GIF goes in after the second paragraph, and an opt-out line at the end."),
     h("div.cr-row", h("button.btn.primary", { type: "button", disabled: ot.busy || !people.length, onclick: create }, ot.busy ? "Saving…" : `Save draft for ${people.length === 1 ? "1 person" : `${num(people.length)} people`}`),
       h("span.cr-muted", "Nothing is sent until you approve the draft.")),
     people.length ? h("details", h("summary.cr-muted", `Who's in (${people.length})`), h("p.cr-muted", people.slice(0, 200).map((p) => p.label).join(", "))) : null);
@@ -650,7 +718,8 @@ function campaignView(d) {
     c.paused_reason ? h("p.cr-alert", h("b", "Paused by the safety brake: "), c.paused_reason, " Fix the list or the message before resuming; resuming counts afresh.") : null,
     h("h3.cr-h", `${c.game} · ${c.audience} · ${CAMPAIGN_STATUS[c.status] || c.status}`),
     h("p.cr-muted", `From ${c.from_name} <${c.from_email}> · up to ${c.daily_limit} a day · ${Object.entries(n).map(([k, v]) => `${MSG_STATUS[k] || k} ${v}`).join(" · ")}`),
-    made?.creators ? h("p.cr-note", h("b", `${C.plural(made.creators, "creator")} made a video`), ` after the email: ${C.plural(made.videos, "video")}, ${num(made.views)} views so far.`) : null,
+    made?.creators ? h("p.cr-note", h("b", `${C.plural(made.new || 0, "new creator")} made a video`), ` after the email${made.repeat ? `, and ${num(made.repeat)} who had covered it before` : ""}: ${C.plural(made.videos, "video")}, ${num(made.views)} views so far.`) : null,
+    c.appid ? h("p.cr-muted", `Steam link: store.steampowered.com/app/${c.appid}/?utm_source=${c.audience}&utm_campaign=outreach-${c.id}. Steamworks' UTM report shows its visits and wishlists.`) : null,
     preview ? h("div.cr-preview", h("div.cr-muted", `To ${preview.name || ""} <${preview.email}> · from ${c.from_name}`), h("div", h("b", preview.subject)),
       preview.html ? h("iframe.cr-frame", { title: "Email preview", sandbox: "", srcdoc: preview.html }) : h("pre.cr-body", preview.body),
       preview.html ? h("details", h("summary.cr-muted", "Plain-text version (sent inside the same email)"), h("pre.cr-body", preview.body)) : null) : null,
@@ -659,14 +728,26 @@ function campaignView(d) {
         h("td.cr-chan", h("b", m.name || m.email), h("div.cr-muted", `${m.email}${m.language && m.language !== "en" ? ` · ${LANG_LABEL[m.language] || m.language}` : ""}`)),
         h("td.cr-genres", m.subject),
         h("td", h("span.cr-type", { title: m.error || "" }, MSG_STATUS[m.status] || m.status),
-          ...(m.videos || []).map((v) => h("div", h("a.cr-made", { href: `https://www.youtube.com/watch?v=${v.id}`, target: "_blank", rel: "noopener", title: v.title || "", onclick: (e) => e.stopPropagation() },
-            `🎬 Made a video · ${num(v.views || 0)} views · ${C.fmtDate(v.published)}`)))),
+          ...(m.videos || []).map((v) => h("div", h("a.cr-made", { href: v.url || `https://www.youtube.com/watch?v=${v.id}`, target: "_blank", rel: "noopener", title: `${v.title || ""}${v.repeat ? " · they had covered the game before the email" : ""}`, onclick: (e) => e.stopPropagation() },
+            `${v.twitch ? "🎮 Streamed it" : "🎬 Made a video"}${v.repeat ? " (repeat)" : ""} · ${num(v.views || 0)} ${v.live ? "viewers" : "views"} · ${C.fmtDate(v.published)}`)))),
         h("td.cr-muted", m.replied_at ? `replied ${C.fmtDate(m.replied_at)}` : m.sent_at ? C.fmtDateTime(m.sent_at) : "–"),
         h("td", m.status === "queued" ? h("button.cr-copy", { type: "button", onclick: (e) => { e.stopPropagation(); outreachSend(`outreach/messages/${m.id}/skip`, undefined); } }, "Leave out") : null)))))));
 }
 
 const CSS = `
-.crv { min-width: 0; color: var(--fb-ink); }
+.crv { min-width: 0; color: var(--fb-ink);
+  --cr-bronze: #8a4b16; --cr-bronze-bg: #f7e6d6; --cr-silver: #4f5863; --cr-silver-bg: #e9edf1;
+  --cr-gold: #7a5a00; --cr-gold-bg: #fbefc2; --cr-diamond: #155e9c; --cr-diamond-bg: #dcefff; }
+@media (prefers-color-scheme: dark) {
+  .crv { --cr-bronze: #e6a873; --cr-bronze-bg: #3b2a1b; --cr-silver: #c9d1da; --cr-silver-bg: #2c3238;
+    --cr-gold: #f2cf55; --cr-gold-bg: #3a3214; --cr-diamond: #86c8ff; --cr-diamond-bg: #15304a; }
+}
+.crv .cr-tier { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; vertical-align: 1px; border: 1px solid var(--fb-line); }
+.crv .cr-tier.is-bronze { color: var(--cr-bronze); background: var(--cr-bronze-bg); }
+.crv .cr-tier.is-silver { color: var(--cr-silver); background: var(--cr-silver-bg); }
+.crv .cr-tier.is-gold { color: var(--cr-gold); background: var(--cr-gold-bg); }
+.crv .cr-tier.is-diamond { color: var(--cr-diamond); background: var(--cr-diamond-bg); }
+.crv .cr-flag { color: var(--fb-warning); cursor: help; }
 .crv .cr-switch { margin-bottom: 14px; }
 .crv .cr-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 0 0 16px; }
 .crv .cr-card { background: var(--fb-card); border: 1px solid var(--fb-line); border-radius: 12px; padding: 10px 14px; text-align: left; font: inherit; color: var(--fb-ink); }

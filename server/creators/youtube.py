@@ -147,24 +147,28 @@ class YouTube:
         items = self._get("channels", {"part": "snippet,statistics", **by}).get("items") or []
         return items[0] if items else None
 
-    def latest_upload(self, channel_id: str) -> int | None:
-        """When the channel last uploaded anything (1 unit), from its uploads playlist (UU + the id's
-        rest). None: no uploads. Raises HttpError as it came: a 403 here may also be a private playlist."""
+    def recent_uploads(self, channel_id: str, now: float) -> tuple[int | None, int | None]:
+        """(newest upload, uploads in the last 90 days) from the channel's newest 50 uploads (1 unit, the
+        same as reading only the newest): how often they upload, not just one Short. (None, None): no
+        uploads. 50 means 50 or more. Raises HttpError as it came: a 403 may also be a private playlist."""
         if not channel_id.startswith("UC"):
-            return None
+            return None, None
         try:
             reply = self.http.get_json(f"{API}/playlistItems", {
-                "part": "contentDetails", "playlistId": "UU" + channel_id[2:], "maxResults": 1, "key": self.key}) or {}
+                "part": "contentDetails", "playlistId": "UU" + channel_id[2:], "maxResults": 50, "key": self.key}) or {}
         except HttpError as error:
             if error.status == 404:
-                return None
+                return None, None
             raise
-        items = reply.get("items") or []
-        return iso_time(((items[0].get("contentDetails") or {}).get("videoPublishedAt")) if items else None)
+        times = [t for t in (iso_time((i.get("contentDetails") or {}).get("videoPublishedAt"))
+                             for i in reply.get("items") or []) if t]
+        if not times:
+            return None, None
+        return max(times), sum(1 for t in times if t >= now - 90 * 86400)
 
     def uploads_since(self, channel_id: str, since: int) -> list[str]:
         """The ids of the channel's uploads published after `since`, from its newest 50 (1 unit).
-        Raises HttpError as it came, like latest_upload."""
+        Raises HttpError as it came, like recent_uploads."""
         if not channel_id.startswith("UC"):
             return []
         try:

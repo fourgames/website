@@ -28,6 +28,7 @@ CREATE TABLE IF NOT EXISTS youtube_channels (
     button_checked_at INTEGER,          -- when that was checked
     last_upload     INTEGER,            -- the channel's newest upload of any kind (unix time); NULL: none or not read
     upload_checked_at INTEGER,          -- when last_upload was read
+    uploads_90d     INTEGER,            -- uploads in the 90 days before that read (of the newest 50; 50 = 50+)
     first_seen      INTEGER NOT NULL,
     refreshed_at    INTEGER,            -- when the numbers above were last read; NULL: not yet
     gone            INTEGER NOT NULL DEFAULT 0   -- the API no longer finds it
@@ -141,7 +142,7 @@ class Store:
         self.db.execute("PRAGMA foreign_keys=ON")
         self.db.executescript(SCHEMA)
         columns = {r[1] for r in self.db.execute("PRAGMA table_info(youtube_channels)")}
-        for name in ("email_button", "button_checked_at", "last_upload", "upload_checked_at"):  # added after the first databases were made
+        for name in ("email_button", "button_checked_at", "last_upload", "upload_checked_at", "uploads_90d"):  # added after the first databases were made
             if name not in columns:
                 self.db.execute(f"ALTER TABLE youtube_channels ADD COLUMN {name} INTEGER")
         if "views_read_at" not in {r[1] for r in self.db.execute("PRAGMA table_info(youtube_videos)")}:
@@ -230,10 +231,11 @@ class Store:
                ORDER BY upload_checked_at IS NOT NULL, upload_checked_at LIMIT ?""",
             (now - days * 86400, limit))]
 
-    def save_upload(self, channel_id: str, last_upload: int | None, now: int) -> None:
+    def save_upload(self, channel_id: str, last_upload: int | None, now: int, uploads_90d: int | None = None) -> None:
         with self.db:
-            self.db.execute("UPDATE youtube_channels SET last_upload = COALESCE(?, last_upload), upload_checked_at = ? "
-                            "WHERE channel_id = ?", (last_upload, now, channel_id))
+            self.db.execute("UPDATE youtube_channels SET last_upload = COALESCE(?, last_upload), "
+                            "uploads_90d = COALESCE(?, uploads_90d), upload_checked_at = ? WHERE channel_id = ?",
+                            (last_upload, uploads_90d, now, channel_id))
 
     def videos_to_reread(self, now: int, after_days: int, limit: int) -> list[str]:
         """Videos last read before they were `after_days` old and that are that old now: read their views

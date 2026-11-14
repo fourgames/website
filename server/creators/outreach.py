@@ -16,8 +16,9 @@ Rules that always hold, whatever a campaign says:
 
 Placeholders in the subject and body: {name} (a creator's first name when we're sure of it, see
 first_name(); else the channel; for press the outlet), {game}, {steam} (the store
-link), {press} (the game's press page on press.fourgames.se), {their_game} (for a creator: a game they made a video of, ours first, else one like ours;
-for press: empty), {key} (a Steam key for the game from the key bot's pool, put in when the email is
+link with this campaign's UTM tags, see steam_link()), {press} (the game's press page on
+press.fourgames.se), {their_game} (for a creator: the game they covered that is most like the
+campaign's game, by Steam tags; for press: empty), {key} (a Steam key for the game from the key bot's pool, put in when the email is
 sent; see keys.py). Anything else is written as it is.
 
 This module is the database side, used by send.py and by the game-data server's admin routes
@@ -35,6 +36,8 @@ from . import coverage
 from . import keys as K
 from .db import Store
 from .dmarc import summary as dmarc_summary
+from .score import load_steam, similarity
+from .zones import zone_for
 
 RECONTACT_DAYS = 90
 MAX_RECIPIENTS = 500
@@ -125,9 +128,21 @@ def local_gifs() -> set[str]:
         return set()
 
 
+def steam_link(appid: int | None, campaign: int | None = None, audience: str | None = None) -> str:
+    """The game's store page with UTM tags, so Steamworks' UTM report (Marketing & Visibility) shows the
+    visits and wishlists each campaign brought: utm_source = who (creators, streamers, press),
+    utm_campaign = outreach-<campaign id>. UTM tags don't change the store's language (unlike ?l=)."""
+    if not appid:
+        return ""
+    url = f"https://store.steampowered.com/app/{appid}/"
+    if campaign:
+        url += f"?utm_source={audience or 'outreach'}&utm_campaign=outreach-{campaign}"
+    return url
+
+
 def html_for(campaign: dict, body: str) -> str:
     appid = campaign.get("appid")
-    steam = f"https://store.steampowered.com/app/{appid}/" if appid else ""
+    steam = steam_link(appid, campaign.get("id"), campaign.get("audience"))
     return html_body(body, image=image_for(campaign["game"], appid, local_gifs()), steam=steam,
                      from_name=campaign["from_name"])
 
@@ -186,6 +201,8 @@ def migrate(store: Store) -> None:
         store.db.execute("ALTER TABLE outreach_messages ADD COLUMN key_id INTEGER")
     if "game_name" not in message_columns:  # the game's name as written in this email (localized), to spot their video
         store.db.execute("ALTER TABLE outreach_messages ADD COLUMN game_name TEXT")
+    if "zone" not in message_columns:  # the recipient's likely time zone (zones.py), so it goes in their working hours
+        store.db.execute("ALTER TABLE outreach_messages ADD COLUMN zone TEXT")
     coverage.ensure(store)
     for name, kind in (("gif", "INTEGER NOT NULL DEFAULT 0"),   # 1 = also the HTML version with the game's GIF
                        ("paused_reason", "TEXT"),               # why the safety brake paused it
@@ -298,7 +315,7 @@ def blocked(store: Store, email: str, now: float, exclude: int | None = None, se
 
 
 def _creator(store: Store, channel_id: str, own: set[int]) -> dict | None:
-    r = store.db.execute("SELECT channel_id, title, emails, revealed_email, language FROM youtube_channels WHERE channel_id = ?",
+    r = store.db.execute("SELECT channel_id, title, emails, revealed_email, language, country FROM youtube_channels WHERE channel_id = ?",
                          (channel_id,)).fetchone()
     if not r:
         return None
@@ -308,14 +325,16 @@ def _creator(store: Store, channel_id: str, own: set[int]) -> dict | None:
     emails += [e for (e,) in store.db.execute("SELECT email FROM site_emails WHERE channel_id = ?", (channel_id,))]
     if not emails:
         return None
-    covered = [a for (a,) in store.db.execute(
-        "SELECT appid FROM youtube_videos WHERE channel_id = ? GROUP BY appid ORDER BY COUNT(*) DESC", (channel_id,))]
-    ours = [a for a in covered if a in own]
-    lang = r["language"] or (store.db.execute(
-        "SELECT language FROM youtube_videos WHERE channel_id = ? AND language IS NOT NULL GROUP BY language ORDER BY COUNT(*) DESC LIMIT 1",
-        (channel_id,)).fetchone() or [None])[0]
+    covered = store.db.execute(
+        "SELECT appid, COUNT(*) FROM youtube_videos WHERE channel_id = ? GROUP BY appid ORDER BY COUNT(*) DESC",
+        (channel_id,)).fetchall()
+    # The language most of their videos are in; the channel's own setting (often left at a default) when none says.
+    lang = (store.db.execute(
+        """SELECT language FROM (SELECT MAX(language) AS language FROM youtube_videos
+                                 WHERE channel_id = ? AND language IS NOT NULL GROUP BY video_id)
+           GROUP BY language ORDER BY COUNT(*) DESC LIMIT 1""", (channel_id,)).fetchone() or [None])[0] or r["language"]
     return {"id": channel_id, "name": r["title"] or "", "email": emails[0].lower(), "lang": short_lang(lang),
-            "games": ours + [a for a in covered if a not in own]}
+            "games": [(a, n) for a, n in covered], "zone": zone_for(r["country"], lang)}
 
 
 def _streamer(store: Store, target: str, own: set[int]) -> dict | None:
@@ -339,16 +358,29 @@ def _streamer(store: Store, target: str, own: set[int]) -> dict | None:
         emails = [yt["email"]] if yt else []
     if not emails:
         return None
-    covered = [a for (a,) in store.db.execute(
-        "SELECT appid FROM twitch_streams WHERE user_id = ? GROUP BY appid ORDER BY COUNT(*) DESC", (uid,))]
-    ours = [a for a in covered if a in own]
+    covered = store.db.execute(
+        "SELECT appid, COUNT(*) FROM twitch_streams WHERE user_id = ? GROUP BY appid ORDER BY COUNT(*) DESC", (uid,)).fetchall()
     return {"id": target, "name": r["name"] or r["login"] or "", "email": emails[0].lower(), "lang": short_lang(r["language"]),
-            "games": ours + [a for a in covered if a not in own]}
+            "games": [(a, n) for a, n in covered], "zone": zone_for(None, r["language"])}
 
 
 def _press(store: Store, key: str) -> dict | None:
-    r = store.db.execute("SELECT key, name, email, language FROM press WHERE key = ?", (key,)).fetchone()
-    return {"id": r["key"], "name": r["name"], "email": r["email"].lower(), "lang": short_lang(r["language"])} if r and r["email"] else None
+    r = store.db.execute("SELECT key, name, email, language, country FROM press WHERE key = ?", (key,)).fetchone()
+    return {"id": r["key"], "name": r["name"], "email": r["email"].lower(), "lang": short_lang(r["language"]),
+            "zone": zone_for(r["country"], r["language"])} if r and r["email"] else None
+
+
+def their_game(games: list[tuple[int, int]], appid: int | None, own: set[int], tags: dict[int, list[int]],
+               meta: set[int]) -> int | None:
+    """The game they covered that is most like the campaign's game: by Steam tags (first tags weigh
+    most, meta tags like Indie left out), then by their videos of it, then ours. The campaign's own game
+    only when it's all they covered."""
+    target = tags.get(appid) or []
+    others = [(a, n) for a, n in games if a != appid]
+    if not others:
+        return appid if any(a == appid for a, _ in games) else None
+    return max(others, key=lambda x: (similarity(tags.get(x[0]) or [], target, meta) if target else 0.0,
+                                      x[1], x[0] in own))[0]
 
 
 # Words a channel name often ends with that nobody would be greeted by ("Hi Bob Gaming Official").
@@ -461,9 +493,11 @@ def check_enough_keys(store: Store, campaign: dict) -> None:
 
 
 def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, str], own: set[int],
-                    now: float) -> dict[str, Any]:
+                    now: float, steam_db: str | None = None) -> dict[str, Any]:
     """A draft campaign with one filled-in message per usable recipient. spec: {appid, game, audience,
-    from_name, from_email, subject, body, daily_limit, recipients: [ids]} (channel ids or press keys)."""
+    from_name, from_email, subject, body, daily_limit, recipients: [ids]} (channel ids or press keys).
+    steam_db: the Steam data collector's database, for the games' tags ({their_game}); default: the
+    STEAM_DB setting or its usual path."""
     audience = spec.get("audience")
     if audience not in ("creators", "streamers", "press"):
         raise OutreachError("audience must be creators, streamers or press")
@@ -490,7 +524,6 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
     translations = check_translations(spec.get("translations"), subject, body)
     appid = spec.get("appid")
     appid = appid if type(appid) is int else None
-    steam = f"https://store.steampowered.com/app/{appid}/" if appid else ""
     if K.uses_key(subject + body):
         check_keys_exist(appid, game)
     skipped: dict[str, int] = {}
@@ -501,6 +534,14 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?)""",
             (appid, game, audience, from_name, from_email, subject, body, daily, int(bool(spec.get("gif"))), int(now)))
         campaign = cur.lastrowid
+        steam = steam_link(appid, campaign, audience)
+        tags: dict[int, list[int]] = {}
+        meta: set[int] = set()
+        if audience != "press":
+            import os
+            from .config import DEFAULT_STEAM_DB
+            tags, meta, _ = load_steam(steam_db or os.environ.get("STEAM_DB", "").strip() or DEFAULT_STEAM_DB,
+                                       set(game_names) | ({appid} if appid else set()))
         seen: set[str] = set()
         for target in dict.fromkeys(ids):
             who = (_press(store, target) if audience == "press" else
@@ -513,10 +554,9 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
                 skipped[why] = skipped.get(why, 0) + 1
                 continue
             seen.add(who["email"])
-            games = who.get("games", [])
-            # A game they made a video of, ours first; the campaign's own game only if it's all they played.
-            their = next((game_names[a] for a in games if a in game_names and a != appid),
-                         game if appid in games else "")
+            pick = their_game([(a, n) for a, n in who.get("games", []) if a in game_names or a == appid],
+                              appid, own, tags, meta)
+            their = game if pick is not None and pick == appid else game_names.get(pick, "") if pick is not None else ""
             known = None if audience == "press" else first_name(store, who["email"])  # press: "Hi {name} team"
             fields = {"name": known[0] if known else greeting_name(who["name"]), "game": game, "key": K.PLACEHOLDER, "steam": steam, "their_game": their,
                       "press": f"https://press.fourgames.se/{re.sub(r'[^a-z0-9]+', '-', game.lower()).strip('-')}"}
@@ -527,10 +567,10 @@ def create_campaign(store: Store, spec: dict[str, Any], game_names: dict[int, st
                 fields = {**fields, "game": t.get("game") or game}
             store.db.execute(
                 """INSERT INTO outreach_messages (campaign_id, target_kind, target_id, name, email, subject, body,
-                                                  status, queued_at, language, game_name)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?)""",
+                                                  status, queued_at, language, game_name, zone)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?, ?)""",
                 (campaign, "press" if audience == "press" else "twitch" if target.startswith("tw:") else "youtube", who["id"], who["name"], who["email"],
-                 render(sub, fields), with_opt_out(render(bod, fields), opt), int(now), lang, fields["game"]))
+                 render(sub, fields), with_opt_out(render(bod, fields), opt), int(now), lang, fields["game"], who.get("zone")))
     return {"id": campaign, "skipped": skipped, **summary(store, campaign)}
 
 
@@ -551,7 +591,7 @@ def messages(store: Store, campaign: int, limit: int = 600) -> list[dict[str, An
     """The campaign's emails, each with the videos of the game its creator made after it (coverage.py)."""
     videos = coverage.videos_by_message(store, campaign)
     return [{**dict(r), "videos": videos.get(r["id"], [])} for r in store.db.execute(
-        """SELECT id, target_kind, target_id, name, email, subject, body, status, queued_at, sent_at, replied_at, error, language
+        """SELECT id, target_kind, target_id, name, email, subject, body, status, queued_at, sent_at, replied_at, error, language, zone
            FROM outreach_messages WHERE campaign_id = ? ORDER BY id LIMIT ?""", (campaign, limit))]
 
 

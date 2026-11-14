@@ -192,7 +192,7 @@ async def create(request: web.Request) -> web.Response:
 
     def work(o, store, steam_db):
         names, own = _game_names(steam_db, store)
-        made = o.create_campaign(store, body, names, own, time.time())
+        made = o.create_campaign(store, body, names, own, time.time(), steam_db)
         return {**made, "messages": o.messages(store, made["id"])}
     return W.ok(await asyncio.to_thread(_with_store, work), status=201)
 

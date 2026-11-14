@@ -7,8 +7,10 @@ collects (plus the hidden emails, below). Matching, the dashboard tab, Twitch an
 Every hour (`creators.timer` → `creators.service`, `python -m creators`) it:
 
 1. Reads the games from the Steam data collector's `steam.db` (read only): **our own games** first
-   (every 7 days: those in the website's game list and every game whose developer or publisher is "Four Games"), then every game with 30 to 50,000 reviews (bigger ones like Counter-Strike 2 bring channels far too big to answer us, and esports channels) and at most $30 full price (so a new AAA release without many reviews yet stays out), ordered by reviews gained in the last 28 days,
-   with games that share tags with ours lifted up to 3×. Names under 4 letters or only digits are
+   (every 7 days: those in the website's game list and every game whose developer or publisher is "Four Games"), then every game with 30 to 50,000 reviews (bigger ones like Counter-Strike 2 would spend the quota on esports and huge channels) and at most $30 full price (so a new AAA release without many reviews yet stays out), ordered by reviews gained in the last 28 days,
+   with games like ours lifted up to 3× (shared Steam tags, first tags weigh most, generic ones like Indie,
+   Singleplayer or 2D left out). Games like ours (similarity 0.5+) are searched up to 1,000,000 reviews
+   (`LOOKALIKE_MAX_REVIEWS`): their creators fit, and typical views sort out channels too big to answer. Names under 4 letters or only digits are
    skipped (they find videos about something else).
 2. Searches YouTube for each game's name in quotes, videos from the last 180 days (after that, since
    the last search), every 30 days.
@@ -76,8 +78,14 @@ dashboard's **Creators** page (fourgames.se/fb-dash, `src/lib/feedback/creators.
 game-data server, signed in as the owner only (`GET /gamedata/v1/admin/creators`). It holds each
 channel's emails and where they came from, numbers, the games it covered, a type (indie variety,
 variety, one game, a few games) and a genre profile from those games' Steam tags. The page works out
-activity (newest upload, read for every channel every 14 days at 1 unit each), filters, and the best
-creators for each of our games.
+activity (the newest 50 uploads, read for every channel every 14 days at 1 unit each: the newest one
+and how many in 90 days; active = an upload in 30 days and 3+ in 90), filters, views badges (Bronze 1k+,
+Silver 5k+, Gold 25k+, Diamond 100k+ typical views; Twitch: 10+, 50+, 200+, 1,000+ live viewers), and the
+best creators for each of our games. A creator's language is what most of their videos are in (the
+channel's own setting when none says). Genre fit counts more surely with more games behind it
+(× n/(n+2)), and a game whose videos did well for them weighs more. A soft flag marks big channels
+with very few likes and comments per view (not a score). The ranking itself is in `score.py`, which
+the server uses the same way for the Email hunt and the link follower.
 
 ## The press list
 
@@ -96,14 +104,23 @@ Short one-to-one emails to the creators and press on the lists, in small daily d
    for it, or press filtered by country/language), a from name and address, a subject and a short
    body with `{name}`, `{game}`, `{steam}`, `{their_game}`. Each recipient gets their own filled-in
    message (`outreach.py`); addresses that opted out, bounced or were emailed in the last 90 days are
-   left out, and an opt-out line is added if the body has none.
+   left out, and an opt-out line is added if the body has none. `{their_game}` is the game they
+   covered that's most like this one (Steam tags), then the one with most videos. `{steam}` carries
+   UTM tags (`?utm_source=creators|streamers|press&utm_campaign=outreach-<id>`), so Steamworks' UTM
+   report (Marketing & Visibility → UTM Analytics) shows each campaign's visits and wishlists. UTM
+   doesn't change the store's language.
 2. **Approve** after reading the previews. Nothing is sent before that.
-3. **Sending** (`send.py`, `creators-send.timer` every 15 minutes): weekdays in `SEND_HOURS`, at most
-   `DAILY_MAX` a day across campaigns (and each campaign's own limit), spread over the day, through
-   the Strato mailbox with SMTP. Each email has a `List-Unsubscribe` header.
+3. **Sending** (`send.py`, `creators-send.timer` every 15 minutes): weekdays in `SEND_HOURS` in the
+   recipient's own time zone (`zones.py`: their channel's or outlet's country, else their language,
+   else `TIMEZONE`), at most `DAILY_MAX` a day across campaigns (and each campaign's own limit),
+   spread over the day, through the Strato mailbox with SMTP. Each email has a `List-Unsubscribe` header.
 4. **Replies** (same run, IMAP, read only): a reply marks the message replied; "no", "not
    interested", "unsubscribe"... mark it opted out and the address is never emailed again; bounces
    too. The dashboard shows each campaign's counts and every message's status.
+5. **Did it work** (`coverage.py`): for 60 days after an email the collector reads the creator's new
+   uploads every 3 days for videos of the game; Twitch streamers count when the weekly read of our
+   games' streams sees them. **New** coverage = no video or stream of the game before the email (the
+   email's real result); **repeat** = they had covered it before. The Outreach tab shows both.
 
 Each email has a plain-text part and an HTML part that looks like a normal email from a person
 (no card, buttons or logo: designed cold emails read like marketing and land in spam more often),
@@ -121,7 +138,7 @@ English email for each recipient language the way a native would, short and plai
 placeholder and link (one that changes them is refused). It uses the game's Steam name in that
 language (fills {game}) and says the game is in their language when Steam lists it. The Steam link
 stays plain: Steam already shows the store in the reader's language, and `?l=` would override their choice. The owner reads and can edit each; each person gets
-their channel's or outlet's language, English otherwise. Replies saying no are recognized in those
+the language most of their videos are in (else their channel's setting) or their outlet's, English otherwise. Replies saying no are recognized in those
 languages too.
 
 **Safety brake:** a campaign pauses itself (with the reason on the dashboard) once 10+ of its emails
@@ -175,7 +192,7 @@ One SQLite file, `/srv/fourgames/creators/creators.db`:
 
 | Table | What's in it |
 | --- | --- |
-| `youtube_channels` | One row per channel: title, handle, description, country, language, subscribers (NULL when hidden), videos, views, when it was made, `emails` and `links` (JSON) from the description, and `revealed_email` / `revealed_at` for the email behind YouTube's "View email address" button, saved by the yt-email-unlock skill, and `email_button` (1/0, NULL not checked) / `button_checked_at` |
+| `youtube_channels` | One row per channel: title, handle, description, country, language, subscribers (NULL when hidden), videos, views, when it was made, `last_upload` and `uploads_90d` (from the newest 50 uploads), `emails` and `links` (JSON) from the description, and `revealed_email` / `revealed_at` for the email behind YouTube's "View email address" button, saved by the yt-email-unlock skill, and `email_button` (1/0, NULL not checked) / `button_checked_at` |
 | `youtube_videos` | Every kept video, per game it names: channel, title, published, views, likes, comments, length, language |
 | `channel_games` (view) | Per channel and game: videos, the latest, total views. What matching will score on |
 | `channel_links` | The web pages each channel links to, from its description or About panel |
@@ -197,15 +214,15 @@ plus a captcha). The `yt-email-unlock` Claude skill gets them in the user's own 
   at a time, the user clicks the button, ticks the captcha and presses Submit, and the email goes to `revealed_email`.
 - `save`: JSON lines on stdin (see `reveal.py`).
 
-Best first, until per-game matching exists: a video of one of our games, then 1k–300k subscribers,
-then a video in the last 30 days, then more games, then more subscribers. Nobody but the user
-solves the captcha, so revealing is kept for the best few.
+Best first: a video of one of our games, then expected value (`score.py`): typical views per video
+(subscribers stand in, at most 0.6, until that's known) × how active they are × how well their genres
+fit any of our games. Nobody but the user solves the captcha, so revealing is kept for the best few.
 
 ## Emails from creators' links
 
 Many creators without a public email on YouTube have one on their Linktree, Beacons or Carrd page or
 their own website. After the YouTube part, every hourly run follows up to 150 links
-(`python -m creators --links N`, or `python -m creators.sites N` alone), best channels first, from
+(`python -m creators --links N`, or `python -m creators.sites N` alone), best channels first (the Email hunt's order), from
 channels without an email yet:
 
 - links in the description (any `https://` address, and bare link-in-bio addresses like `linktr.ee/name`),

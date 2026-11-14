@@ -11,34 +11,67 @@
 // title to "traffic ready" (or "traffic failed: …"). feedback/traffic_save.py merges it into
 // traffic.json in the private data repo.
 //
-// One page read per game per day (the page sums a date range; one day at a time gives the days).
-// Each day keeps the page's table that has a "Visits" column: its column names and one row per
-// source ([label, numbers…]), e.g. ["youtube.com", 1200, 85, …]. Rows without a number are left out.
+// One read per game per day (the page sums a date range; one day at a time gives the days), from the
+// page's own "Download … in CSV format" link (the same URL with &format=csv): since late 2026 the page
+// draws its breakdown with scripts, so the HTML has no table to read. The CSV has one line per
+// [Page / Category, Page / Feature, Impressions, Visits, Owner Impressions, Owner Visits], then one per
+// country. Each day keeps cols ["Source", "Impressions", "Visits", …] and one row per source,
+// [label, numbers…]: an outside site by its domain (["youtube.com", 0, 85, 0, 0]), anything else
+// summed per category (["Home Page", 120, 4, 0, 0]).
 // Its own JSON writer, like steamworks.js.
 document.title = "traffic reading";
 (async () => {
   const plan = window.__trafficPlan;
   if (!plan || !Object.keys(plan).length) throw new Error("set window.__trafficPlan first (traffic_save.py --plan)");
-  const clean = (el) => el.textContent.replace(/\s+/g, " ").split("(?)")[0].trim();
   const number = (text) => {
     const t = text.replace(/[,\s%$]/g, "");
     return /^-?\d+(\.\d+)?$/.test(t) ? Number(t) : null;
   };
-  const read = async (id, day) => {
-    const url = `/apps/navtrafficstats/${id}?attribution_filter=all&preset_date_range=custom&start_date=${day}&end_date=${day}`;
-    const res = await fetch(url, { credentials: "include" });
-    if (res.url.includes("/login")) throw new Error("not signed in to partner.steamgames.com");
-    const doc = new DOMParser().parseFromString(await res.text(), "text/html");
-    for (const table of doc.querySelectorAll("table")) {
-      const rows = [...table.rows].map((r) => [...r.cells].map(clean));
-      const head = rows.findIndex((r) => r.some((c) => /visits/i.test(c)));
-      if (head < 0) continue;
-      const body = rows.slice(head + 1)
-        .map((r) => [r[0], ...r.slice(1).map(number)])
-        .filter((r) => r[0] && r.slice(1).some((n) => n != null));
-      return { cols: rows[head], rows: body.slice(0, 300) };
+  // CSV lines into cells (quoted cells may hold commas and "" for a quote).
+  const parse = (text) => text.split(/\r?\n/).filter((l) => l.trim()).map((line) => {
+    const cells = [];
+    let cell = "", quoted = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (quoted) {
+        if (ch === '"' && line[i + 1] === '"') { cell += '"'; i++; } else if (ch === '"') quoted = false; else cell += ch;
+      } else if (ch === '"') quoted = true;
+      else if (ch === ",") { cells.push(cell.trim()); cell = ""; } else cell += ch;
     }
-    return { cols: [], rows: [], missing: true }; // no table with visits: the page changed, or no data
+    cells.push(cell.trim());
+    return cells;
+  });
+  // Steamworks sometimes drops a request when many run at once: try a few times.
+  const get = async (url) => {
+    for (let attempt = 1; ; attempt++) {
+      try {
+        const res = await fetch(url, { credentials: "include" });
+        if (res.url.includes("/login")) throw new Error("not signed in to partner.steamgames.com");
+        if (res.ok) return await res.text();
+        if (attempt >= 4) throw new Error(`HTTP ${res.status}`);
+      } catch (error) {
+        if (/signed in/.test(error.message) || attempt >= 4) throw error;
+      }
+      await new Promise((r) => setTimeout(r, 2000 * attempt));
+    }
+  };
+  const read = async (id, day) => {
+    const url = `/apps/navtrafficstats/${id}?attribution_filter=all&preset_date_range=custom&start_date=${day}&end_date=${day}&format=csv`;
+    const [head, ...lines] = parse(await get(url));
+    // Not the CSV (a sign-in or error page): the page changed.
+    if (!head || !/^page/i.test(head[0]) || !head.some((c) => /^visits$/i.test(c))) return { cols: [], rows: [], missing: true };
+    // Summed per category, outside sites per domain; countries and bot traffic left out (they'd make
+    // the page text too long to read out, and nothing uses them).
+    const sums = new Map();
+    for (const [category, feature, ...rest] of lines) {
+      if (!category || /^(country|bot traffic)$/i.test(category)) continue;
+      const label = /^external website$/i.test(category) && feature ? feature : category;
+      const sum = sums.get(label) || rest.map(() => 0);
+      rest.forEach((cell, i) => { sum[i] += number(cell) || 0; });
+      sums.set(label, sum);
+    }
+    const rows = [...sums].map(([label, sum]) => [label, ...sum]).filter((r) => r.slice(1).some((n) => n));
+    return { cols: ["Source", ...head.slice(2)], rows };
   };
   const out = { apps: {} };
   const jobs = Object.entries(plan).flatMap(([id, days]) => days.map((day) => [id, day]));

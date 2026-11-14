@@ -20,7 +20,7 @@ import time
 REPO = "fourgames/feedback-data"  # private: all the feedback data
 PATH = "traffic.json"
 RECENT = 3
-FILL = 30
+FILL = 7  # older days per run: more makes the page text too long to read out
 BACK = 120
 
 
@@ -42,7 +42,7 @@ def current():
 
 
 def plan(apps, have, today):
-    """{appId: [days]}: the last RECENT full days, any of the last 14 that read no table, and up to FILL
+    """{appId: [days]}: the last RECENT full days, any of the last 14 that read nothing, and up to FILL
     older missing days, newest first. Today isn't over, so it's never read."""
     out = {}
     for app in apps:
@@ -96,7 +96,7 @@ def main(arg):
         body["sha"] = sha
     gh("-X", "PUT", f"repos/{REPO}/contents/{PATH}", "--input", "-", data=body)
     print(f"Store traffic saved: {saved} day(s) for {len(read['apps'])} game(s)"
-          + (f"; {missing} day(s) had no table with visits (did the page change?)" if missing else ""))
+          + (f"; {missing} day(s) read no traffic CSV (did the page change?)" if missing else ""))
 
 
 if __name__ == "__main__":

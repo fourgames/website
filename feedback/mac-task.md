@@ -4,7 +4,7 @@ What the collector can't read from GitHub's servers: Steamworks' refund notes an
 
 ## Prompt
 
-You read the data the Four Games feedback collector (GitHub Actions) can't reach itself, and save it to the private repo fourgames/feedback-data through the GitHub API. The scripts live in the website repo at /Users/danny/Documents/GitHub/website/feedback; each has a docstring explaining it. Never commit to or change the website checkout; the save scripts write through `gh api` only. Do all three parts even if one fails, then report one short line per part.
+You read the data the Four Games feedback collector (GitHub Actions) can't reach itself, and save it to the private repo fourgames/feedback-data through the GitHub API. The scripts live in the website repo at /Users/danny/Documents/GitHub/website/feedback; each has a docstring explaining it. Never commit to or change the website checkout; the save scripts write through `gh api` only. Do all the parts even if one fails, then report one short line per part.
 
 0. Update the scripts: `git -C /Users/danny/Documents/GitHub/website pull -q --rebase origin main` (if it fails because of local changes, skip it and use the files as they are).
 
@@ -14,4 +14,6 @@ You read the data the Four Games feedback collector (GitHub Actions) can't reach
 
 3. Steamworks stats, in the same tab (navigate it back to https://partner.steampowered.com/ first). Read /Users/danny/Documents/GitHub/website/feedback/steamworks.js and run its full contents with javascript_tool. It returns at once and works in the background; check `document.title` every 20 seconds or so until it is "steamworks ready" (or starts with "steamworks failed:", then report that error and skip the save). It can take a few minutes. Then use get_page_text on the tab (with a large max_chars), write the full text to a temporary file (it must end with the line END; if the text is cut off, read it with javascript_tool as `document.querySelector('pre').textContent.slice(...)` in parts instead) and run `python3 /Users/danny/Documents/GitHub/website/feedback/steamworks_save.py <that file>`; report what it prints.
 
-4. Close the tab you opened. Don't touch the user's other tabs. Delete the temporary files.
+3b. Store traffic. Run `python3 /Users/danny/Documents/GitHub/website/feedback/traffic_save.py --plan`; it prints the days to read as JSON. Open a NEW tab at https://partner.steamgames.com/ (a different site from part 3, with its own sign-in). If it shows a sign-in page, skip this part: never type a password; report that Chrome needs to be signed in to partner.steamgames.com. Otherwise run `window.__trafficPlan = <the printed JSON>` with javascript_tool, then the full contents of /Users/danny/Documents/GitHub/website/feedback/traffic.js. Wait for `document.title` to be "traffic ready" (or report a "traffic failed: …" title) like in part 3, save the page text to a temporary file the same way and run `python3 /Users/danny/Documents/GitHub/website/feedback/traffic_save.py <that file>`; report what it prints.
+
+4. Close the tabs you opened. Don't touch the user's other tabs. Delete the temporary files.

@@ -255,9 +255,10 @@ def cluster(game, issue, items):
     }
 
 
-def spike(game, posts, count, usual, release, top):
-    """More negative reviews and bug reports than usual in the last 24 hours: how many, against a
-    normal day, the update that went out just before, and what they're about."""
+def spike(game, posts, count, usual, release, top, reasons=()):
+    """More negative reviews and bug reports than the day's reviews and players would explain: how
+    many, against a normal day at this traffic, why, the update that went out just before, and what
+    they're about."""
     negative = sum(1 for p in posts if p["kind"] == "review" and not p.get("votedUp"))
     lines = "\n".join(f"• {_clip(issue['title'], 120)} ({n} player{'s' if n != 1 else ''})" for issue, n in top)
     since = ""
@@ -271,11 +272,11 @@ def spike(game, posts, count, usual, release, top):
         "title": _clip(f"📈 Spike · {game['name']}: {count} players unhappy in 24 h", 256),
         "url": DASHBOARD_URL,
         "description": _clip(
-            since + (f"**What it's about:**\n{lines}\n\n" if lines else "") + f"**Latest:**\n{links}\n\n[Dashboard]({DASHBOARD_URL})", 4000),
+            since + "".join(f"{r}.\n" for r in reasons) + ("\n" if reasons else "") + (f"**What it's about:**\n{lines}\n\n" if lines else "") + f"**Latest:**\n{links}\n\n[Dashboard]({DASHBOARD_URL})", 4000),
         "color": COLORS["urgent"],
         "fields": [
             {"name": "Last 24 h", "value": str(count), "inline": True},
-            {"name": "Usual day", "value": f"{usual:.1f}", "inline": True},
+            {"name": "Usual at this traffic", "value": f"{usual:.1f}", "inline": True},
             {"name": "Negative reviews", "value": str(negative), "inline": True},
         ],
         "footer": {"text": f"Negative reviews and bug reports · {game['name']}"},

@@ -392,6 +392,11 @@ def _duration(text):
 def _video_stats(item, v):
     stats = v.get("statistics") or {}
     item["views"] = int(stats.get("viewCount", 0))
+    # Views at the end of each GMT day (the day's last read), while the video is refreshed
+    # (REFRESH_DAYS), so the dashboard can see the day a video took off and line it up with sales.
+    # One number a day, from the reads already happening: no extra quota.
+    if (v.get("snippet") or {}).get("liveBroadcastContent") not in ("live", "upcoming"):
+        item.setdefault("viewsByDay", {})[time.strftime("%Y-%m-%d", time.gmtime(now()))] = item["views"]
     item["likes"] = int(stats["likeCount"]) if "likeCount" in stats else None
     item["comments"] = int(stats["commentCount"]) if "commentCount" in stats else None
     live = (v.get("snippet") or {}).get("liveBroadcastContent")

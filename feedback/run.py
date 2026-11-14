@@ -729,6 +729,7 @@ def refresh_issues(state, game):
         issue["firstSession"] = len({(p.get("author") or {}).get("id") or p["id"] for p in posts
                                      if p["kind"] == "review" and p.get("playtime") is not None and p["playtime"] < 2})
         issue["details"] = list(dict.fromkeys(d for p in posts if (d := (p.get("triage") or {}).get("details"))))[:8]
+        issue["reach"] = issue_reach(posts, (state.get("media") or {}).get("items") or {})
         if issue["status"] in ("likely_fixed", "still_happening"):
             # Only a post after the fix that says the problem persists in the fixed version counts.
             after = [p["created"] for p in posts if p["created"] > issue["fixedAt"]
@@ -739,11 +740,62 @@ def refresh_issues(state, game):
         issue["fixPrompt"] = fix_prompt(game, issue, posts) if issue["kind"] == "bug" and not game.get("research") else None
 
 
+# How much one player's post about an issue reaches buyers (see issue_reach). A negative review sits on
+# the store page and counts toward the score, more so with helpful votes (Steam shows the most voted
+# first); a refund is a lost sale; a video or a comment under one reaches its viewers; a forum or
+# Discord post mostly reaches players who already own the game.
+NEGATIVE_REVIEW = 3
+REFUND = 3
+POSITIVE_REVIEW = 1  # a positive review that mentions the problem: read on the store, but still a yes
+OTHER_POST = 1
+FIRST_SESSION = 1.5  # raised inside Steam's 2-hour refund window: what turns new buyers away
+URGENCY_FACTOR = {"low": 1, "medium": 1.15, "high": 1.35, "urgent": 1.6}  # Claude's label: a small nudge
+
+
+def votes_factor(votes):
+    return 1 + math.log2(1 + max(0, votes or 0))
+
+
+def views_factor(views):
+    return 1 + math.log2(1 + max(0, views or 0) / 1000)  # 1k views 2, 10k 4.5, 100k 7.7
+
+
+def post_reach(post, videos):
+    """One post's weight in issue_reach."""
+    kind = post["kind"]
+    if kind == "review":
+        if post.get("votedUp"):
+            weight = POSITIVE_REVIEW * (1 + 0.5 * math.log2(1 + max(0, post.get("votesUp") or 0)))
+        else:
+            weight = NEGATIVE_REVIEW * votes_factor(post.get("votesUp"))
+        if post.get("playtime") is not None and post["playtime"] < 2:
+            weight *= FIRST_SESSION
+        return weight
+    if kind == "refund":
+        return REFUND
+    if kind in YOUTUBE_KINDS:
+        views = (videos.get(post.get("media")) or {}).get("views")
+        return views_factor(views) * (1 if kind == "video" else 0.5)
+    return OTHER_POST
+
+
+def issue_reach(posts, videos):
+    """How many buyers an issue reaches: each player once, with the weight of their post that reaches
+    the most (post_reach). Ten players with one forum post each is 10; one negative review with 15
+    helpful votes is 3 x 5 = 15."""
+    best = {}
+    for p in posts:
+        who = (p.get("author") or {}).get("id") or p["id"]
+        best[who] = max(best.get(who, 0), post_reach(p, videos))
+    return round(sum(best.values()), 2)
+
+
 def priority(issue):
-    weight = {"low": 1, "medium": 2, "high": 4, "urgent": 8}[issue["urgency"]]
+    """What reaches buyers (issue_reach, log-scaled, no cap), nudged by Claude's urgency label, lower
+    the longer nobody reported it, and by its fix status."""
+    reach = issue.get("reach") or issue["mentions"]
     age = (now() - issue["lastSeen"]) / DAY
-    score = weight * (1 + math.log2(issue["mentions"])) * (1 if age < 7 else 0.6 if age < 30 else 0.3)
-    score *= 1 + 0.25 * min(issue["negativeReviews"] + issue.get("refunds", 0), 4)
+    score = math.log2(1 + reach) * URGENCY_FACTOR[issue["urgency"]] * (1 if age < 7 else 0.6 if age < 30 else 0.3)
     score *= {"still_happening": 1.5, "likely_fixed": 0.2}.get(issue["status"], 1)
     return round(score, 2)
 
@@ -1154,31 +1206,84 @@ def send_alerts(state, game, run, first_run):
             notify.send(batch[start : start + 10], ping=ping)
 
 
-SPIKE_MIN = 3  # bad posts in a day, from different players
-SPIKE_RATIO = 3  # times the usual day
+SPIKE_Z = 2.5  # how far above normal (in standard deviations) before it pings; checked every 5 minutes
+SPIKE_MIN_REVIEWS = 5  # reviews in the last 24 hours before their negative share can say anything
+SPIKE_MIN_BAD = 3  # unhappy players in the last 24 hours, at least
+SPIKE_BASE_DAYS = 30
 
 
-def check_spike(state, game):
-    """A spike: in the last 24 hours, at least SPIKE_MIN players posted a negative review or reported a
-    bug, and that's at least SPIKE_RATIO times their usual day (the 14 days before). Pings once, then
-    again only a day later or when the count doubles. Names the update that went out just before, if
-    any, and the issues those posts are about."""
-    import notify
+def peak_players(series, start, end):
+    """The highest player count between two times (the series holds each change)."""
+    peak, current = 0, 0
+    for t, n in series or []:
+        if t <= start:
+            current = n
+        elif t < end:
+            peak = max(peak, n)
+        else:
+            break
+    return max(peak, current)
 
+
+def spike_signal(state, t):
+    """Whether the last 24 hours look worse than usual once traffic is taken into account, so a sale or
+    a launch (more players, so more posts) doesn't ping and a quality drop in a quiet week does:
+    - reviews: the negative share of the day's reviews against the share of the 30 days before (at
+      least SPIKE_MIN_REVIEWS reviews);
+    - other posts (bug reports, refund notes, comments): unhappy players per peak player against the
+      30 days before (when the player count is known).
+    Returns (players unhappy in 24 h, how many a normal day of this traffic would have, reasons) or None."""
     def bad(item):
         if item.get("dev") or item.get("pending"):
             return False
         return (item["kind"] == "review" and not item.get("votedUp")) or item["kind"] == "refund" or any(
             pt["kind"] == "bug" for pt in (item.get("triage") or {}).get("points") or [])
 
-    t = now()
     who = lambda posts: {(p.get("author") or {}).get("id") or p["id"] for p in posts}
-    recent = [i for i in state["items"].values() if t - DAY <= i["created"] and bad(i)]
-    before = [i for i in state["items"].values() if t - 15 * DAY <= i["created"] < t - DAY and bad(i)]
-    count, usual = len(who(recent)), len(who(before)) / 14
-    last = state.get("spike") or {}
-    if count < SPIKE_MIN or count < SPIKE_RATIO * usual:
+    items = [i for i in state["items"].values() if not i.get("dev") and not i.get("pending")]
+    recent = [i for i in items if t - DAY <= i["created"] <= t]
+    base = [i for i in items if t - (SPIKE_BASE_DAYS + 1) * DAY <= i["created"] < t - DAY]
+    reasons, expected, hit = [], 0.0, False
+
+    reviews = [i for i in recent if i["kind"] == "review"]
+    neg = sum(1 for i in reviews if not i.get("votedUp"))
+    base_reviews = [i for i in base if i["kind"] == "review"]
+    p0 = (sum(1 for i in base_reviews if not i.get("votedUp")) + 1) / (len(base_reviews) + 2)  # +1/+2: no 0% from a few reviews
+    exp_neg = len(reviews) * p0
+    expected += exp_neg
+    if len(reviews) >= SPIKE_MIN_REVIEWS and neg >= SPIKE_MIN_BAD:
+        z = (neg - exp_neg) / math.sqrt(len(reviews) * p0 * (1 - p0))
+        if z >= SPIKE_Z:
+            hit = True
+            reasons.append(f"{neg} of {len(reviews)} reviews negative, usually {round(100 * p0)}%")
+
+    others = who(i for i in recent if i["kind"] != "review" and bad(i))
+    peak_now = peak_players(state.get("players"), t - DAY, t)
+    peaks = sum(peak_players(state.get("players"), t - (d + 1) * DAY, t - d * DAY) for d in range(1, SPIKE_BASE_DAYS + 1))
+    if peak_now and peaks:
+        base_bad = len(who(i for i in base if i["kind"] != "review" and bad(i)))
+        rate = (base_bad + 1) / peaks
+        exp_other = rate * peak_now
+        expected += exp_other
+        if len(others) >= SPIKE_MIN_BAD and (len(others) - exp_other) / math.sqrt(max(exp_other, 1)) >= SPIKE_Z:
+            hit = True
+            reasons.append(f"{len(others)} players reported bugs or refunded at a peak of {peak_now} players, usually {exp_other:.1f}")
+    unhappy = [i for i in recent if bad(i)]
+    return (len(who(unhappy)), expected, reasons, unhappy) if hit else None
+
+
+def check_spike(state, game):
+    """A spike (spike_signal): more unhappy players in the last 24 hours than the day's reviews and
+    players would explain. Pings once, then again only a day later or when the count doubles. Names
+    the update that went out just before, if any, and the issues those posts are about."""
+    import notify
+
+    t = now()
+    signal = spike_signal(state, t)
+    if not signal:
         return []
+    count, usual, reasons, recent = signal
+    last = state.get("spike") or {}
     if last.get("at", 0) > t - DAY and count < 2 * last.get("count", 0):
         return []
     state["spike"] = {"at": t, "count": count}
@@ -1190,8 +1295,8 @@ def check_spike(state, game):
             if issue and issue["kind"] != "praise":
                 tally.setdefault(issue_id, set()).add((p.get("author") or {}).get("id") or p["id"])
     top = sorted(tally, key=lambda i: len(tally[i]), reverse=True)[:5]
-    print(f"[spike] {game['name']}: {count} bad posts in 24 h (usually {usual:.1f} a day)")
-    return [notify.spike(game, recent, count, usual, release, [(state["issues"][i], len(tally[i])) for i in top])]
+    print(f"[spike] {game['name']}: {'; '.join(reasons)}")
+    return [notify.spike(game, recent, count, usual, release, [(state["issues"][i], len(tally[i])) for i in top], reasons)]
 
 
 USAGE_KEYS = ("input", "output", "calls", "cost")
@@ -1611,7 +1716,7 @@ def test_discord():
     if negative:
         sent.append(notify.send([notify.flip(owner(negative), negative)], note="**5. Review flipped to negative** (no ping):"))
     release = max(state["releases"], key=lambda r: r["time"], default=None)
-    sent.append(notify.send([notify.spike(game, posts, max(SPIKE_MIN, issue["mentions"]), 0.4, release, [(issue, issue["mentions"])])],
+    sent.append(notify.send([notify.spike(game, posts, max(SPIKE_MIN_BAD, issue["mentions"]), 0.4, release, [(issue, issue["mentions"])], ["8 of 10 reviews negative, usually 15%"])],
                             note="**5b. Spike in negative reviews and bug reports** (no ping):"))
     # One of each kind of coverage, from the data when there is one.
     covered = {}

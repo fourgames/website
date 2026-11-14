@@ -171,6 +171,7 @@ async function loadSales() {
   try { state.sales = await getJson("sales.json"); } catch {}
   try { state.wishlists = await getJson("wishlists.json"); } catch {}
   try { state.steamworks = await getJson("steamworks.json"); } catch {}
+  try { state.traffic = await getJson("traffic.json"); } catch {} // store visits by source (feedback/traffic.js)
 }
 
 // The game's wishlist days (feedback/wishlists.py), oldest first: [[date, {adds, deletes, purchases,
@@ -1925,23 +1926,46 @@ function reviewFacts(totals) {
 const pct = (share) => `${share > 0 ? "+" : share < 0 ? "−" : "±"}${Math.abs(Math.round(share * 100))}%`;
 const median = (list) => { const s = list.slice().sort((a, b) => a - b); return s.length % 2 ? s[(s.length - 1) / 2] : (s[s.length / 2 - 1] + s[s.length / 2]) / 2; };
 
-// The one line that says what the numbers mean: did only this game drop, or everyone?
+// How much a game's players usually swing week to week: the spread (standard deviation) of its
+// weekly changes over the 8 weeks before this one, or null with under 3 of them.
+function weeklySwing(peaks) {
+  const changes = [];
+  for (let k = 1; k <= 8; k++) {
+    const was = peakAverage(peaks, WEEK, 1 + WEEK * (k + 1)), is = peakAverage(peaks, WEEK, 1 + WEEK * k);
+    if (was != null && is != null && was >= 1) changes.push(is / was - 1);
+  }
+  if (changes.length < 3) return null;
+  const m = changes.reduce((a, b) => a + b, 0) / changes.length;
+  return Math.sqrt(changes.reduce((a, c) => a + (c - m) ** 2, 0) / (changes.length - 1));
+}
+const MIN_COMPARE_PLAYERS = 10; // average daily peak, this week and last, before a drop means anything
+const DEFAULT_SWING = 0.15; // until a game has 4 weeks of history
+
+// The one line that says what the numbers mean: did only this game drop, or everyone? A gap only
+// counts when it's bigger than 2 × the usual week-to-week swing of this game and of the others
+// (median), together; less is normal ups and downs.
 function competitorVerdict(own, others) {
   if (!others.length) return null;
-  const m = median(others);
+  const m = median(others.map((o) => o.change));
   const vs = `similar games ${pct(m)} (median of ${others.length})`;
-  if (own == null) return ["calm", `Too few players of your own these two weeks to compare. Players this week against last: ${vs}.`];
-  if (own - m <= -0.15) return ["bad", `Only you dropped: players ${pct(own)} this week against last, while ${vs}. Look at what changed for this game: an update, a bug, a sale ending.`];
-  if (own - m >= 0.15) return ["good", `You're beating the market: players ${pct(own)} this week against last, while ${vs}.`];
-  if (m <= -0.1) return ["calm", `Everyone dropped: players ${pct(own)} this week against last, and ${vs}. Likely the season or a big release elsewhere, not your game.`];
-  return ["calm", `In step with similar games: players ${pct(own)} this week against last, ${vs}.`];
+  if (own.change == null || own.players < MIN_COMPARE_PLAYERS) return ["calm", `Too few players of your own these two weeks to compare (needs an average daily peak of ${MIN_COMPARE_PLAYERS}). Players this week against last: ${vs}.`];
+  const swing = (x) => Math.max(0.03, x ?? DEFAULT_SWING);
+  const theirs = median(others.map((o) => swing(o.swing)));
+  const band = Math.max(0.1, 2 * Math.sqrt(swing(own.swing) ** 2 + theirs ** 2));
+  const noise = `Your players usually swing ${own.swing == null ? "(not known yet, under 4 weeks)" : `about ${pct(own.swing).slice(1)}`} a week, so only a gap over ${Math.round(band * 100)} points counts.`;
+  if (own.change - m <= -band) return ["bad", `Only you dropped: players ${pct(own.change)} this week against last, while ${vs}. ${noise} Look at what changed for this game: an update, a bug, a sale ending.`];
+  if (own.change - m >= band) return ["good", `You're beating the market: players ${pct(own.change)} this week against last, while ${vs}. ${noise}`];
+  if (m <= -theirs * 2 && m <= -0.1) return ["calm", `Everyone dropped: players ${pct(own.change)} this week against last, and ${vs}. Likely the season or a big release elsewhere, not your game.`];
+  if (Math.abs(own.change - m) >= 0.15) return ["calm", `Within your usual ups and downs: players ${pct(own.change)} this week against last, ${vs}. ${noise}`];
+  return ["calm", `In step with similar games: players ${pct(own.change)} this week against last, ${vs}.`];
 }
 
 function competitorsView() {
   const list = competitors();
   const mine = ownPeaks();
   const rows = list.map((w) => ({ ...w, name: w.info?.name || w.name || `App ${w.appId}`, peaks: w.info?.peaks || {} }));
-  const verdict = competitorVerdict(weekChange(mine), rows.map((r) => weekChange(r.peaks)).filter((v) => v != null));
+  const facts = (peaks) => ({ change: weekChange(peaks), swing: weeklySwing(peaks), players: Math.min(peakAverage(peaks, WEEK) ?? 0, peakAverage(peaks, WEEK, WEEK + 1) ?? 0) });
+  const verdict = competitorVerdict(facts(mine), rows.map((r) => facts(r.peaks)).filter((v) => v.change != null));
   const since = Math.min(...rows.flatMap((r) => Object.keys(r.peaks)).map(dayTime));
   const storeLink = (appId, text) => h("a", { href: `https://store.steampowered.com/app/${appId}/`, target: "_blank", rel: "noopener" }, text);
   const row = ({ appId, name, capsule, peaks, reviews, updates, info, own }) => {
@@ -1972,7 +1996,7 @@ function competitorsView() {
         : h("p.ov-calm", !list.length ? "Add 5 to 10 games like this one (same genre, size or price) to see whether a drop in players is yours alone or everyone's."
           : `Needs two weeks of players to compare: collecting${Number.isFinite(since) ? ` since ${fmtShort(since)}` : " from the next run"}. Steam keeps no history, so it starts when a game is added.`),
       list.length ? competitorChart(own, rows) : null,
-      about("Each game is read hourly from Steam: its player count (kept as the day's peak), its reviews and its update posts. \"This week\" is the average daily peak over the last 7 full days against the 7 before, so a game with 10 players and one with 10,000 compare fairly. Days are UTC."),
+      about("Each game is read hourly from Steam: its player count (kept as the day's peak), its reviews and its update posts. \"This week\" is the average daily peak over the last 7 full days against the 7 before, so a game with 10 players and one with 10,000 compare fairly. A gap only counts when it's bigger than these games' usual week-to-week swings, and only from an average daily peak of 10 players. Days are UTC."),
       row(own),
       ...rows.map((r) => row({ ...r, ...(r.info || {}), name: r.name, peaks: r.peaks }))));
 }
@@ -2302,7 +2326,9 @@ function issueView(kind) {
   // What costs the most reviews, what most players hit, or what turns new players away.
   const sort = chips([["priority", "Priority"], ["trending", "Trending"], ["negative", "Negative reviews"], ["players", "Most players"], ["first", "First 2 hours"]], f.sort, (v) => { f.sort = v; draw(); }, "Sort");
   const search = h("input", { type: "search", placeholder: "Search issues", value: f.q, oninput: (e) => { f.q = e.target.value; draw(); } });
-  wrap.append(h("div.filters", status, h("span.zoom-label", "Sort"), sort, search), list);
+  wrap.append(h("div.filters", status, h("span.zoom-label", "Sort"), sort, search),
+    h("p.meta", "Priority: what reaches buyers counts most. Negative reviews (more with helpful votes), refunds, reports in the first 2 hours, videos and comments by views; Claude's urgency counts a little."),
+    list);
   draw();
   return wrap;
 }
@@ -2312,18 +2338,33 @@ function playersBetween(issue, from, to) {
   const posts = issue.items.map((id) => state.game.items[id]).filter((p) => p && p.created >= from && p.created < to);
   return new Set(posts.map((p) => p.author?.id || p.id)).size;
 }
-// Trending: at least 2 players this week, and at least twice as many as the week before. Only once
-// the game has two weeks of posts: before that, everything is up on an empty week.
+// Trending: at least 4 players this week, and clearly more than the week before once the game's
+// overall post volume is taken into account (a launch or a sale brings more posts about everything):
+// at least twice what the week before scaled by all players posting would give, and more than
+// chance (2 × √expected). Only once the game has two weeks of posts: before that, everything is up
+// on an empty week.
+const TREND_MIN = 4;
+let volumeCache = null;
+function postVolume(t) {
+  const key = `${state.game.appId}:${Math.floor(t / 3600)}:${items().length}`;
+  if (volumeCache?.key === key) return volumeCache;
+  const who = (from, to) => new Set(items().filter((p) => !p.dev && p.created >= from && p.created < to).map((p) => p.author?.id || p.id)).size;
+  volumeCache = { key, week: who(t - 7 * DAY, t + 1), before: who(t - 14 * DAY, t - 7 * DAY) };
+  return volumeCache;
+}
 function trend(issue) {
   const t = now();
   if (!items().some((p) => !p.dev && p.created < t - 14 * DAY)) return null;
   const week = playersBetween(issue, t - 7 * DAY, t + 1), before = playersBetween(issue, t - 14 * DAY, t - 7 * DAY);
-  return week >= 2 && week >= 2 * before ? { week, before } : null;
+  if (week < TREND_MIN) return null;
+  const v = postVolume(t);
+  const expected = before * (v.before ? v.week / v.before : 1);
+  return week >= 2 * expected && week - expected >= 2 * Math.sqrt(Math.max(expected, 1)) ? { week, before, expected } : null;
 }
-const trendScore = (i) => { const t = trend(i); return t ? t.week - t.before : -1; };
+const trendScore = (i) => { const t = trend(i); return t ? t.week - t.expected : -1; };
 function trendTag(issue) {
   const t = trend(issue);
-  return t ? h("span.pc-trend", { title: `${plural(t.week, "player")} in the last 7 days, ${t.before} the 7 days before` }, "Trending") : null;
+  return t ? h("span.pc-trend", { title: `${plural(t.week, "player")} in the last 7 days, ${t.before} the 7 days before (${Math.round(t.expected * 10) / 10} expected with this week's post volume)` }, "Trending") : null;
 }
 
 // The newest update (any update post), and whether an issue first came up after it, within its
@@ -2344,12 +2385,25 @@ const SORTS = {
   first: (a, b) => (b.firstSession || 0) - (a.firstSession || 0) || b.mentions - a.mentions,
 };
 
-// What players love: praise grouped like ideas, most players first, ready to copy for a store page.
+// How much a bit of praise reaches buyers: each player once, a positive review (on the store page)
+// worth 2, more with helpful votes (Steam shows the most voted first: 1 + log2(1 + votes) times),
+// any other post 1.
+function praiseWeight(issue) {
+  const best = {};
+  for (const p of issue.items.map((id) => state.game.items[id]).filter(Boolean)) {
+    const w = p.kind === "review" && p.votedUp ? 2 * (1 + Math.log2(1 + (p.votesUp || 0))) : 1;
+    const who = p.author?.id || p.id;
+    best[who] = Math.max(best[who] || 0, w);
+  }
+  return Object.values(best).reduce((a, b) => a + b, 0);
+}
+
+// What players love: praise grouped like ideas, what buyers see most first, ready to copy for a store page.
 function lovedView() {
-  const list = issues("praise").sort((a, b) => b.mentions - a.mentions || b.lastSeen - a.lastSeen);
+  const list = issues("praise").map((i) => [i, praiseWeight(i)]).sort((a, b) => b[1] - a[1] || b[0].mentions - a[0].mentions || b[0].lastSeen - a[0].lastSeen).map(([i]) => i);
   const copyAll = h("button.btn.primary", { onclick: (e) => copy(list.map((i) => `- ${i.title} (${plural(i.mentions, "player")})`).join("\n"), e.currentTarget) }, "Copy the list");
   return h("div",
-    about( "What players praise, grouped like ideas: things to keep, and wording for your store page and trailers."),
+    about( "What players praise, grouped like ideas: things to keep, and wording for your store page and trailers. First: what buyers see most. A positive review counts double, more with helpful votes; other posts count once."),
     list.length ? h("div.filters", copyAll) : null,
     ...(list.length ? list.map((i) => issueCard(i)) : [h("p.empty", "No praise grouped yet.")]));
 }
@@ -2364,12 +2418,21 @@ function updatesView() {
     const list = reviews.filter((r) => r.created >= from && r.created < to);
     return { n: list.length, neg: list.filter((r) => !r.votedUp).length };
   };
-  // How players took the update, from the reviews written after it (until the next update).
-  const reception = (w, last) => {
+  // How players took the update: the positive share of the reviews written after it (until the next
+  // update) against the game's share in all reviews before it. A verdict only from 10 reviews on, and
+  // only when the gap is bigger than chance (2 standard errors); else "about the same as before".
+  const MIN_REVIEWS = 10;
+  const reception = (w, last, before) => {
     if (!w.n) return h("div.impact-stat", h("b", "–"), h("span", last ? "no reviews since yet" : "no reviews before the next update"));
     const pos = w.n - w.neg, share = pos / w.n;
-    const [word, cls] = share >= 0.7 ? ["Liked", ".good"] : share >= 0.4 ? ["Mixed", ".warn"] : ["Disliked", ".bad"];
-    return h(`div.impact-stat${cls}`, h("b", word), h("span", w.n === 1 ? `the 1 review since was ${pos ? "positive" : "negative"}` : `${pos} of ${w.n} reviews since were positive`));
+    const counted = w.n === 1 ? `the 1 review since was ${pos ? "positive" : "negative"}` : `${pos} of ${w.n} reviews since were positive`;
+    if (w.n < MIN_REVIEWS) return h("div.impact-stat", h("b", "Too few reviews yet"), h("span", `${counted} (needs ${MIN_REVIEWS})`));
+    if (!before.n) return h("div.impact-stat", h("b", `${Math.round(share * 100)}% positive`), h("span", `${counted}; no reviews before to compare with`));
+    const was = (before.n - before.neg) / before.n;
+    const band = 2 * Math.sqrt(Math.max(was * (1 - was), 0.01) / w.n);
+    const [word, cls] = share - was >= band ? ["Liked", ".good"] : was - share >= band ? ["Disliked", ".bad"] : ["Same as before", ""];
+    return h(`div.impact-stat${cls}`, { title: `Better or worse than ${Math.round(band * 100)} points counts; less could be chance.` },
+      h("b", word), h("span", `${counted} (${Math.round(share * 100)}%), ${Math.round(was * 100)}% before`));
   };
   const cards = all.slice().reverse().map((r) => {
     const i = all.indexOf(r);
@@ -2385,7 +2448,7 @@ function updatesView() {
       h("div.pc-top",
         h("div.pc-main", h("span.pc-type", isLaunch(r) ? "Launch" : r.version ? `v${r.version}` : r.name), h("span.pc-prio", fmtDate(r.time))),
         h("div.pc-aside.impact",
-          reception(after, !all[i + 1]))),
+          reception(after, !all[i + 1], tally(0, r.time)))),
       fixed.length ? h("div.upd-section", h("b", "Fixed by this update"),
         h("ul.pc-points", ...fixed.map((x) => h("li", h(`span.pk.pk-${x.kind === "bug" ? "bug" : "suggestion"}`, x.kind === "bug" ? "Bug" : "Idea"),
           h("span", x.title, " · ", reportsAfter(x) ? h("span.vote-down", `${plural(reportsAfter(x), "report")} since`) : h("span.s-fixed", "no reports since")))))) : null,
@@ -2396,7 +2459,7 @@ function updatesView() {
       h("div.meta", h("a", { href: r.url, target: "_blank", rel: "noopener" }, "Patch notes ↗")));
   });
   return h("div",
-    about( "Each update: how players took it (the reviews written after it), what it fixed (and whether those reports stopped), what it only partly addressed, and what came up since (crossed out once a later update fixed it)."),
+    about( "Each update: how players took it (the share of positive reviews after it against before it; from 10 reviews on, and only a gap bigger than chance), what it fixed (and whether those reports stopped), what it only partly addressed, and what came up since (crossed out once a later update fixed it)."),
     ...(cards.length ? cards : [h("p.empty", "No updates yet.")]));
 }
 
@@ -2498,7 +2561,7 @@ function issueCard(issue) {
       h("div.pc-top",
         h("div.pc-main",
           h(`span.pc-type.tt-text-${issue.kind}`, typeIcon(issue.kind), kind),
-          u ? h("span.pc-prio", bars, `${URGENCY[u]} priority`) : null,
+          u ? h("span.pc-prio", { title: `Claude's urgency label. The list is sorted by priority ${issue.priority}: what reaches buyers, with urgency as a small part.` }, bars, `${URGENCY[u]} urgency`) : null,
           statusBadge(issue),
           isRecent(issue.firstSeen) ? h("span.pc-new", { title: `First reported ${ago(issue.firstSeen)}` }, "New")
             : isRecent(issue.lastSeen) ? h("span.pc-new", { title: `Last reported ${ago(issue.lastSeen)}` }, "New report") : null,
@@ -3196,6 +3259,7 @@ function salesView(all = false) {
 
 // The game's YouTube videos next to its sales and wishlists around each (video-impact.js).
 const videoRows = () => videoImpact({ videos: mediaItems(), sales: Object.fromEntries(salesDays()), wishlists: state.wishlists?.apps?.[state.game.appId]?.days || {},
+  traffic: state.traffic?.apps?.[state.game.appId]?.days || {},
   events: markers(0, now()).map((r) => ({ ...r, launch: isLaunch(r) })), now: now(), salesLast: Object.keys(state.sales?.days || {}).sort().at(-1) });
 
 // Why players refunded: the reason Steam asks for, split, then what they wrote, newest first

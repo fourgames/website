@@ -43,6 +43,7 @@ const SIZE_RANGE = { s0: [0, 1e3], s1: [1e3, 1e4], s2: [1e4, 1e5], s3: [1e5, 1e6
 // Views tiers: typical views per video (YouTube) or typical live viewers (Twitch), lowest first.
 export const TIERS = ["bronze", "silver", "gold", "diamond"];
 const TIER_NAME = { bronze: "Bronze", silver: "Silver", gold: "Gold", diamond: "Diamond" };
+const TIER_EMOJI = { bronze: "🥉", silver: "🥈", gold: "🥇", diamond: "💎" };
 export const TIER_MIN = { yt: { bronze: 1e3, silver: 5e3, gold: 25e3, diamond: 1e5 }, tw: { bronze: 10, silver: 50, gold: 200, diamond: 1000 } };
 const TYPES = { "indie-variety": "Indie variety", variety: "Variety", "one-game": "One game", "few-games": "A few games" };
 const TYPE_HELP = {
@@ -118,7 +119,7 @@ function tierBadge(c) {
   if (!t) return null;
   const tw = c.pl === "tw";
   const min = TIER_MIN[tw ? "tw" : "yt"][t];
-  return C.h(`span.cr-tier.is-${t}`, { title: `${TIER_NAME[t]}: typical ${num(c.mv)} ${tw ? "live viewers" : "views per video"} (${TIER_NAME[t]} is ${num(min)}+)` }, TIER_NAME[t]);
+  return C.h(`span.cr-tier.is-${t}`, { title: `${TIER_NAME[t]}: typical ${num(c.mv)} ${tw ? "live viewers" : "views per video"} (${TIER_NAME[t]} is ${num(min)}+)` }, `${TIER_EMOJI[t]} ${TIER_NAME[t]}`);
 }
 // How sure a genre overlap is with n games behind it: 1 -> 0.33, 2 -> 0.5, 4 -> 0.67, 10 -> 0.83.
 export function confidence(n) { return n > 0 ? n / (n + 2) : 0; }
@@ -290,7 +291,7 @@ function draw() {
       select("Genre", st.f.genre, [["all", "Any"], ...genres.map(([t, n]) => [t, `${d.tags[t]} (${n})`])], "genre"),
       select("Sort", st.f.sort, [...(gameId ? [["fit", "Best fit for the game"]] : []), ["best", "Best overall"], ["views", tw ? "Most viewers" : "Most views per video"], ["subs", tw ? "Most followers" : "Most subscribers"], ["active", "Newest upload"], ["games", "Most games"], ["new", "Newest found"]], "sort")),
     h("div.cr-row", C.chips(SIZES, st.f.size, (v) => setF({ size: v }), "Size"),
-      C.chips([["all", tw ? "Any viewers" : "Any views"], ["bronze", "Bronze+"], ["silver", "Silver+"], ["gold", "Gold+"], ["diamond", "Diamond"]], st.f.views, (v) => setF({ views: v }), tw ? "Typical live viewers" : "Typical views per video"),
+      C.chips([["all", tw ? "Any viewers" : "Any views"], ["bronze", "🥉 Bronze+"], ["silver", "🥈 Silver+"], ["gold", "🥇 Gold+"], ["diamond", "💎 Diamond"]], st.f.views, (v) => setF({ views: v }), tw ? "Typical live viewers" : "Typical views per video"),
       C.chips([["all", "Any type"], ...Object.entries(TYPES)], st.f.type, (v) => setF({ type: v }), "Type")));
 
   const list = h("div.cr-list");

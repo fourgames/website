@@ -397,3 +397,29 @@ def test_is_about_names_or_steam_link():
     assert is_about(v("new game", "https://store.steampowered.com/app/3958210/Digging/", "22"), 3958210, ["X"])
     assert not is_about(v("new game", "https://store.steampowered.com/app/39582100/", "22"), 3958210, ["X"])
     assert not is_about(v("ice fishing"), 3958210, ["Digging A Hole In Ice With A Chainsaw"])
+
+
+def test_views_read_again_after_a_week_and_typical_views(tmp_path, steam_db):
+    from creators import export
+    collector, store = make(tmp_path, steam_db, FakeYouTube())
+    collector.run(spend_all=True)
+    week = 7 * 86400
+    # Found in their first hours: read again once they're a week old, not before.
+    store.db.execute("UPDATE youtube_videos SET published = ?, found_at = ?, views = 5", (NOW - week - 10, NOW - week))
+    store.db.commit()
+    assert store.videos_to_reread(int(NOW) - 20, 7, 50) == []
+    ids = store.videos_to_reread(int(NOW), 7, 50)
+    assert set(ids) == {r[0] for r in store.db.execute("SELECT video_id FROM youtube_videos")}
+    collector.summary["reread"] = 0
+    collector._reread_views()
+    assert collector.summary["reread"] == len(ids) and store.videos_to_reread(int(NOW), 7, 50) == []
+    assert {r[0] for r in store.db.execute("SELECT views FROM youtube_videos")} == {1234}
+    # Typical views: the median of long videos a week old; Shorts and fresh videos left out.
+    store.db.execute("UPDATE youtube_videos SET views = 100 WHERE channel_id = 'UCa'")
+    for vid, views, dur, age in [("s1", 900000, 40, week * 2), ("n1", 900000, 600, 3600), ("l2", 300, 600, week * 2),
+                                 ("l3", 200, 600, week * 2)]:
+        store.db.execute("INSERT INTO youtube_videos (video_id, appid, channel_id, published, views, duration, found_at) "
+                         "VALUES (?, 1, 'UCa', ?, ?, ?, ?)", (vid, NOW - age, views, dur, NOW))
+    store.db.commit()
+    by = {c["id"]: c for c in export.build(store, collector.config.steam_db, set(), NOW)["creators"]}
+    assert (by["UCa"]["mv"], by["UCa"]["mvn"]) == (200, 3)

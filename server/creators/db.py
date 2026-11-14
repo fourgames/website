@@ -46,6 +46,7 @@ CREATE TABLE IF NOT EXISTS youtube_videos (
     duration    INTEGER,                -- seconds
     language    TEXT,                   -- the video's audio or default language, when set
     found_at    INTEGER NOT NULL,
+    views_read_at INTEGER,              -- when views/likes/comments were last read again (a week after publishing)
     PRIMARY KEY (video_id, appid)
 );
 CREATE INDEX IF NOT EXISTS youtube_videos_channel ON youtube_videos (channel_id);
@@ -132,6 +133,8 @@ class Store:
         for name in ("email_button", "button_checked_at", "last_upload", "upload_checked_at"):  # added after the first databases were made
             if name not in columns:
                 self.db.execute(f"ALTER TABLE youtube_channels ADD COLUMN {name} INTEGER")
+        if "views_read_at" not in {r[1] for r in self.db.execute("PRAGMA table_info(youtube_videos)")}:
+            self.db.execute("ALTER TABLE youtube_videos ADD COLUMN views_read_at INTEGER")
 
     def close(self) -> None:
         self.db.close()
@@ -220,3 +223,22 @@ class Store:
         with self.db:
             self.db.execute("UPDATE youtube_channels SET last_upload = COALESCE(?, last_upload), upload_checked_at = ? "
                             "WHERE channel_id = ?", (last_upload, now, channel_id))
+
+    def videos_to_reread(self, now: int, after_days: int, limit: int) -> list[str]:
+        """Videos last read before they were `after_days` old and that are that old now: read their views
+        once more, so a video found in its first hours isn't judged by them. Oldest first."""
+        return [r[0] for r in self.db.execute(
+            """SELECT video_id FROM youtube_videos
+               WHERE published <= ? AND COALESCE(views_read_at, found_at) < published + ?
+               GROUP BY video_id ORDER BY MIN(published) LIMIT ?""",
+            (now - after_days * 86400, after_days * 86400, limit))]
+
+    def save_views(self, rows: Iterable[dict], asked: Iterable[str], now: int) -> None:
+        """New numbers for videos (every game row of each); videos YouTube no longer lists keep theirs."""
+        with self.db:
+            for r in rows:
+                self.db.execute("UPDATE youtube_videos SET views = COALESCE(:views, views), likes = COALESCE(:likes, likes), "
+                                "comments = COALESCE(:comments, comments) WHERE video_id = :video_id",
+                                {k: r.get(k) for k in ("video_id", "views", "likes", "comments")})
+            self.db.executemany("UPDATE youtube_videos SET views_read_at = ? WHERE video_id = ?",
+                                [(now, v) for v in asked])

@@ -17,6 +17,10 @@ Every hour (`creators.timer` → `creators.service`, `python -m creators`) it:
 4. Reads each new channel's details: subscribers, videos, country, language, handle, and the
    description, where it finds **email addresses** (also "name [at] gmail [dot] com" and the like)
    and **links** to Twitch, X, Instagram, TikTok and Discord. Channels are read again every 30 days.
+5. Reads each video's views once more when it's a week old (50 videos per unit), since most are
+   found in their first days. The Creators page ranks channels by **typical views**: the median views
+   of their game videos of 3+ minutes (Shorts count people scrolling past) a week old or more.
+   Subscribers say little: an 85k channel whose videos get 500 views sells nothing.
 
 ## The budget
 

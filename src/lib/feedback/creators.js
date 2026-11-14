@@ -10,10 +10,13 @@
 //   - Type (the server's cat): indie variety = 4+ games, mostly small ones (median under 5,000 reviews);
 //     variety = 4+ games; one game = one game in 3+ videos; a few games = the rest.
 //   - Genres (p): the Steam tags of the games they covered, weighted by videos, generic tags left out.
+//   - Reach (YouTube): typical views per video (mv, the median of their game videos of 3+ minutes, a
+//     week old or more), not subscribers: an 85k channel whose videos get 500 views sells nothing.
+//     5k-300k typical views is the sweet spot for a small studio (big enough to sell, small enough to
+//     answer). Until mv is known, subscribers stand in, at most 0.6. Twitch: followers.
 //   - Fit for a game: how much their genres overlap the game's tags (its first tags count most), times
-//     how active they are and a size factor (1k-300k subscribers is the sweet spot for a small studio:
-//     big enough to sell, small enough to answer), a little more for indie-variety channels. Anyone
-//     who already made a video of that game goes first.
+//     how active they are and their reach, a little more for indie-variety channels. Anyone who
+//     already made a video of that game goes first.
 //
 // Contract (like market-merged.js): creatorsTop(ctx) fills the header, creatorsView(ctx) returns one
 // root that redraws itself. ctx = the dashboard's helpers (h, chips, adminGet, copy, fmtNum, plural...).
@@ -57,6 +60,19 @@ export function sizeFactor(s) {
   if (s == null) return 0.5;
   return s < 500 ? 0.4 : s < 1000 ? 0.65 : s <= 300000 ? 1 : s <= 1e6 ? 0.75 : 0.5;
 }
+// Typical views per video -> 0.05 (200 or fewer) rising evenly per tenfold to 1 at 5,000, 1 up to 300k,
+// then down to 0.6 at 3M+ (too big to answer a small studio).
+export function viewsFactor(v) {
+  const l = Math.log10(Math.max(v, 1)), lo = Math.log10(200), hi = Math.log10(5000);
+  if (l <= lo) return 0.05;
+  if (l < hi) return 0.05 + 0.95 * (l - lo) / (hi - lo);
+  if (l <= Math.log10(3e5)) return 1;
+  return Math.max(0.6, 1 - 0.4 * (l - Math.log10(3e5)));
+}
+export function reach(c) {
+  if (c.pl === "tw") return sizeFactor(c.s);
+  return c.mv != null ? viewsFactor(c.mv) : 0.6 * sizeFactor(c.s);
+}
 const ACTIVE_FACTOR = { active: 1, quiet: 0.6, inactive: 0.15, unknown: 0.5 };
 
 // A game's tags as weights: its first (non-generic) tags count most.
@@ -71,7 +87,7 @@ export function fit(c, appid, weights, today = now()) {
   const played = c.g.some((g) => g[0] === appid);
   let genre = 0;
   for (const [t, pw] of c.p) genre += pw * (weights.get(t) || 0);
-  const base = Math.pow(Math.min(1, genre), 0.8) * ACTIVE_FACTOR[activity(c, today)] * sizeFactor(c.s) * (c.cat === "indie-variety" ? 1.15 : 1);
+  const base = Math.pow(Math.min(1, genre), 0.8) * ACTIVE_FACTOR[activity(c, today)] * reach(c) * (c.cat === "indie-variety" ? 1.15 : 1);
   return { score: base + (played ? 2 : 0), base, genre, played };
 }
 
@@ -201,7 +217,7 @@ function draw() {
       select("Active", st.f.active, [["all", "Any"], ["active", "Active (30 days)"], ["quiet", "Quiet (30–90 days)"], ["inactive", "Inactive (90+ days)"], ["unknown", "Not known yet"]], "active"),
       select("Language", st.f.lang, [["all", "Any"], ...langs.map(([l, n]) => [l, `${LANGS[l] || (l === "?" ? "Not set" : l.toUpperCase())} (${n})`])], "lang"),
       select("Genre", st.f.genre, [["all", "Any"], ...genres.map(([t, n]) => [t, `${d.tags[t]} (${n})`])], "genre"),
-      select("Sort", st.f.sort, [...(gameId ? [["fit", "Best fit for the game"]] : []), ["best", "Best overall"], ["subs", "Most subscribers"], ["active", "Newest upload"], ["games", "Most games"], ["new", "Newest found"]], "sort")),
+      select("Sort", st.f.sort, [...(gameId ? [["fit", "Best fit for the game"]] : []), ["best", "Best overall"], ...(tw ? [] : [["views", "Most views per video"]]), ["subs", tw ? "Most followers" : "Most subscribers"], ["active", "Newest upload"], ["games", "Most games"], ["new", "Newest found"]], "sort")),
     h("div.cr-row", C.chips(SIZES, st.f.size, (v) => setF({ size: v }), "Size"),
       C.chips([["all", "Any type"], ...Object.entries(TYPES)], st.f.type, (v) => setF({ type: v }), "Type")));
 
@@ -210,10 +226,11 @@ function draw() {
     let rows = filterCreators(all, st.f, d, today);
     const scored = new Map();
     if (gameId) for (const c of rows) scored.set(c.id, fit(c, gameId, weights, today));
-    const overall = (c) => ACTIVE_FACTOR[activity(c, today)] * sizeFactor(c.s) * (c.e.length ? 1.3 : 1) * (1 + Math.min(c.g.length, 10) / 10) * (c.own ? 2 : 1);
+    const overall = (c) => ACTIVE_FACTOR[activity(c, today)] * reach(c) * (c.e.length ? 1.3 : 1) * (1 + Math.min(c.g.length, 10) / 10) * (c.own ? 2 : 1);
     const key = {
       fit: (c) => scored.get(c.id)?.score || 0,
       best: overall,
+      views: (c) => c.mv ?? -1,
       subs: (c) => c.s || 0,
       active: (c) => lastActive(c) || 0,
       games: (c) => c.g.length,
@@ -227,11 +244,11 @@ function draw() {
       h("span", `${C.plural(rows.length, who)}${rows.length !== all.length ? ` of ${num(all.length)}` : ""}, ${num(emails.length)} with an email`),
       h("button.btn", { type: "button", disabled: !emails.length, title: "One email per creator, the first found, one per line", onclick: (e) => C.copy(emails.map((c) => c.e[0][0]).join("\n"), e.currentTarget) }, `Copy ${C.plural(emails.length, "email")}`));
     const table = h("table.cr-table",
-      h("thead", h("tr", ...(gameId ? [h("th.cr-num", "Fit")] : []), h("th", "Channel"), h("th.cr-num", tw ? "Followers" : "Subs"), h("th", "Lang"), h("th", tw ? "Last stream" : "Last upload"),
+      h("thead", h("tr", ...(gameId ? [h("th.cr-num", "Fit")] : []), h("th", "Channel"), h("th.cr-num", tw ? "Followers" : "Subs"), ...(tw ? [] : [h("th.cr-num", { title: "Typical views per video: the median of their game videos of 3+ minutes, a week old or more" }, "Views")]), h("th", "Lang"), h("th", tw ? "Last stream" : "Last upload"),
         h("th", "Games"), h("th", "Type"), h("th", "Genres"), h("th", "Email"))),
       h("tbody", ...shown.flatMap((c) => row(c, gameId ? scored.get(c.id) : null, top, today))));
     const more = rows.length > st.shown ? h("button.btn.cr-more", { type: "button", onclick: () => { st.shown += PAGE; drawList(); } }, `Show ${Math.min(PAGE, rows.length - st.shown)} more`) : null;
-    list.replaceChildren(head, rows.length ? h("div.cr-scroll", table) : h("p.empty", `No ${who}s match these filters.`), more);
+    list.replaceChildren(...[head, rows.length ? h("div.cr-scroll", table) : h("p.empty", `No ${who}s match these filters.`), more].filter(Boolean));
   }
 
   function row(c, f, top, today) {
@@ -253,6 +270,7 @@ function draw() {
         c.pk ? h("span.cr-badge", { title: "Twitch partner or affiliate" }, c.pk) : null,
         c.h ? h("div.cr-muted", c.h) : null),
       h("td.cr-num", subs(c.s)),
+      ...(tw ? [] : [h("td.cr-num", c.mv != null ? { title: `Median of ${C.plural(c.mvn, "long video")}${c.s ? `, ${Math.round(c.mv / c.s * 100)}% of subscribers` : ""}`, class: c.mv < 1000 ? "cr-low" : null } : { title: "Not known yet: no game video of 3+ minutes a week old" }, c.mv != null ? subs(c.mv) : h("span.cr-muted", "–"))]),
       h("td", { title: LANGS[c.l] || "" }, (c.l || "–").toUpperCase(), c.c ? h("span.cr-muted", ` ${c.c}`) : null),
       h("td", h("span.cr-act", { class: `is-${act}`, title: tw ? "Newest broadcast of a game we searched" : c.lu ? "Newest upload of any kind" : c.lv ? "Newest video of a game we searched (the newest upload isn't read yet)" : "" }, ago(lastActive(c)))),
       h("td.cr-gamescol", { title: games.join(", ") }, h("b", c.g.length), " ", h("span.cr-muted", games.slice(0, 2).join(", "))),
@@ -260,7 +278,7 @@ function draw() {
       h("td.cr-genres", c.p.slice(0, 3).map(([t]) => d.tags[t]).filter(Boolean).join(", ")),
       h("td", email));
     if (!open) return [main];
-    const cols = (f ? 1 : 0) + 8;
+    const cols = (f ? 1 : 0) + (tw ? 8 : 9);
     const links = Object.entries(c.k).map(([k, v]) => {
       const href = { youtube: `https://www.youtube.com/${v}`, twitch: `https://twitch.tv/${v}`, x: `https://x.com/${v}`, instagram: `https://instagram.com/${v}`, tiktok: `https://tiktok.com/@${v}`, discord: `https://discord.gg/${v}` }[k];
       return href ? h("a", { href, target: "_blank", rel: "noopener" }, k === "x" ? "X" : k[0].toUpperCase() + k.slice(1)) : null;
@@ -272,6 +290,7 @@ function draw() {
           ? h("p", `${subs(c.s)} followers · ${C.plural(c.n || 0, "broadcast")} of searched games`, h("br"),
             `Newest broadcast: ${ago(c.lu)} · ${C.plural(c.v30 || 0, "broadcast")} in 30 days`)
           : h("p", `${subs(c.s)} subscribers · ${num(c.n)} videos`, h("br"),
+          c.mv != null ? `Typical views: ${num(c.mv)} per video (median of ${C.plural(c.mvn, "game video")} of 3+ minutes)` : "Typical views: not known yet", h("br"),
           `Newest upload: ${c.lu ? ago(c.lu) : "not read yet"} · ${C.plural(c.v30 || 0, "video")} of searched games in 30 days`),
           links.length ? h("p", "Also on ", ...links.flatMap((a, i) => [i ? " · " : null, a])) : null),
         h("div", h("div.cr-dh", `Games (${c.g.length})`), h("ul.cr-games", ...c.g.slice(0, 12).map(([id, n, last, views]) =>
@@ -293,11 +312,11 @@ function draw() {
     d.generated ? ` Last run ${clock(d.generated)}.` : "") : null;
 
   drawList();
-  root.replaceChildren(switcher, tw ? null : huntStrip(d, C), cards, collecting, gamePick, filters, list,
+  root.replaceChildren(...[switcher, tw ? null : huntStrip(d, C), cards, collecting, gamePick, filters, list,
     h("details.about", h("summary", "How this works"),
       h("p", "The server searches YouTube every hour for videos of Steam games (ours every week, then games with 30 to 50,000 reviews, those like ours first) and keeps the channels that made them. Emails come from the channel description, from pages they link to (Linktree, their website; the server follows those), or from YouTube's hidden View email button, which needs a captcha (the creator-emails skill)."),
       h("p", "Last upload is the channel's newest upload of any kind, read every 14 days. Type comes from the games they covered: indie variety plays 4+ different, mostly small games; one game is mostly one title. Genres are the Steam tags of those games."),
-      h("p", "Best for a game ranks creators by how much their genres overlap the game's tags (its first tags count most), how active they are, and size: 1k–300k subscribers is the sweet spot for a small studio. Anyone who already made a video of the game is first. Contact status (emailed, replied, made a video) comes with sending: for 60 days after an email, the server looks at the creator's new uploads every 3 days for videos of the game.")));
+      h("p", "Best for a game ranks creators by how much their genres overlap the game's tags (its first tags count most), how active they are, and reach: typical views per video (the median of their game videos of 3+ minutes, a week old or more; Shorts left out), not subscribers. 5k–300k views is the sweet spot for a small studio. Anyone who already made a video of the game is first. Contact status (emailed, replied, made a video) comes with sending: for 60 days after an email, the server looks at the creator's new uploads every 3 days for videos of the game."))].filter(Boolean));
 }
 
 // Press, aggregators and trailer channels (server/creators/press.py), worldwide.
@@ -658,6 +677,7 @@ const CSS = `
 .crv .cr-chan a:hover { text-decoration: underline; }
 .crv .cr-chan { min-width: 12em; max-width: 20em; }
 .crv .cr-muted { color: var(--fb-muted); font-size: 0.8rem; }
+.crv .cr-low { color: var(--fb-muted); }
 .crv .cr-gamescol { max-width: 16em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .crv .cr-genres { color: var(--fb-ink-2); min-width: 10em; }
 .crv .cr-badge { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 0.7rem; font-weight: 700; color: var(--fb-good-text); border: 1px solid var(--fb-positive); vertical-align: 1px; }

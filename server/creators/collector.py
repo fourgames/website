@@ -35,6 +35,8 @@ def quota_day(now: float) -> tuple[str, float]:
 
 # How often each channel's newest upload is read again.
 UPLOAD_CHECK_DAYS = 14
+# A video's views are read once more when it's this old (most are found in their first days).
+VIEWS_AFTER_DAYS = 7
 
 
 class Collector:
@@ -44,7 +46,7 @@ class Collector:
         self.store = store
         self.youtube = youtube or YouTube(Http(USER_AGENT), config.youtube_api_key)
         self.clock = clock
-        self.summary = {"searches": 0, "videos": 0, "new_videos": 0, "channels": 0, "uploads": 0, "emailed": 0,
+        self.summary = {"searches": 0, "videos": 0, "new_videos": 0, "channels": 0, "uploads": 0, "reread": 0, "emailed": 0,
                         "made_video": 0, "units": 0}
 
     def allowed(self, spend_all: bool) -> tuple[str, int]:
@@ -68,6 +70,7 @@ class Collector:
             self._check_emailed()
             self._searches(max_searches)
             self._refresh_channels(stale=True)
+            self._reread_views()
             self._check_uploads()
         except QuotaExceeded as error:
             log.warning("YouTube refused (%s): stopping until the quota day ends", error)
@@ -76,7 +79,7 @@ class Collector:
             # Network trouble or a 5xx: the next hourly run carries on.
             log.warning("YouTube error, stopping this run: %s", error)
         log.info("ran: %(searches)d searches, %(videos)d videos kept (%(new_videos)d new), "
-                 "%(channels)d channels read, %(uploads)d newest uploads read, %(emailed)d emailed channels "
+                 "%(channels)d channels read, %(reread)d videos' views read again, %(uploads)d newest uploads read, %(emailed)d emailed channels "
                  "looked at (%(made_video)d new videos of the game), %(units)d units", self.summary)
         return self.summary
 
@@ -151,6 +154,19 @@ class Collector:
                 self.summary["made_video"] += self.store.save_videos(rows, now)
             coverage.checked(self.store, watch["channel_id"], watch["appid"], now)
             self.summary["emailed"] += 1
+
+    def _reread_views(self) -> None:
+        """Views of videos that are a week old now but were read younger, 50 per unit. The Creators page
+        ranks channels by their typical views, which a video's first hours would understate."""
+        now = int(self.clock())
+        while self._can(LIST_COST):
+            ids = self.store.videos_to_reread(now, VIEWS_AFTER_DAYS, 50)
+            if not ids:
+                return
+            rows = [video_row(0, v) for v in self.youtube.videos(ids)]
+            self._pay(LIST_COST)
+            self.store.save_views(rows, ids, now)
+            self.summary["reread"] += len(ids)
 
     def _check_uploads(self) -> None:
         """Each channel's newest upload of any kind (is it still active?), every UPLOAD_CHECK_DAYS, 1 unit

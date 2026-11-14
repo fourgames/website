@@ -9,7 +9,9 @@ Per creator (short keys, the file grows to thousands): id, t title, h handle, s 
 on the channel, c country, l language, e [[email, source]] (source: description, revealed, links),
 k links {twitch, x, ...}, b hidden-email button (1/0/null), lu newest upload, lv newest video of a
 game we searched, g [[appid, videos, newest, views]], cat category, p genre profile [[tagid, weight]],
-ra when the hidden email was looked at (only once it was; with or without an email behind it), for
+mv typical views: the median views of their game videos of 3 minutes or more (no Shorts, whose
+views count people scrolling past) that are at least a week old, and mvn how many videos that is
+(absent when none), ra when the hidden email was looked at (only once it was; with or without an email behind it), for
 the page's Email hunt.
 Also "streamers": Twitch streamers (twitch.py) in the same shape, id "tw:<user id>", pl "tw", h their
 login, s followers, n broadcasts of searched games, lu their newest such broadcast, g per game
@@ -50,6 +52,9 @@ META_TAGS = {"Indie", "Singleplayer", "Casual", "Free to Play", "Early Access", 
              "Mature", "Violent", "Gore", "Nudity", "Sexual Content", "Retro", "Old School", "Minimalist",
              "Hand-drawn", "Cartoon", "Comedy", "Memes", "Psychological"}
 TOP_TAGS = 10
+# Typical views count only videos this long (Shorts' views count people scrolling past) and this old.
+LONG_VIDEO = 180
+SETTLED_DAYS = 7
 PROFILE_TAGS = 8
 
 
@@ -91,6 +96,11 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
                            FROM twitch_streams GROUP BY user_id, appid"""):
         tw_covered[r["user_id"]].append([r["appid"], r["n"], r["last"], r["views"]])
         appids.add(r["appid"])
+    long_views: dict[str, list[int]] = defaultdict(list)
+    for cid, views in db.execute("""SELECT channel_id, MAX(views) FROM youtube_videos
+                                    WHERE views IS NOT NULL AND duration >= ? AND published <= ?
+                                    GROUP BY video_id""", (LONG_VIDEO, now - SETTLED_DAYS * 86400)):
+        long_views[cid].append(views)
     v30 = dict(db.execute("SELECT channel_id, COUNT(*) FROM youtube_videos WHERE published >= ? GROUP BY channel_id",
                           (now - 30 * 86400,)).fetchall())
     site = defaultdict(list)
@@ -153,6 +163,7 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
             "v30": v30.get(cid, 0), "g": g, "cat": category([(x[0], x[1]) for x in g], reviews),
             "p": genre_profile(g),
             "own": any(x[0] in own for x in g), "first": r["first_seen"],
+            **({"mv": int(statistics.median(long_views[cid])), "mvn": len(long_views[cid])} if long_views[cid] else {}),
             **({"ra": r["revealed_at"]} if r["revealed_at"] else {}),
         })
     streamers = []

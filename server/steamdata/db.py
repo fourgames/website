@@ -177,6 +177,37 @@ CREATE TABLE IF NOT EXISTS pcgw_pages (
     PRIMARY KEY (engine, pageid)
 ) WITHOUT ROWID;
 
+-- Demos of games coming soon or out at most cadence.DEMO_RELEASED_DAYS (from apps.demos): how many
+-- play them and how many reviews they get, a game's best signal before release. A demo isn't a game,
+-- so it lives here, not in apps. snapshot_due NULL: no longer followed (its game is out too long).
+CREATE TABLE IF NOT EXISTS demos (
+    appid         INTEGER PRIMARY KEY,   -- the demo's own app id
+    parent        INTEGER NOT NULL,      -- its game
+    name          TEXT,
+    reviews       INTEGER,
+    positive_pct  INTEGER,
+    players_last  INTEGER,
+    players_at    INTEGER,
+    players_max   INTEGER,
+    players_zero  INTEGER NOT NULL DEFAULT 0,
+    snapshot_at   INTEGER,
+    snapshot_due  INTEGER,
+    players_due   INTEGER
+);
+CREATE INDEX IF NOT EXISTS demos_snapshot_due ON demos(snapshot_due) WHERE snapshot_due IS NOT NULL;
+CREATE INDEX IF NOT EXISTS demos_players_due ON demos(players_due) WHERE players_due IS NOT NULL;
+CREATE INDEX IF NOT EXISTS demos_parent ON demos(parent);
+
+-- One row per followed demo per UTC day: its reviews and its highest player sample.
+CREATE TABLE IF NOT EXISTS demo_daily (
+    day           INTEGER NOT NULL,
+    appid         INTEGER NOT NULL,
+    reviews       INTEGER,
+    positive_pct  INTEGER,
+    players_peak  INTEGER,
+    PRIMARY KEY (day, appid)
+) WITHOUT ROWID;
+
 CREATE TABLE IF NOT EXISTS tags (tagid INTEGER PRIMARY KEY, name TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
 CREATE TABLE IF NOT EXISTS genres (id INTEGER PRIMARY KEY, name TEXT NOT NULL);
@@ -527,6 +558,94 @@ class Store:
                               players_max_at = CASE WHEN COALESCE(:count, -1) > COALESCE(players_max, -1)
                                                     THEN :now ELSE players_max_at END,
                               players_max = MAX(COALESCE(players_max, 0), COALESCE(:count, 0))
+                          WHERE appid = :appid""",
+                       {"count": count, "now": now, "zeros": zeros, "due": now + interval, "appid": appid})
+            return interval
+
+    # Demos
+
+    def sync_demos(self, now: float) -> tuple[int, int]:
+        """Follows the demos of games coming soon or out at most DEMO_RELEASED_DAYS (apps.demos),
+        and stops following the rest. Returns (newly followed, no longer followed)."""
+        now = int(now)
+        since = now - cadence.DEMO_RELEASED_DAYS * cadence.DAY
+        wanted: dict[int, int] = {}
+        for r in self.db.execute("""SELECT appid, demos FROM apps
+                                    WHERE type = 'game' AND demos IS NOT NULL AND demos != '[]'
+                                      AND COALESCE(visible, 1) = 1
+                                      AND (coming_soon = 1 OR COALESCE(release_ts, 0) >= ?)""", (since,)):
+            for d in _ids(r["demos"]):
+                if isinstance(d, int):
+                    wanted[d] = r["appid"]
+        have = {r[0]: r[1] for r in self.db.execute("SELECT appid, snapshot_due FROM demos")}
+        added = dropped = 0
+        with self.transaction() as db:
+            for d, parent in wanted.items():
+                if d not in have:
+                    db.execute("INSERT INTO demos (appid, parent, snapshot_due, players_due) VALUES (?, ?, ?, ?)",
+                               (d, parent, now, now))
+                    added += 1
+                elif have[d] is None:
+                    db.execute("UPDATE demos SET parent = ?, snapshot_due = ?, players_due = ? WHERE appid = ?",
+                               (parent, now, now, d))
+                    added += 1
+            for d, due in have.items():
+                if d not in wanted and due is not None:
+                    db.execute("UPDATE demos SET snapshot_due = NULL, players_due = NULL WHERE appid = ?", (d,))
+                    dropped += 1
+        return added, dropped
+
+    def due_demos(self, kind: str, now: float, limit: int) -> list[int]:
+        column = {"snapshot": "snapshot_due", "players": "players_due"}[kind]
+        return [r[0] for r in self.db.execute(
+            f"SELECT appid FROM demos WHERE {column} <= ? ORDER BY {column}, appid LIMIT ?", (int(now), limit))]
+
+    def delay_demos(self, kind: str, appids: Iterable[int], until: float) -> None:
+        column = {"snapshot": "snapshot_due", "players": "players_due"}[kind]
+        with self.transaction() as db:
+            db.executemany(f"UPDATE demos SET {column} = MAX({column}, ?) WHERE appid = ? AND {column} IS NOT NULL",
+                           [(int(until), a) for a in appids])
+
+    def save_demo_snapshot(self, results: dict[int, Snapshot | None], now: float) -> int:
+        """A GetItems batch of demos: their review counts. Returns the daily rows written."""
+        now = int(now)
+        day = cadence.day_number(now)
+        rows = 0
+        with self.transaction() as db:
+            for appid, snap in results.items():
+                if snap is None or snap.appid != appid:
+                    # Gone, hidden or pointing elsewhere: looked at again in a week.
+                    db.execute("UPDATE demos SET snapshot_at = ?, snapshot_due = ?, players_due = NULL "
+                               "WHERE appid = ? AND snapshot_due IS NOT NULL", (now, now + cadence.HIDDEN_RETRY, appid))
+                    continue
+                db.execute("""UPDATE demos SET name = ?, reviews = ?, positive_pct = ?, snapshot_at = ?,
+                                  snapshot_due = ?, players_due = COALESCE(players_due, ?)
+                              WHERE appid = ? AND snapshot_due IS NOT NULL""",
+                           (snap.name or None, snap.reviews, snap.positive_pct, now, cadence.next_snapshot(now), now, appid))
+                db.execute("""INSERT INTO demo_daily (day, appid, reviews, positive_pct) VALUES (?, ?, ?, ?)
+                              ON CONFLICT(day, appid) DO UPDATE SET reviews = excluded.reviews,
+                                  positive_pct = excluded.positive_pct""",
+                           (day, appid, snap.reviews, snap.positive_pct))
+                rows += 1
+        return rows
+
+    def save_demo_players(self, appid: int, count: int | None, now: float, rng: random.Random) -> int:
+        """One player-count sample of a demo. Returns the seconds until the next one."""
+        now = int(now)
+        day = cadence.day_number(now)
+        with self.transaction() as db:
+            prev = db.execute("SELECT players_zero, players_due FROM demos WHERE appid = ?", (appid,)).fetchone()
+            if prev is None or prev["players_due"] is None:
+                return 0
+            zeros = 0 if count else prev["players_zero"] + 1
+            interval = cadence.demo_players_interval(count, zeros, rng)
+            if count is not None:
+                db.execute("""INSERT INTO demo_daily (day, appid, players_peak) VALUES (?, ?, ?)
+                              ON CONFLICT(day, appid) DO UPDATE SET
+                                  players_peak = MAX(COALESCE(players_peak, 0), excluded.players_peak)""",
+                           (day, appid, count))
+            db.execute("""UPDATE demos SET players_last = :count, players_at = :now, players_zero = :zeros,
+                              players_due = :due, players_max = MAX(COALESCE(players_max, 0), COALESCE(:count, 0))
                           WHERE appid = :appid""",
                        {"count": count, "now": now, "zeros": zeros, "due": now + interval, "appid": appid})
             return interval

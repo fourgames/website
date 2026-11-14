@@ -19,13 +19,16 @@ SteamDB: its terms forbid it. The data is for our own analysis: don't republish 
 | Every game on the store (id, name, last change) | `IStoreService/GetAppList` (Web API key) | changed apps every 6 hours, the whole list daily |
 | **The daily snapshot** of every game: review count, % positive and score, price, discount, user tags, release date (and coming soon / early access), platforms, Steam Deck rating, developers, publishers | `IStoreBrowseService/GetItems`, 100 games per request | once per UTC day, from 00:05 |
 | Players right now | `ISteamUserStats/GetNumberOfCurrentPlayers` | from hourly to monthly, by how many play (below) |
+| **Demos** of games coming soon or out at most 90 days (`apps.demos`): players and reviews | the same two endpoints, in the `demos` and `demo_daily` tables | reviews daily; players every 4 hours (100+), 12 (10+), a day (1+), nobody: 2 days, then 4, at most 7 |
 | Full metadata: genres, languages, age rating, controller support, Metacritic, achievements, DLC count, demos, the store's release-date text | store `api/appdetails` | new games first (newest first), then every 30 days |
 | Whether the game discloses AI-generated content, and how the developer says it uses it | the store page, `store.steampowered.com/app/<appid>/` | games first released since 2023 and games coming soon: newest first, then every 60 days (`AI_DAYS`) |
 | User tag names | `IStoreService/GetTagList` | weekly |
 | Which games are made with Godot | PCGamingWiki, and the store text above | weekly / with the metadata |
 
 Only games: the app list asks for games only, and anything the snapshot or metadata says isn't a
-game (DLC, demo, soundtrack, tool...) is dropped from collection. Review texts are never fetched or
+game (DLC, demo, soundtrack, tool...) is dropped from collection. The one exception is demos of games
+coming soon or just out (`cadence.DEMO_RELEASED_DAYS`): how many play them is a game's best early
+signal, so the `demos` lane follows them in their own tables (they never become apps). Review texts are never fetched or
 stored, only the totals.
 
 Review counts come from the snapshot, which is the store's own summary: the count the store page
@@ -74,7 +77,8 @@ allow 100,000.
 | App list (10,000 apps per page) | ~25 |
 | Daily snapshot, 150,000 games / 100 | 1,500 |
 | Player counts: 2,500 × 6 + 7,000 × 2 + 15,000 × 1 + ~125,000 nobody / ~25 days + new releases ~4,000 + Godot set: ~100 × 24 + ~400 × 12 + ~1,000 × 6 + ~8,500 nobody / ~5 days | ~70,000 |
-| **Total** | **~71,500** (~50 a minute) |
+| Demos: ~5,000 followed × about one player sample every day or two, plus their daily reviews (~50) | ~3,000-5,000 |
+| **Total** | **~75,000** (~52 a minute) |
 
 **store.steampowered.com/api/appdetails**, `APPDETAILS_PER_5MIN=120` (Steam allows about 200): at
 most 34,560 a day. The first pass over 150,000 games takes about 4.5 days, newest first. After that:
@@ -123,6 +127,7 @@ sample, ~70 MB of memory, a few KB/s of network (a few hundred MB a day, gzipped
 | `app_changes` | What changed between snapshots or metadata fetches: release date, coming soon → released, name, developers, tags, Steam Deck rating, platforms, genres, languages, hidden, gone from the app list |
 | `engine_signals` | Engine hints per game (below) |
 | `pcgw_pages` | The PCGamingWiki pages read, so unchanged ones aren't read again |
+| `demos`, `demo_daily` | The followed demos (their game in `parent`): reviews, players last and most; per day their reviews and highest player sample |
 | `tags`, `genres`, `categories` | Names for the ids in `apps` |
 | `http_log` | Requests per day and host: ok, throttled, failed, bytes |
 
@@ -198,31 +203,54 @@ Ideas for more, not built (none downloads game files):
 the snapshot) reads steam.db read-only and writes five gzipped JSON files to `MARKET_DIR`
 (`/srv/fourgames/steamdata/market`). The game-data API hands them to the signed-in owner
 (`GET /v1/admin/market/<name>`, server/gamedata/admin.py), and the dashboard's **Market** entry
-(src/lib/feedback/market-merged.js) does the rest in the browser. Nothing here is public. About 10 seconds
-and 250 MB, once a day.
+(src/lib/feedback/market-merged.js) does the rest in the browser. Nothing here is public. About a minute
+and 250 MB, once a day (most of it the realized prices: a year of daily rows, ~12 s per 9 million
+measured).
 
 | File | What | Used by |
 | --- | --- | --- |
 | `overview` | when it was built, how much history, counts, tag and genre names | everything |
 | `growth` | releases (and those releases' reviews) per year since 2006 and per month for six years, for Steam and each tag and genre; and Steam's users online at the peak, for *new games vs Steam's players* | Growth |
-| `games` | every game released in the last three years, one compact row: price, reviews, % positive, first 10 tags, flags (Linux, Mac, Deck, Early Access, Godot, demo, self-published), languages, hit index, reviews gained in 7 and 28 days, most players seen | Gap finder, Hit index |
-| `godot` | the Godot set with everything the finder scores on, the studio's other games, the publisher's size and the engine evidence | Godot finder, Leads |
-| `upcoming` | games coming soon with a date in the next 18 months (or a demo out), any engine: tags, flags, the studio's released games and best one's reviews, the outside publisher's catalog size | Scouting before release |
-| `trends` | each tag's momentum, and the alerts | Trends |
+| `games` | every game released in the last three years, one compact row: price, reviews, % positive, first 10 tags, flags (Linux, Mac, Deck, Early Access, Godot, demo, self-published), languages, hit index, reviews gained in 7 and 28 days, most players seen (and most in a day lately), realized price, estimated revenue and earn index; the revenue model's numbers | Gap finder, Hit index |
+| `godot` | the Godot set with everything the finder scores on (including revenue, recent players, the language list and demo traction), the studio's best other game (reviews and estimated revenue) and all its other games' reviews, the publisher's size and the engine evidence | Godot finder, Leads |
+| `upcoming` | games coming soon with a date in the next 18 months (or a demo out), any engine: tags, flags, languages, the studio's released games and best one's reviews and estimated revenue, the outside publisher's catalog size, the demo's players and reviews | Scouting before release |
+| `trends` | each tag's momentum (hits by revenue, demand from reviews and players, releases), and the alerts | Trends |
 
 Definitions (also under *How this works* in each view):
 
 - **A game is a tag** when the tag is one of its first 5 user tags (the strongest).
 - **Hit index**: a game's review count as a percentile among every game released within 7 days of it,
   with or without reviews; so games are only compared with games of the same age.
-- **Trends**, per tag with 15+ releases in the last 90 days: *supply* (its share of releases now
-  against the same 90 days a year ago), *hit rate* (the share of its games released 14–180 days ago
-  with hit index 90+, against all new games; pulled toward Steam's rate by 30 made-up average
-  games, so a tag with a handful of games and a few hits can't top the list) and *reviews* (its share of all new reviews in the
-  latest 7 or 28 days against the window before; needs 14 days of history). *Heat* is their
-  geometric mean.
+- **Revenue** (`est_revenue`, the numbers in `market.py`): reviews × sales per review × realized
+  price × 0.515, divided by the share of lifetime sales a game of its age has made. A rough guide
+  built from public research, not sales data:
+  - *sales per review* by release year (60 up to 2013, 50 to 2016, 40 to 2019, 33 to 2022, 30 after,
+    at $10-20) × a price factor (under $5 ×1.4, $5-10 ×1.15, $20-40 ×0.85, $40+ ×0.75): Jake Birkett
+    (2018), Simon Carless / GameDiscoverCo (2020-2024), VG Insights (2021);
+  - *realized price*: the price each day of the last 365, weighted by the reviews gained that day
+    (by days when under 10 came in), pulled toward 75% of the list price by 60 days, so a game seen
+    only at launch isn't taken at full price;
+  - *0.515* = Steam's 70% × 0.8 (VAT, lower regional prices) × 0.92 (refunds);
+  - *lifetime*: the first week ~12% of lifetime sales, a month 25%, a year 60%, two 76%, four 90%,
+    eight all (`LIFETIME_SHARE`).
+  Free games (and games not for sale) have none. The dashboard can scale it by our own Steamworks
+  sales (`calibration` in market-gaps.js, from `ctx.ownSales`, `{appid: net dollars so far}`); the
+  dashboard doesn't pass them yet, so it says "not yet checked against our own sales".
+- **Earn index**: a paid game's estimated revenue as a percentile among the paid games released within
+  7 days of it. A **hit** in the niche numbers is earn index 90+.
+- **Trends**, per tag with 15+ releases in the last 90 days: *hit rate* (the share of its paid games
+  released 14–180 days ago with earn index 90+, against all new paid games; pulled toward Steam's rate
+  by 30 made-up average games, so a tag with a handful of games and a few hits can't top the list;
+  free games are counted apart in `freeGames`, the old review-based rate is `reviewHitRate`),
+  *medianRevenue* / *topRevenue* (a typical and a top-10% paid game's estimated lifetime revenue),
+  *demand* (the geometric mean of its share of all new reviews and its share of all players, average
+  daily peak, in the latest 7 or 28 days against the window before; games released inside the window
+  don't count, so more releases can't raise it; needs 14 days of history) and *supply* (its share of
+  releases now against the same 90 days a year ago: crowding, shown as context only). *Heat* is the
+  geometric mean of the hit lift and demand: releases never raise it.
 - **Self-published**: no publisher besides the developers.
-- **Alerts**: a tag with heat 2+ that both grows and hits (the 8 hottest a day at most); an indie breakout (hit index 99 within 30
+- **Alerts**: a tag whose demand is up ×1.25+ and whose paid games earn a hit ×1.5+ as often as all
+  new games (the 8 hottest a day at most); an indie breakout (hit index 99 within 30
   days of release, under $30, 300+ reviews or 100+ this week); a self-published Godot game taking off (hit index
   90+ within 90 days and 30+ reviews, or 30+ reviews this week). Each is noted once in
   `alerts-state.json` (a tag again after 30 days); the very first run only notes what's there.
@@ -233,8 +261,13 @@ Definitions (also under *How this works* in each view):
   reads Steam's own stats feed (`store.steampowered.com/stats/userdata.json`, the last 48 hours, one
   request a day) and keeps each whole UTC day's peak in `MARKET_DIR/steam-users.json`; a period uses
   that when it's higher than the record. Like steam.db it can't be fetched again: back it up with it.
-- **Revenue** (in the browser): reviews × sales per review (30 by default, adjustable) × the game's
-  price × 0.5 (Steam's cut, VAT, refunds, discounts). A rough guide, not sales data.
+- **Demos**: per game, the most players its demos have had (`demoPlayers`), the most in a day over the
+  last 14 days (`demoPeak`), their reviews and % positive. The leads score a demo by them (1,000 at
+  once or 300 reviews is the top); a demo not counted yet scores as a plain "demo out".
+- **Upside** (in the browser, market-sign.js `reach`): what a publisher could add, weighted by the
+  share of Steam's players it reaches, from the Steam Hardware & Software Survey (rough values:
+  Simplified Chinese 30%, Russian 9%, Spanish 5%, Portuguese 4%, German 3%, Japanese, Korean,
+  French 2% each...; Mac 2%, Linux 1%, Steam Deck 1%), from the game's language list (`langList`).
 
 Install, once (after `git pull` in `/srv/fourgames/own`):
 

@@ -1,7 +1,7 @@
 """The collector: one thread, one request at a time, each host at its own pace.
 
 Work is split into lanes (the app list, tag names, the daily snapshot, player counts, the monthly
-metadata, the store pages' AI disclosure, PCGamingWiki). Each lane takes what's due from the
+demos, metadata, the store pages' AI disclosure, PCGamingWiki). Each lane takes what's due from the
 database a small batch at a time. The loop picks the lane whose host may be asked soonest (lanes sharing a host go in the order
 below, so the daily snapshot goes before player counts), sleeps until then, and does one request.
 """
@@ -163,6 +163,40 @@ class PlayersLane(Lane):
         self.store.delay("players", [appid], now + cadence.RETRY_LATER)
 
 
+class DemosLane(Lane):
+    """The demos of games coming soon or just out (db.sync_demos): their review counts once a day
+    (GetItems, 100 per request) and their players (GetNumberOfCurrentPlayers) as often as
+    cadence.demo_players_interval says. On the Web API host after the games' own lanes, so it only
+    uses what's left of the budget."""
+
+    name = "demos"
+    idle = 300.0
+
+    def refill(self, now):
+        if now >= self.store.meta_float("demos_sync_due"):
+            added, dropped = self.store.sync_demos(now)
+            self.store.set_meta("demos_sync_due", int(now) + cadence.DEMO_SYNC_EVERY)
+            if added or dropped:
+                log.info("demos: %d newly followed, %d no longer", added, dropped)
+        due = self.store.due_demos("snapshot", now, steam.ITEMS_PER_CALL * 2)
+        items: list = [("snapshot", due[i:i + steam.ITEMS_PER_CALL]) for i in range(0, len(due), steam.ITEMS_PER_CALL)]
+        items += [("players", a) for a in self.store.due_demos("players", now, 50)]
+        return items
+
+    def run(self, item, now):
+        kind, arg = item
+        if kind == "snapshot":
+            self.counts["rows"] += self.store.save_demo_snapshot(steam.get_items(self.c.http, arg, self.c.cfg.country), now)
+            # Whatever the reply, nothing in this batch is asked for again within the hour.
+            self.store.delay_demos("snapshot", arg, now + cadence.RETRY_LATER)
+        else:
+            self.store.save_demo_players(arg, steam.current_players(self.c.http, arg), now, self.c.rng)
+
+    def give_up(self, item, now):
+        kind, arg = item
+        self.store.delay_demos(kind, arg if isinstance(arg, list) else [arg], now + cadence.RETRY_LATER)
+
+
 class DetailsLane(Lane):
     """store appdetails: new games first (newest first), then each game every DETAILS_DAYS."""
 
@@ -279,7 +313,7 @@ class Collector:
         wiki = Limiter("www.pcgamingwiki.com", cfg.pcgw_seconds, throttle_pause=300)
         # Order matters for lanes sharing a host: earlier ones go first.
         all_lanes = [AppListLane(self, webapi), TagsLane(self, webapi), SnapshotLane(self, webapi),
-                     PlayersLane(self, webapi), DetailsLane(self, store_api), AiLane(self, store_api), PcgwLane(self, wiki)]
+                     PlayersLane(self, webapi), DemosLane(self, webapi), DetailsLane(self, store_api), AiLane(self, store_api), PcgwLane(self, wiki)]
         self.lanes = [lane for lane in all_lanes if lanes is None or lane.name in lanes]
         self.next_summary = 0.0
         self.day: int | None = None
@@ -434,6 +468,8 @@ def _describe(item: Any) -> str:
         return f"{len(item)} apps ({item[0]}...)" if item else "nothing"
     if isinstance(item, dict):
         return "the app list"
+    if isinstance(item, tuple) and len(item) == 2:
+        return f"demo {item[0]} of {_describe(item[1])}"
     if isinstance(item, tuple):
         return f"PCGamingWiki {item[0]} for {item[1]}"
     return f"app {item}" if isinstance(item, int) else str(item)

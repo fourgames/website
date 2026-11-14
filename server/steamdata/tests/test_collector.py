@@ -178,3 +178,25 @@ def test_a_crash_keeps_what_was_committed(config, db_path, http, web, clock, rng
     assert reopened.db.execute("SELECT COUNT(*) FROM app_daily").fetchone()[0] == 3
     reopened.close()
     store.db.close()
+
+
+def test_demos_of_upcoming_games_are_followed(config, store, http, web, clock, rng):
+    """A coming-soon game's demo: its players and reviews are collected (it never becomes a game)."""
+    world(web)
+    web.details[30] = {**details("Soon"), "demos": [{"appid": 31, "description": ""}]}
+    web.items[31] = item(31, "Soon Demo", kind=1, reviews=40, pct=95, price=None, free=True)
+    web.players[31] = 120
+    collector = Collector(config, store, http, clock=clock, rng=rng)
+    run_for(collector, clock, 2 * cadence.HOUR + 600)
+    demo = store.db.execute("SELECT * FROM demos WHERE appid = 31").fetchone()
+    assert demo["parent"] == 30 and demo["reviews"] == 40 and demo["positive_pct"] == 95
+    assert demo["players_max"] == 120 and demo["players_due"] > clock.now
+    assert demo["snapshot_due"] == cadence.next_snapshot(demo["snapshot_at"])
+    day = store.db.execute("SELECT * FROM demo_daily WHERE appid = 31").fetchone()
+    assert (day["reviews"], day["players_peak"]) == (40, 120)
+    assert app(store, 31) is None, "a demo isn't collected as a game"
+    # Once the game is out longer than DEMO_RELEASED_DAYS, its demo is no longer followed.
+    store.db.execute("UPDATE apps SET coming_soon = 0, release_ts = ? WHERE appid = 30",
+                     (int(clock.now) - (cadence.DEMO_RELEASED_DAYS + 1) * cadence.DAY,))
+    assert store.sync_demos(clock.now) == (0, 1)
+    assert tuple(store.db.execute("SELECT snapshot_due, players_due FROM demos WHERE appid = 31").fetchone()) == (None, None)

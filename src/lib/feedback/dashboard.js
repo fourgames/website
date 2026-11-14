@@ -1118,7 +1118,16 @@ async function pickCreators() {
   creatorsModule ??= await import("./creators.js");
   if (state.creators) render();
 }
-const marketHelpers = () => ({ h, svgEl, chips, about, adminGet, adminSend, fmtNum, fmtDate, fmtDateTime, plural, copy, store, dataOverride: DATA_OVERRIDE });
+// Our own games' revenue so far, for the Market page to check its estimate against: Steamworks' net
+// (after refunds and VAT, before Steam's cut) × 0.7, so it means the same as the market's estimate.
+// sales.json has every day with a sale since each game launched (feedback/sales.py).
+function ownSales() {
+  const out = {};
+  for (const apps of Object.values(state.sales?.days || {}))
+    for (const [id, t] of Object.entries(apps)) if (id !== "0") out[id] = (out[id] || 0) + (t.net || 0) * 0.7;
+  return Object.keys(out).length ? out : null;
+}
+const marketHelpers = () => ({ h, svgEl, chips, about, adminGet, adminSend, fmtNum, fmtDate, fmtDateTime, plural, copy, store, dataOverride: DATA_OVERRIDE, ownSales: ownSales() });
 function renderUptimeTop() {
   document.getElementById("fb-capsule").hidden = true;
   document.getElementById("fb-title").replaceChildren("Status");

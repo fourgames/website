@@ -48,13 +48,15 @@ GROWTH = {"years": [2025, 2026], "yearDone": 0.85, "total": {"y": [20155, 25484]
 def rising_growth():
     """30 months to Nov 2026 (a fifth done), 1,000 releases a month. Extraction Shooter: 1 a month, then 10
     in the last 3 full months (1% of releases: getting crowded). Roguelite: 1 a month, then 4 (0.4%, and it
-    wasn't rising before: early). Visual Novel rises too, but its games hit less than Steam's: left out."""
+    wasn't rising before: early). Visual Novel rises too, but its games hit less than Steam's: left out.
+    New games get 20 reviews each on average (mr); in the rising tags 40 in the last 3 months, so demand rises
+    too (a rise is demand, never just more releases)."""
     months = [f"{2024 + (i + 5) // 12}-{(i + 5) % 12 + 1:02d}" for i in range(30)]
-    def rise(late):
-        return [1] * 26 + [late] * 3 + [0]
-    return {**GROWTH, "months": months, "monthDone": 0.2, "total": {**GROWTH["total"], "m": [1000] * 30},
-            "tags": {"1": {"name": "Extraction Shooter", "m": rise(10)}, "2": {"name": "Roguelite", "m": rise(4)},
-                     "3": {"name": "Visual Novel", "m": rise(10)}}}
+    def rise(late, per_game=40):
+        return {"m": [1] * 26 + [late] * 3 + [0], "mr": [20] * 26 + [late * per_game] * 3 + [0]}
+    return {**GROWTH, "months": months, "monthDone": 0.2, "total": {**GROWTH["total"], "m": [1000] * 30, "mr": [20000] * 30},
+            "tags": {"1": {"name": "Extraction Shooter", **rise(10)}, "2": {"name": "Roguelite", **rise(4)},
+                     "3": {"name": "Visual Novel", **rise(10)}}}
 
 
 def write_market(path, trends=TRENDS, overview=OVERVIEW, rows=(), growth=GROWTH):
@@ -168,7 +170,7 @@ def test_market_score_formula(market):
 
 def test_the_brief_has_every_tag_on_one_line(market):
     brief = ideas.market_brief(ideas.Market.load())
-    assert "1|Extraction Shooter|80|40|1.0|20%|15/60|40|900|2.00" in brief
+    assert "1|Extraction Shooter|80|40|1.0|20%|15/60|40|900|-|2.00" in brief, "median revenue: - in files from before the estimate"
     assert "3|Visual Novel|" in brief and "4:Dwarf" in brief
     assert "2026-11-05" in brief and "41.8M" in brief
 
@@ -403,6 +405,7 @@ def test_rising_stages_as_the_dashboard_reads_them(market):
     rising = ideas.rising_tags(m)
     assert {t: r["stage"] for t, r in rising.items()} == {1: "crowded", 2: "early"}
     assert rising[2]["mult"] == 2.3, "(12 + 4) / (0.1% of 3,000 + 4): the pseudo-count pulls 4x toward 1"
+    assert rising[2]["revRatio"] == 1.75, "(480 + 4 x 20) / (12 + 4) reviews per new game, against Steam's 20"
     brief = ideas.market_brief(m)
     assert "- Roguelite: Early (small and only just started" in brief and "- Extraction Shooter: Getting crowded" in brief
     [c] = ideas.candidate_pairs(m)
@@ -410,6 +413,17 @@ def test_rising_stages_as_the_dashboard_reads_them(market):
     assert c["aim"] == c["score"] + ideas.GEN_STAGE["early"] + ideas.GEN_STAGE["crowded"]
     assert "rising: Extraction Shooter getting crowded, Roguelite early" in ideas.candidate_line(1, c, m)
     assert "Early (a small tag" in ideas.SYSTEM, "the scorer reads a rise by its stage"
+
+
+def test_more_releases_alone_is_not_a_rise(market):
+    growth = rising_growth()
+    for t in growth["tags"].values():
+        t["mr"] = [20 * n for n in t["m"]]  # more games, each getting just the usual reviews
+    write_market(market, rows=[[i, f"g{i}", TODAY - 30, 999, 10, 90, [1, 2], 0, 1, 95 if i < 8 else 50, None, None, None]
+                               for i in range(20)], growth=growth)
+    rising = ideas.rising_tags(ideas.Market.load())
+    assert 2 not in rising, "Roguelite: 4x the releases, but no more reviews per game and no demand figure"
+    assert rising[1]["rise"] == round(2.0 ** 0.5, 2), "Extraction Shooter still rises on its demand (2x) alone"
 
 
 def test_a_rise_carried_by_one_or_two_big_games_is_left_out(market):

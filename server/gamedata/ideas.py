@@ -119,11 +119,14 @@ def market_file(name: str, transform=None) -> Any:
 
 
 def rated_games(games: dict[str, Any]) -> dict[str, Any]:
-    """games.json cut down to what the pair stats need: the top tags of every rated game."""
+    """games.json cut down to what the pair stats need: the top tags of every rated game, with its revenue
+    percentile among paid games out the same fortnight (earn; free games have none, so they're left out),
+    or, in files from before the revenue estimate, its reviews percentile (hit)."""
     cols = {name: i for i, name in enumerate(games.get("columns", []))}
     top = games.get("topTags", 5)
-    rows = [(frozenset((row[cols["tags"]] or [])[:top]), row[cols["day"]], row[cols["hit"]])
-            for row in games.get("rows", []) if row[cols["hit"]] is not None and row[cols["day"]] is not None]
+    rank = cols["earn"] if "earn" in cols else cols["hit"]
+    rows = [(frozenset((row[cols["tags"]] or [])[:top]), row[cols["day"]], row[rank])
+            for row in games.get("rows", []) if row[rank] is not None and row[cols["day"]] is not None]
     return {"rows": rows}
 
 
@@ -139,6 +142,7 @@ class Market:
         self.names = names
         self.base_hit = trends.get("baseHitRate") or 0.1
         self.base_median = trends.get("baseMedianReviews") or 0
+        self.base_revenue = trends.get("baseMedianRevenue")  # None in files from before the revenue estimate
         self.prior = trends.get("priorGames") or 30
         today = self.overview.get("today")
         self.today = today
@@ -167,7 +171,8 @@ def tag_score(t: dict[str, Any], m: Market) -> dict[str, Any]:
     hit      = 50 + 25 * log2(hitRate / baseHitRate)            (twice Steam's hit rate: 75)
     crowd    = 50 - 20 * log2(supply)                           (share of releases doubled in a year: 30)
     demand   = 50 + 25 * log2(demand), or 50 while it's unknown (share of new reviews vs the window before)
-    reviews  = 50 + 12 * log2((median + 1) / (baseMedian + 1))  (what a typical game in it gets)
+    typical  = 50 + 12 * log2((medianRevenue + 1) / (baseMedianRevenue + 1))  (what a typical paid game
+               in it earns; median reviews in files from before the revenue estimate)
     score    = 0.45 hit + 0.20 crowd + 0.15 demand + 0.20 reviews, each part clamped to 0-100
     """
     def log2(x):
@@ -175,11 +180,14 @@ def tag_score(t: dict[str, Any], m: Market) -> dict[str, Any]:
     hit = clamp(50 + 25 * log2((t.get("hitRate") or m.base_hit) / m.base_hit))
     crowd = clamp(50 - 20 * log2(t["supply"])) if t.get("supply") else 50.0
     demand = clamp(50 + 25 * log2(t["demand"])) if t.get("demand") else 50.0
-    reviews = clamp(50 + 12 * log2(((t.get("medianReviews") or 0) + 1) / (m.base_median + 1)))
+    if m.base_revenue and t.get("medianRevenue") is not None:
+        reviews = clamp(50 + 12 * log2((t["medianRevenue"] + 1) / (m.base_revenue + 1)))
+    else:
+        reviews = clamp(50 + 12 * log2(((t.get("medianReviews") or 0) + 1) / (m.base_median + 1)))
     score = 0.45 * hit + 0.20 * crowd + 0.15 * demand + 0.20 * reviews
     return {"id": t["tag"], "name": t["name"], "score": round(score, 1), "hitRate": t.get("hitRate"),
             "supply": t.get("supply"), "demand": t.get("demand"), "medianReviews": t.get("medianReviews"),
-            "topReviews": t.get("topReviews"), "releases": t.get("releases")}
+            "medianRevenue": t.get("medianRevenue"), "topReviews": t.get("topReviews"), "releases": t.get("releases")}
 
 
 def best_pair(tag_ids: list[int], m: Market) -> dict[str, Any] | None:
@@ -239,6 +247,8 @@ RISE_EARLY_SHARE = 0.005   # under 0.5% of releases...
 RISE_EARLY_STARTED = 2.5   # ...and it wasn't already rising the year before: early
 RISE_LATE_SHARE = 0.015    # 1.5%+ of releases: late
 RISE_K = 4
+RISE_MIN = 1.2             # demand must rise this much (reviews per new game vs the year before, and demand)
+RISE_MIN_REV = 0.8         # and its new games get at least 0.8x the reviews of an average new game
 RISE_FEW_BIG = 0.7         # the two biggest new games hold 70%+ of the tag's new reviews: a big-release story
 # The dashboard's big-build tags (HUGE and BIG): never "early" for a small team.
 BIG_BUILD = {"Massively Multiplayer", "MMORPG", "Open World", "Open World Survival Craft", "Realistic", "Photorealistic",
@@ -247,14 +257,17 @@ BIG_BUILD = {"Massively Multiplayer", "MMORPG", "Open World", "Open World Surviv
 
 
 def rising_tags(m: Market) -> dict[int, dict[str, Any]]:
-    """Each tag whose share of releases rose 1.5x or more (the last 3 full months against the 12 before,
-    from under 1.5% of releases) and whose games still hit at least as often as Steam's, with its stage:
-    early (small and only just started), late (1.5%+ of releases) or crowded (between). As the
-    dashboard's risingNow: a rise carried by one or two big releases is left out."""
+    """Each tag whose demand is rising, as the dashboard's risingNow: new games in it get more reviews
+    than an average new game, more so than the year before (reviews per new game vs Steam's, now against
+    the year before), together with trends' demand (its share of new reviews and players). More releases
+    never count as a rise: they're more rivals. Its stage comes from its share of releases: early (small
+    and only just started), late (1.5%+ of releases) or crowded (between). A rise carried by one or two
+    big releases is left out, as are tags whose paid games hit less often than Steam's."""
     growth = market_file("growth")
     if not growth or not growth.get("tags") or not (growth.get("total") or {}).get("m"):
         return {}
     total = growth["total"]["m"]
+    total_rev = growth["total"].get("mr") or []
     n = len(total)
     done = growth.get("monthDone") or 0
     full = n - 1 if 0 < done < 1 else n
@@ -263,6 +276,9 @@ def rising_tags(m: Market) -> dict[int, dict[str, Any]]:
     now, before, prior = (full - 3, full), (full - 15, full - 3), (full - 27, full - 15)
     t_now, t_before, t_prior = span(total, *now), span(total, *before), span(total, *prior)
     if not t_now or not t_before:
+        return {}
+    rev_all, rev_all_before = span(total_rev, *now) / t_now, span(total_rev, *before) / t_before
+    if not rev_all or not rev_all_before:
         return {}
     few_big = big_release_tags(growth, full)
     out = {}
@@ -273,25 +289,25 @@ def rising_tags(m: Market) -> dict[int, dict[str, Any]]:
         # Like the dashboard's small-team view: no store words, adult or big-build tags.
         if not tr or tr.get("hitRate") is None or tr["hitRate"] < m.base_hit or name in NOT_A_BASE or name in BIG_BUILD:
             continue
-        counts = g.get("m") or []
+        counts, revs = g.get("m") or [], g.get("mr") or []
         c_now, c_before, c_prior = span(counts, *now), span(counts, *before), span(counts, *prior)
         if c_now < RISE_MIN_GAMES:
             continue
         share_now, share_before = c_now / t_now, c_before / t_before
         share_prior = c_prior / t_prior if t_prior else 0
-        if share_before >= RISE_LATE_SHARE:
-            continue
         mult = (c_now + RISE_K) / (share_before * t_now + RISE_K)
-        if mult < 1.5:
-            continue
         started = (c_before + RISE_K) / (share_prior * t_before + RISE_K)
-        if tag in few_big:
+        rev_ratio = ((span(revs, *now) + RISE_K * rev_all) / (c_now + RISE_K)) / rev_all
+        rev_before = ((span(revs, *before) + RISE_K * rev_all_before) / (c_before + RISE_K)) / rev_all_before
+        parts = [x for x in (rev_ratio / rev_before, tr.get("demand")) if x and x > 0]
+        rise = math.exp(sum(math.log(x) for x in parts) / len(parts))
+        if rise < RISE_MIN or rev_ratio < RISE_MIN_REV or tag in few_big:
             continue
         stage = ("late" if share_now >= RISE_LATE_SHARE
-                 else "early" if share_now < RISE_EARLY_SHARE and started < RISE_EARLY_STARTED and name not in BIG_BUILD
+                 else "early" if share_now < RISE_EARLY_SHARE and started < RISE_EARLY_STARTED
                  else "crowded")
-        out[tag] = {"tag": tag, "name": name, "stage": stage, "mult": round(mult, 1), "share": share_now,
-                    "hitRate": tr["hitRate"], "releases": tr.get("releases")}
+        out[tag] = {"tag": tag, "name": name, "stage": stage, "rise": round(rise, 2), "revRatio": round(rev_ratio, 2),
+                    "mult": round(mult, 1), "share": share_now, "hitRate": tr["hitRate"], "releases": tr.get("releases")}
     return out
 
 
@@ -327,13 +343,14 @@ RISE_WORDS = {"early": "Early (small and only just started: an opening, few riva
 
 
 def rising_brief(m: Market) -> str:
-    rising = sorted(rising_tags(m).values(), key=lambda r: (["early", "crowded", "late"].index(r["stage"]), -r["mult"]))
+    rising = sorted(rising_tags(m).values(), key=lambda r: (["early", "crowded", "late"].index(r["stage"]), -r["rise"]))
     if not rising:
         return ""
-    return ("Rising tags (share of new releases, the last 3 months against the 12 before), by stage, as the owner's "
-            "dashboard shows them:\n" + "\n".join(
-                f"- {r['name']}: {RISE_WORDS[r['stage']]}; {r['mult']}x its share a year before, {100 * r['share']:.1f}% of new "
-                f"games now, {pct(r['hitRate'])} hit" for r in rising))
+    return ("Rising tags (demand rising: new games in them get more reviews than an average new game, more so than "
+            "the year before), by stage, as the owner's dashboard shows them:\n" + "\n".join(
+                f"- {r['name']}: {RISE_WORDS[r['stage']]}; demand {r['rise']}x, new games get {r['revRatio']}x the reviews of "
+                f"an average new game; {100 * r['share']:.1f}% of new games now ({r['mult']}x its share a year before), "
+                f"{pct(r['hitRate'])} of paid games hit" for r in rising))
 
 
 # The evidence for one idea: the tags the owner listed, how their pairs did, the biggest similar games
@@ -440,18 +457,22 @@ def market_brief(m: Market) -> str:
     lines = [
         f"Steam market data, built {m.day}. Over the last {t.get('supplyWindow', 90)} days {t.get('releasesNow')} games "
         f"were released ({t.get('releasesYearAgo')} in the same window a year ago).",
-        f"Hit = a game in the top 10% of reviews among games released within a week of it. Steam's base hit rate is "
-        f"{pct(m.base_hit)}; a typical (median) new game gets {m.base_median} reviews. Hit rates are for games "
+        (f"Hit = a paid game in the top 10% of estimated revenue among paid games released the same fortnight (free "
+         f"games left out). Steam's base hit rate is {pct(m.base_hit)}; a typical (median) paid game earns about "
+         f"${m.base_revenue:,.0f} and a typical new game gets {m.base_median} reviews. Hit rates are for games "
+         if m.base_revenue else
+         f"Hit = a game in the top 10% of reviews among games released within a week of it. Steam's base hit rate is "
+         f"{pct(m.base_hit)}; a typical (median) new game gets {m.base_median} reviews. Hit rates are for games ") +
         f"released {t.get('hitRateWindow', [14, 180])[0]}-{t.get('hitRateWindow', [14, 180])[1]} days ago, shrunk toward "
         f"the base rate with {m.prior} average games so small tags can't top the list.",
         "Columns: id|tag|releases last 90d|releases same 90d a year ago|supply (share of releases vs a year ago; "
-        ">1 = more crowded)|hit rate|hits/rated games|median reviews|top-10% reviews|demand (share of new reviews "
-        "vs the window before; - = not known yet)",
+        ">1 = more crowded)|hit rate|hits/rated games|median reviews|top-10% reviews|median revenue $ (paid games)|"
+        "demand (share of new reviews and players vs the window before; - = not known yet)",
     ]
     for r in sorted(t.get("tags", []), key=lambda r: -(r.get("releases") or 0)):
         lines.append(f"{r['tag']}|{r['name']}|{r.get('releases')}|{r.get('releasesYearAgo')}|{num(r.get('supply'))}|"
                      f"{pct(r.get('hitRate'))}|{r.get('hits')}/{r.get('hitGames')}|{r.get('medianReviews')}|"
-                     f"{r.get('topReviews')}|{num(r.get('demand'), 2)}")
+                     f"{r.get('topReviews')}|{r.get('medianRevenue') if r.get('medianRevenue') is not None else '-'}|{num(r.get('demand'), 2)}")
     rare = [f"{i}:{n}" for i, n in sorted(m.names.items()) if i not in m.tags]
     if rare:
         lines.append("Other Steam tags (too few recent games to rate; you may still map to them): " + ", ".join(rare))
@@ -490,7 +511,7 @@ so when a score leans on tag numbers alone. Never suggest adding a tag the game 
 because it sells; a pivot that adds a tag must change the game itself.
 
 Judge with the market data below, not general hype. Quote its numbers in your reasons (hit rates, median and \
-top-10% reviews, releases, supply, demand) in plain words a non-analyst understands. Small tags have few games: \
+top-10% reviews, median revenue, releases, supply, demand) in plain words a non-analyst understands. Small tags have few games: \
 say how sure the data is. Strong demand with modest supply is the opening to look for.
 
 A rising supply is not the same as a crowded tag: read it by the stage in the "Rising tags" list at the end of \

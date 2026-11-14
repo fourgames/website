@@ -15,8 +15,9 @@ const INDIE = 492;
 const PRIOR = 30;          // shrinkage: as if each niche also had 30 games at the base rate
 const MIN_PAIR = 15;       // a niche needs this many games to be listed at all
 const MIN_SINGLE = 20;
-const SALES_PER_REVIEW = 30;
-const NET_SHARE = 0.5;     // what's left of a sale after Steam's 30%, VAT, refunds and discounts
+// Market files from before the revenue estimate (no "rev" column): the old rough guess, so the page
+// still works until the server rebuilds them.
+const OLD_SALES_PER_REVIEW = 30, OLD_NET_SHARE = 0.5;
 const DEBOUNCE = 250;
 const PAGE = 30;
 // Same lists as market-merged.js (not exported there): big-build tags left out by "small-team only".
@@ -31,12 +32,12 @@ const METRICS = [
   { key: "earn", label: "Earn chance", good: 1 },
   { key: "gap", label: "Gap score", good: 1 },
   { key: "bonus", label: "vs its tags", good: 1, pairsOnly: true },
-  { key: "medianReviews", label: "Typical game", good: 1 },
+  { key: "typical", label: "Typical game", good: 1 },
   { key: "recent", label: "Fewest rivals", good: -1 },
   { key: "n", label: "Most games", good: 1 },
 ];
 const METRIC = Object.fromEntries(METRICS.map((m) => [m.key, m]));
-const SORT_KEYS = ["name", "combined", "hit", "earn", "bonus", "n", "medianReviews", "recent", "gap"];
+const SORT_KEYS = ["name", "combined", "hit", "earn", "bonus", "n", "typical", "recent", "gap"];
 
 export const GAP_FILTERS = { minHit: null, minEarn: null, minGames: 40, maxCrowd: null, minGap: null };
 const NO_FILTERS = { minHit: null, minEarn: null, minGames: null, maxCrowd: null, minGap: null };
@@ -62,25 +63,77 @@ function tagSets(tagNames) {
   return { big: ids([...HUGE, ...BIG]), adult: ids(ADULT), meta: ids(META), byName };
 }
 
+// --- The revenue estimate (worked out on the server, market.py: est_revenue) ---
+// rev: a paid game's estimated lifetime net revenue in dollars: reviews × sales per review (by price
+// band and release year) × its realized price (discounts in) × what's left after Steam's cut, VAT and
+// refunds, divided by the share of lifetime sales a game of its age has made. earn: that as a
+// percentile among the paid games out the same fortnight (the "hit" of the niche numbers). Free games
+// have neither. Old files without the column fall back on reviews × 30 × list price × 0.5.
+export const hasRevenue = (file) => !!file?.columns?.includes("rev");
 export function unpackGames(file) {
   const col = Object.fromEntries(file.columns.map((c, i) => [c, i]));
   const top = file.topTags || 5;
+  const byRev = col.rev != null;
+  const FREE = file.flags?.free ?? 32;
   return file.rows.map((r) => {
     const tags = r[col.tags] || [];
+    const price = r[col.price] || 0, reviews = r[col.reviews] || 0, free = !!((r[col.flags] || 0) & FREE);
+    const rev = byRev ? r[col.rev] ?? null : !free && price > 0 ? reviews * OLD_SALES_PER_REVIEW * (price / 100) * OLD_NET_SHARE : null;
     return {
-      appid: r[col.appid], name: r[col.name], day: r[col.day], price: r[col.price] || 0, reviews: r[col.reviews] || 0,
-      top: tags.slice(0, top), hit: r[col.hit],
+      appid: r[col.appid], name: r[col.name], day: r[col.day], price, reviews, free,
+      top: tags.slice(0, top), hit: r[col.hit], earn: byRev ? r[col.earn] ?? null : null, rev,
     };
   });
 }
 
-// Niches with two chances: hit = top 10% of their release fortnight (games out 2 weeks to 6 months);
-// earn = made about `target` dollars (paid games out 2 months to 2 years). Both shrunk toward the average.
-export function gapFinder(list, tagNames, { today, target = 50000, pairs = true, small = true, must = null } = {}) {
+// Lifetime share of sales by age (the server's curve in games.json revenueModel), for calibration.
+export function lifetimeShare(model, age) {
+  const pts = model?.lifetimeShare || [[7, 0.12], [30, 0.25], [90, 0.36], [180, 0.46], [365, 0.6], [730, 0.76], [1460, 0.9], [2920, 1]];
+  if (age <= pts[0][0]) return pts[0][1];
+  for (let i = 1; i < pts.length; i++) {
+    const [d0, v0] = pts[i - 1], [d1, v1] = pts[i];
+    if (age <= d1) return v0 + ((Math.log(age) - Math.log(d0)) / (Math.log(d1) - Math.log(d0))) * (v1 - v0);
+  }
+  return 1;
+}
+
+// The hook for our own Steamworks sales: own = { appid: net dollars so far }. Each of our games'
+// real net against the estimate so far (rev × lifetime share at its age); their geometric mean,
+// pulled toward ×1 as if 2 more games matched the estimate exactly, and kept within ×0.25..×4.
+// Returns { factor, n } (factor 1, n 0 when there's nothing to calibrate with). The page passes
+// ctx.ownSales when the dashboard has it; until then the estimate stands uncalibrated.
+export function calibration(own, list, today, model = null) {
+  if (!own || !list) return { factor: 1, n: 0 };
+  let sum = 0, n = 0;
+  for (const g of list) {
+    const net = own[g.appid];
+    if (!(net > 0) || !(g.rev > 0) || today - g.day < 30) continue;
+    const est = g.rev * lifetimeShare(model, today - g.day);
+    if (est > 0) { sum += Math.log(net / est); n++; }
+  }
+  return { factor: n ? clamp(Math.exp(sum / (n + 2)), 0.25, 4) : 1, n };
+}
+
+// The assumption in one short line, for under the table.
+export function revenueLine(model, cal = { factor: 1, n: 0 }) {
+  if (!model) return `Revenue (old server files): reviews × ${OLD_SALES_PER_REVIEW} sales per review × list price × ${OLD_NET_SHARE}. A rough guide, not sales data.`;
+  const years = model.salesPerReviewByYear.map(([, v]) => v), facs = model.salesPerReviewByPrice.map(([, f]) => f);
+  const lo = Math.round(Math.min(...years) * Math.min(...facs)), hi = Math.round(Math.max(...years) * Math.max(...facs));
+  return `Revenue = reviews × ${lo}–${hi} sales per review (cheaper and older games more) × the price people really paid (sales included) × ${model.netShare} (Steam's cut, VAT, refunds), scaled up to a whole lifetime by the game's age. `
+    + (cal.n ? `Matched to our own sales (${cal.n} game${cal.n > 1 ? "s" : ""}): ×${cal.factor.toFixed(2)}.` : "Not yet checked against our own sales.");
+}
+
+// Niches with two chances: hit = a paid game in the top 10% of its release fortnight by estimated
+// revenue (games out 2 weeks to 6 months; free games left out); earn = estimated lifetime revenue of
+// about `target` dollars (paid games out 2 months to 2 years). Both shrunk toward the average.
+// Files without revenue fall back on the review hit index. `calib` scales the estimate (calibration()).
+export function gapFinder(list, tagNames, { today, target = 50000, pairs = true, small = true, must = null, calib = 1 } = {}) {
   const s = tagSets(tagNames);
-  const okH = (g) => g.hit != null && g.day >= today - 180 && g.day <= today - 14;
-  const okE = (g) => g.price > 0 && g.day >= today - 730 && g.day <= today - 60;
-  const wonE = (g) => g.reviews * SALES_PER_REVIEW * (g.price / 100) * NET_SHARE >= target;
+  const byRev = list.some((g) => g.earn != null);
+  const perf = byRev ? (g) => g.earn : (g) => g.hit;
+  const okH = (g) => perf(g) != null && g.day >= today - 180 && g.day <= today - 14;
+  const okE = (g) => g.rev != null && g.day >= today - 730 && g.day <= today - 60;
+  const wonE = (g) => g.rev * calib >= target;
   const keysOf = (g) => {
     const own = g.top.filter((t) => t !== INDIE && !s.meta.has(t) && t !== must);
     if (!pairs) return own.map(String);
@@ -89,44 +142,44 @@ export function gapFinder(list, tagNames, { today, target = 50000, pairs = true,
     return out;
   };
   const skip = (g) => g.top.some((t) => s.adult.has(t)) || (small && g.top.some((t) => s.big.has(t))) || (must != null && !g.top.includes(must));
-  const niches = new Map(), recent = new Map(), ago = new Map();
-  let nH = 0, wH = 0, nE = 0, wE = 0, recentAll = 0, agoAll = 0;
+  const niches = new Map(), recent = new Map();
+  let nH = 0, wH = 0, nE = 0, wE = 0;
   for (const g of list) {
     if (skip(g)) continue;
-    const isRecent = g.day > today - 90, isAgo = g.day > today - 455 && g.day <= today - 365;
+    const isRecent = g.day > today - 90;
     const inH = okH(g), inE = okE(g);
-    if (!inH && !inE && !isRecent && !isAgo) continue;
+    if (!inH && !inE && !isRecent) continue;
     const keys = keysOf(g);
-    if (isRecent) { recentAll++; for (const k of keys) recent.set(k, (recent.get(k) || 0) + 1); }
-    if (isAgo) { agoAll++; for (const k of keys) ago.set(k, (ago.get(k) || 0) + 1); }
+    if (isRecent) for (const k of keys) recent.set(k, (recent.get(k) || 0) + 1);
     if (!inH && !inE) continue;
-    const hitW = inH && g.hit >= 90, earnW = inE && wonE(g);
+    const hitW = inH && perf(g) >= 90, earnW = inE && wonE(g);
     if (inH) { nH++; if (hitW) wH++; }
     if (inE) { nE++; if (earnW) wE++; }
     for (const k of keys) {
       let e = niches.get(k);
-      if (!e) niches.set(k, e = { k, n: 0, nH: 0, wH: 0, nE: 0, wE: 0, reviews: [], best: null });
+      if (!e) niches.set(k, e = { k, n: 0, nH: 0, wH: 0, nE: 0, wE: 0, revs: [], best: null });
       e.n++;
       if (inH) { e.nH++; if (hitW) e.wH++; }
       if (inE) { e.nE++; if (earnW) e.wE++; }
-      e.reviews.push(g.reviews);
-      if (!e.best || g.reviews > e.best.reviews) e.best = g;
+      if (g.rev != null) e.revs.push(g.rev * calib);
+      if (g.rev != null && (!e.best || g.rev > e.best.rev)) e.best = g;
     }
   }
   const baseHit = nH ? wH / nH : 0, baseEarn = nE ? wE / nE : 0;
   const min = pairs ? MIN_PAIR : MIN_SINGLE;
   const rows = [...niches.values()].filter((e) => e.n >= min && baseHit > 0 && baseEarn > 0).map((e) => {
     const hit = (e.wH + PRIOR * baseHit) / (e.nH + PRIOR), earn = (e.wE + PRIOR * baseEarn) / (e.nE + PRIOR);
-    const r = recent.get(e.k) || 0, a = ago.get(e.k) || 0;
+    const r = recent.get(e.k) || 0;
     const nMin = Math.min(e.nH, e.nE);
     return {
       k: e.k, name: e.k.split("+").map((id) => (tagNames[id] || `Tag ${id}`).trim()).join(" + "), n: e.n,
       nH: e.nH, wH: e.wH, nE: e.nE, wE: e.wE, hit, earn, hitLift: hit / baseHit, earnLift: earn / baseEarn, lift: (hit / baseHit + earn / baseEarn) / 2,
-      conf: confidence(nMin), sure: sureLabel(hit, nMin), medianReviews: median(e.reviews), best: e.best ? { appid: e.best.appid, name: e.best.name, reviews: e.best.reviews } : null,
-      recent: r, growth: agoAll && recentAll ? ((r + 1) / recentAll) / ((a + 1) / agoAll) : null,
+      conf: confidence(nMin), sure: sureLabel(hit, nMin), typical: median(e.revs),
+      best: e.best ? { appid: e.best.appid, name: e.best.name, reviews: e.best.reviews, rev: e.best.rev * calib } : null,
+      recent: r,
     };
   }).sort((x, y) => y.lift - x.lift);
-  return { baseHit, baseEarn, poolHit: nH, poolEarn: nE, rows };
+  return { baseHit, baseEarn, poolHit: nH, poolEarn: nE, rows, byRev };
 }
 
 // gap: the two chances against their averages (averaged), divided by log10(10 + releases in the last
@@ -184,24 +237,26 @@ export function sortRows(rows, keys, sort) {
 
 // The whole pipeline for given settings, the heavy part cached by its inputs.
 const unpacked = new WeakMap(), results = new WeakMap();
-export function computeGaps(files, { target, small, mustId, pairs }) {
+export function computeGaps(files, { target, small, mustId, pairs, own = null }) {
   const g = files.games;
   if (!unpacked.has(g)) unpacked.set(g, unpackGames(g));
   if (!results.has(g)) results.set(g, new Map());
   const cache = results.get(g), list = unpacked.get(g), names = files.overview?.tags || {};
   const today = files.overview?.today ?? Math.floor(Date.now() / 86400000);
+  const cal = calibration(own, list, today, g.revenueModel);
+  const calib = cal.factor;
   const run = (p) => {
-    const k = `${today}:${target}:${small}:${mustId}:${p}`;
+    const k = `${today}:${target}:${small}:${mustId}:${p}:${calib}`;
     if (!cache.has(k)) {
-      cache.set(k, gapFinder(list, names, { today, target, small, must: mustId, pairs: p }));
+      cache.set(k, gapFinder(list, names, { today, target, small, must: mustId, pairs: p, calib }));
       if (cache.size > 16) cache.delete(cache.keys().next().value);
     }
     return cache.get(k);
   };
   const res = run(pairs);
-  const sk = `${today}:${target}:${small}:${mustId}:${pairs}:scored`;
+  const sk = `${today}:${target}:${small}:${mustId}:${pairs}:${calib}:scored`;
   if (!cache.has(sk)) cache.set(sk, withGapScores(res, pairs ? run(false) : null));
-  return { res, scored: cache.get(sk) };
+  return { res, scored: cache.get(sk), cal };
 }
 
 // The best tag pairs that contain `tag` (by gap score), for "find an angle" hints elsewhere on the
@@ -210,7 +265,7 @@ export function computeGaps(files, { target, small, mustId, pairs }) {
 // improvement when one exists. Uses the owner's earn target once the gap finder restored it.
 export function topPairsWith(files, tag, { small = true, target = S.target, limit = 1, minGames = GAP_FILTERS.minGames, minBonus = 1.05 } = {}) {
   if (!files?.games || tag == null) return [];
-  const { scored } = computeGaps(files, { target, small, mustId: null, pairs: true });
+  const { scored } = computeGaps(files, { target, small, mustId: null, pairs: true, own: files.own || null });
   const id = String(tag);
   const better = (r) => (r.bonus ?? 0) >= minBonus;
   // A pair clearly worse than its tags alone (under ×0.95) is no angle at all.
@@ -336,12 +391,16 @@ function build() {
 
 const anyFilter = () => Object.values(S.filters).some((v) => v != null);
 
-function legend(res) {
+function legend(res, cal) {
   const h = C.h;
   const line = (b, ...t) => h("p", h("b", b), " ", ...t);
   return [
-    line("Hit chance:", `the share of the niche's games (out 2 weeks to 6 months) that ended up in the top 10% by reviews of their release fortnight. Average ${pct(res.baseHit, 1)}.`),
-    line("Earn chance:", `the share of its paid games (out 2 months to 2 years) that reached your ${usd(S.target)} target, estimated as reviews × ${SALES_PER_REVIEW} sales per review × price × ${NET_SHARE}. Average ${pct(res.baseEarn, 1)}. The target changes only this column (and the gap score and "vs its tags", which use it).`),
+    line("Hit chance:", res.byRev
+      ? `the share of the niche's paid games (out 2 weeks to 6 months) that earned more than 90% of the paid games out the same fortnight. Free games are left out. Average ${pct(res.baseHit, 1)}.`
+      : `the share of the niche's games (out 2 weeks to 6 months) that ended up in the top 10% by reviews of their release fortnight. Average ${pct(res.baseHit, 1)}.`),
+    line("Earn chance:", `the share of its paid games (out 2 months to 2 years) that will earn your ${usd(S.target)} over their lifetime, by the estimate below. Average ${pct(res.baseEarn, 1)}. The target changes only this column (and the gap score and "vs its tags", which use it).`),
+    line("Typical game:", "what a typical (median) paid game in the niche earns over its lifetime, by the same estimate."),
+    h("p.mkg-dim", revenueLine(FILES.games?.revenueModel, cal)),
     line("Gap score:", `(hit chance ÷ average hit chance + earn chance ÷ average earn chance) ÷ 2, divided by log10(10 + games released in it in the last 90 days). High = does well on both and few are being made.`),
     line("Small-team only:", OPTS.small
       ? `on (switch at the top of the tab): games with big-build tags (MMO, open world, multiplayer, 3D, story rich…) are left out here.`
@@ -352,7 +411,7 @@ function legend(res) {
 function update() {
   if (!ROOT || !FILES?.games) return;
   const h = C.h, id = mustId();
-  const { res, scored } = computeGaps(FILES, { target: S.target, small: OPTS.small, mustId: id, pairs: S.pairs });
+  const { res, scored, cal } = computeGaps(FILES, { target: S.target, small: OPTS.small, mustId: id, pairs: S.pairs, own: C.ownSales || null });
   const keys = usableRank(S.rank, S.pairs);
   const v = viewRows(scored, { filters: S.filters, q: S.q, rank: S.rank, sort: S.sort, pairs: S.pairs });
   // Controls, updated in place.
@@ -363,7 +422,7 @@ function update() {
     if (off) b.setAttribute("disabled", ""); else b.removeAttribute("disabled");
   }
   U.mustNote.textContent = S.must.trim() && id == null ? " no such tag" : "";
-  U.legend.replaceChildren(...legend(res));
+  U.legend.replaceChildren(...legend(res, cal));
   const rankText = keys.length > 1 ? `Ranked by Combined: ${keys.map((k) => METRIC[k].label).join(" + ")}.` : `Ranked by ${METRIC[keys[0]]?.label || "gap score"}.`;
   U.counts.textContent = `${num(v.rows.length)} of ${num(scored.length)} niches shown${id != null ? ` (games with ${names()[id].trim()})` : ""}. ${v.key === "combined" || !S.sort ? rankText : "Sorted by the column you clicked; pick a chip to rank again."}`;
   U.table.replaceChildren(...(v.rows.length ? table(v, keys) : [h("p.mkg-note", scored.length ? "No niche passes these filters: loosen one." : "Not enough games for these settings: take a tag away, switch to single tags or lower the target.")]));
@@ -377,11 +436,11 @@ function table(v, keys) {
   const cols = [
     { key: "name", label: S.pairs ? "Pair of tags" : "Tag", tip: "Tags among a game's 5 strongest (Indie, adult and how-it's-sold tags left out). Hover a row for what a tag means." },
     combined ? { key: "combined", label: "Combined", num: true, tip: `The average of each picked metric's percentile among the rows shown (0–100): ${keys.map((k) => METRIC[k].label).join(", ")}.` } : null,
-    { key: "hit", label: "Hit chance", num: true, tip: "Share of its games in the top 10% by reviews of their release fortnight, pulled toward the average." },
+    { key: "hit", label: "Hit chance", num: true, tip: "Share of its paid games in the top 10% of their release fortnight by estimated revenue, pulled toward the average." },
     { key: "earn", label: "Earn chance", num: true, tip: `Share of its paid games that reached ${usd(S.target)}, pulled toward the average.` },
     { key: "gap", label: "Gap score", num: true, tip: "Both chances against their averages, divided by crowding (log)." },
     S.pairs ? { key: "bonus", label: "vs its tags", num: true, tip: "The pair against the better of its two tags alone. Above ×1: the combination does better than either part." } : null,
-    { key: "medianReviews", label: "Typical game", num: true, tip: "Median reviews of its games." },
+    { key: "typical", label: "Typical game", num: true, tip: "Estimated lifetime revenue (after Steam's cut) of a typical paid game in it." },
     { key: "recent", label: "Crowding", num: true, tip: "Games released with it in the last 90 days." },
     { key: "n", label: "Games", num: true, tip: "Games behind the numbers. Fewer games = the chances lean more on the average." },
     { key: null, label: "How sure", tip: "By the smaller pool: solid 100+ games, likely 40+, thin data fewer. ± is a rough 90% range for the hit chance." },
@@ -401,11 +460,11 @@ function table(v, keys) {
       bar(r.earn / mxe, pct(r.earn), r.earnLift >= 1.5 ? "var(--sw-3)" : "var(--sw-1)"),
       h("td.mkg-num", h("b", r.gap.toFixed(2))),
       S.pairs ? h("td.mkg-num", { class: r.bonus >= 1.1 ? "mkg-up" : r.bonus < 0.9 ? "mkg-down" : null }, times(r.bonus)) : null,
-      h("td.mkg-num", fmtK(r.medianReviews)),
+      h("td.mkg-num", r.typical == null ? "–" : usd(r.typical)),
       bar(Math.log1p(r.recent) / mxc, fmtK(r.recent), "var(--fb-muted)"),
       h("td.mkg-num", { title: `${num(r.wH)} of ${num(r.nH)} became hits; ${num(r.wE)} of ${num(r.nE)} paid games reached ${usd(S.target)}` }, num(r.n)),
       h("td", h("span.mkg-sure", { class: r.conf === "solid" ? "is-solid" : r.conf === "likely" ? "is-likely" : "is-thin" }, r.sure)),
-      h("td.mkg-best", r.best ? h("a", { href: storeUrl(r.best.appid), target: "_blank", rel: "noopener", title: `${r.best.name}: ${num(r.best.reviews)} reviews` }, r.best.name) : "–"));
+      h("td.mkg-best", r.best ? h("a", { href: storeUrl(r.best.appid), target: "_blank", rel: "noopener", title: `${r.best.name}: ${num(r.best.reviews)} reviews, about ${usd(r.best.rev)} over its lifetime` }, r.best.name) : "–"));
   });
   const head = h("tr", ...cols.map((c) => h("th", { title: c.tip || null, class: c.num ? "mkg-num" : null, "aria-sort": c.key && c.key === v.key ? (v.dir > 0 ? "ascending" : "descending") : null },
     c.key ? h("button", { type: "button", onclick: () => onSort(c.key) }, c.label, c.key === v.key ? (v.dir > 0 ? " ↑" : " ↓") : "") : c.label)));
@@ -485,4 +544,4 @@ function injectStyle() {
   document.head.append(el);
 }
 
-export const _test = { topPairsWith, unpackGames, gapFinder, withGapScores, filterGaps, searchRows, percentiler, combinedScores, sortRows, usableRank, computeGaps, viewRows, GAP_FILTERS, METRICS };
+export const _test = { calibration, lifetimeShare, revenueLine, topPairsWith, unpackGames, gapFinder, withGapScores, filterGaps, searchRows, percentiler, combinedScores, sortRows, usableRank, computeGaps, viewRows, GAP_FILTERS, METRICS };

@@ -3,7 +3,7 @@
   python -m steamdata                          runs until stopped (systemd: steamdata.service)
   python -m steamdata --max-requests 20        a short trial run, then exits
   python -m steamdata --lanes snapshot,players only some lanes (applist, tags, snapshot, players,
-                                               details, pcgw)
+                                               demos, details, ai, pcgw)
 """
 
 import argparse
@@ -15,7 +15,7 @@ from .collector import Collector
 from .config import Config, ConfigError
 from .db import Store
 
-LANES = ("applist", "tags", "snapshot", "players", "details", "pcgw")
+LANES = ("applist", "tags", "snapshot", "players", "demos", "details", "ai", "pcgw")
 
 
 def main(argv: list[str] | None = None) -> int:

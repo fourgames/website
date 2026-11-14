@@ -66,7 +66,7 @@ export function splitIdeas(text) {
 const joinIdeas = (list) => list.length === 1 ? list[0] : list.map((x, i) => `${i + 1}. ${x}`).join("\n\n");
 const FAKE_MODEL = "test mode (no Claude)";
 const SUBSCORES = [
-  ["demand", "Demand", "Do players want this now? Share of new reviews going to these tags, and what a typical game gets."],
+  ["demand", "Demand", "Do players want this now? Share of new reviews and players going to these tags, and what a typical paid game earns."],
   ["competition", "Competition", "High = few rivals. How fast the tags' share of releases is growing."],
   ["hit_odds", "Hit odds", "How often a game with these tags lands in the top 10% of reviews."],
   ["small_team_fit", "Small-team fit", "Can 1-3 people make it in Godot in months?"],
@@ -92,7 +92,9 @@ export function sortIdeas(ideas, by = "mine") {
 const META = ["Indie", "Singleplayer", "Casual", "2D", "3D", "Free to Play", "Early Access", "Great Soundtrack", "Addictive", "Replay Value", "Classic", "Beautiful", "Masterpiece"];
 
 // ---------------------------------------------------------------------------
-// The market score, the same formula as the server's (ideas.py, market_score)
+// The market score, the same formula as the server's (ideas.py, market_score). hitRate in trends.json is
+// by estimated revenue among paid games (hitBasis "revenue"); the typical game is its estimated
+// lifetime revenue (medianRevenue) when the files have it, else its reviews.
 // ---------------------------------------------------------------------------
 
 const clamp = (x) => Math.max(0, Math.min(100, x));
@@ -105,6 +107,7 @@ function marketOf(files) {
     tags: new Map((t.tags || []).map((r) => [r.tag, r])),
     base: t.baseHitRate || 0.1,
     baseMedian: t.baseMedianReviews || 0,
+    baseRevenue: t.baseMedianRevenue ?? null,
     prior: t.priorGames || 30,
     window: t.hitRateWindow || [14, 180],
     today: files.overview?.today,
@@ -115,7 +118,9 @@ function tagScore(r, m) {
   const hit = clamp(50 + 25 * log2((r.hitRate || m.base) / m.base));
   const crowd = r.supply ? clamp(50 - 20 * log2(r.supply)) : 50;
   const demand = r.demand ? clamp(50 + 25 * log2(r.demand)) : 50;
-  const reviews = clamp(50 + 12 * log2(((r.medianReviews || 0) + 1) / (m.baseMedian + 1)));
+  const reviews = r.medianRevenue != null && m.baseRevenue != null
+    ? clamp(50 + 12 * log2((r.medianRevenue + 1) / (m.baseRevenue + 1)))
+    : clamp(50 + 12 * log2(((r.medianReviews || 0) + 1) / (m.baseMedian + 1)));
   return { id: r.tag, name: r.name, hit, crowd, demand, reviews, score: round1(0.45 * hit + 0.2 * crowd + 0.15 * demand + 0.2 * reviews) };
 }
 
@@ -197,6 +202,8 @@ export function mapTags(text, files) {
 }
 
 const pct = (x) => (x == null ? "?" : `${Math.round(100 * x)}%`);
+// What a tag's typical (median) paid game earns over its lifetime (estimate), or its reviews in older files.
+const typicalWords = (r) => r.medianRevenue != null ? `earns about $${Math.round(r.medianRevenue).toLocaleString("en-US")}` : `gets ${r.medianReviews} reviews`;
 
 export function cannedAnalysis(text, files, at = Math.floor(Date.now() / 1000)) {
   const m = marketOf(files);
@@ -214,9 +221,9 @@ export function cannedAnalysis(text, files, at = Math.floor(Date.now() / 1000)) 
     timing: Math.round(avg((x) => (x.s.crowd + x.s.demand) / 2)),
   };
   const score = Math.round(0.25 * sub.demand + 0.2 * sub.competition + 0.25 * sub.hit_odds + 0.15 * sub.small_team_fit + 0.15 * sub.timing);
-  const line = (x) => `${x.r.name}: ${pct(x.r.hitRate)} of games hit (Steam ${pct(m.base)}), a typical game gets ${x.r.medianReviews} reviews`;
+  const line = (x) => `${x.r.name}: ${pct(x.r.hitRate)} of paid games earn a hit (Steam ${pct(m.base)}), a typical one ${typicalWords(x.r)}`;
   const reasons = {
-    demand: core ? `${core.r.name}: typical game ${core.r.medianReviews} reviews, top 10% ${core.r.topReviews}` : "No rated tag found in the idea",
+    demand: core ? `${core.r.name}: a typical paid game ${typicalWords(core.r)}${core.r.demand ? `; share of new reviews and players ×${core.r.demand.toFixed(2)} the weeks before` : ""}` : "No rated tag found in the idea",
     competition: core ? `${core.r.name}: ${core.r.releases} releases in 90 days, ${core.r.supply ? `×${core.r.supply.toFixed(1)}` : "?"} its share a year ago` : "No rated tag found",
     hit_odds: core ? line(core) : "No rated tag found",
     small_team_fit: big ? `${big} big-build tag${big > 1 ? "s" : ""} (multiplayer, open world…)` : "No big-build tags",
@@ -750,7 +757,7 @@ function card(v, idea) {
     const stats = new Map((v.files.trends?.tags || []).map((r) => [r.tag, r]));
     body.push(h("div.mki-tags", a.tags.map((t) => {
       const r = stats.get(t.id);
-      return h("span.mki-chip", { title: `${t.why || ""}${r ? `\n${pct(r.hitRate)} of its games hit · typical ${r.medianReviews} reviews · ${r.releases} releases in 90 days` : "\nToo few recent games to rate"}` },
+      return h("span.mki-chip", { title: `${t.why || ""}${r ? `\n${pct(r.hitRate)} of its paid games earn a hit · typical game ${typicalWords(r)} · ${r.releases} releases in 90 days` : "\nToo few recent games to rate"}` },
         t.name, r ? h("small", ` ${pct(r.hitRate)} hit`) : null);
     })));
     body.push(h("p.mki-muted.mki-tagnote", "Tag numbers show where buyers are and how crowded it is. They go with doing well; they don't cause it (hits collect more player tags, and good games do well anyway)."));

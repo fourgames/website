@@ -8,9 +8,11 @@
 //      of the game's tags, weighted by position (a tag in the first five counts double), with the
 //      generic tags (Indie, Singleplayer...) left out so they don't make everything look alike.
 //   2. For every tag among the look-alikes: how many have it ("fit"), and how the look-alikes with it
-//      did against those without it: the hit chance (a hit = top 10% of reviews among the games out
-//      the same fortnight, market.py's hit index) and the typical (median) review count. Rates are
-//      pulled toward the look-alikes' own rate by PRIOR games, so a handful of lucky games can't win.
+//      did against those without it: the hit chance and the typical (median) rank. Both use an index
+//      that compares a game only with the games out the same fortnight, so a 3-year-old game and a
+//      2-week-old one are judged fairly: the earn index (estimated revenue among paid games, market.py;
+//      free games left out) when the files have it, else the hit index (reviews). A hit = 90+. Rates
+//      are pulled toward the look-alikes' own rate by PRIOR games, so a handful of lucky games can't win.
 //   3. Verdicts for the game's own tags, tags worth adding, and a suggested top five.
 // It shows which tags go together with doing well among similar games, not that a tag causes it.
 //
@@ -74,7 +76,7 @@ export function unpackPool(files) {
   const g = files.games;
   if (g) {
     const c = Object.fromEntries(g.columns.map((x, i) => [x, i]));
-    for (const r of g.rows) out.set(r[c.appid], { appid: r[c.appid], name: r[c.name], day: r[c.day], reviews: r[c.reviews] || 0, pos: r[c.pos], tags: r[c.tags] || [], hit: r[c.hit], released: true, devs: [], pubs: [] });
+    for (const r of g.rows) out.set(r[c.appid], { appid: r[c.appid], name: r[c.name], day: r[c.day], reviews: r[c.reviews] || 0, pos: r[c.pos], tags: r[c.tags] || [], hit: r[c.hit], earn: c.earn != null ? r[c.earn] ?? null : null, released: true, devs: [], pubs: [] });
   }
   const u = files.upcoming;
   if (u) {
@@ -84,7 +86,7 @@ export function unpackPool(files) {
   for (const r of files.godot?.games || []) {
     const have = out.get(r.appid);
     if (have) { have.devs = r.developers || have.devs; have.pubs = r.publishers || have.pubs; continue; }
-    out.set(r.appid, { appid: r.appid, name: r.name, day: r.day, reviews: r.reviews || 0, pos: r.pos, tags: r.tags || [], hit: r.hit, released: !r.comingSoon, devs: r.developers || [], pubs: r.publishers || [] });
+    out.set(r.appid, { appid: r.appid, name: r.name, day: r.day, reviews: r.reviews || 0, pos: r.pos, tags: r.tags || [], hit: r.hit, earn: r.earn ?? null, released: !r.comingSoon, devs: r.developers || [], pubs: r.publishers || [] });
   }
   return out;
 }
@@ -139,7 +141,7 @@ export function lookalikes(tags, pool, { today, exclude = null, skip = new Set()
   return out.sort((a, b) => b.sim - a.sim || b.reviews - a.reviews).slice(0, k);
 }
 
-// How the look-alikes with a tag did against those without it.
+// How the look-alikes with a tag did against those without it (g.rank: the age-matched index).
 function tagStats(t, looks, rated, base, baseMedian) {
   let all = 0, fitW = 0, topW = 0, n = 0;
   for (const g of looks) {
@@ -150,14 +152,14 @@ function tagStats(t, looks, rated, base, baseMedian) {
   let wW = 0, hW = 0, nW = 0, wO = 0, hO = 0, nO = 0;
   const revW = [], revO = [];
   for (const g of rated) {
-    const hit = g.hit >= HIT ? 1 : 0;
-    if (g.tags.includes(t)) { wW += g.sim; hW += g.sim * hit; nW++; revW.push(g.reviews); }
-    else { wO += g.sim; hO += g.sim * hit; nO++; revO.push(g.reviews); }
+    const hit = g.rank >= HIT ? 1 : 0;
+    if (g.tags.includes(t)) { wW += g.sim; hW += g.sim * hit; nW++; revW.push(g.rank); }
+    else { wO += g.sim; hO += g.sim * hit; nO++; revO.push(g.rank); }
   }
   const rateWith = (hW + PRIOR * base) / (wW + PRIOR), rateWithout = (hO + PRIOR * base) / (wO + PRIOR);
   const medWith = median(revW), medWithout = median(revO);
   const lift = rateWithout > 0 ? rateWith / rateWithout : null;
-  // Typical reviews, with as many pretend games at the look-alikes' median as PRIOR on each side.
+  // The typical rank among same-age games, with as many pretend games at the look-alikes' median as PRIOR on each side.
   const revLift = medWith != null && medWithout != null ? (1 + (medWith * nW + PRIOR * baseMedian) / (nW + PRIOR)) / (1 + (medWithout * nO + PRIOR * baseMedian) / (nO + PRIOR)) : null;
   const parts = [lift, revLift].filter((x) => x != null && Number.isFinite(x));
   const effect = parts.length ? Math.exp(parts.reduce((s, x) => s + Math.log(Math.max(x, 0.05)), 0) / parts.length) : null;
@@ -169,10 +171,13 @@ export function tagReport({ tags, pool, trends, tagNames, today, exclude = null,
   const kinds = tagKinds(tagNames);
   const name = (t) => tagNames?.[t] ?? `Tag ${t}`;
   const looks = lookalikes(tags, pool, { today, exclude, skip: kinds.meta });
-  const rated = looks.filter((g) => g.hit != null && today - g.day >= MIN_AGE);
-  let W = 0, H = 0; for (const g of rated) { W += g.sim; H += g.sim * (g.hit >= HIT ? 1 : 0); }
+  // Earnings when the files have them (paid games only), else reviews; either way against games of the same age.
+  const byRev = [...pool.values()].some((g) => g.earn != null);
+  const rankOf = (g) => byRev ? g.earn : g.hit;
+  const rated = looks.filter((g) => rankOf(g) != null && today - g.day >= MIN_AGE).map((g) => ({ ...g, rank: rankOf(g) }));
+  let W = 0, H = 0; for (const g of rated) { W += g.sim; H += g.sim * (g.rank >= HIT ? 1 : 0); }
   const baseRate = W ? H / W : trends?.baseHitRate || 0.1;
-  const baseMedian = median(rated.map((g) => g.reviews)) ?? 0;
+  const baseMedian = median(rated.map((g) => g.rank)) ?? 0;
   const stat = (t) => tagStats(t, looks, rated, baseRate, baseMedian);
   const global = new Map((trends?.tags || []).map((r) => [r.tag, r]));
   const steamBase = trends?.baseHitRate || null;
@@ -207,13 +212,14 @@ export function tagReport({ tags, pool, trends, tagNames, today, exclude = null,
     ...adds.filter((a) => a.kind === "add" && a.topFit >= 0.15).map((a) => ({ tag: a.tag, name: a.name, own: false, score: a.effect * (0.6 + a.topFit) })),
   ].sort((a, b) => b.score - a.score).slice(0, TOP);
 
-  const you = game && game.released && game.hit != null && today - game.day >= MIN_AGE
-    ? { reviews: game.reviews, hit: game.hit, typical: baseMedian, better: rated.filter((g) => g.reviews < game.reviews).length / Math.max(1, rated.length) }
+  const own = game ? rankOf(game) : null;
+  const you = game && game.released && own != null && today - game.day >= MIN_AGE
+    ? { reviews: game.reviews, hit: own, typical: baseMedian, better: rated.filter((g) => g.rank < own).length / Math.max(1, rated.length) }
     : null;
-  return { looks, rated, baseRate, median: baseMedian, steamBase, current, adds, top: pick, you, thin: rated.length < 40 };
+  return { looks, rated, baseRate, median: baseMedian, steamBase, current, adds, top: pick, you, byRev, thin: rated.length < 40 };
 }
 
-// "did better", or which way it split when hits and typical reviews disagree.
+// "did better", or which way it split when hits and the typical rank disagree.
 function lead(s) {
   const h = s.lift ?? 1, r = s.revLift ?? 1;
   const better = s.effect >= 1;
@@ -221,7 +227,7 @@ function lead(s) {
   return `Games like yours with it did ${better ? "better" : "worse"}`;
 }
 function hitWords(s) { return `${oneIn(s.rateWith)} became hits, against ${oneIn(s.rateWithout)} without it`; }
-function revWords(s) { return s.medWith != null && s.medWithout != null ? `; typical ${num(s.medWith)} reviews against ${num(s.medWithout)}` : ""; }
+function revWords(s) { return s.medWith != null && s.medWithout != null ? `; a typical one beat ${num(s.medWith)}% of the games out the same fortnight, against ${num(s.medWithout)}%` : ""; }
 
 function verdict(t, i, s, kinds, gl, steamBase) {
   const top = i < TOP;
@@ -400,12 +406,13 @@ function paintReport(v) {
   const fits = new Map([...(claude?.current || []), ...(claude?.candidates || [])].map((x) => [x.tag.toLowerCase(), x]));
   const fitPill = (n) => { const f = fits.get(n.toLowerCase()); return f ? h("span.mkt-fit", { class: `is-${f.fits}`, title: f.why }, f.fits === "yes" ? "✓ fits" : f.fits === "no" ? "✗ doesn't fit" : "? maybe") : null; };
   const pillOf = (kind, say) => h("span.mkt-v", { class: `is-${kind}` }, say);
-  const rateCell = (s) => h("td.mkt-num", { title: s.sure ? `Hit = top 10% of reviews among games out the same fortnight. ${num(s.nWith)} look-alikes with it, ${num(s.nWithout)} without.` : "Too few games on one side to judge" }, `${oneIn(s.rateWith)} / ${oneIn(s.rateWithout)}`);
+  const rateCell = (s) => h("td.mkt-num", { title: s.sure ? `Hit = top 10% of the games out the same fortnight. ${num(s.nWith)} look-alikes with it, ${num(s.nWithout)} without.` : "Too few games on one side to judge" }, `${oneIn(s.rateWith)} / ${oneIn(s.rateWithout)}`);
   const revCell = (s) => h("td.mkt-num", s.medWith == null ? "–" : `${num(s.medWith)} / ${num(s.medWithout)}`);
+  const what = r.byRev ? "earned more than (estimated revenue, paid games)" : "got more reviews than";
 
   const lines = [];
-  lines.push(`Compared with the ${num(r.looks.length)} released games most like this one (${num(r.rated.length)} out long enough to judge). Among them ${oneIn(r.baseRate)} became hits${r.steamBase ? ` (all of Steam: ${oneIn(r.steamBase)})` : ""}, and a typical one has ${num(r.median)} reviews.`);
-  if (r.you) lines.push(`${v.game.name} has ${num(r.you.reviews)} reviews: more than ${pct(r.you.better)} of these look-alikes, and a hit index of ${r.you.hit} (more reviews than ${r.you.hit}% of the games out the same fortnight).`);
+  lines.push(`Compared with the ${num(r.looks.length)} released games most like this one (${num(r.rated.length)} out long enough to judge${r.byRev ? ", paid games only" : ""}). Among them ${oneIn(r.baseRate)} became hits${r.steamBase ? ` (all of Steam: ${oneIn(r.steamBase)})` : ""}, and a typical one ${what} ${num(r.median)}% of the games out the same fortnight. Each game is only compared with games of its own age.`);
+  if (r.you) lines.push(`${v.game.name} ${what} ${r.you.hit}% of the games out the same fortnight: better than ${pct(r.you.better)} of these look-alikes.`);
   const moves = r.current.filter((c) => ["down", "up", "odd", "weak"].includes(c.kind));
   const goodAdds = r.adds.filter((a) => a.kind === "add");
   if (moves.length || goodAdds.length) lines.push(`${moves.length ? `${moves.length} of your tags could move or go` : "Your tags look sound"}${goodAdds.length ? `, and ${goodAdds.length} tag${goodAdds.length === 1 ? "" : "s"} that games like yours use went with doing better: add the ones that are true.` : "."}`);
@@ -423,7 +430,7 @@ function paintReport(v) {
     h("td.mkt-num", String(c.pos + 1)), h("td", h("b", c.name), " ", fitPill(c.name)), h("td.mkt-num", pct(c.fit)), rateCell(c), revCell(c),
     h("td", pillOf(c.kind, c.say))), whyRow(6, c)]);
   const head = (...cols) => h("thead", h("tr", ...cols.map(([l, tip, n]) => h(n ? "th.mkt-num" : "th", { title: tip || null }, l))));
-  const COLS = [["Tag"], ["Have it", "Share of the games like yours that have this tag", 1], ["Hits with / without", "How many games like yours became hits (top 10% of reviews among games out the same fortnight), with the tag and without it", 1], ["Typical reviews with / without", "Median review count, with the tag and without it", 1]];
+  const COLS = [["Tag"], ["Have it", "Share of the games like yours that have this tag", 1], ["Hits with / without", `How many games like yours became hits (top 10% of the games out the same fortnight, by ${r.byRev ? "estimated revenue" : "reviews"}), with the tag and without it`, 1], ["Typical rank with / without", `A typical game's rank against the games out the same fortnight (0–100, by ${r.byRev ? "estimated revenue" : "reviews"}), with the tag and without it`, 1]];
   const curTable = h("div.mkt-scroll", h("table.mkt-table", head(["#", null, 1], COLS[0], COLS[1], COLS[2], COLS[3], ["Verdict"]), h("tbody", ...curRows)));
 
   const addRows = r.adds.slice(0, 15).flatMap((a) => [h("tr.mkt-main", { class: `is-${a.kind}` },

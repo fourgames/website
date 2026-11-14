@@ -1,7 +1,8 @@
 // The dashboard's Market section, final merged design: the Briefing layout (a "Today" summary in
 // sentences, then three big question tabs) with the best parts of the other designs:
-//   1. What should I make next?  one small-team filter for the whole tab; "Rising now" (tags whose
-//      share of releases climbs fastest, with sparklines, a stage and an action); the top 25 by score
+//   1. What should I make next?  one small-team filter for the whole tab; "Rising now" (tags players
+//      want more of: reviews per new game and share of new reviews and players climbing, with
+//      sparklines, a stage and an action); the top 25 by score
 //      as bars; every tag as a dot (rivals vs hit chance, sized by reviews, brightness by review pace); a niche table whose
 //      rows open a line in plain words; and the gap finder from market-gaps.js.
 //   2. Who should I sign?        market-sign.js (its own state and CSS).
@@ -13,7 +14,7 @@
 // Same contract as market.js: marketTop(ctx) fills the header, marketView(ctx) returns one root that
 // redraws itself. The data files come from server/steamdata/market.py.
 
-import { signView } from "./market-sign.js";
+import { signView, reach, demoTraction, trackRecord, momentum } from "./market-sign.js";
 import { gapView, topPairsWith } from "./market-gaps.js";
 import { ideasView } from "./market-ideas.js";
 import { tagsView, openWith as openTagsWith } from "./market-tags.js";
@@ -32,7 +33,7 @@ const META = ["Indie", "Free to Play", "Early Access", "Replay Value", "Great So
 const CRUDE = /\b(penis|dick|cock|boobs?|tits|butt|fart|poop|hentai|waifu|sex|sexy|nsfw|porn|nude|horny|manhole|wiener|weiner)\b/i;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const TABS = [
-  ["make", "What should I make next?", "Niches where games often become hits"],
+  ["make", "What should I make next?", "Niches where paid games often earn a hit"],
   ["sign", "Who should I sign?", "Self-published games worth a message"],
   ["steam", "How is Steam doing?", "Games vs players, what's working now"],
   ["ideas", "My game ideas", "Score an idea against the market"],
@@ -171,11 +172,11 @@ export const sureLabel = (p, n) => `${confidence(n)} · ±${Math.max(1, Math.rou
 // A tag's releases as a share of Steam's, against a year ago.
 function growthWords(supply) {
   if (supply == null) return "no year-ago count";
-  if (supply >= 2) return "growing much faster than Steam";
-  if (supply >= 1.15) return "growing faster than Steam";
-  if (supply >= 0.87) return "growing with Steam";
-  if (supply >= 0.6) return "growing slower than Steam";
-  return "losing ground on Steam";
+  if (supply >= 2) return "releases growing much faster than Steam's: many more rivals";
+  if (supply >= 1.15) return "releases growing faster than Steam's: more rivals";
+  if (supply >= 0.87) return "releases growing with Steam's";
+  if (supply >= 0.6) return "releases growing slower than Steam's: fewer rivals";
+  return "releases falling behind Steam's: fewer rivals";
 }
 const growthDir = (supply) => supply == null ? 0 : supply >= 1.1 ? 1 : supply <= 0.9 ? -1 : 0;
 // An upcoming game's release date from its day number, as precise as the store's kind of date says.
@@ -197,14 +198,32 @@ const tagSets = (tagNames) => {
 
 // --- 1. Niches from trends.json -------------------------------------------------
 
-// Every tag with a hit rate, best first. trends.hitRate is already pulled toward Steam's rate (as if
-// the tag also had `priorGames` average games), so a tag with a handful of games can't top the list.
-// The opportunity score: each signal as a percentile among the listed tags (0 = worst, 1 = best),
-// mixed by these weights, then cut by up to 30% for a tag that stands on fewer than 100 games.
+// Every tag with a hit rate, best first. trends.hitRate (server files with hitBasis "revenue"): the
+// share of its paid games in the top 10% of their release fortnight by estimated revenue (free games
+// left out), already pulled toward Steam's rate (as if the tag also had `priorGames` average games),
+// so a tag with a handful of games can't top the list. The opportunity score: each signal as a
+// percentile among the listed tags (0 = worst, 1 = best), mixed by these weights, then cut by up to
+// 30% for a tag that stands on fewer than 100 games. growth is demand growth (trends.demand: the tag's
+// share of new reviews and of players against the weeks before), never releases: more rivals can only
+// lower a score (quiet).
 export const SCORE_WEIGHTS = { hit: 0.4, typical: 0.25, quiet: 0.2, growth: 0.15 };
-export const SCORE_TEXT = "Score 0–100: how a tag ranks against the others on hit chance (40%), reviews for a typical game (25%), how few new games it gets (20%) and growth (15%), cut by up to 30% when it rests on fewer than 100 games.";
-const SIGNAL_WORDS = { hit: "hit chance", typical: "reviews per game", quiet: "few rivals", growth: "growth" };
-const SIGNAL_WEAK = { hit: "a low hit chance", typical: "few reviews per game", quiet: "crowding", growth: "slow growth" };
+export const SCORE_TEXT = "Score 0–100: how a tag ranks against the others on hit chance (40%), what a typical paid game earns (25%), how few new games it gets (20%) and rising demand (15%: its share of new reviews and players), cut by up to 30% when it rests on fewer than 100 games.";
+const SIGNAL_WORDS = { hit: "hit chance", typical: "earnings per game", quiet: "few rivals", growth: "rising demand" };
+const SIGNAL_WEAK = { hit: "a low hit chance", typical: "low earnings per game", quiet: "crowding", growth: "falling demand" };
+// A tag's typical and top-10% game: estimated lifetime revenue (dollars), or reviews in older files.
+const typicalOf = (r) => r.medianRevenue ?? r.medianReviews;
+const topOf = (r) => r.topRevenue ?? r.topReviews;
+const isMoney = (r) => r.medianRevenue != null;
+const typFmt = (r, v) => v == null ? "–" : isMoney(r) ? usd(v) : `${fmtK(v)} reviews`;
+// Demand growth in words (trends.demand: share of new reviews and players, now against the weeks before).
+function demandWords(d) {
+  if (d == null) return "demand not known yet (needs two weeks of daily data)";
+  if (d >= 1.5) return `players want much more of it (${times(d)} its share of new reviews and players)`;
+  if (d >= 1.1) return `players want more of it (${times(d)} its share of new reviews and players)`;
+  if (d > 0.9) return "demand steady";
+  return `players want less of it (${times(d)} its share of new reviews and players)`;
+}
+const demandDir = (d) => d == null ? 0 : d >= 1.1 ? 1 : d <= 0.9 ? -1 : 0;
 
 function percentiler(values) {
   const s = values.filter((v) => v != null && Number.isFinite(v)).sort((a, b) => a - b);
@@ -217,10 +236,10 @@ function percentiler(values) {
 }
 
 export function opportunityScores(rows) {
-  const pHit = percentiler(rows.map((r) => r.hitRate)), pTyp = percentiler(rows.map((r) => r.medianReviews));
-  const pCrowd = percentiler(rows.map((r) => r.releases)), pGrow = percentiler(rows.map((r) => r.supply));
+  const pHit = percentiler(rows.map((r) => r.hitRate)), pTyp = percentiler(rows.map(typicalOf));
+  const pCrowd = percentiler(rows.map((r) => r.releases)), pGrow = percentiler(rows.map((r) => r.demand));
   return rows.map((r) => {
-    const parts = { hit: pHit(r.hitRate), typical: pTyp(r.medianReviews), quiet: 1 - pCrowd(r.releases), growth: pGrow(r.supply) };
+    const parts = { hit: pHit(r.hitRate), typical: pTyp(typicalOf(r)), quiet: 1 - pCrowd(r.releases), growth: pGrow(r.demand) };
     const sure = 0.7 + 0.3 * clamp(r.hitGames / 100);
     const raw = Object.entries(SCORE_WEIGHTS).reduce((s, [k, w]) => s + w * parts[k], 0);
     const strong = Object.keys(parts).filter((k) => parts[k] >= 0.75).sort((a, b) => parts[b] - parts[a]);
@@ -236,7 +255,7 @@ export function opportunityScores(rows) {
 export function rankNiches(trends, tagNames, { small = true, sort = "best" } = {}) {
   const s = tagSets(tagNames);
   const rows = opportunityScores((trends.tags || []).filter((r) => r.hitRate != null && r.hitGames >= MIN_SINGLE && !s.meta.has(r.tag) && !s.adult.has(r.tag) && (!small || !s.big.has(r.tag)))
-    .map((r) => ({ ...r, conf: confidence(r.hitGames), sure: sureLabel(r.hitRate, r.hitGames), range: spread(r.hitRate, r.hitGames), lift: r.hitLift ?? r.hitRate / trends.baseHitRate, dir: growthDir(r.supply) })));
+    .map((r) => ({ ...r, conf: confidence(r.hitGames), sure: sureLabel(r.hitRate, r.hitGames), range: spread(r.hitRate, r.hitGames), lift: r.hitLift ?? r.hitRate / trends.baseHitRate, dir: growthDir(r.supply), ddir: demandDir(r.demand) })));
   const thinLast = (a, b) => (a.conf === "thin data") - (b.conf === "thin data");
   const by = {
     best: (a, b) => b.score - a.score || b.hitRate - a.hitRate,
@@ -293,22 +312,25 @@ const PACE_WORDS = [
   "Solid: 2.5 times as fast or faster",
 ];
 
-// --- 1c. Rising now: trends to get into early, from growth.json's monthly counts -----------
+// --- 1c. Rising now: what players want more of, from growth.json's monthly counts -------------
 
-// Each tag's share of Steam's releases in the last 3 full months against the 12 before (`mult`), from
-// a small base (under 1.5% of releases a year before), kept only when its games still become hits at
-// least as often as Steam's (trends.hitRate, already pulled toward the base rate). Pseudo-counts keep a
-// jump from 1 game to 6 from reading as ×6. Ordered by stage (Early first, Late last), then by `mult`.
-// `revRatio`: reviews per release of its last 3 months' games against all of Steam's from the same
-// months. `top2`: the share of those reviews that its two biggest new games hold (from games.json,
-// when given): at 70%+ one or two big releases make the tag look good, and it's left out.
-// Stage, so "Early" means a small, young rise a small team can still join:
-//   early:   under 0.5% of releases, the rise only started lately (it wasn't rising the year before:
-//            under ×2.5 against the 12 months before that), and not a big build (the HUGE/BIG lists);
+// Tags whose new games are wanted more and more: `perGame`, reviews per new release against Steam's
+// (the last 3 full months against the 12 before; both sides pulled toward Steam's average as if they
+// had K more average games, so one big game can't make ×30), and, once the server has two weeks of
+// daily data, `demand` (trends.demand: the tag's share of new reviews and of players against the
+// weeks before). `rise` is their geometric mean; a tag needs ×RISE_RULES.minRise to be listed, its new
+// games must still get RISE_RULES.minRev × the reviews of an average new game, and its paid games must
+// earn a hit at least as often as Steam's (trends.hitRate). More releases never help: they only lower
+// reviews per release, and they decide the stage (how crowded it is).
+// `top2`: the share of those reviews that its two biggest new games hold (from games.json, when
+// given): at 70%+ one or two big releases make the tag look good, and it's left out.
+// Stage, so "Early" means a small, young rush a small team can still join:
+//   early:   under 0.5% of releases, the release rise only started lately (under ×2.5 against the
+//            12 months before that), and not a big build (the HUGE/BIG lists);
 //   late:    1.5%+ of all releases: the rush has arrived;
 //   crowded: everything between.
 export const RISE_MIN_GAMES = 12;
-export const RISE_RULES = { earlyShare: 0.005, earlyStarted: 2.5, lateShare: 0.015, fewBig: 0.7 };
+export const RISE_RULES = { earlyShare: 0.005, earlyStarted: 2.5, lateShare: 0.015, fewBig: 0.7, minRise: 1.2, minRev: 0.8 };
 export function risingNow(growth, trends, tagNames, { small = true, limit = 8, games = null } = {}) {
   if (!growth?.tags || !growth.total?.m || !trends?.tags) return [];
   const T = growth.total.m, TR = growth.total.mr || [], n = T.length;
@@ -317,7 +339,7 @@ export function risingNow(growth, trends, tagNames, { small = true, limit = 8, g
   const now = [full - 3, full], before = [full - 15, full - 3], prior = [full - 27, full - 15];
   const tNow = sum(T, ...now), tBefore = sum(T, ...before), tPrior = sum(T, ...prior);
   if (!tNow || !tBefore) return [];
-  const revAll = sum(TR, ...now) / tNow;
+  const revAll = sum(TR, ...now) / tNow, revAllBefore = sum(TR, ...before) / tBefore;
   const s = tagSets(tagNames), base = trends.baseHitRate, tm = new Map(trends.tags.map((r) => [r.tag, r]));
   const K = 4;
   const months = (growth.months || []).slice(Math.max(0, full - 24), full);
@@ -328,32 +350,39 @@ export function risingNow(growth, trends, tagNames, { small = true, limit = 8, g
     if (!tr || tr.hitRate == null || tr.hitRate < base || tag === INDIE || s.meta.has(tag) || s.adult.has(tag) || (small && big)) continue;
     const m = g.m || [], mr = g.mr || [];
     const cNow = sum(m, ...now), cBefore = sum(m, ...before), cPrior = sum(m, ...prior);
-    if (cNow < RISE_MIN_GAMES) continue;
+    if (cNow < RISE_MIN_GAMES || !revAll || !revAllBefore) continue;
     const shareNow = cNow / tNow, shareBefore = cBefore / tBefore, sharePrior = tPrior ? cPrior / tPrior : 0;
-    if (shareBefore >= 0.015) continue;
     const mult = (cNow + K) / (shareBefore * tNow + K);
-    if (mult < 1.5) continue;
     const started = (cBefore + K) / (sharePrior * tBefore + K);
-    // Pulled toward Steam's average as if it also had K average games: one big game can't make ×30.
-    const revRatio = revAll > 0 ? ((sum(mr, ...now) + K * revAll) / (cNow + K)) / revAll : null;
+    // Reviews per release against Steam's, now and the year before (the same age gap on both sides, so it cancels).
+    const revRatio = ((sum(mr, ...now) + K * revAll) / (cNow + K)) / revAll;
+    const revBefore = ((sum(mr, ...before) + K * revAllBefore) / (cBefore + K)) / revAllBefore;
+    const perGame = revRatio / revBefore;
+    const parts = [perGame, tr.demand].filter((x) => x != null && Number.isFinite(x) && x > 0);
+    const rise = Math.exp(parts.reduce((a, x) => a + Math.log(x), 0) / parts.length);
+    if (rise < RISE_RULES.minRise || revRatio < RISE_RULES.minRev) continue;
     const c = conc?.get(tag);
     const top2 = c && c.total >= 50 ? (c.top[0].reviews + (c.top[1]?.reviews || 0)) / c.total : null;
     // Carried by one or two big releases (e.g. a famous studio's game): a big-release story, not a
     // niche to join, so it stays off the list.
-    const fewBig = top2 != null && top2 >= RISE_RULES.fewBig;
-    if (fewBig) continue;
+    if (top2 != null && top2 >= RISE_RULES.fewBig) continue;
     const stage = shareNow >= RISE_RULES.lateShare ? "late"
       : shareNow < RISE_RULES.earlyShare && started < RISE_RULES.earlyStarted && !big ? "early" : "crowded";
+    // The line: reviews per new game against Steam's, month by month (pulled toward Steam's by K games).
     const spark = [];
-    for (let i = Math.max(0, full - 24); i < full; i++) spark.push(T[i] ? (m[i] || 0) / T[i] : 0);
+    for (let i = Math.max(0, full - 24); i < full; i++) {
+      const avg = T[i] ? (TR[i] || 0) / T[i] : 0;
+      spark.push(avg > 0 ? (((mr[i] || 0) + K * avg) / ((m[i] || 0) + K)) / avg : 1);
+    }
     const x = mult >= 10 ? String(Math.round(mult)) : mult.toFixed(1).replace(/\.0$/, "");
-    const rev = revRatio == null ? "" : revRatio >= 3 ? ", and they get far more reviews than an average new game" : revRatio >= 1.2 ? `, and they get ${times(revRatio)} the reviews of an average new game` : revRatio < 0.8 ? ", though they get fewer reviews than an average new game" : "";
-    const words = `${x}× its share of releases a year before (${pct(shareNow, 1)} of all new games now), ${oneIn(tr.hitRate)} still become hits, ${num(tr.releases)} new in ${trends.supplyWindow || 90} days${rev}.`;
-    out.push({ tag, name: tr.name || g.name, cNow, cBefore, shareNow, shareBefore, mult, started, revRatio, top2, big, stage, hitRate: tr.hitRate, lift: tr.hitRate / base, releases: tr.releases, hitGames: tr.hitGames, spark, months, words });
+    const words = `New games here get ${times(revRatio)} the reviews of an average new game, ${times(perGame)} the year before`
+      + (tr.demand != null ? `; its share of new reviews and players is ${times(tr.demand)} the weeks before` : "")
+      + `. ${oneIn(tr.hitRate)} paid games earn a hit. ${pct(shareNow, 1)} of new releases (${x}× its share a year before).`;
+    out.push({ tag, name: tr.name || g.name, cNow, cBefore, shareNow, shareBefore, mult, started, revRatio, perGame, demand: tr.demand ?? null, rise, top2, big, stage, hitRate: tr.hitRate, lift: tr.hitRate / base, releases: tr.releases, hitGames: tr.hitGames, spark, months, words });
   }
-  // Best chances first: Early, then Getting crowded, then Late, each by rise speed. `limit` caps the
-  // Early + crowded rows and, separately, the Late ones (shown folded away).
-  out.sort((a, b) => STAGE_ORDER[a.stage] - STAGE_ORDER[b.stage] || b.mult - a.mult || b.hitRate - a.hitRate);
+  // Best chances first: Early, then Getting crowded, then Late, each by how fast demand rises. `limit`
+  // caps the Early + crowded rows and, separately, the Late ones (shown folded away).
+  out.sort((a, b) => STAGE_ORDER[a.stage] - STAGE_ORDER[b.stage] || b.rise - a.rise || b.hitRate - a.hitRate);
   return [...out.filter((r) => r.stage !== "late").slice(0, limit), ...out.filter((r) => r.stage === "late").slice(0, limit)];
 }
 export const STAGE_ORDER = { early: 0, crowded: 1, late: 2 };
@@ -380,7 +409,7 @@ function newGameReviews(games, growth, full) {
 // What to do about a rising tag, in one short line. `pair`: the best tag pair containing it, from the
 // gap finder (topPairsWith in market-gaps.js), for the "find an angle" hint.
 export function riseAction(row, pair) {
-  if (row.stage === "early") return { lead: "Get in now:", rest: "few rivals yet." };
+  if (row.stage === "early") return { lead: "Get in now:", rest: "players want more, and few are making it yet." };
   if (row.stage === "late") return { lead: "Only with a clear twist:", rest: "the rush has arrived." };
   return pair
     ? { lead: "Move fast or find an angle:", rest: `${row.name} + ${pair.other}`, pair }
@@ -395,6 +424,10 @@ export function unpackUpcoming(file) {
     appid: r[col.appid], name: r[col.name], day: r[col.day], display: r[col.display], price: r[col.price],
     tags: r[col.tags] || [], flags: r[col.flags] || 0, langs: r[col.langs], devs: r[col.devs] || [], pubs: r[col.pubs] || [],
     devGames: r[col.devGames] || 0, devBest: r[col.devBest] || 0, devReviews: r[col.devReviews] || 0, pubGames: r[col.pubGames] || 0,
+    // Newer files: the best other game's estimated revenue, the languages, and the demo's traction.
+    devBestRev: col.devBestRev != null ? r[col.devBestRev] ?? null : null, langList: col.langList != null ? r[col.langList] ?? null : null,
+    demoPlayers: col.demoPlayers != null ? r[col.demoPlayers] ?? null : null, demoPeak: col.demoPeak != null ? r[col.demoPeak] ?? null : null,
+    demoReviews: col.demoReviews != null ? r[col.demoReviews] ?? null : null, demoPos: col.demoPos != null ? r[col.demoPos] ?? null : null,
   }));
 }
 
@@ -415,43 +448,45 @@ export function upcomingLeads(list, trends, today, { godotOnly = true, tagNames 
     const exact = g.display === "date_full" || g.display === "date_month";
     const tag = hotTag(g.tags, hot);
     const demo = !!(g.flags & F.demo);
+    const traction = demoTraction({ ...g, demo });
     let score = { self: 30, label: 14, published: 0 }[deal] + (g.flags & F.godot ? 20 : 0);
     score += until == null ? 1 : until < -30 ? 0 : !exact ? 4 : until <= 30 ? 15 : until <= 120 ? 12 : until <= 270 ? 8 : 4;
     if (tag) score += Math.min(15, (tag.lift - 1) * 10);
-    score += g.devBest >= 1000 ? 15 : g.devBest >= 200 ? 11 : g.devBest >= 50 ? 7 : g.devGames ? 2 : 0;
-    if (demo) score += 6;
+    // The studio's best other game (by what it earned when the files say), and how many play the demo.
+    score += g.devGames ? 15 * trackRecord(g) : 0;
+    score += 15 * traction.t;
     const who = `${deal === "self" ? "Self-published" : deal === "label" ? "Small-label" : "Published"}${g.flags & F.godot ? " Godot" : ""} game`;
     const when = until == null ? (demo ? "no date yet, but a demo is out" : "no date yet")
       : until < 0 ? `its date (${dayShort(g.day)}) just passed: still coming`
       : !exact ? `planned for ${releaseText(g.day, g.display)}`
       : until === 0 ? "out today" : until <= 60 ? `out in ${plural(until, "day")} (${dayShort(g.day)})` : `out ${releaseText(g.day, g.display)}`;
     const parts = [`${who}, ${when}`];
-    if (tag) parts.push(`in ${tag.name}, where ${oneIn(tag.rate)} recent games became a hit`);
-    if (g.devBest >= 50) parts.push(`the studio's best game has ${num(g.devBest)} reviews`);
+    if (tag) parts.push(`in ${tag.name}, where ${oneIn(tag.rate)} recent paid games earned a hit`);
+    if (g.devBest >= 50) parts.push(`the studio's best game ${g.devBestRev != null ? `earned about ${usd(g.devBestRev)} (estimate)` : `has ${num(g.devBest)} reviews`}`);
     else if (!g.devGames) parts.push("the studio's first game");
-    if (demo && until != null) parts.push("demo out");
+    if (traction.words && (until != null || traction.t !== 0.35)) parts.push(traction.words);
     return { ...g, deal, until, tag, demo, score: Math.round(score), reason: parts.join("; ") + "." };
   }).sort((a, b) => (a.deal === "published") - (b.deal === "published") || b.score - a.score);
 }
 
-// Released self-published (or small-label) Godot games: well liked but not reaching many players yet.
+// Released self-published (or small-label) Godot games: well liked, still selling, but not reaching
+// many players yet. The room to grow is the share of Steam's players it can't reach yet (reach() in
+// market-sign.js: languages, Mac, Linux, Deck), the momentum its reviews and players in the last 28 days.
 export function releasedLeads(godot, today, tagNames = {}) {
   const adult = tagSets(tagNames).adult;
   return godot.filter((g) => !g.comingSoon && g.day != null && today - g.day <= 730 && g.reviews >= 10 && g.pos != null && g.pos >= 75
     && (g.selfPublished || g.publisherGames <= 2) && !isJoke(g.name) && !(g.tags || []).some((t) => adult.has(t))).map((g) => {
     const trust = clamp(Math.log10(g.reviews + 1) / 2);
-    const gaps = [];
-    if (g.languages != null && g.languages < 5) gaps.push(`only ${plural(g.languages, "language")}`);
-    const ports = [!g.mac && "Mac", !g.linux && "Linux"].filter(Boolean);
-    if (ports.length) gaps.push(`no ${ports.join(" or ")} build`);
-    if (!g.deck) gaps.push("no Steam Deck rating");
-    const age = today - g.day;
-    let score = 30 * clamp((g.pos - 75) / 20) * trust;
-    score += 15 * clamp(1 - Math.log10(Math.max(g.reviews, 10)) / Math.log10(5000));
-    score += Math.min(25, gaps.length * 8) * trust;
-    score += age <= 180 ? 15 : age <= 365 ? 8 : 0;
+    const r = reach(g), gaps = r.items.map((x) => x.label);
+    const age = today - g.day, move = momentum(g);
+    let score = 25 * clamp((g.pos - 75) / 20) * trust;
+    score += 10 * clamp(1 - Math.log10(Math.max(g.reviews, 10)) / Math.log10(5000));
+    score += 25 * clamp(r.share / 0.4) * trust;
+    score += 20 * move;
+    score += age <= 180 ? 10 : age <= 365 ? 5 : 0;
     score += g.selfPublished ? 10 : 4;
-    const reason = `${g.selfPublished ? "Self-published" : "On a small label"}, ${g.pos}% positive from ${num(g.reviews)} reviews, out for ${age < 60 ? plural(age, "day") : `${Math.round(age / 30.4)} months`}`
+    const lately = g.gain28 ? `, +${num(g.gain28)} reviews in the last 28 days` : g.gain28 === 0 ? ", no new reviews in 28 days" : "";
+    const reason = `${g.selfPublished ? "Self-published" : "On a small label"}, ${g.pos}% positive from ${num(g.reviews)} reviews${lately}, out for ${age < 60 ? plural(age, "day") : `${Math.round(age / 30.4)} months`}`
       + (gaps.length ? `, but ${gaps.join(", ")}: room to reach more players.` : ": well liked, still a small audience.");
     return { ...g, score: Math.round(score), reason };
   }).sort((a, b) => b.score - a.score);
@@ -529,7 +564,7 @@ export function rankAlerts(trends, godotGames) {
     if (a.kind === "tag") {
       const t = tm.get(a.tag);
       out.push({ ...a, group: 0, label: "Rising niche", head: t?.name || a.title,
-        plain: t ? `${num(t.releases)} games out in the last 90 days, ${times(t.supply)} its share of releases a year ago, and its games become hits ${times(t.hitLift)} as often as Steam's (${t.hitRate != null ? sureLabel(t.hitRate, t.hitGames) : "no hit rate yet"}).` : a.detail });
+        plain: t ? `${demandWords(t.demand).replace(/^./, (c) => c.toUpperCase())}, and its paid games earn a hit ${times(t.hitLift)} as often as Steam's (${t.hitRate != null ? sureLabel(t.hitRate, t.hitGames) : "no hit rate yet"}). ${num(t.releases)} games out in the last 90 days (${times(t.supply)} its share of releases a year ago).` : a.detail });
     } else if (a.kind === "godot") {
       const g = gd.get(a.appid);
       const self = g?.selfPublished;
@@ -550,12 +585,12 @@ export function todayItems({ trends, tagNames, upcoming, godot, growth, games = 
   const out = [];
   if (trends) {
     const n = rankNiches(trends, tagNames, { small: true }).find((r) => r.conf !== "thin data");
-    if (n) out.push({ kind: "Niche", text: `Best niche right now: ${n.name} (score ${n.score}). ${num(n.hits)} of its ${num(n.hitGames)} recent games became hits, about ${oneIn(n.hitRate)} even after allowing for chance (Steam average: ${oneIn(trends.baseHitRate)}; ${n.sure}). New ones are ${growthWords(n.supply)}.`, tab: "make", tag: n.tag, keys: [`niche:${n.tag}`] });
+    if (n) out.push({ kind: "Niche", text: `Best niche right now: ${n.name} (score ${n.score}). ${num(n.hits)} of its ${num(n.hitGames)} recent paid games earned a hit (top 10% of their fortnight), about ${oneIn(n.hitRate)} even after allowing for chance (Steam average: ${oneIn(trends.baseHitRate)}; ${n.sure}). A typical one earns ${typFmt(n, typicalOf(n))}. ${demandWords(n.demand).replace(/^./, (c) => c.toUpperCase())}.`, tab: "make", tag: n.tag, keys: [`niche:${n.tag}`] });
   }
   if (trends && growth) {
     // The fastest riser that isn't already the best niche above.
     const r = risingNow(growth, trends, tagNames, { small: true, limit: 3, games }).find((x) => x.tag !== out[0]?.tag);
-    if (r) out.push({ kind: "Rising", text: `Rising fast: ${r.name} (${STAGE[r.stage].toLowerCase()}). ${r.words.charAt(0).toUpperCase()}${r.words.slice(1)}`, tab: "make", tag: r.tag, keys: [`rising:${r.tag}`] });
+    if (r) out.push({ kind: "Rising", text: `Players want more: ${r.name} (${STAGE[r.stage].toLowerCase()}). ${r.words}`, tab: "make", tag: r.tag, keys: [`rising:${r.tag}`] });
   }
   if (upcoming) {
     const l = upcoming.find((g) => g.deal !== "published");
@@ -620,7 +655,7 @@ const relLeads = () => memo("rel", () => releasedLeads(st.files.godot.games, tod
 const growthNow = () => memo(`growth:${st.qMin}`, () => steamGrowth(st.files.growth, st.qMin));
 const risingRows = () => memo(`rising:${st.small}:${!!st.files.games}`, () => risingNow(st.files.growth, st.files.trends, tagNames(), { small: st.small, games: st.files.games ? gamesList() : null }));
 // The best tag pair containing a rising tag, for its "find an angle" line (from the gap finder).
-const anglePair = (tag) => memo(`angle:${st.small}:${tag}`, () => { try { return topPairsWith({ overview: st.files.overview, games: st.files.games }, tag, { small: st.small, minGames: 25 })[0] || null; } catch (e) { console.error(e); return null; } });
+const anglePair = (tag) => memo(`angle:${st.small}:${tag}`, () => { try { return topPairsWith({ overview: st.files.overview, games: st.files.games, own: C.ownSales || null }, tag, { small: st.small, minGames: 25 })[0] || null; } catch (e) { console.error(e); return null; } });
 const reviewPace = () => memo("pace", () => tagReviewPace(gamesList(), today()));
 const nichesNow = () => memo(`niches:${st.small}:${st.sort}`, () => rankNiches(st.files.trends, tagNames(), { small: st.small, sort: st.sort }));
 const adultIds = () => memo("adult", () => tagSets(tagNames()).adult);
@@ -834,13 +869,16 @@ function makeView() {
     h("b", "The server's market files are from an older version."), " They're rebuilt every night at 04:00 Swedish time with the current code; to see this tab now, rebuild them on the server: ",
     h("code", "sudo systemctl start steamdata-market")));
   const all = nichesNow();
+  const byRev = t.hitBasis === "revenue";
   return h("div",
+    byRev ? null : h("p.mm-note.mm-stale", h("b", "These market files are from before the revenue estimate."), " Hits are counted by reviews until the server rebuilds them tonight (or now: ", h("code", "sudo systemctl start steamdata-market"), ")."),
     filterBar(),
     risingSection(),
     section("The 25 best niches right now",
-      `Ranked by the opportunity score (0–100). A hit is a game in the top 10% by reviews among the games released the same fortnight (on Steam, ${oneIn(t.baseHitRate)}).`,
+      byRev ? `Ranked by the opportunity score (0–100). A hit is a paid game that earned more than 90% of the paid games released the same fortnight (estimated revenue; free games left out). On Steam, ${oneIn(t.baseHitRate)}.`
+        : `Ranked by the opportunity score (0–100). A hit is a game in the top 10% by reviews among the games released the same fortnight (on Steam, ${oneIn(t.baseHitRate)}).`,
       scoreBars(all)),
-    section("Every niche: rivals against hit chance", "Up and to the left is where you want to be: few new games to compete with, and many of them become hits. Click a dot to pick a tag.",
+    section("Every niche: rivals against hit chance", "Up and to the left is where you want to be: few new games to compete with, and many of them earn a hit. Click a dot to pick a tag.",
       scatterCard(all, t.baseHitRate)),
     nicheTable(all, t),
     gapBlock());
@@ -867,6 +905,14 @@ const DIR_WORDS = [
   ["var(--sw-2)", "More rivals coming: its share of new Steam games is up 10% or more on a year ago"],
 ];
 const DIR_TIP = "Its share of all Steam releases in the last 90 days, against the same 90 days a year ago.";
+// Demand: green when players want more (its share of new reviews and players up 10%+ on the weeks before).
+const DEMAND_COLOR = (r) => r.ddir > 0 ? "var(--sw-3)" : r.ddir < 0 ? "var(--sw-2)" : "var(--fb-muted)";
+const DEMAND_WORDS = [
+  ["var(--sw-3)", "Rising: its share of new reviews and players is up 10% or more on the weeks before"],
+  ["var(--fb-muted)", "Steady, or not known yet"],
+  ["var(--sw-2)", "Falling: down 10% or more"],
+];
+const DEMAND_TIP = "Its share of all new Steam reviews and of all players, the latest weeks against the weeks before. New releases don't count, so more games can't make it look wanted.";
 const dirLegend = (what) => [C.h("b", `${what} color:`), ...DIR_WORDS.map(([c, w]) => C.h("span", { title: DIR_TIP }, C.h("i.mm-key", { style: `background:${c}` }), w))];
 
 // "New games collect about 3.1 reviews a month (×1.8 Steam's pace)", for the tooltip.
@@ -877,19 +923,20 @@ function paceLine(r) {
   return p ? C.h("div", `New games collect ${p.rate < 10 ? p.rate.toFixed(1) : fmtK(p.rate)} reviews a month (${times(p.ratio)} Steam's pace)${demand}`) : demand ? C.h("div", demand.slice(3)) : null;
 }
 
-// " (52 opportunity + 9 growth)": the score's two bar parts in points.
+// " (52 opportunity + 9 demand)": the score's two bar parts in points.
 function scoreSplit(r) {
   if (!r.parts) return [];
   const g = SCORE_WEIGHTS.growth * r.parts.growth, all = Object.keys(SCORE_WEIGHTS).reduce((a, k) => a + SCORE_WEIGHTS[k] * r.parts[k], 0) || 1;
   const gp = Math.round((g / all) * r.score);
-  return [` (${r.score - gp} opportunity + ${gp} growth)`];
+  return [` (${r.score - gp} opportunity + ${gp} demand)`];
 }
 function tagTip(r) {
   const h = C.h, gl = glossary(r.name);
   return [h("div.mm-tip-t", r.name), gl ? h("div.mm-tip-raw", gl) : null, h("div", "Opportunity score ", h("b", String(r.score)), "/100", ...scoreSplit(r)),
-    h("div", h("b", pct(r.hitRate)), ` become hits (${times(r.lift)} Steam's)`),
+    h("div", h("b", pct(r.hitRate)), ` earn a hit (${times(r.lift)} Steam's)`),
     h("div", `${fmtK(r.releases)} new games in 90 days · ${growthWords(r.supply)}`),
-    h("div", `Typical game ${fmtK(r.medianReviews)} reviews, top 10% ${fmtK(r.topReviews)}`),
+    h("div", `Demand: ${demandWords(r.demand)}`),
+    h("div", `Typical paid game ${typFmt(r, typicalOf(r))}, top 10% ${typFmt(r, topOf(r))}`),
     paceLine(r),
     h("div.mm-tip-raw", `How sure: ${r.sure} (${num(r.hitGames)} games)`)];
 }
@@ -922,9 +969,10 @@ function risingSection() {
   if (!st.files.growth) return section(title, null, h("p.mm-note", "Loading the monthly release counts…"));
   const rows = risingRows();
   const g = st.files.growth;
-  const sub = h("p.mm-sub", h("b", "How it's ranked: "), "best chances first. ", h("b", "Early"), " rises come first, then ", h("b", "Getting crowded"),
-    ", and ", h("b", "Late"), " ones are folded away at the end. Within each stage, the tag whose share of new Steam releases is climbing fastest (the last 3 full months against the 12 before) comes first.",
-    " Only tags whose games still become hits at least as often as Steam's are listed; a rise carried by one or two big releases is left out.",
+  const sub = h("p.mm-sub", h("b", "What players want more of. "), "A tag is listed when its new games get more and more reviews against an average new game (the last 3 full months against the 12 before)",
+    " and, once the server has two weeks of daily data, a growing share of all new reviews and players. More releases never count as rising. ",
+    h("b", "Early"), " ones come first, then ", h("b", "Getting crowded"), ", and ", h("b", "Late"), " ones are folded away at the end; within each, the fastest rise first.",
+    " Only tags whose paid games earn a hit at least as often as Steam's are listed; a rise carried by one or two big releases is left out.",
     st.small ? "" : " Big-build tags (MMO, open world, multiplayer…) are in, marked \u201cbig build\u201d.");
   if (!rows.length) return h("section.mm-section", h("h2", title), sub, h("p.mm-note", "Nothing is rising fast right now with these settings."));
   const [from, to] = [rows[0].months[0], rows[0].months.at(-1)];
@@ -941,13 +989,13 @@ function risingSection() {
         h("p.mm-rise-words", r.words),
         h("p.mm-rise-act", { class: `is-${r.stage}` }, h("b", act.lead), " ", act.rest,
           act.pair ? h("span.mm-dim", ` (${pct(act.pair.hit)} hit chance, ${plural(act.pair.n, "game")}, ${act.pair.recent} new in 90 days)`) : null)),
-      sparkline(r.spark, `${r.name}: ${pct(r.spark[0], 2)} of Steam's releases in ${monthName(from)}, ${pct(r.spark.at(-1), 2)} in ${monthName(to)}`));
+      sparkline(r.spark, `${r.name}: new games got ${times(r.spark[0])} the reviews of an average new game in ${monthName(from)}, ${times(r.spark.at(-1))} in ${monthName(to)}`));
   };
   return h("section.mm-section", h("h2", title), sub,
     active.length ? h("ol.mm-rise", ...active.map(row)) : h("p.mm-note", "No early or getting-crowded rise right now: only late ones."),
     late.length ? fold("rise-late", h("span", h("b", `Already late (${late.length})`), h("span.mm-late-arrow", " ▸"), h("span.mm-dim", ` the rush has arrived: ${pct(RISE_RULES.lateShare, 1)}+ of all new releases`)),
       h("ol.mm-rise", ...late.map((r, i) => row(r, active.length + i)))) : null,
-    h("p.mm-small", `Lines: each tag's share of all Steam releases per month, ${monthName(from)} to ${monthName(to)} (its own scale; the shaded end is the last 3 months). ${g.monthDone > 0 && g.monthDone < 1 ? "This month is still going, so it's left out. " : ""}Stages: `,
+    h("p.mm-small", `Lines: reviews per new game against an average new Steam game, per release month, ${monthName(from)} to ${monthName(to)} (its own scale; the shaded end is the last 3 months). ${g.monthDone > 0 && g.monthDone < 1 ? "This month is still going, so it's left out. " : ""}Stages (by how many are making it): `,
       ...Object.keys(STAGE).flatMap((k, i) => [i ? "; " : "", h("b", STAGE[k]), ` ${STAGE_TIP[k].charAt(0).toLowerCase()}${STAGE_TIP[k].slice(1, -1)}`]),
       ". The angle is the best-scoring tag pair with it in the gap finder below."));
 }
@@ -955,9 +1003,9 @@ const monthName = (ym) => { const [y, m] = String(ym).split("-"); return `${MONT
 
 // --- Score bars (top 25) ---
 
-// A bar in two parts, bottom to top: growth in the niche's direction, then opportunity (hit chance,
-// reviews per game and few rivals together) in blue, so "growing" no longer paints the whole bar. The exact
-// split is in the tooltip.
+// A bar in two parts, bottom to top: demand growth, colored by where demand is heading, then
+// opportunity (hit chance, earnings per game and few rivals together) in blue. The exact split is in
+// the tooltip.
 const BAR_PARTS = [["growth", ["growth"]], ["opp", ["hit", "typical", "quiet"]]];
 
 function scoreBars(rows) {
@@ -1005,7 +1053,7 @@ function scoreBars(rows) {
     BAR_PARTS.forEach(([k], j) => {
       const hgt = j === 0 ? gh : full - gh;
       if (hgt <= 0) return;
-      stack.append(svgEl("rect", { x: cx - w / 2, y: at - hgt, width: w, height: hgt, fill: k === "growth" ? DIR_COLOR(r) : "var(--sw-1)", class: "mm-bar-seg" }));
+      stack.append(svgEl("rect", { x: cx - w / 2, y: at - hgt, width: w, height: hgt, fill: k === "growth" ? DEMAND_COLOR(r) : "var(--sw-1)", class: "mm-bar-seg" }));
       at -= hgt;
     });
     // Below the median: the same colors under a checkerboard.
@@ -1026,9 +1074,9 @@ function scoreBars(rows) {
     text({ x: W - M.right + 6, y: y(mid) + 4, class: "mm-axis mm-med-tick" }, "median");
   }
   const box = h("div.mm-chart",
-    h("div.mm-legend", h("span", h("i.mm-key", { style: "background:var(--sw-1)" }), h("b", "Opportunity"), ": hit chance, reviews per game and few rivals"),
-      h("span", h("b", "Growth"), " at the bottom, colored by where the niche is heading:")),
-    h("div.mm-legend", ...dirLegend("Growth"),
+    h("div.mm-legend", h("span", h("i.mm-key", { style: "background:var(--sw-1)" }), h("b", "Opportunity"), ": hit chance, earnings per game and few rivals"),
+      h("span", h("b", "Demand"), " at the bottom, colored by where it's heading:")),
+    h("div.mm-legend", ...DEMAND_WORDS.map(([c, w]) => C.h("span", { title: DEMAND_TIP }, C.h("i.mm-key", { style: `background:${c}` }), w)),
       h("span", h("i.mm-key.mm-key-low"), "Below the median (scroll right): not picks"),
       h("span", h("i.mm-key.mm-key-selbox"), "The tag you picked (click a bar, dot or row to pick one)")),
     h("div.mm-hscroll", svg),
@@ -1061,11 +1109,11 @@ function scatterCard(rows, base) {
   const xs = rows.map((r) => Math.max(1, r.releases));
   const lx0 = Math.log10(Math.max(1, Math.min(...xs) * 0.8)), lx1 = Math.log10(Math.max(...xs) * 1.2);
   const ymax = niceMax(Math.max(...rows.map((r) => r.hitRate), base * 2) * 1.06);
-  const vmax = Math.max(...rows.map((r) => r.medianReviews || 0), 1);
+  const vmax = Math.max(...rows.map((r) => typicalOf(r) || 0), 1);
   const x = (v) => M.left + ((Math.log10(Math.max(1, v)) - lx0) / (lx1 - lx0)) * (W - M.left - M.right);
   const y = (v) => H - M.bottom - (v / ymax) * (H - M.top - M.bottom);
   const xSplit = median(xs), ySplit = base * 1.5;
-  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "mm-svg", role: "img", "aria-label": "Every tag: new games in 90 days against hit chance; dot size is a typical game's reviews, how solid a dot is shows how fast new games collect reviews" });
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, class: "mm-svg", role: "img", "aria-label": "Every tag: new games in 90 days against hit chance; dot size is what a typical paid game earns, how solid a dot is shows how fast new games collect reviews" });
   const text = (attrs, s) => { const el = svgEl("text", attrs); el.textContent = s; svg.append(el); return el; };
   // The most attractive corner: few rivals, high hit chance. Named in the legend, never written on.
   svg.append(svgEl("rect", { x: M.left, y: M.top, width: x(xSplit) - M.left, height: y(ySplit) - M.top, rx: 8, class: "mm-gapzone" }));
@@ -1084,17 +1132,17 @@ function scatterCard(rows, base) {
   text({ x: M.left, y: H - 8, class: "mm-axis mm-axis-end" }, "← fewer rivals");
   text({ x: W - M.right, y: H - 8, "text-anchor": "end", class: "mm-axis mm-axis-end" }, "more rivals →");
   const yt = (M.top + H - M.bottom) / 2;
-  text({ x: 14, y: yt, "text-anchor": "middle", transform: `rotate(-90 14 ${yt})`, class: "mm-axis mm-axis-title" }, "Hit chance (share of games that become hits)");
+  text({ x: 14, y: yt, "text-anchor": "middle", transform: `rotate(-90 14 ${yt})`, class: "mm-axis mm-axis-title" }, "Hit chance (share of paid games that earn a hit)");
   svg.append(svgEl("line", { x1: M.left, x2: W - M.right, y1: y(base), y2: y(base), class: "mm-ref" }));
   text({ x: W - M.right + 6, y: y(base) - 2, class: "mm-axis" }, "All Steam");
   text({ x: W - M.right + 6, y: y(base) + 11, class: "mm-axis" }, pct(base));
   // Dots: big ones first so small ones stay on top and clickable; the picked one last.
-  const geo = new Map(rows.map((r) => [r, { cx: x(r.releases), cy: y(r.hitRate), r: dotR(r.medianReviews, vmax), lv: pace ? paceLevel(pace.tags.get(r.tag)?.ratio) : null }]));
+  const geo = new Map(rows.map((r) => [r, { cx: x(r.releases), cy: y(r.hitRate), r: dotR(typicalOf(r), vmax), lv: pace ? paceLevel(pace.tags.get(r.tag)?.ratio) : null }]));
   const dots = svgEl("g");
   const order0 = [...rows].sort((a, b) => geo.get(b).r - geo.get(a).r);
   for (const r of [...order0.filter((r) => r !== sel), ...(sel ? [sel] : [])]) {
     const { cx, cy, r: R, lv } = geo.get(r), on = r === sel;
-    const g = svgEl("g", { class: `mm-dot${on ? " is-sel" : ""}`, "data-tag": r.tag, tabindex: "0", role: "button", "aria-label": `${r.name}: hit chance ${pct(r.hitRate)}, ${r.releases} new games in 90 days, typical game ${fmtK(r.medianReviews)} reviews. Pick it.` });
+    const g = svgEl("g", { class: `mm-dot${on ? " is-sel" : ""}`, "data-tag": r.tag, tabindex: "0", role: "button", "aria-label": `${r.name}: hit chance ${pct(r.hitRate)}, ${r.releases} new games in 90 days, typical game ${typFmt(r, typicalOf(r))}. Pick it.` });
     if (on) g.append(svgEl("circle", { cx, cy, r: R + 7, class: "mm-sel-ring" }));
     g.append(svgEl("circle", { cx, cy, r: R, fill: on ? "var(--fb-accent)" : DIR_COLOR(r), class: "mm-dot-c", style: lv == null || on ? null : `--op:${PACE_OPACITY[lv]}` }));
     g.append(svgEl("circle", { cx, cy, r: Math.max(R + 3, 9), fill: "transparent" }));
@@ -1170,9 +1218,11 @@ function scatterCard(rows, base) {
     items.forEach((draw, i) => draw(k, 17 + i * 34, 17));
     return k;
   };
-  const sizes = [...new Set([5, 20, Math.max(40, Math.round(vmax / 10) * 10)].filter((v) => v <= vmax * 1.2))];
-  const sizeKey = h("span.mm-keygroup", h("span", h("b", "Dot size"), ": reviews a typical (median) game in the tag gets"),
-    ...sizes.map((v) => h("span.mm-keyitem", keySvg([(k, cx, cy) => k.append(svgEl("circle", { cx, cy, r: dotR(v, vmax), class: "mm-key-dot" }))]), fmtK(v))));
+  const money = rows.some(isMoney);
+  const sizes = money ? [...new Set([vmax / 16, vmax / 4, vmax].map((v) => Math.max(1, Math.round(v / 1000) * 1000)))]
+    : [...new Set([5, 20, Math.max(40, Math.round(vmax / 10) * 10)].filter((v) => v <= vmax * 1.2))];
+  const sizeKey = h("span.mm-keygroup", h("span", h("b", "Dot size"), money ? ": what a typical (median) paid game in the tag earns (estimate)" : ": reviews a typical (median) game in the tag gets"),
+    ...sizes.map((v) => h("span.mm-keyitem", keySvg([(k, cx, cy) => k.append(svgEl("circle", { cx, cy, r: dotR(v, vmax), class: "mm-key-dot" }))]), money ? usd(v) : fmtK(v))));
   const ringKey = pace ? h("span.mm-keygroup", h("span", h("b", "Brightness"), `: how fast the tag's newest games (out 2 weeks to 3 months) are collecting reviews, against a typical new Steam game (${pace.base.toFixed(1)} reviews a month). More solid dot = reviews coming in faster.`),
     ...[0, 1, 2, 3].map((lv) => h("span.mm-keyitem", keySvg([(k, cx, cy) => {
       k.append(svgEl("circle", { cx, cy, r: 7, class: "mm-key-dot mm-key-pace", style: `--op:${PACE_OPACITY[lv]}` }));
@@ -1187,7 +1237,7 @@ function scatterCard(rows, base) {
     h("div.mm-legend.mm-legend-keys", sizeKey, ringKey),
     h("div.mm-hscroll", svg),
     h("p.mm-small.mm-tight", `Each dot is a tag (${rows.length} shown). Labels show where they fit; hover any dot for its numbers.`),
-    sel ? h("div.mm-picked", h("span", "Picked: ", h("b", sel.name), ` · score ${sel.score} · ${pct(sel.hitRate)} become hits · ${fmtK(sel.releases)} new in 90 days`),
+    sel ? h("div.mm-picked", h("span", "Picked: ", h("b", sel.name), ` · score ${sel.score} · ${pct(sel.hitRate)} earn a hit · ${fmtK(sel.releases)} new in 90 days`),
       btn("Show in the table ↓", () => pickTag(sel.tag, { toggle: false })), btn("Clear", () => selectTag(sel.tag)))
       : h("p.mm-small.mm-tight", "Nothing picked: click a dot, a bar or a table row."));
   wireChart(svg, box, ".mm-dot");
@@ -1213,18 +1263,18 @@ function nicheTable(all, t) {
       h("td.mm-num.mm-dim", String(all.indexOf(r) + 1)),
       h("td", { title: gl ? `${r.name}: ${gl}` : null }, h("b", r.name), gl ? h("span.mm-dim", " ⓘ") : null),
       h("td.mm-num", { title: SCORE_TEXT }, h("div.mm-barcell", h("span.mm-cbar.mm-cbar-w", h("i", { style: `width:${clamp(r.score / 100) * 100}%;background:var(--sw-1)` })), h("b", String(r.score)))),
-      h("td.mm-num", { title: `${num(r.hits)} of ${num(r.hitGames)} recent games became hits; pulled toward Steam's rate for fairness.` },
+      h("td.mm-num", { title: `${num(r.hits)} of ${num(r.hitGames)} recent paid games earned a hit; pulled toward Steam's rate for fairness.${r.freeGames ? ` ${num(r.freeGames)} free games left out.` : ""}` },
         h("div.mm-barcell", h("span.mm-cbar.mm-vs", h("i", { style: `width:${clamp(r.hitRate / maxHit) * 100}%;background:${r.lift >= 1.5 ? "var(--sw-3)" : "var(--sw-1)"}` }), h("b", { style: `left:${clamp(t.baseHitRate / maxHit) * 100}%` })),
           h("span", h("b", pct(r.hitRate)), h("span.mm-dim", ` ${times(r.lift)}`)))),
-      h("td.mm-num", fmtK(r.medianReviews)),
-      h("td.mm-num", fmtK(r.topReviews)),
+      h("td.mm-num", isMoney(r) ? usd(typicalOf(r)) : fmtK(typicalOf(r))),
+      h("td.mm-num", isMoney(r) ? usd(topOf(r)) : fmtK(topOf(r))),
       h("td.mm-num", { title: `${fmtK(r.releasesYearAgo)} in the same ${win} days a year ago: ${growthWords(r.supply)}.` }, fmtK(r.releases), arrow(r)),
       h("td", confPill(r.conf, r.sure))));
     if (on) {
       const games = best?.get(r.tag) || [];
       body.push(h("tr.mm-ndetail", h("td", { colspan: COLS },
         gl ? h("p.mm-gloss", gl) : null,
-        h("p", `${num(r.hits)} of its ${num(r.hitGames)} recent games became hits: about ${oneIn(r.hitRate)}, against ${oneIn(t.baseHitRate)} on Steam. A typical one gets ${plural(r.medianReviews, "review")}; one in its best 10% gets ${num(r.topReviews)}. ${num(r.releases)} came out in the last ${win} days (${num(r.releasesYearAgo)} a year ago): ${growthWords(r.supply)}. ${r.why}`),
+        h("p", `${num(r.hits)} of its ${num(r.hitGames)} recent paid games earned a hit: about ${oneIn(r.hitRate)}, against ${oneIn(t.baseHitRate)} on Steam${r.freeGames ? ` (${num(r.freeGames)} free games left out)` : ""}. A typical one earns ${typFmt(r, typicalOf(r))}; one in its best 10% ${typFmt(r, topOf(r))}. ${demandWords(r.demand).replace(/^./, (c) => c.toUpperCase())}. ${num(r.releases)} came out in the last ${win} days (${num(r.releasesYearAgo)} a year ago): ${growthWords(r.supply)}. ${r.why}`),
         games.length ? h("p.mm-line", "Best recent games: ", ...games.flatMap((g, i) => [i ? ", " : "", link(storeUrl(g.appid), g.name), h("span.mm-dim", ` (${fmtK(g.reviews)} reviews, ${dayShort(g.day)} ${new Date(g.day * DAY * 1000).getUTCFullYear()})`)]), ".")
           : st.files.games ? null : h("p.mm-small.mm-tight", "Loading its best recent games…"),
         h("div.mm-controls", btn("Unpick", () => selectTag(r.tag))))));
@@ -1233,9 +1283,9 @@ function nicheTable(all, t) {
   const cols = [
     { label: "#" }, { label: "Niche", tip: "Hover a name with ⓘ for what it means." },
     { label: "Score", num: true, tip: SCORE_TEXT },
-    { label: "Hit chance", num: true, tip: `Share of its recent games in the top 10% of their release fortnight, against Steam's ${pct(t.baseHitRate)} (the black tick). ×: how many times Steam's.` },
-    { label: "Typical game", num: true, tip: "Median reviews of its recent games: what an ordinary one gets." },
-    { label: "Top 10%", num: true, tip: "Reviews of a game in its best 10%." },
+    { label: "Hit chance", num: true, tip: `Share of its recent paid games in the top 10% of their release fortnight by estimated revenue, against Steam's ${pct(t.baseHitRate)} (the black tick). ×: how many times Steam's.` },
+    { label: "Typical game", num: true, tip: "What an ordinary (median) recent paid game in it will earn over its lifetime, after Steam's cut (estimate)." },
+    { label: "Top 10%", num: true, tip: "What a paid game in its best 10% will earn (estimate)." },
     { label: `New in ${win} days`, num: true, tip: `Games released with the tag in the last ${win} days. Arrow: more (↑) or fewer (↓) than a year ago, as a share of Steam's releases.` },
     { label: "How sure", tip: "By how many games the hit chance stands on: solid 100+, likely 40+, thin data fewer. ± is a rough 90% range." },
   ];

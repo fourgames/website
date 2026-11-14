@@ -13,9 +13,9 @@ import { isJoke } from "./market-merged.js";
 const REAL_PUB = 5;
 const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const STAGES = [
-  ["soon", "Coming soon", "Not out yet: the best time to sign. Lead score: the studio's past results, how often its niche's games become hits, how soon it's out, and a demo."],
-  ["fresh", "Just out (≤ 90 days)", "Released in the last 90 days. Hit score: how many games out the same fortnight it beats on reviews, lowered for weak reviews or games already too big."],
-  ["proven", "Proven", "Out 3 months to 3 years, 80%+ positive, still small. Upside score: well liked, few reviews for that quality, and things a publisher fixes cheaply."],
+  ["soon", "Coming soon", "Not out yet: the best time to sign. Lead score: what the studio's best game earned, how often its niche's paid games earn a hit, how many play its demo, and how soon it's out."],
+  ["fresh", "Just out (≤ 90 days)", "Released in the last 90 days. Hit score: how many paid games out the same fortnight it out-earns (by estimated revenue), lowered for weak reviews or games already too big."],
+  ["proven", "Proven", "Out 3 months to 3 years, 80%+ positive, still small. Upside score: well liked, still selling lately, few reviews for that quality, and how many more Steam players a publisher could reach (languages, Mac, Linux, Deck)."],
 ];
 const STAGE_NAME = { soon: "Coming soon", fresh: "Just out", proven: "Proven" };
 const STAGE_RANK = { soon: 0, fresh: 1, proven: 2 };
@@ -81,18 +81,71 @@ function bestTag(tags, tm) {
   return best;
 }
 
-// What a publisher could add to a released game, cheaply. Platforms and the Deck rating come from
-// the store list (deck: 0 = no rating, 1 = unsupported); languages only once store details are in.
-function upsideList(g) {
-  const out = [];
-  if (!g.mac && !g.linux) out.push("no Mac/Linux build");
-  else if (!g.mac) out.push("no Mac build");
-  else if (!g.linux) out.push("no Linux build");
-  if (!g.deck) out.push("no Deck rating");
-  else if (g.deck === 1) out.push("fails on Steam Deck");
-  if (g.languages != null && g.languages < 5) out.push(g.languages <= 1 ? "1 language" : `only ${g.languages} languages`);
-  return out;
+// Who a game can't reach yet, as a share of Steam's players. From the Steam Hardware & Software Survey
+// (store.steampowered.com/hwsurvey), rough recent values: each language is the share of users with it
+// as their Steam language (Simplified Chinese swings between ~25% and ~50% month to month, so a middle
+// value); English is about 35%. Mac and Linux are each about 2% of users; Steam Deck is part of Linux.
+// Rough: many players also buy games in a language they read but don't use for Steam.
+export const LANGUAGE_SHARE = [
+  ["Simplified Chinese", 0.30, ["Simplified Chinese"]], ["Russian", 0.09, ["Russian"]],
+  ["Spanish", 0.05, ["Spanish - Spain", "Spanish - Latin America"]], ["Portuguese", 0.04, ["Portuguese - Brazil", "Portuguese - Portugal"]],
+  ["German", 0.03, ["German"]], ["Japanese", 0.02, ["Japanese"]], ["Korean", 0.02, ["Korean"]], ["French", 0.02, ["French"]],
+  ["Polish", 0.015, ["Polish"]], ["Traditional Chinese", 0.015, ["Traditional Chinese"]], ["Turkish", 0.01, ["Turkish"]],
+  ["Italian", 0.01, ["Italian"]], ["Thai", 0.01, ["Thai"]], ["Ukrainian", 0.005, ["Ukrainian"]],
+];
+export const PLATFORM_SHARE = { mac: 0.02, linux: 0.01, deck: 0.01 };
+const pts = (x) => `+${x >= 0.095 ? Math.round(x * 100) : +(x * 100).toFixed(1)}%`;
+
+// What a publisher could add to a game, each with the share of Steam's players it would add.
+// langList: the store's language names (null until the store details are in: then only the count is
+// known, and the languages can't be weighed). deck: 0 = no rating, 1 = unsupported.
+export function reach(g) {
+  const items = [];
+  const list = Array.isArray(g.langList) ? g.langList : null;
+  if (list) {
+    const have = new Set(list);
+    const missing = LANGUAGE_SHARE.filter(([, , names]) => !names.some((n) => have.has(n)));
+    const share = missing.reduce((a, [, x]) => a + x, 0);
+    if (missing.length && share >= 0.02) {
+      const names = missing.slice(0, 3).map(([n]) => n);
+      items.push({ label: `no ${names.join(", ")}${missing.length > 3 ? ` (+${missing.length - 3} more)` : ""} (${pts(share)} of Steam players)`, share });
+    }
+  } else if (g.languages != null && g.languages < 5) {
+    items.push({ label: g.languages <= 1 ? "1 language" : `only ${g.languages} languages`, share: null });
+  }
+  if (!g.mac) items.push({ label: `no Mac build (${pts(PLATFORM_SHARE.mac)})`, share: PLATFORM_SHARE.mac });
+  if (!g.linux) items.push({ label: `no Linux build (${pts(PLATFORM_SHARE.linux)})`, share: PLATFORM_SHARE.linux });
+  if (!g.deck) items.push({ label: `no Deck rating (${pts(PLATFORM_SHARE.deck)})`, share: PLATFORM_SHARE.deck });
+  else if (g.deck === 1) items.push({ label: `fails on Steam Deck (${pts(PLATFORM_SHARE.deck)})`, share: PLATFORM_SHARE.deck });
+  return { items, share: items.reduce((a, x) => a + (x.share || 0), 0) };
 }
+function upsideList(g) { return reach(g).items.map((x) => x.label); }
+
+// How many play a game's demo (the server follows demos of games coming soon or just out): 0..1,
+// 1 at 1,000 players at once or 300 reviews. A demo the server hasn't counted yet: 0.35.
+export function demoTraction(g) {
+  if (!g.demo) return { t: 0, words: null };
+  const players = g.demoPeak ?? g.demoPlayers, reviews = g.demoReviews || 0;
+  if (players == null && !reviews) return { t: 0.35, words: "a demo is out (no player count yet)" };
+  const t = clamp(Math.max(Math.log10((players || 0) + 1) / 3, Math.log10(reviews + 1) / Math.log10(301)));
+  const bits = [players != null ? `${num(players)} playing at once${g.demoPeak != null ? " lately" : " at most"}` : null, reviews ? `${plural(reviews, "review")}${g.demoPos != null ? ` (${g.demoPos}% positive)` : ""}` : null].filter(Boolean);
+  return { t, words: `demo: ${bits.join(", ")}` };
+}
+
+// A studio's track record: its best other released game, by estimated lifetime revenue when the
+// files have it ($1k → 0, $1M → 1), else by reviews. A first game: 0.25.
+export function trackRecord(g) {
+  if (!g.devGames) return 0.25;
+  if (g.devBestRev != null) return clamp((Math.log10(g.devBestRev + 1) - 3) / 3);
+  return clamp(Math.log10((g.devBest || 0) + 1) / 3.5);
+}
+
+// Selling lately: reviews in the last 28 days (100 → 1) or the most players in a day lately (300 → 1).
+export function momentum(g) {
+  const r = g.gain28 != null ? Math.log10(g.gain28 + 1) / 2 : 0, p = g.players28 != null ? Math.log10(g.players28 + 1) / Math.log10(301) : 0;
+  return clamp(Math.max(r, p));
+}
+const usd = (n) => n == null ? "–" : n >= 1e6 ? `$${+(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${Math.round(n / 1e3)}k` : `$${Math.round(n)}`;
 
 const pubNameOf = (devs, pubs) => (pubs || []).filter((p) => !(devs || []).includes(p)).join(", ");
 
@@ -102,9 +155,10 @@ function scoreSoon(u, tm, today) {
   const hot = bestTag(u.tags, tm);
   let soon = w.days == null ? 0.3 : w.days < 0 ? 0.5 : w.days <= 90 ? 1 : w.days <= 180 ? 0.8 : w.days <= 365 ? 0.55 : 0.35;
   if (w.rough) soon *= 0.75;
-  const track = u.devGames ? clamp(Math.log10(u.devBest + 1) / 3.5) : 0.25;
+  const track = trackRecord(u);
   const niche = hot ? clamp((hot.lift - 0.8) / 1.7) : 0.15;
-  const score = Math.round(100 * (0.3 * track + 0.25 * niche + 0.25 * soon + 0.2 * (u.demo ? 1 : 0)));
+  const demo = demoTraction(u);
+  const score = Math.round(100 * (0.3 * track + 0.25 * niche + 0.2 * soon + 0.25 * demo.t));
   const who = `${PUB_WHO[u.pub]}${u.godot ? " Godot" : ""} game`;
   let when;
   if (w.days == null) when = u.demo ? "no date yet, but a demo is out" : "no date yet";
@@ -114,40 +168,46 @@ function scoreSoon(u, tm, today) {
   else if (w.days <= 60) when = `out in ${plural(w.days, "day")} (${dayShort(u.day)})`;
   else when = `out ${w.label}`;
   const parts = [`${who}, ${when}`];
-  if (hot && hot.lift >= 1.3) parts.push(`in ${hot.name}, where ${oneIn(hot.rate)} recent games became a hit`);
-  if (u.devBest >= 50) parts.push(`the studio's best game has ${num(u.devBest)} reviews`);
+  if (hot && hot.lift >= 1.3) parts.push(`in ${hot.name}, where ${oneIn(hot.rate)} recent paid games earned a hit`);
+  const best = u.devBestRev != null ? `about ${usd(u.devBestRev)} (estimate)` : `${num(u.devBest)} reviews`;
+  if (u.devBest >= 50) parts.push(u.devBestRev != null ? `the studio's best game earned ${best}` : `the studio's best game has ${best}`);
   else if (!u.devGames) parts.push("the studio's first game");
-  else parts.push(`the studio's earlier games are small (${num(u.devBest)} reviews at best)`);
-  if (u.demo && w.days != null) parts.push("demo out");
+  else parts.push(`the studio's earlier games are small (best: ${best})`);
+  if (demo.words && (w.days != null || demo.t !== 0.35)) parts.push(demo.words);
   return { score, why: parts.join("; ") + ".", when: w, hot };
 }
 
-// Just out: the hit index (reviews vs games out the same fortnight), lowered for poor reviews and
-// for games already so big they're out of reach.
+// Just out: the earn index (estimated revenue against the paid games out the same fortnight; the
+// review hit index for free games and old files), lowered for poor reviews and for games already so
+// big they're out of reach.
 function scoreFresh(g, today) {
   const q = g.pos == null ? 0.7 : g.pos >= 80 ? 1 : g.pos >= 70 ? 0.85 : 0.6;
   const big = g.reviews > 3000 ? 0.6 : 1;
-  const score = Math.round((g.hit ?? 40) * q * big);
+  const score = Math.round((g.earn ?? g.hit ?? 40) * q * big);
   const age = today - g.day;
   const up = upsideList(g);
   const who = `${PUB_WHO[g.pub]}${g.godot ? " Godot" : ""} game`;
   const why = `${who}, out ${age === 0 ? "today" : ageWords(age)}: ${plural(g.reviews, "review")}${g.pos != null ? `, ${g.pos}% positive` : ""}`
-    + (g.hit != null ? `, more reviews than ${g.hit}% of games out the same fortnight` : "")
+    + (g.earn != null ? `, earning more than ${g.earn}% of paid games out the same fortnight (estimate)` : g.hit != null ? `, more reviews than ${g.hit}% of games out the same fortnight` : "")
     + (g.reviews > 3000 ? "; already big, likely out of reach" : up.length ? `; ${up.slice(0, 2).join(", ")}` : "") + ".";
   return { score, why, up };
 }
 
-// Proven: well liked, still small, with concrete things to improve.
+// Proven: well liked, still selling, still small, with players a publisher could add. fix: the share
+// of Steam's players it can't reach yet (languages, Mac, Linux, Deck), 1 at 40% or more.
 function scoreProven(g, today) {
   const trust = clamp(Math.log10(g.reviews) / 2.5);
   const quality = clamp((g.pos - 78) / 20) * trust;
   const small = 1 - clamp(Math.log10(Math.max(g.reviews, 20)) / Math.log10(20000));
-  const up = upsideList(g);
-  const fix = clamp(up.length / 3);
-  const hitf = clamp((g.hit ?? 50) / 100);
-  const score = Math.round(100 * (0.35 * quality + 0.2 * small + 0.3 * fix + 0.15 * hitf));
+  const r = reach(g), up = r.items.map((x) => x.label);
+  const fix = clamp(r.share / 0.4);
+  const hitf = clamp((g.earn ?? g.hit ?? 50) / 100);
+  const move = momentum(g);
+  const score = Math.round(100 * (0.3 * quality + 0.15 * small + 0.25 * fix + 0.15 * hitf + 0.15 * move));
   const age = today - g.day;
+  const lately = [g.gain28 ? `+${num(g.gain28)} reviews in 28 days` : null, g.players28 ? `${num(g.players28)} playing at once lately` : null].filter(Boolean);
   const why = `${PUB_WHO[g.pub]}, ${g.pos}% positive from ${num(g.reviews)} reviews, out ${ageWords(age)}`
+    + (lately.length ? ` (${lately.join(", ")})` : g.gain28 === 0 ? " (no new reviews in 28 days)" : "")
     + (up.length ? `; room to grow: ${up.join(", ")}` : ": well liked, still a small audience") + ".";
   return { score, why, up };
 }
@@ -168,7 +228,7 @@ function buildEntries(files) {
     const s = scoreSoon(u, tm, today);
     out.push({ appid: u.appid, name: u.name, stage: "soon", godot: u.godot, pub: u.pub, pubName: pubNameOf(u.devs, u.pubs), pubGames: u.pubGames,
       studio: u.devs.join(", "), tags: u.tags, adult: isAdult(u.tags, u.name), demo: u.demo, day: u.day, days: s.when.days, whenLabel: s.when.label,
-      devGames: u.devGames, devBest: u.devBest, reviews: null, pos: null, hot: s.hot, score: s.score, why: s.why, up: [], langs: u.langs });
+      devGames: u.devGames, devBest: u.devBest, devBestRev: u.devBestRev, reviews: null, pos: null, hot: s.hot, score: s.score, why: s.why, up: [], langs: u.langs });
   };
   const up = files.upcoming;
   if (up?.rows) {
@@ -177,9 +237,11 @@ function buildEntries(files) {
       const fl = r[col.flags] || 0, appid = r[col.appid];
       seen.add(appid);
       const g = gd.get(appid);
+      const v = (k) => col[k] == null ? null : r[col[k]] ?? null;
       addSoon({ appid, name: r[col.name], day: r[col.day], display: r[col.display], tags: r[col.tags] || [], self: !!(fl & 256), demo: !!(fl & 128),
         godot: !!(fl & 64) || !!g, devs: r[col.devs] || [], pubs: r[col.pubs] || [], devGames: r[col.devGames] || 0, devBest: r[col.devBest] || 0,
-        pubGames: r[col.pubGames] ?? null, langs: r[col.langs] });
+        devBestRev: v("devBestRev"), pubGames: r[col.pubGames] ?? null, langs: r[col.langs],
+        demoPlayers: v("demoPlayers"), demoPeak: v("demoPeak"), demoReviews: v("demoReviews"), demoPos: v("demoPos") });
     }
   }
   for (const g of files.godot?.games || []) {
@@ -187,9 +249,11 @@ function buildEntries(files) {
     if (g.comingSoon) {
       if (seen.has(g.appid)) continue;
       // Godot games the upcoming file leaves out (no date within 18 months and no demo).
+      // devBest: the studio's best other released game (older files only had all its games' reviews together).
       addSoon({ appid: g.appid, name: g.name, day: g.day, display: g.releaseDisplay || (g.day != null ? "date_full" : "Coming soon"), tags, self: g.selfPublished,
-        demo: !!g.demos, godot: true, devs: g.developers || [], pubs: g.publishers || [], devGames: g.devGames || 0, devBest: g.devReviews || 0,
-        pubGames: g.publisherGames ?? null, langs: g.languages });
+        demo: !!g.demos, godot: true, devs: g.developers || [], pubs: g.publishers || [], devGames: g.devGames || 0, devBest: g.devBest ?? g.devReviews ?? 0,
+        devBestRev: g.devBestRev ?? null, pubGames: g.publisherGames ?? null, langs: g.languages,
+        demoPlayers: g.demoPlayers ?? null, demoPeak: g.demoPeak ?? null, demoReviews: g.demoReviews ?? null, demoPos: g.demoPos ?? null });
       continue;
     }
     if (g.day == null) continue;
@@ -201,11 +265,11 @@ function buildEntries(files) {
     if (age <= 90) { if (g.reviews < 3) continue; stage = "fresh"; s = scoreFresh(e, today); }
     else if (age <= 1095 && g.pos != null && g.pos >= 80 && g.reviews >= 20 && g.reviews <= 15000) { stage = "proven"; s = scoreProven(e, today); }
     else continue;
-    // The studio's best other game, roughly: its total reviews minus this one's.
-    const other = (g.devGames || 0) > 1 ? Math.max(0, (g.devReviews || 0) - g.reviews) : 0;
+    // The studio's best other released game, from the server (devGames already leaves this one out).
+    // Older files only had all its other games' reviews together: that stands in until they're rebuilt.
     out.push({ appid: g.appid, name: g.name, stage, godot: true, pub, pubName: pubNameOf(g.developers, g.publishers), pubGames: g.publisherGames,
       studio: (g.developers || []).join(", "), tags, adult: isAdult(tags, g.name), demo: !!g.demos, day: g.day, days: -age, whenLabel: dayDate(g.day),
-      devGames: Math.max(0, (g.devGames || 0) - 1), devBest: other, reviews: g.reviews, pos: g.pos, hit: g.hit, hot: bestTag(tags, tm),
+      devGames: g.devGames || 0, devBest: g.devBest ?? g.devReviews ?? 0, devBestRev: g.devBestRev ?? null, reviews: g.reviews, pos: g.pos, hit: g.hit, earn: g.earn ?? null, hot: bestTag(tags, tm),
       score: s.score, why: s.why, up: s.up, langs: g.languages });
   }
   return { list: out, today, byId: new Map(out.map((e) => [e.appid, e])) };
@@ -238,7 +302,7 @@ const SORTS = {
   stage: (e) => -STAGE_RANK[e.stage],
   when: (e) => e.day ?? Infinity,
   reviews: (e) => e.reviews ?? -1,
-  best: (e) => e.devBest || 0,
+  best: (e) => e.devBestRev ?? e.devBest ?? 0,
 };
 function sortRows(list, sort) {
   if (!sort || !SORTS[sort.key]) return list;
@@ -261,7 +325,7 @@ function shortlistText(items, tagName = (id) => String(id)) {
   return lines.join("\n");
 }
 
-export const _test = { whenText, pubKind, tagMap, bestTag, upsideList, scoreSoon, scoreFresh, scoreProven, buildEntries, filterEntries, tableFilter, sortRows, shortlistText, oneIn };
+export const _test = { reach, demoTraction, trackRecord, momentum, whenText, pubKind, tagMap, bestTag, upsideList, scoreSoon, scoreFresh, scoreProven, buildEntries, filterEntries, tableFilter, sortRows, shortlistText, oneIn };
 
 // ---------------------------------------------------------------------------
 // State
@@ -406,7 +470,7 @@ function tagChips(e, tagName, n = 3) {
   const h = C.h, map = tagMapCache();
   return (e.tags || []).filter((t) => t !== INDIE).slice(0, n).map((t) => {
     const r = map.get(t);
-    return h("span.mks-chip", { class: r?.hot ? "mks-hot" : null, title: r ? `${r.name}: ${pct(r.rate)} of its recent games became hits, ${times(r.lift)} Steam's average${r.hot ? " (a hot tag)" : ""}` : tagName(t) }, r?.hot ? "▲ " : "", tagName(t));
+    return h("span.mks-chip", { class: r?.hot ? "mks-hot" : null, title: r ? `${r.name}: ${pct(r.rate)} of its recent paid games earned a hit (top 10% of their fortnight), ${times(r.lift)} Steam's average${r.hot ? " (a hot tag)" : ""}` : tagName(t) }, r?.hot ? "▲ " : "", tagName(t));
   });
 }
 let tmCache = { src: null, map: new Map() };
@@ -454,7 +518,7 @@ function tableView(d, tagName) {
   const set = (k) => (v) => { t[k] = v; t.shown = 40; saveTable(); R(); };
   const filters = h("div.mks-bar.mks-tfilters",
     C.chips([["all", "All stages"], ["soon", "Coming soon"], ["fresh", "Just out"], ["proven", "Proven"]], t.stage, set("stage"), "Stage"),
-    toggle("Hot tags only", t.hot, () => { t.hot = !t.hot; t.shown = 40; saveTable(); }, "Its strongest tag's games become hits 1.5× as often as Steam's average, or more"),
+    toggle("Hot tags only", t.hot, () => { t.hot = !t.hot; t.shown = 40; saveTable(); }, "Its strongest tag's paid games earn a hit 1.5× as often as Steam's average, or more"),
     toggle("Demo out", t.demo, () => { t.demo = !t.demo; t.shown = 40; saveTable(); }));
   const filters2 = h("div.mks-bar.mks-tfilters",
     h("span.mks-lab", "Out within"), C.chips([[0, "Any"], [90, "3 months"], [180, "6"], [365, "12"], [540, "18"]], t.within, set("within"), "Out within (coming soon only)"),
@@ -468,8 +532,8 @@ function tableView(d, tagName) {
     { key: "score", label: "Score", num: true, tip: "0–100 within its stage: Lead (coming soon), Hit (just out) or Upside (proven). See the board's column notes." },
     { key: "when", label: "Release", tip: "The planned date as precise as the store says (a year or quarter when that's all it gives; TBA when there's none), or the release date." },
     { key: "reviews", label: "Reviews", num: true, tip: "Released games: reviews and how many are positive." },
-    { key: "best", label: "Studio's best", num: true, tip: "Reviews of the studio's best other released game: a track record says they can ship and sell." },
-    { label: "Hot tag", tip: "Its strongest tag, with how often that tag's games become hits against Steam's average. ▲ = hot (1.5× or more)." },
+    { key: "best", label: "Studio's best", num: true, tip: "The studio's best other released game: reviews, and what it earned (estimate). A track record says they can ship and sell." },
+    { label: "Hot tag", tip: "Its strongest tag, with how often that tag's paid games earn a hit against Steam's average. ▲ = hot (1.5× or more)." },
     { label: "Why", tip: "The one-line reason." },
     { label: "", tip: "✕ hides a game for good" },
   ];
@@ -486,7 +550,7 @@ function tableView(d, tagName) {
       h("td.mks-num", meter(e)),
       h("td", e.whenLabel, h("div.mks-dim", e.stage === "soon" ? (e.days == null ? "no date yet" : e.days < 0 ? "date passed" : e.days === 0 ? "today" : `in ${plural(e.days, "day")}`) : `${ageWords(-e.days)} ago`)),
       h("td.mks-num", e.reviews != null ? fmtK(e.reviews) : "–", e.pos != null ? h("div.mks-dim", `${e.pos}% positive`) : null),
-      h("td.mks-num", e.devBest ? fmtK(e.devBest) : "–", e.devGames ? h("div.mks-dim", plural(e.devGames, "game")) : h("div.mks-dim", "first game")),
+      h("td.mks-num", e.devBest ? fmtK(e.devBest) : "–", e.devBestRev != null ? h("div.mks-dim", `~${usd(e.devBestRev)}`) : null, e.devGames ? h("div.mks-dim", plural(e.devGames, "game")) : h("div.mks-dim", "first game")),
       h("td", hot ? h("span", { class: hot.hot ? "mks-hottext" : null }, hot.hot ? "▲ " : "", hot.name, h("span.mks-dim", ` ${times(hot.lift)}`)) : "–"),
       h("td.mks-whycell", e.why),
       h("td.mks-ic", xBtn));

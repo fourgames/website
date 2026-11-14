@@ -35,6 +35,12 @@ NEW_RELEASE_DAYS = 14
 NEW_RELEASE_HOURS = 4
 # Nobody playing: 2 days, then 4, 8, 16, and at most 30 days between samples.
 ZERO_MAX_DAYS = 30
+# Demos (the demos table): of games coming soon or out at most DEMO_RELEASED_DAYS. Their player
+# counts by the same tiers as most games; nobody playing: 2 days, then 4, at most a week. Their review
+# counts with the daily snapshot. The list of demos is brought up to date every DEMO_SYNC_EVERY.
+DEMO_RELEASED_DAYS = 90
+DEMO_SYNC_EVERY = HOUR
+DEMO_ZERO_MAX_DAYS = 7
 
 
 def day_number(ts: float) -> int:
@@ -74,6 +80,14 @@ def players_interval(count: int | None, zeros: int, godot: bool, released_days_a
     if new:
         return jitter(DAY, rng)
     return jitter(min(2 ** max(zeros, 1), ZERO_MAX_DAYS) * DAY, rng)
+
+
+def demo_players_interval(count: int | None, zeros: int, rng: random.Random) -> int:
+    """Seconds until a demo's next player-count sample (zeros: samples in a row with nobody)."""
+    players = count or 0
+    if players >= 1:
+        return jitter(next(h for low, h in PLAYER_TIERS if players >= low) * HOUR, rng)
+    return jitter(min(2 ** max(zeros, 1), DEMO_ZERO_MAX_DAYS) * DAY, rng)
 
 
 def first_players_delay(reviews: int, godot: bool) -> int:

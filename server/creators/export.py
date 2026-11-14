@@ -17,7 +17,11 @@ Also "streamers": Twitch streamers (twitch.py) in the same shape, id "tw:<user i
 login, s followers, n broadcasts of searched games, lu their newest such broadcast, g per game
 [[appid, broadcasts, newest, views]], pk partner/affiliate, yt their YouTube channel when it's on our
 list, and e with source "youtube" for emails taken from that channel.
-Also "press": the press list (press.py), one object per outlet, and "quota": today's YouTube units
+Twitch streamers also get mv, typical viewers: the median of the viewer counts seen while they were
+live in a searched game (mvk "live"), or, when never seen live, the median views of their past
+broadcasts a week old (mvk "vod"); mvn how many.
+Also "press": the press list (press.py), one object per outlet (trailer channels with s subscribers,
+mv typical views and mvn once the collector read them), and "quota": today's YouTube units
 (day, spent, limit, exhausted, reset = when YouTube's quota day ends), so the page can say when
 collecting stops for the day. And "reveal_limit": {hit, ready}, the latest time YouTube said the
 hidden-email limit was reached and when to try again (reveal.py), for the Email hunt's countdown.
@@ -38,7 +42,7 @@ from .collector import PACIFIC, quota_day
 from .config import Config, ConfigError
 from .db import Store
 from .games import _json, connect, own_appids
-from .press import rows as press_rows
+from .press import key as press_key, rows as press_rows
 from .reveal import limit_status
 from . import twitch as twitch_mod
 
@@ -67,6 +71,15 @@ def category(games: list[tuple[int, int]], reviews: dict[int, int]) -> str:
         median = statistics.median(reviews.get(a, 0) for a, _ in games)
         return "indie-variety" if median < 5000 else "variety"
     return "few-games"
+
+
+def typical(live: list[int] | None, vod: list[int] | None) -> dict:
+    """A streamer's typical viewers: live viewer counts when we have any, else past broadcasts' views."""
+    if live:
+        return {"mv": int(statistics.median(live)), "mvn": len(live), "mvk": "live"}
+    if vod:
+        return {"mv": int(statistics.median(vod)), "mvn": len(vod), "mvk": "vod"}
+    return {}
 
 
 def quota(store: Store, daily_units: int, now: float) -> dict:
@@ -101,6 +114,14 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
                                     WHERE views IS NOT NULL AND duration >= ? AND published <= ?
                                     GROUP BY video_id""", (LONG_VIDEO, now - SETTLED_DAYS * 86400)):
         long_views[cid].append(views)
+    tw_live: dict[str, list[int]] = defaultdict(list)
+    tw_vod: dict[str, list[int]] = defaultdict(list)
+    for uid, sid, views, started in db.execute("SELECT user_id, stream_id, MAX(views), started FROM twitch_streams "
+                                               "WHERE views IS NOT NULL GROUP BY stream_id"):
+        if sid.startswith("live:"):
+            tw_live[uid].append(views)
+        elif (started or now) <= now - SETTLED_DAYS * 86400:
+            tw_vod[uid].append(views)
     v30 = dict(db.execute("SELECT channel_id, COUNT(*) FROM youtube_videos WHERE published >= ? GROUP BY channel_id",
                           (now - 30 * 86400,)).fetchall())
     site = defaultdict(list)
@@ -183,7 +204,14 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
             "v30": sum(1 for x in g if (x[2] or 0) >= now - 30 * 86400),
             "g": g, "cat": category([(x[0], x[1]) for x in g], reviews), "p": genre_profile(g),
             "own": any(x[0] in own for x in g), "first": r["first_seen"],
+            **typical(tw_live.get(uid), tw_vod.get(uid)),
         })
+    press = press_rows(store)
+    yt = {r["key"]: r for r in db.execute("SELECT * FROM press_youtube WHERE channel_id IS NOT NULL")}
+    for p in press:
+        y = yt.get(press_key(p["url"]))
+        if y:
+            p.update({k: v for k, v in (("s", y["subscribers"]), ("mv", y["mv"]), ("mvn", y["mvn"])) if v is not None})
     used = {t for c in creators + streamers for t, _ in c["p"]} | {t for g in games.values() for t in g["t"]}
     return {
         "generated": int(now),
@@ -193,7 +221,7 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
         "creators": creators,
         "streamers": streamers,
         "searched": db.execute("SELECT COUNT(*) FROM searches").fetchone()[0],
-        "press": press_rows(store),
+        "press": press,
         **({"quota": quota(store, daily_units, now)} if daily_units else {}),
         **({"reveal_limit": status} if (status := limit_status(store)) else {}),
     }

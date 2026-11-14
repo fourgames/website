@@ -115,6 +115,17 @@ CREATE TABLE IF NOT EXISTS press (
     updated_at  INTEGER NOT NULL
 );
 
+-- YouTube trailer channels on the press list (press.kind = 'trailer-channel'): their numbers, read
+-- every 30 days by the collector. mv: the median views of their newest long videos (3+ minutes) a week old.
+CREATE TABLE IF NOT EXISTS press_youtube (
+    key         TEXT PRIMARY KEY,       -- press.key
+    channel_id  TEXT,                   -- NULL: the link isn't a channel YouTube can look up
+    subscribers INTEGER,
+    mv          INTEGER,
+    mvn         INTEGER,
+    checked_at  INTEGER NOT NULL
+);
+
 -- Per channel and game: how many videos, the latest, their views.
 CREATE VIEW IF NOT EXISTS channel_games AS
     SELECT channel_id, appid, COUNT(*) AS videos, MAX(published) AS last_video, SUM(views) AS views

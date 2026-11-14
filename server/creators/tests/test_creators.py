@@ -116,6 +116,7 @@ class FakeYouTube:
         }
         self.quota_left = 10 ** 6
         self.uploads = {}  # channel id -> [(video id, published)], newest first
+        self.published = "2026-11-01T10:00:00Z"
 
     def __call__(self, url, headers, timeout):
         parts = urllib.parse.urlsplit(url)
@@ -133,7 +134,7 @@ class FakeYouTube:
             body = {"items": [{"id": {"videoId": v}} for v in hits]}
         elif kind == "videos":
             body = {"items": [{"id": v, "snippet": {"channelId": c, "channelTitle": c, "title": t, "categoryId": cat,
-                                                    "publishedAt": "2026-11-01T10:00:00Z"},
+                                                    "publishedAt": self.published},
                                "statistics": {"viewCount": "1234"}, "contentDetails": {"duration": "PT10M"}}
                               for v in q["id"].split(",") for c, t, cat in [self.videos[v]]]}
         elif kind == "playlistItems":
@@ -142,6 +143,9 @@ class FakeYouTube:
             uploads = self.uploads.get("UC" + q["playlistId"][2:])
             body = {"items": [{"contentDetails": {"videoId": v, "videoPublishedAt": at}} for v, at in uploads]
                     if uploads else [{"contentDetails": {"videoPublishedAt": "2026-11-03T08:00:00Z"}}]}
+        elif "forHandle" in q or "forUsername" in q:
+            body = {"items": [{"id": "UCt", "snippet": {"title": "Trailers"}, "statistics": {"subscriberCount": "900000"}}]
+                    if q.get("forHandle") == "@trailers" else []}
         else:
             body = {"items": [{"id": c, "snippet": {"title": f"Channel {c}", "customUrl": f"@{c.lower()}",
                                                     "description": f"business: {c.lower()}@mail.com twitch.tv/{c}x",
@@ -423,3 +427,27 @@ def test_views_read_again_after_a_week_and_typical_views(tmp_path, steam_db):
     store.db.commit()
     by = {c["id"]: c for c in export.build(store, collector.config.steam_db, set(), NOW)["creators"]}
     assert (by["UCa"]["mv"], by["UCa"]["mvn"]) == (200, 3)
+
+
+def test_trailer_channels_and_twitch_typical_viewers(tmp_path, steam_db):
+    from creators import export, press
+    fake = FakeYouTube()
+    collector, store = make(tmp_path, steam_db, fake)
+    press.import_list(store, [
+        {"name": "Trailers", "url": "https://www.youtube.com/@trailers", "kind": "trailer-channel", "email": "t@t.com"},
+        {"name": "Old", "url": "https://www.youtube.com/c/oldname", "kind": "trailer-channel", "email": "o@o.com"},
+        {"name": "Site", "url": "https://site.com", "kind": "press", "email": "s@s.com"}], NOW)
+    fake.published = "2026-10-01T10:00:00Z"
+    fake.uploads["UCt"] = [("v1", "2026-10-01T10:00:00Z"), ("v2", "2026-10-01T10:00:00Z")]
+    collector.run(spend_all=True)
+    assert collector.summary["trailers"] == 2  # the /c/ link can't be looked up, but counts as read
+    data = export.build(store, collector.config.steam_db, set(), NOW)
+    by = {p["name"]: p for p in data["press"]}
+    assert (by["Trailers"]["s"], by["Trailers"]["mv"], by["Trailers"]["mvn"]) == (900000, 1234, 2)
+    assert "mv" not in by["Old"] and "mv" not in by["Site"]
+    collector.summary["trailers"] = 0
+    collector._trailer_channels()
+    assert collector.summary["trailers"] == 0  # not due again for 30 days
+    assert export.typical([30, 10, 500], [9999]) == {"mv": 30, "mvn": 3, "mvk": "live"}
+    assert export.typical(None, [100, 300]) == {"mv": 200, "mvn": 2, "mvk": "vod"}
+    assert export.typical([], None) == {}

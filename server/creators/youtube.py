@@ -7,6 +7,7 @@ Costs (units): search 100, videos 1 per 50 videos, channels 1 per 50 channels. T
 from __future__ import annotations
 
 import re
+import urllib.parse
 from datetime import datetime, timezone
 from typing import Any
 
@@ -125,6 +126,26 @@ class YouTube:
             out += self._get("channels", {"part": "snippet,statistics",
                                           "id": ",".join(ids[start:start + 50])}).get("items") or []
         return out
+
+    def channel_by_url(self, url: str) -> dict | None:
+        """The channel a YouTube link points to (1 unit): /channel/UC..., /@handle or /user/name.
+        None: not a channel link YouTube can look up (/c/ names can't be), or no such channel."""
+        parts = urllib.parse.urlsplit(url.strip())
+        if not re.search(r"(^|\.)youtube\.com$", parts.netloc.lower()):
+            return None
+        path = [p for p in parts.path.split("/") if p]
+        if not path:
+            return None
+        if path[0] == "channel" and len(path) > 1:
+            by = {"id": path[1]}
+        elif path[0].startswith("@"):
+            by = {"forHandle": urllib.parse.unquote(path[0])}
+        elif path[0] == "user" and len(path) > 1:
+            by = {"forUsername": path[1]}
+        else:
+            return None
+        items = self._get("channels", {"part": "snippet,statistics", **by}).get("items") or []
+        return items[0] if items else None
 
     def latest_upload(self, channel_id: str) -> int | None:
         """When the channel last uploaded anything (1 unit), from its uploads playlist (UU + the id's

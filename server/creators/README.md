@@ -21,6 +21,11 @@ Every hour (`creators.timer` → `creators.service`, `python -m creators`) it:
    found in their first days. The Creators page ranks channels by **typical views**: the median views
    of their game videos of 3+ minutes (Shorts count people scrolling past) a week old or more.
    Subscribers say little: an 85k channel whose videos get 500 views sells nothing.
+   Twitch streamers are ranked the same way by typical viewers: the median viewer count seen while
+   they were live in a searched game (or their past broadcasts' views when never seen live).
+6. Reads the press list's YouTube trailer channels every 30 days (about 3 units each): subscribers
+   and typical views of their newest videos, so the Press & trailers page lists them by who still
+   watches. Links of the old /c/name kind can't be looked up; use the /@handle or /channel/ link.
 
 ## The budget
 

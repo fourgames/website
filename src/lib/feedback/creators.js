@@ -13,7 +13,10 @@
 //   - Reach (YouTube): typical views per video (mv, the median of their game videos of 3+ minutes, a
 //     week old or more), not subscribers: an 85k channel whose videos get 500 views sells nothing.
 //     5k-300k typical views is the sweet spot for a small studio (big enough to sell, small enough to
-//     answer). Until mv is known, subscribers stand in, at most 0.6. Twitch: followers.
+//     answer). Until mv is known, subscribers stand in, at most 0.6.
+//   - Reach (Twitch): typical viewers (mv, mvk "live": the median viewer count seen while they were live
+//     in a searched game; 50-2,000 is the sweet spot), or past broadcasts' views when never seen live
+//     (mvk "vod", a weaker sign, at most 0.8). Until then followers stand in, at most 0.6.
 //   - Fit for a game: how much their genres overlap the game's tags (its first tags count most), times
 //     how active they are and their reach, a little more for indie-variety channels. Anyone who
 //     already made a video of that game goes first.
@@ -69,8 +72,17 @@ export function viewsFactor(v) {
   if (l <= Math.log10(3e5)) return 1;
   return Math.max(0.6, 1 - 0.4 * (l - Math.log10(3e5)));
 }
+// Typical live viewers -> 0.05 (3 or fewer) rising evenly per tenfold to 1 at 50, 1 up to 2,000, then
+// down to 0.6 at 20,000+.
+export function viewersFactor(v) {
+  const l = Math.log10(Math.max(v, 1)), lo = Math.log10(3), hi = Math.log10(50);
+  if (l <= lo) return 0.05;
+  if (l < hi) return 0.05 + 0.95 * (l - lo) / (hi - lo);
+  if (l <= Math.log10(2000)) return 1;
+  return Math.max(0.6, 1 - 0.4 * (l - Math.log10(2000)));
+}
 export function reach(c) {
-  if (c.pl === "tw") return sizeFactor(c.s);
+  if (c.pl === "tw") return c.mv == null ? 0.6 * sizeFactor(c.s) : c.mvk === "live" ? viewersFactor(c.mv) : 0.8 * viewersFactor(c.mv);
   return c.mv != null ? viewsFactor(c.mv) : 0.6 * sizeFactor(c.s);
 }
 const ACTIVE_FACTOR = { active: 1, quiet: 0.6, inactive: 0.15, unknown: 0.5 };
@@ -217,7 +229,7 @@ function draw() {
       select("Active", st.f.active, [["all", "Any"], ["active", "Active (30 days)"], ["quiet", "Quiet (30–90 days)"], ["inactive", "Inactive (90+ days)"], ["unknown", "Not known yet"]], "active"),
       select("Language", st.f.lang, [["all", "Any"], ...langs.map(([l, n]) => [l, `${LANGS[l] || (l === "?" ? "Not set" : l.toUpperCase())} (${n})`])], "lang"),
       select("Genre", st.f.genre, [["all", "Any"], ...genres.map(([t, n]) => [t, `${d.tags[t]} (${n})`])], "genre"),
-      select("Sort", st.f.sort, [...(gameId ? [["fit", "Best fit for the game"]] : []), ["best", "Best overall"], ...(tw ? [] : [["views", "Most views per video"]]), ["subs", tw ? "Most followers" : "Most subscribers"], ["active", "Newest upload"], ["games", "Most games"], ["new", "Newest found"]], "sort")),
+      select("Sort", st.f.sort, [...(gameId ? [["fit", "Best fit for the game"]] : []), ["best", "Best overall"], ["views", tw ? "Most viewers" : "Most views per video"], ["subs", tw ? "Most followers" : "Most subscribers"], ["active", "Newest upload"], ["games", "Most games"], ["new", "Newest found"]], "sort")),
     h("div.cr-row", C.chips(SIZES, st.f.size, (v) => setF({ size: v }), "Size"),
       C.chips([["all", "Any type"], ...Object.entries(TYPES)], st.f.type, (v) => setF({ type: v }), "Type")));
 
@@ -244,7 +256,7 @@ function draw() {
       h("span", `${C.plural(rows.length, who)}${rows.length !== all.length ? ` of ${num(all.length)}` : ""}, ${num(emails.length)} with an email`),
       h("button.btn", { type: "button", disabled: !emails.length, title: "One email per creator, the first found, one per line", onclick: (e) => C.copy(emails.map((c) => c.e[0][0]).join("\n"), e.currentTarget) }, `Copy ${C.plural(emails.length, "email")}`));
     const table = h("table.cr-table",
-      h("thead", h("tr", ...(gameId ? [h("th.cr-num", "Fit")] : []), h("th", "Channel"), h("th.cr-num", tw ? "Followers" : "Subs"), ...(tw ? [] : [h("th.cr-num", { title: "Typical views per video: the median of their game videos of 3+ minutes, a week old or more" }, "Views")]), h("th", "Lang"), h("th", tw ? "Last stream" : "Last upload"),
+      h("thead", h("tr", ...(gameId ? [h("th.cr-num", "Fit")] : []), h("th", "Channel"), h("th.cr-num", tw ? "Followers" : "Subs"), h("th.cr-num", { title: tw ? "Typical viewers: the median viewer count seen while they were live in a searched game, or, if never seen live, their past broadcasts' views (marked vod)" : "Typical views per video: the median of their game videos of 3+ minutes, a week old or more" }, tw ? "Viewers" : "Views"), h("th", "Lang"), h("th", tw ? "Last stream" : "Last upload"),
         h("th", "Games"), h("th", "Type"), h("th", "Genres"), h("th", "Email"))),
       h("tbody", ...shown.flatMap((c) => row(c, gameId ? scored.get(c.id) : null, top, today))));
     const more = rows.length > st.shown ? h("button.btn.cr-more", { type: "button", onclick: () => { st.shown += PAGE; drawList(); } }, `Show ${Math.min(PAGE, rows.length - st.shown)} more`) : null;
@@ -270,7 +282,10 @@ function draw() {
         c.pk ? h("span.cr-badge", { title: "Twitch partner or affiliate" }, c.pk) : null,
         c.h ? h("div.cr-muted", c.h) : null),
       h("td.cr-num", subs(c.s)),
-      ...(tw ? [] : [h("td.cr-num", c.mv != null ? { title: `Median of ${C.plural(c.mvn, "long video")}${c.s ? `, ${Math.round(c.mv / c.s * 100)}% of subscribers` : ""}`, class: c.mv < 1000 ? "cr-low" : null } : { title: "Not known yet: no game video of 3+ minutes a week old" }, c.mv != null ? subs(c.mv) : h("span.cr-muted", "–"))]),
+      tw ? h("td.cr-num", c.mv != null ? { title: c.mvk === "live" ? `Median viewers in ${C.plural(c.mvn, "live stream")} we saw` : `Never seen live: median views of ${C.plural(c.mvn, "past broadcast")}`, class: c.mv < 20 ? "cr-low" : null } : { title: "Not known yet: never seen live, no past broadcast a week old" },
+          c.mv != null ? subs(c.mv) : h("span.cr-muted", "–"), c.mv != null && c.mvk !== "live" ? h("span.cr-muted", " vod") : null)
+        : h("td.cr-num", c.mv != null ? { title: `Median of ${C.plural(c.mvn, "long video")}${c.s ? `, ${Math.round(c.mv / c.s * 100)}% of subscribers` : ""}`, class: c.mv < 1000 ? "cr-low" : null } : { title: "Not known yet: no game video of 3+ minutes a week old" }, c.mv != null ? subs(c.mv) : h("span.cr-muted", "–")),
+
       h("td", { title: LANGS[c.l] || "" }, (c.l || "–").toUpperCase(), c.c ? h("span.cr-muted", ` ${c.c}`) : null),
       h("td", h("span.cr-act", { class: `is-${act}`, title: tw ? "Newest broadcast of a game we searched" : c.lu ? "Newest upload of any kind" : c.lv ? "Newest video of a game we searched (the newest upload isn't read yet)" : "" }, ago(lastActive(c)))),
       h("td.cr-gamescol", { title: games.join(", ") }, h("b", c.g.length), " ", h("span.cr-muted", games.slice(0, 2).join(", "))),
@@ -278,7 +293,7 @@ function draw() {
       h("td.cr-genres", c.p.slice(0, 3).map(([t]) => d.tags[t]).filter(Boolean).join(", ")),
       h("td", email));
     if (!open) return [main];
-    const cols = (f ? 1 : 0) + (tw ? 8 : 9);
+    const cols = (f ? 1 : 0) + 9;
     const links = Object.entries(c.k).map(([k, v]) => {
       const href = { youtube: `https://www.youtube.com/${v}`, twitch: `https://twitch.tv/${v}`, x: `https://x.com/${v}`, instagram: `https://instagram.com/${v}`, tiktok: `https://tiktok.com/@${v}`, discord: `https://discord.gg/${v}` }[k];
       return href ? h("a", { href, target: "_blank", rel: "noopener" }, k === "x" ? "X" : k[0].toUpperCase() + k.slice(1)) : null;
@@ -288,6 +303,7 @@ function draw() {
         h("div", h("div.cr-dh", "Emails"), c.e.length ? h("ul", ...c.e.map(([e, s]) => h("li", h("a", { href: `mailto:${e}` }, e), h("span.cr-muted", ` ${SOURCES[s] || s}`)))) : h("p.cr-muted", c.b === 1 ? "None public. There's one behind YouTube's View email address button (the creator-emails skill, with a captcha)." : c.b === 0 ? "None found, and no hidden one on YouTube." : "None found yet.")),
         h("div", h("div.cr-dh", "Channel"), tw
           ? h("p", `${subs(c.s)} followers · ${C.plural(c.n || 0, "broadcast")} of searched games`, h("br"),
+            c.mv == null ? "Typical viewers: not known yet" : c.mvk === "live" ? `Typical viewers: ${num(c.mv)} live (median of ${C.plural(c.mvn, "stream")} we saw)` : `Never seen live; past broadcasts get ${num(c.mv)} views (median of ${c.mvn})`, h("br"),
             `Newest broadcast: ${ago(c.lu)} · ${C.plural(c.v30 || 0, "broadcast")} in 30 days`)
           : h("p", `${subs(c.s)} subscribers · ${num(c.n)} videos`, h("br"),
           c.mv != null ? `Typical views: ${num(c.mv)} per video (median of ${C.plural(c.mvn, "game video")} of 3+ minutes)` : "Typical views: not known yet", h("br"),
@@ -371,16 +387,17 @@ function pressView(d) {
   const REACH_ORDER = { big: 0, mid: 1, small: 2 };
   function drawList() {
     const rows = filterPress(all, st.pf).sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "press" ? -1 : b.kind === "press" ? 1 : a.kind.localeCompare(b.kind))
-      || (REACH_ORDER[a.reach] ?? 3) - (REACH_ORDER[b.reach] ?? 3) || a.name.localeCompare(b.name));
+      || (b.mv ?? -1) - (a.mv ?? -1) || (REACH_ORDER[a.reach] ?? 3) - (REACH_ORDER[b.reach] ?? 3) || a.name.localeCompare(b.name));
     const emails = [...new Set(rows.map((p) => p.email).filter(Boolean))];
     const head = h("div.cr-listhead", h("span", `${C.plural(rows.length, "outlet")}${rows.length !== all.length ? ` of ${num(all.length)}` : ""}, ${num(emails.length)} with an email`),
       h("button.btn", { type: "button", disabled: !emails.length, onclick: (e) => C.copy(emails.join("\n"), e.currentTarget) }, `Copy ${C.plural(emails.length, "email")}`));
-    const table = h("table.cr-table", h("thead", h("tr", h("th", "Outlet"), h("th", "Kind"), h("th", "Where"), h("th", "Reach"), h("th", "Focus"), h("th", "Contact"), h("th", "Notes"))),
+    const table = h("table.cr-table", h("thead", h("tr", h("th", "Outlet"), h("th", "Kind"), h("th", "Where"), h("th", "Reach"), h("th.cr-num", { title: "YouTube trailer channels: typical views, the median of their newest videos of 3+ minutes, a week old or more (read every 30 days)" }, "Views"), h("th", "Focus"), h("th", "Contact"), h("th", "Notes"))),
       h("tbody", ...rows.slice(0, st.pshown).map((p) => h("tr",
         h("td.cr-chan", h("a", { href: p.url, target: "_blank", rel: "noopener" }, p.name), h("div.cr-muted", p.url.replace(/^https?:\/\/(www\.)?/, "").replace(/\/$/, ""))),
         h("td", h("span.cr-type", KINDS[p.kind] || p.kind)),
         h("td", { title: COUNTRY_NAMES[p.country] || "" }, p.country || "–", h("span.cr-muted", ` ${(p.language || "").toUpperCase()}`)),
         h("td", p.reach || "–"),
+        h("td.cr-num", p.mv != null ? { title: `Median of ${C.plural(p.mvn, "video")}${p.s ? ` · ${subs(p.s)} subscribers` : ""}`, class: p.mv < 1000 ? "cr-low" : null } : null, p.mv != null ? subs(p.mv) : h("span.cr-muted", "–")),
         h("td", p.focus || "–"),
         h("td", p.email
           ? h("span.cr-email", h("a", { href: `mailto:${p.email}` }, p.email), h("button.cr-copy", { type: "button", onclick: (e) => C.copy(p.email, e.currentTarget) }, "Copy"),
@@ -388,12 +405,13 @@ function pressView(d) {
           : p.contact_url ? h("a", { href: p.contact_url, target: "_blank", rel: "noopener" }, "Contact form ↗") : "–"),
         h("td.cr-genres", p.notes || "", p.source ? h("div", h("a.cr-muted", { href: p.source, target: "_blank", rel: "noopener", title: "Where the contact was found" }, "source ↗")) : null)))));
     const more = rows.length > st.pshown ? h("button.btn.cr-more", { type: "button", onclick: () => { st.pshown += PAGE; drawList(); } }, `Show ${Math.min(PAGE, rows.length - st.pshown)} more`) : null;
-    list.replaceChildren(head, rows.length ? h("div.cr-scroll", table) : h("p.empty", "No outlets match these filters."), more);
+    list.replaceChildren(...[head, rows.length ? h("div.cr-scroll", table) : h("p.empty", "No outlets match these filters."), more].filter(Boolean));
   }
   drawList();
   wrap.append(cards, filters, list, h("details.about", h("summary", "How this works"),
     h("p", "Games press, aggregators (sites and newsletters that repost trailers and press releases) and YouTube trailer channels, worldwide, for launch announcements. Each contact was taken from the outlet's own contact or about page (source); none are guessed. Kept on the server, not in the public repository."),
-    h("p", "Send one short, personal email per outlet in its language where you can, with the press release, trailer link and a key or Steam page; no mass mail. Many big sites prefer their tips address; trailer channels usually want an unlisted video link. Steam Curator Connect (in Steamworks) reaches curators separately.")));
+    h("p", "Send one short, personal email per outlet in its language where you can, with the press release, trailer link and a key or Steam page; no mass mail. Many big sites prefer their tips address; trailer channels usually want an unlisted video link. Steam Curator Connect (in Steamworks) reaches curators separately."),
+    h("p", "Trailer channels are listed by typical views (the median of their newest videos of 3+ minutes), which the server reads every 30 days; subscribers often say little about who still watches.")));
   return wrap;
 }
 

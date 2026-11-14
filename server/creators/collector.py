@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 import math
+import statistics
 import time
 from datetime import datetime
 from typing import Callable
@@ -37,6 +38,9 @@ def quota_day(now: float) -> tuple[str, float]:
 UPLOAD_CHECK_DAYS = 14
 # A video's views are read once more when it's this old (most are found in their first days).
 VIEWS_AFTER_DAYS = 7
+# Trailer channels on the press list: their typical views read again this often (about 3 units each).
+TRAILER_DAYS = 30
+LONG_VIDEO = 180
 
 
 class Collector:
@@ -46,7 +50,7 @@ class Collector:
         self.store = store
         self.youtube = youtube or YouTube(Http(USER_AGENT), config.youtube_api_key)
         self.clock = clock
-        self.summary = {"searches": 0, "videos": 0, "new_videos": 0, "channels": 0, "uploads": 0, "reread": 0, "emailed": 0,
+        self.summary = {"searches": 0, "videos": 0, "new_videos": 0, "channels": 0, "uploads": 0, "reread": 0, "trailers": 0, "emailed": 0,
                         "made_video": 0, "units": 0}
 
     def allowed(self, spend_all: bool) -> tuple[str, int]:
@@ -71,6 +75,7 @@ class Collector:
             self._searches(max_searches)
             self._refresh_channels(stale=True)
             self._reread_views()
+            self._trailer_channels()
             self._check_uploads()
         except QuotaExceeded as error:
             log.warning("YouTube refused (%s): stopping until the quota day ends", error)
@@ -79,7 +84,7 @@ class Collector:
             # Network trouble or a 5xx: the next hourly run carries on.
             log.warning("YouTube error, stopping this run: %s", error)
         log.info("ran: %(searches)d searches, %(videos)d videos kept (%(new_videos)d new), "
-                 "%(channels)d channels read, %(reread)d videos' views read again, %(uploads)d newest uploads read, %(emailed)d emailed channels "
+                 "%(channels)d channels read, %(reread)d videos' views read again, %(trailers)d trailer channels read, %(uploads)d newest uploads read, %(emailed)d emailed channels "
                  "looked at (%(made_video)d new videos of the game), %(units)d units", self.summary)
         return self.summary
 
@@ -167,6 +172,44 @@ class Collector:
             self._pay(LIST_COST)
             self.store.save_views(rows, ids, now)
             self.summary["reread"] += len(ids)
+
+    def _trailer_channels(self) -> None:
+        """The press list's YouTube trailer channels: subscribers and typical views (the median views of
+        their newest 50 uploads that are 3+ minutes and a week old), every TRAILER_DAYS, about 3 units each."""
+        now = int(self.clock())
+        due = self.store.db.execute(
+            """SELECT p.key, p.url FROM press p LEFT JOIN press_youtube y ON y.key = p.key
+               WHERE p.kind = 'trailer-channel' AND (y.checked_at IS NULL OR y.checked_at < ?)
+               ORDER BY y.checked_at IS NOT NULL, y.checked_at""", (now - TRAILER_DAYS * DAY,)).fetchall()
+        for key, url in due:
+            if not self._can(3 * LIST_COST):
+                return
+            channel = self.youtube.channel_by_url(url)
+            self._pay(LIST_COST)
+            subs = mv = mvn = None
+            if channel:
+                subs = channel_row(channel)["subscribers"]
+                try:
+                    ids = self.youtube.uploads_since(channel["id"], 0)
+                except HttpError as error:
+                    if error.status != 403:
+                        raise
+                    ids = []
+                self._pay(LIST_COST)
+                if ids:
+                    videos = [video_row(0, v) for v in self.youtube.videos(ids)]
+                    self._pay(LIST_COST)
+                    views = [v["views"] for v in videos if v["views"] is not None and (v["duration"] or 0) >= LONG_VIDEO
+                             and (v["published"] or now) <= now - VIEWS_AFTER_DAYS * DAY]
+                    if views:
+                        mv, mvn = int(statistics.median(views)), len(views)
+            with self.store.db:
+                self.store.db.execute(
+                    """INSERT INTO press_youtube (key, channel_id, subscribers, mv, mvn, checked_at) VALUES (?, ?, ?, ?, ?, ?)
+                       ON CONFLICT(key) DO UPDATE SET channel_id = excluded.channel_id, subscribers = excluded.subscribers,
+                           mv = excluded.mv, mvn = excluded.mvn, checked_at = excluded.checked_at""",
+                    (key, channel["id"] if channel else None, subs, mv, mvn, now))
+            self.summary["trailers"] += 1
 
     def _check_uploads(self) -> None:
         """Each channel's newest upload of any kind (is it still active?), every UPLOAD_CHECK_DAYS, 1 unit

@@ -76,17 +76,17 @@ export function unpackPool(files) {
   const g = files.games;
   if (g) {
     const c = Object.fromEntries(g.columns.map((x, i) => [x, i]));
-    for (const r of g.rows) out.set(r[c.appid], { appid: r[c.appid], name: r[c.name], day: r[c.day], reviews: r[c.reviews] || 0, pos: r[c.pos], tags: r[c.tags] || [], hit: r[c.hit], earn: c.earn != null ? r[c.earn] ?? null : null, released: true, devs: [], pubs: [] });
+    for (const r of g.rows) out.set(r[c.appid], { appid: r[c.appid], name: r[c.name], day: r[c.day], reviews: r[c.reviews] || 0, pos: r[c.pos], tags: r[c.tags] || [], hit: r[c.hit], earn: c.earn != null ? r[c.earn] ?? null : null, price: r[c.price] ?? null, rev: c.rev != null ? r[c.rev] ?? null : null, released: true, devs: [], pubs: [] });
   }
   const u = files.upcoming;
   if (u) {
     const c = Object.fromEntries(u.columns.map((x, i) => [x, i]));
-    for (const r of u.rows) if (!out.has(r[c.appid])) out.set(r[c.appid], { appid: r[c.appid], name: r[c.name], day: r[c.day], reviews: 0, pos: null, tags: r[c.tags] || [], hit: null, released: false, devs: r[c.devs] || [], pubs: r[c.pubs] || [] });
+    for (const r of u.rows) if (!out.has(r[c.appid])) out.set(r[c.appid], { appid: r[c.appid], name: r[c.name], day: r[c.day], reviews: 0, pos: null, tags: r[c.tags] || [], hit: null, price: c.price != null ? r[c.price] ?? null : null, released: false, devs: r[c.devs] || [], pubs: r[c.pubs] || [] });
   }
   for (const r of files.godot?.games || []) {
     const have = out.get(r.appid);
     if (have) { have.devs = r.developers || have.devs; have.pubs = r.publishers || have.pubs; continue; }
-    out.set(r.appid, { appid: r.appid, name: r.name, day: r.day, reviews: r.reviews || 0, pos: r.pos, tags: r.tags || [], hit: r.hit, earn: r.earn ?? null, released: !r.comingSoon, devs: r.developers || [], pubs: r.publishers || [] });
+    out.set(r.appid, { appid: r.appid, name: r.name, day: r.day, reviews: r.reviews || 0, pos: r.pos, tags: r.tags || [], hit: r.hit, earn: r.earn ?? null, price: r.free ? 0 : r.price ?? null, rev: r.rev ?? null, released: !r.comingSoon, devs: r.developers || [], pubs: r.publishers || [] });
   }
   return out;
 }

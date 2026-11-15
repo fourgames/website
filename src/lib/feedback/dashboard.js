@@ -1127,7 +1127,19 @@ function ownSales() {
     for (const [id, t] of Object.entries(apps)) if (id !== "0") out[id] = (out[id] || 0) + (t.net || 0) * 0.7;
   return Object.keys(out).length ? out : null;
 }
-const marketHelpers = () => ({ h, svgEl, chips, about, adminGet, adminSend, fmtNum, fmtDate, fmtDateTime, plural, copy, store, dataOverride: DATA_OVERRIDE, ownSales: ownSales() });
+// The same per game, with copies: { appid: { units, returnedUnits, gross, net } } (net: after refunds and
+// VAT, before Steam's cut), for "Price my game" to say what buyers really paid per copy.
+function ownSalesDetail() {
+  const out = {};
+  for (const apps of Object.values(state.sales?.days || {}))
+    for (const [id, t] of Object.entries(apps)) {
+      if (id === "0") continue;
+      const o = out[id] ||= { units: 0, returnedUnits: 0, gross: 0, net: 0 };
+      for (const k of ["units", "returnedUnits", "gross", "net"]) o[k] += t[k] || 0;
+    }
+  return Object.keys(out).length ? out : null;
+}
+const marketHelpers = () => ({ h, svgEl, chips, about, adminGet, adminSend, fmtNum, fmtDate, fmtDateTime, plural, copy, store, dataOverride: DATA_OVERRIDE, ownSales: ownSales(), ownSalesDetail: ownSalesDetail() });
 function renderUptimeTop() {
   document.getElementById("fb-capsule").hidden = true;
   document.getElementById("fb-title").replaceChildren("Status");

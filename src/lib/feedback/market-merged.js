@@ -7,9 +7,10 @@
 //      rows open a line in plain words; and the gap finder from market-gaps.js.
 //   2. Who should I sign?        market-sign.js (its own state and CSS).
 //   3. How is Steam doing?       games released vs Steam's peak players (this year as a dashed pace),
-//      how many new games disclose AI on their store page (by month), what's doing well right now (releases by hit index), and all of today's alerts, folded.
+//      how many new games disclose AI on their store page (by month), what new games cost (by month and price band), what's doing well right now (releases by hit index), and all of today's alerts, folded.
 //   4. My game ideas             market-ideas.js: score an idea against the market.
 //   5. Tag my game               market-tags.js: a game's tags against the games most like it.
+//   6. Price my game             market-price.js: which prices went with doing well among games like it.
 //      ctx.openTags({ tags, about }) opens it on an idea's tags (used by My game ideas).
 // Same contract as market.js: marketTop(ctx) fills the header, marketView(ctx) returns one root that
 // redraws itself. The data files come from server/steamdata/market.py.
@@ -18,6 +19,7 @@ import { signView, reach, demoTraction, trackRecord, momentum } from "./market-s
 import { gapView, topPairsWith } from "./market-gaps.js";
 import { ideasView } from "./market-ideas.js";
 import { tagsView, openWith as openTagsWith } from "./market-tags.js";
+import { priceView, priceTrends } from "./market-price.js";
 
 const DAY = 86400;
 const PREFIX = "mkv-merged-";
@@ -38,6 +40,7 @@ const TABS = [
   ["steam", "How is Steam doing?", "Games vs players, what's working now"],
   ["ideas", "My game ideas", "Score an idea against the market"],
   ["tags", "Tag my game", "Better tags, from games like yours"],
+  ["price", "Price my game", "What games like yours sell for"],
 ];
 const SEEN_DAYS = 30;      // the Today box forgets a seen item after this long
 const F = { linux: 1, mac: 2, deckOk: 4, godot: 64, demo: 128, self: 256, ai: 512 };
@@ -275,6 +278,7 @@ export function unpackGames(file) {
     return {
       appid: r[col.appid], name: r[col.name], day: r[col.day], price: r[col.price] || 0, reviews: r[col.reviews] || 0,
       pos: r[col.pos], top: tags.slice(0, top), indie: tags.includes(INDIE), flags: r[col.flags] || 0, hit: r[col.hit],
+      earn: col.earn != null ? r[col.earn] ?? null : null, rev: col.rev != null ? r[col.rev] ?? null : null,
     };
   });
 }
@@ -616,7 +620,7 @@ const st = {
   tab: "make", small: true, sort: "best", shown: 15, q: "", sel: null, qMin: 10,
   rel: { days: 30, indie: true, self: false, godot: false, adult: false }, relShown: 25,
 };
-const NEEDS = { make: ["trends", "games", "growth"], sign: ["trends", "upcoming", "godot"], steam: ["growth", "trends", "games", "godot"], ideas: ["trends", "games", "growth"], tags: ["trends", "games", "upcoming", "godot"] };
+const NEEDS = { make: ["trends", "games", "growth"], sign: ["trends", "upcoming", "godot"], steam: ["growth", "trends", "games", "godot"], ideas: ["trends", "games", "growth"], tags: ["trends", "games", "upcoming", "godot"], price: ["trends", "games", "upcoming", "godot"] };
 const today = () => st.files.overview?.today ?? Math.floor(Date.now() / 1000 / DAY);
 const tagNames = () => st.files.overview?.tags || {};
 const storeUrl = (appid) => `https://store.steampowered.com/app/${appid}/`;
@@ -716,6 +720,7 @@ function draw() {
     steam: () => waitFor(["overview", "growth"], "Loading Steam's history…", steamView),
     ideas: () => waitFor(["overview", ...NEEDS.ideas], "Loading the market data to score your ideas…", ideasTab),
     tags: () => waitFor(["overview", ...NEEDS.tags], "Loading every game's tags…", tagsTab),
+    price: () => waitFor(["overview", ...NEEDS.price], "Loading every game's price…", priceTab),
   }[st.tab]();
   st.root.replaceChildren(
     waitFor(["overview", "trends"], "Loading today's briefing…", todayView),
@@ -739,6 +744,12 @@ function ideasTab() {
 function tagsTab() {
   try { return tagsView(C, { overview: st.files.overview, trends: st.files.trends, games: st.files.games, upcoming: st.files.upcoming, godot: st.files.godot }, draw); }
   catch (e) { console.error(e); return C.h("p.mm-note", `The tag view couldn't draw: ${e.message}. The rest of the page still works.`); }
+}
+
+// Tab 6 lives in market-price.js; same guard.
+function priceTab() {
+  try { return priceView(C, { overview: st.files.overview, trends: st.files.trends, games: st.files.games, upcoming: st.files.upcoming, godot: st.files.godot }, draw); }
+  catch (e) { console.error(e); return C.h("p.mm-note", `The price view couldn't draw: ${e.message}. The rest of the page still works.`); }
 }
 
 function waitFor(names, text, fn) {
@@ -1353,7 +1364,7 @@ function steamView() {
         h("p.mm-line", "Steam's all-time record of users online at once as of each year's end, as Valve reported it at the time (quoted in the press). From November 2026 the server keeps each day's peak from Steam's own stats feed."),
         h("ul.mm-sources", ...(g.users.records || []).map((r) => h("li", `${r.date}: ${short(r.users)} `, link(r.source, "source")))))));
   }
-  out.push(aiSection(), releasesSection(), alertsFold());
+  out.push(aiSection(), priceSection(), releasesSection(), alertsFold());
   return h("div", ...out);
 }
 
@@ -1380,6 +1391,49 @@ function aiSection() {
     ].filter(Boolean).join(" "),
   });
   return section(title, null, h("p.mm-big", a.sentence), chartCard(chart), about);
+}
+
+function priceSection() {
+  const h = C.h, title = "What do games cost?";
+  if (st.errors.games) return section(title, null, h("p.mm-note", st.errors.games, " ", btn("Try again", () => load(["games"]))));
+  if (!st.files.games) return section(title, null, h("p.mm-note", "Loading three years of releases (a few MB, once)…"));
+  const p = memo("prices", () => priceTrends(gamesList(), today()));
+  const fmt = (v) => v == null ? "–" : `$${+(v / 100).toFixed(2)}`;
+  const chart = lineChart({
+    labels: p.labels, yLabel: "Typical full price (median)", fmt, indexed: false,
+    series: [
+      { name: "New paid games", color: "var(--sw-1)", values: p.all, raw: p.nAll, rawFmt: (n) => `${num(n)} games` },
+      { name: "Hits among them", color: "var(--sw-3)", values: p.hits, raw: p.nHits, rawFmt: (n) => `${num(n)} hits` },
+    ],
+    note: "By release month, at today's full price (before any sale). A hit is a game in the top 10% of its launch week by reviews, so this line has no revenue estimate in it; the newest months have too few hits yet. Months with under 30 paid games (or 10 hits) are left out.",
+  });
+  const judged = p.bands.filter((b) => b.n >= 30 && b.revRate != null);
+  const best = judged.length ? judged.reduce((a, b) => b.revRate > a.revRate ? b : a) : null;
+  const worst = judged.length ? judged.reduce((a, b) => b.revRate < a.revRate ? b : a) : null;
+  const sentence = [
+    `New paid games from the last year typically cost ${money(p.medPaid)}; the ones that became hits ${money(p.medHit)}.`,
+    best && worst && best !== worst ? `${best.label} games became hits most often (${oneIn(best.revRate)} by reviews), ${worst.label} the least (${oneIn(worst.revRate)}).` : "",
+    p.freeShare != null ? `${pct(p.freeShare)} of new games are free.` : "",
+  ].filter(Boolean).join(" ");
+  const maxR = Math.max(...p.bands.map((b) => b.revRate || 0), p.freeRevRate || 0, 0.01);
+  const rows = p.bands.map((b) => h("tr", h("td", b.label), barCell(b.share, pct(b.share)),
+    barCell((b.revRate || 0) / maxR, b.n >= 30 ? oneIn(b.revRate) : "–", "var(--sw-3)"),
+    h("td.mm-num", b.n >= 30 ? oneIn(b.earnRate) : "–"), h("td.mm-num", b.n >= 30 && b.medRev != null ? usd(b.medRev) : "–"), h("td.mm-num", num(b.n))));
+  if (p.free) rows.push(h("tr", h("td", "Free"), h("td.mm-num.mm-dim", "–"), barCell((p.freeRevRate || 0) / maxR, oneIn(p.freeRevRate), "var(--sw-3)"), h("td.mm-num.mm-dim", "–"), h("td.mm-num.mm-dim", "–"), h("td.mm-num", num(p.free))));
+  const cols = [
+    { label: "Full price" }, { label: "Share of paid games", num: true },
+    { label: "Hits by reviews", num: true, tip: "Top 10% of the games out the same week by reviews: players reached, no revenue estimate in it." },
+    { label: "Hits by earnings", num: true, tip: "Top 10% of paid games out the same fortnight by estimated revenue. The estimate assumes cheaper games sell more copies per review." },
+    { label: "Typical lifetime revenue", num: true, tip: "Median estimated lifetime net revenue (after Steam's cut, VAT and refunds)." },
+    { label: "Games", num: true },
+  ];
+  return section(title,
+    "What new games sell for, and which prices go with doing well. To price one game against the games most like it, use Price my game.",
+    h("p.mm-big", sentence),
+    chartCard(chart),
+    h("h3.mm-h3", "By price: games out 2 weeks to a year"),
+    sortTable(cols, rows, null, null),
+    h("p.mm-small", "Pricier games are often bigger and more polished, so a band doing well doesn't mean the price did it. ", btn("Price my game", () => goTab("price"), { class: "mm-inline" })));
 }
 
 function releasesSection() {
@@ -1527,6 +1581,7 @@ const CSS = `
 .mkv-merged *, .mkv-merged *::before, .mkv-merged *::after { box-sizing: border-box; }
 .mkv-merged h2 { font-size: 1.25rem; line-height: 1.3; margin: 0 0 4px; color: var(--fb-title); font-weight: 700; }
 .mkv-merged h3 { font-size: 1.04rem; line-height: 1.3; margin: 0; color: var(--fb-title); font-weight: 650; overflow-wrap: anywhere; }
+.mkv-merged h3.mm-h3 { margin: 18px 0 6px; }
 .mkv-merged p { margin: 0; }
 .mkv-merged a.mm-link { color: var(--fb-link); text-decoration: none; }
 .mkv-merged a.mm-link:hover { text-decoration: underline; }
@@ -1563,7 +1618,7 @@ const CSS = `
 .mkv-merged .mm-today-fold[open] > summary::after { content: " ▾"; }
 .mkv-merged .mm-today-fold > summary:hover { color: var(--fb-link); }
 
-.mkv-merged .mm-tabs { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px; margin: 0 0 16px; }
+.mkv-merged .mm-tabs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin: 0 0 16px; }
 .mkv-merged .mm-tab { display: grid; grid-template-columns: auto 1fr; column-gap: 10px; text-align: left; padding: 10px 14px; border-radius: 12px; border: 1px solid var(--fb-line); background: var(--fb-card); color: var(--fb-ink); font: inherit; cursor: pointer; }
 .mkv-merged .mm-tab:hover { background: var(--fb-hover); }
 .mkv-merged .mm-tab[aria-selected="true"] { border-color: var(--fb-accent); box-shadow: inset 0 0 0 1px var(--fb-accent); }

@@ -2870,9 +2870,69 @@ function attention() {
     .sort((a, b) => b.priority - a.priority);
 }
 
+// YouTube comments live under their video: one card with what the creator said on top and what
+// their audience said below, instead of each comment as a post of its own. `list` is the filtered,
+// newest-first [game, item] pairs; a video shows when it or any of its comments matched the
+// filters. Returns entries in the same order, each a post ({ g, item }) or a thread ({ g, thread }).
+function withVideoThreads(list) {
+  const threads = new Map();
+  const out = [];
+  for (const [g, i] of list) {
+    if (i.kind !== "video" && i.kind !== "comment") { out.push({ g, item: i }); continue; }
+    const key = `${g.appId}|${i.media}`;
+    let t = threads.get(key);
+    if (!t) {
+      const video = i.kind === "video" ? i : Object.values(g.items || {}).find((v) => v.kind === "video" && v.media === i.media) || null;
+      t = { video, title: i.videoTitle || video?.title, url: (i.url || "").split("&lc=")[0], comments: [] };
+      threads.set(key, t);
+      out.push({ g, thread: t });
+    }
+    if (i.kind === "comment") t.comments.push(i);
+  }
+  return out;
+}
+
+const COMMENT_RANK = { bug: 0, suggestion: 1, question: 2, praise: 3 };
+const AUDIENCE_SHOWN = 3;
+
+function videoThread({ video, title, url, comments }) {
+  // Most useful first: bugs, then ideas, questions and praise, the most urgent within each.
+  const rank = (c) => COMMENT_RANK[c.triage?.category] ?? 4;
+  const onTopic = comments.filter((c) => !c.offTopic)
+    .sort((a, b) => rank(a) - rank(b) || (PRIORITY_BARS[b.triage?.urgency] || 0) - (PRIORITY_BARS[a.triage?.urgency] || 0) || b.created - a.created);
+  const about = comments.filter((c) => c.offTopic).sort((a, b) => b.created - a.created);
+  const counts = Object.entries(CATEGORY).map(([k, [, label]]) => [onTopic.filter((c) => c.triage?.category === k).length, label])
+    .filter(([n]) => n).map(([n, label]) => `${n} ${label.toLowerCase()}${n === 1 || label === "Praise" ? "" : "s"}`);
+  return h("div.vt-thread",
+    h("div.vt-label", "🎙 Creator"),
+    video ? postView(video) : h("div.vt-head", h("a", { href: url, target: "_blank", rel: "noopener" }, title || "YouTube video", " ↗")),
+    comments.length ? h("div.vt-audience",
+      h("div.vt-label", "👥 Audience", h("span.vt-sum", [plural(comments.length, "comment"), ...counts].join(" · "))),
+      ...onTopic.slice(0, AUDIENCE_SHOWN).map(commentRow),
+      onTopic.length > AUDIENCE_SHOWN ? h("details.vt-more", h("summary", `${plural(onTopic.length - AUDIENCE_SHOWN, "more comment")} about the game`), ...onTopic.slice(AUDIENCE_SHOWN).map(commentRow)) : null,
+      about.length ? h("details.vt-more", h("summary", `${plural(about.length, "comment")} about the video or creator`), ...about.map(commentRow)) : null)
+      : null);
+}
+
+// One audience comment, smaller than a post: who, when, its type, then its points and words.
+function commentRow(item) {
+  const p = postParts(item);
+  const cat = p.t.category;
+  const kind = (CATEGORY[cat] || [])[1];
+  return h("div.vt-c",
+    h("div.vt-c-top",
+      item.author?.avatar ? h("img.avatar", { src: item.author.avatar, alt: "", loading: "lazy" }) : null,
+      item.author?.profile ? h("a.pc-player", { href: item.author.profile, target: "_blank", rel: "noopener", title: "YouTube channel" }, p.who || "Viewer") : h("b", p.who || "Viewer"),
+      kind ? h(`span.vt-c-type.tt-text-${cat}`, typeIcon(cat), kind) : null,
+      h("span.meta", [p.flag ? `${p.flag} ${p.language}` : null, p.when].filter(Boolean).join(" · ")),
+      h("a.vt-c-link", { href: item.url, target: "_blank", rel: "noopener", title: "Open the comment on YouTube" }, "↗")),
+    ...p.body);
+}
+
 // Every post, newest first; on the All games page every game's posts together, each with its game.
 function feedView({ everyGame = false } = {}) {
   const f = everyGame ? state.filters.home : state.filters.feed;
+  if (f.kind === "comment") f.kind = "video";
   const wrap = h("div");
   const list = h("div");
   const games = everyGame ? gamesLoaded() : [state.game];
@@ -2883,21 +2943,26 @@ function feedView({ everyGame = false } = {}) {
     const all = games.filter((g) => !f.game || f.game === "all" || g.appId === f.game)
       .flatMap((g) => Object.values(g.items || {}).map((i) => [g, i]))
       .filter(([, i]) => !i.dev || !(i.kind === "topic" && i.forum === "Events & Announcements"))
-      .filter(([, i]) => f.kind === "all" || i.kind === f.kind)
+      // A video's comments come with it (the "YouTube" chip), never as posts of their own.
+      .filter(([, i]) => f.kind === "all" || i.kind === f.kind || (f.kind === "video" && i.kind === "comment"))
       .filter(([, i]) => f.category === "all" || (f.category === "pending" ? !i.triage && !i.dev : i.triage?.category === f.category))
       .filter(([, i]) => f.version === "all" || !update || (f.version === "since") === (i.created >= update.time))
       .filter(([, i]) => !q || (english(i) + " " + (i.text || "") + " " + (i.title || "")).toLowerCase().includes(q))
       .sort(([, a], [, b]) => Math.max(b.created, b.updated || 0) - Math.max(a.created, a.updated || 0));
-    const shown = all.slice(0, f.shown);
-    const card = ([g, i]) => everyGame ? h("div.card", gameTag(g), inGame(g, () => postView(i))) : h("div.card", postView(i));
+    const entries = withVideoThreads(all);
+    const shown = entries.slice(0, f.shown);
+    const card = (e) => {
+      const build = () => e.thread ? videoThread(e.thread) : postView(e.item);
+      return h(`div.card${e.thread ? ".vt" : ""}`, everyGame ? gameTag(e.g) : null, everyGame ? inGame(e.g, build) : build());
+    };
     list.replaceChildren(...(shown.length ? shown.map(card) : [h("p.empty", "Nothing here yet.")]));
-    if (all.length > shown.length) list.append(h("button.btn.more", { onclick: () => { f.shown += 50; draw(); } }, `Show more (${all.length - shown.length} left)`));
+    if (entries.length > shown.length) list.append(h("button.btn.more", { onclick: () => { f.shown += 50; draw(); } }, `Show more (${entries.length - shown.length} left)`));
   };
   const sel = (label, key, options) => chips(options, f[key], (v) => { f[key] = v; f.shown = 50; draw(); }, label);
   wrap.append(
     h("div.filters",
       everyGame ? sel("Game", "game", [["all", "All games"], ...games.map((g) => [g.appId, [g.meta.capsule ? h("img.chip-thumb", { src: g.meta.capsule, alt: "", loading: "lazy" }) : null, g.meta.name]])]) : null,
-      sel("Type", "kind", [["all", "All posts"], ["review", "Reviews"], ["topic", "Threads"], ["reply", "Replies"], ["video", "YouTube videos"], ["comment", "YouTube comments"], ["refund", "Refund notes"]]),
+      sel("Type", "kind", [["all", "All posts"], ["review", "Reviews"], ["topic", "Threads"], ["reply", "Replies"], ["video", "YouTube"], ["refund", "Refund notes"]]),
       sel("Category", "category", [["all", "Any category"], ["bug", "Bugs"], ["suggestion", "Suggestions"], ["question", "Questions"], ["praise", "Praise"], ["pending", "Not triaged yet"]]),
       update ? sel("Update", "version", [["all", "Any version"], ["since", `Since ${updateName(update)}`], ["before", `Before ${updateName(update)}`]]) : null,
       h("input", { type: "search", placeholder: "Search posts", value: f.q, oninput: (e) => { f.q = e.target.value; f.shown = 50; draw(); } })),

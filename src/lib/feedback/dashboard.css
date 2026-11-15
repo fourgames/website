@@ -2865,37 +2865,24 @@
 }
 
 /* A YouTube video with its comments under it: the creator on top, their audience below. */
-.fb .vt-label {
-	display: flex;
-	align-items: baseline;
-	gap: 8px;
-	margin: 0 0 6px;
-	font-size: 0.75rem;
-	font-weight: 700;
-	letter-spacing: 0.04em;
-	text-transform: uppercase;
-	color: var(--fb-ink-2);
-}
 .fb .vt-sum {
-	font-weight: 500;
-	letter-spacing: 0;
-	text-transform: none;
+	margin-left: 8px;
+	font-size: 0.8125rem;
 	color: var(--fb-muted);
 }
 .fb .vt-head a {
 	font-weight: 700;
 }
 .fb .vt-audience {
-	margin-top: 14px;
-	padding: 12px 0 0 14px;
+	margin-top: 12px;
+	padding: 10px 0 0 14px;
 	border-top: 1px dashed var(--fb-line);
 	border-left: 4px solid color-mix(in srgb, #ff0033 35%, transparent);
 }
 .fb .vt-c {
 	padding: 8px 0;
 }
-.fb .vt-c + .vt-c,
-.fb .vt-more > .vt-c:first-of-type {
+.fb .vt-c + .vt-c {
 	border-top: 1px solid var(--fb-line);
 }
 .fb .vt-c-top {
@@ -2925,11 +2912,10 @@
 	margin-left: auto;
 	text-decoration: none;
 }
-.fb .vt-more {
-	margin-top: 6px;
-}
-.fb .vt-more > summary {
+.fb .vt-audience > summary {
 	cursor: pointer;
-	font-size: 0.875rem;
 	color: var(--fb-ink-2);
+}
+.fb .vt-audience[open] > summary {
+	margin-bottom: 4px;
 }

@@ -2893,24 +2893,20 @@ function withVideoThreads(list) {
 }
 
 const COMMENT_RANK = { bug: 0, suggestion: 1, question: 2, praise: 3 };
-const AUDIENCE_SHOWN = 3;
 
+// The audience stays folded under the creator until you open it. Triage often can't tell a comment
+// about the game from one about the video, so they're all kept together, game ones first.
 function videoThread({ video, title, url, comments }) {
-  // Most useful first: bugs, then ideas, questions and praise, the most urgent within each.
-  const rank = (c) => COMMENT_RANK[c.triage?.category] ?? 4;
-  const onTopic = comments.filter((c) => !c.offTopic)
+  const rank = (c) => (c.offTopic ? 10 : 0) + (COMMENT_RANK[c.triage?.category] ?? 4);
+  const sorted = [...comments]
     .sort((a, b) => rank(a) - rank(b) || (PRIORITY_BARS[b.triage?.urgency] || 0) - (PRIORITY_BARS[a.triage?.urgency] || 0) || b.created - a.created);
-  const about = comments.filter((c) => c.offTopic).sort((a, b) => b.created - a.created);
-  const counts = Object.entries(CATEGORY).map(([k, [, label]]) => [onTopic.filter((c) => c.triage?.category === k).length, label])
+  const counts = Object.entries(CATEGORY).map(([k, [, label]]) => [comments.filter((c) => !c.offTopic && c.triage?.category === k).length, label])
     .filter(([n]) => n).map(([n, label]) => `${n} ${label.toLowerCase()}${n === 1 || label === "Praise" ? "" : "s"}`);
   return h("div.vt-thread",
-    h("div.vt-label", "🎙 Creator"),
     video ? postView(video) : h("div.vt-head", h("a", { href: url, target: "_blank", rel: "noopener" }, title || "YouTube video", " ↗")),
-    comments.length ? h("div.vt-audience",
-      h("div.vt-label", "👥 Audience", h("span.vt-sum", [plural(comments.length, "comment"), ...counts].join(" · "))),
-      ...onTopic.slice(0, AUDIENCE_SHOWN).map(commentRow),
-      onTopic.length > AUDIENCE_SHOWN ? h("details.vt-more", h("summary", `${plural(onTopic.length - AUDIENCE_SHOWN, "more comment")} about the game`), ...onTopic.slice(AUDIENCE_SHOWN).map(commentRow)) : null,
-      about.length ? h("details.vt-more", h("summary", `${plural(about.length, "comment")} about the video or creator`), ...about.map(commentRow)) : null)
+    comments.length ? h("details.vt-audience",
+      h("summary", h("b", `Show audience (${plural(comments.length, "comment")})`), counts.length ? h("span.vt-sum", counts.join(" · ")) : null),
+      ...sorted.map(commentRow))
       : null);
 }
 

@@ -279,6 +279,7 @@ export function unpackGames(file) {
       appid: r[col.appid], name: r[col.name], day: r[col.day], price: r[col.price] || 0, reviews: r[col.reviews] || 0,
       pos: r[col.pos], top: tags.slice(0, top), indie: tags.includes(INDIE), flags: r[col.flags] || 0, hit: r[col.hit],
       earn: col.earn != null ? r[col.earn] ?? null : null, rev: col.rev != null ? r[col.rev] ?? null : null,
+      langs: r[col.langs] || 0, demo: !!((r[col.flags] || 0) & 128), deck: !!((r[col.flags] || 0) & 4),
     };
   });
 }
@@ -1407,22 +1408,25 @@ function priceSection() {
     ],
     note: "By release month, at today's full price (before any sale). A hit is a game in the top 10% of its launch week by reviews, so this line has no revenue estimate in it; the newest months have too few hits yet. Months with under 30 paid games (or 10 hits) are left out.",
   });
-  const judged = p.bands.filter((b) => b.n >= 30 && b.revRate != null);
-  const best = judged.length ? judged.reduce((a, b) => b.revRate > a.revRate ? b : a) : null;
-  const worst = judged.length ? judged.reduce((a, b) => b.revRate < a.revRate ? b : a) : null;
+  // The cheapest and priciest bands with enough games, all of them and the high-effort ones only.
+  const ends = (n, r) => { const j = p.bands.filter((b) => b[n] >= 30 && b[r] != null); return j.length >= 2 ? [j[0], j.at(-1)] : null; };
+  const all = ends("n", "revRate"), hi = ends("hiN", "hiRevRate");
   const sentence = [
     `New paid games from the last year typically cost ${money(p.medPaid)}; the ones that became hits ${money(p.medHit)}.`,
-    best && worst && best !== worst ? `${best.label} games became hits most often (${oneIn(best.revRate)} by reviews), ${worst.label} the least (${oneIn(worst.revRate)}).` : "",
-    p.freeShare != null ? `${pct(p.freeShare)} of new games are free.` : "",
-  ].filter(Boolean).join(" ");
+    all ? `Across all of them, ${all[1].label} games became hits ${times(all[1].revRate / all[0].revRate)} as often as ${all[0].label} ones (${pct(all[1].revRate)} against ${pct(all[0].revRate)}, by reviews)` : "",
+    all && hi ? `, but among high-effort games only (6+ languages, a demo, Steam Deck OK) that shrinks to ${times(hi[1].hiRevRate / hi[0].hiRevRate)} (${pct(hi[1].hiRevRate)} against ${pct(hi[0].hiRevRate)}): most of the gap is bigger games charging more, not the price.` : all ? "." : "",
+    p.freeShare != null ? ` ${pct(p.freeShare)} of new games are free.` : "",
+  ].join("").trim();
   const maxR = Math.max(...p.bands.map((b) => b.revRate || 0), p.freeRevRate || 0, 0.01);
   const rows = p.bands.map((b) => h("tr", h("td", b.label), barCell(b.share, pct(b.share)),
     barCell((b.revRate || 0) / maxR, b.n >= 30 ? oneIn(b.revRate) : "–", "var(--sw-3)"),
+    h("td.mm-num", { title: `${num(b.hiN)} high-effort games` }, b.hiN >= 30 ? oneIn(b.hiRevRate) : "–"),
     h("td.mm-num", b.n >= 30 ? oneIn(b.earnRate) : "–"), h("td.mm-num", b.n >= 30 && b.medRev != null ? usd(b.medRev) : "–"), h("td.mm-num", num(b.n))));
-  if (p.free) rows.push(h("tr", h("td", "Free"), h("td.mm-num.mm-dim", "–"), barCell((p.freeRevRate || 0) / maxR, oneIn(p.freeRevRate), "var(--sw-3)"), h("td.mm-num.mm-dim", "–"), h("td.mm-num.mm-dim", "–"), h("td.mm-num", num(p.free))));
+  if (p.free) rows.push(h("tr", h("td", "Free"), h("td.mm-num.mm-dim", "–"), barCell((p.freeRevRate || 0) / maxR, oneIn(p.freeRevRate), "var(--sw-3)"), h("td.mm-num.mm-dim", "–"), h("td.mm-num.mm-dim", "–"), h("td.mm-num.mm-dim", "–"), h("td.mm-num", num(p.free))));
   const cols = [
     { label: "Full price" }, { label: "Share of paid games", num: true },
     { label: "Hits by reviews", num: true, tip: "Top 10% of the games out the same week by reviews: players reached, no revenue estimate in it." },
+    { label: "Hits, high effort only", num: true, tip: "The same by reviews, only games with 6+ languages, a demo and a Steam Deck rating of playable or verified: closer to comparing like with like. Shown with 30+ such games." },
     { label: "Hits by earnings", num: true, tip: "Top 10% of paid games out the same fortnight by estimated revenue. The estimate assumes cheaper games sell more copies per review." },
     { label: "Typical lifetime revenue", num: true, tip: "Median estimated lifetime net revenue (after Steam's cut, VAT and refunds)." },
     { label: "Games", num: true },
@@ -1433,7 +1437,7 @@ function priceSection() {
     chartCard(chart),
     h("h3.mm-h3", "By price: games out 2 weeks to a year"),
     sortTable(cols, rows, null, null),
-    h("p.mm-small", "Pricier games are often bigger and more polished, so a band doing well doesn't mean the price did it. ", btn("Price my game", () => goTab("price"), { class: "mm-inline" })));
+    h("p.mm-small", "Pricier games are often bigger and more polished, so a band doing well doesn't mean the price did it; the high-effort column takes out part of that, and quality players judge for themselves stays in. Cheap games also get fewer reviews per copy, so the review columns undercount them. ", btn("Price my game", () => goTab("price"), { class: "mm-inline" })));
 }
 
 function releasesSection() {

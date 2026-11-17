@@ -40,6 +40,14 @@ press.fourgames.se {
 	redir https://fourgames.se/press{uri}
 }
 
+# Player support, the address Steamworks lists for every game; support.fourgames.se/ja opens the
+# Japanese page, and so on for the other languages.
+support.fourgames.se {
+	@lang path_regexp lang ^/(ja|ko|zh-cn|zh-tw)/?$
+	redir @lang https://fourgames.se/{re.lang.1}/support
+	redir https://fourgames.se/support
+}
+
 # The player data API. For now the feedback loop's status: feedback/loop.sh writes
 # /srv/fourgames/status/<part>.json after each run, and the dashboard (fourgames.se/fb-dash) reads it
 # to tell the collector is running.

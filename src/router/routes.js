@@ -69,6 +69,12 @@ export const routes = [
 		component: () => import("@/views/PrivacyView.vue"),
 		meta: { head: { key: "privacy" } },
 	},
+	{
+		path: `${L}/support`,
+		name: "support",
+		component: () => import("@/views/SupportView.vue"),
+		meta: { head: { key: "support" } },
+	},
 	// One page per game with a public store page: /press/reforge-front (slugs in src/lib/press.js).
 	{
 		path: `${L}/press/:game`,
@@ -104,6 +110,7 @@ export const routes = [
 	{ path: `${L}/press.html`, redirect: keepLocale("/press") },
 	{ path: `${L}/principles.html`, redirect: keepLocale("/principles") },
 	{ path: `${L}/privacy.html`, redirect: keepLocale("/privacy") },
+	{ path: `${L}/support.html`, redirect: keepLocale("/support") },
 	{ path: `${L}/press/:game([^/]+)\\.html`, redirect: (to) => localizePath(`/press/${to.params.game}`, localeFromPath(to.path)) },
 	{ path: "/fb-dash.html", redirect: "/fb-dash" },
 	{
@@ -127,6 +134,7 @@ export const prerenderTargets = [
 	{ url: "/press", file: "press.html", sitemap: true },
 	{ url: "/principles", file: "principles.html", sitemap: true },
 	{ url: "/privacy", file: "privacy.html", sitemap: true },
+	{ url: "/support", file: "support.html", sitemap: true },
 	// The game press kits (press/<slug>.html) are added by src/entry-server.js, from the Steam data.
 	{ url: "/fb-dash", file: "fb-dash.html", sitemap: false, localized: false },
 	{ url: "/404", file: "404.html", sitemap: false, localized: false },

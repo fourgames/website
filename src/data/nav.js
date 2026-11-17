@@ -15,7 +15,10 @@ export const NAV_LEFT = [
 	{
 		label: "nav.games",
 		to: "/games",
-		children: [{ label: "nav.steam", href: SITE.links.steam }],
+		children: [
+			{ label: "nav.steam", href: SITE.links.steam },
+			{ label: "nav.support", to: "/support" },
+		],
 	},
 	{
 		label: "nav.videos",

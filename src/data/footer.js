@@ -10,6 +10,7 @@ export const FOOTER_COLUMNS = [
 			{ label: "footer.games.all", to: "/games" },
 			{ label: "footer.games.steam", href: SITE.links.steam },
 			{ label: "footer.games.members", to: "/#membership" },
+			{ label: "footer.games.support", to: "/support" },
 		],
 	},
 	{

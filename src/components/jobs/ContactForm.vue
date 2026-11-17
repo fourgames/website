@@ -5,9 +5,15 @@ import Icon from "@/components/ui/Icon.vue";
 import { SITE } from "@/data/site.js";
 import { useI18n } from "@/i18n/index.js";
 
-// Reused by the press kit, which passes its own subtitle, placeholder and subject tag.
+// Reused by the press kit and the support page, which pass their own copy and subject tag. The
+// support page also asks which game it's about (the answer goes in the email's subject, so the
+// backend needs nothing new) and has no PDF field.
 const props = defineProps({
+	title: { type: String, default: null },
 	subtitle: { type: String, default: null },
+	emailPlaceholder: { type: String, default: null },
+	games: { type: Array, default: null }, // game names for the "Which game?" menu, or null for none
+	attachments: { type: Boolean, default: true },
 	placeholder: { type: String, default: null },
 	topic: { type: String, default: null },
 });
@@ -19,6 +25,7 @@ const emailId = useId();
 const messageId = useId();
 const fileId = useId();
 const fileErrorId = useId();
+const gameId = useId();
 
 // Matches the backend's CONTACT_MAX_ATTACHMENT_MB (default 5).
 const MAX_FILE_MB = 5;
@@ -26,6 +33,7 @@ const MAX_FILE_BYTES = MAX_FILE_MB * 1024 * 1024;
 
 const email = ref("");
 const message = ref("");
+const game = ref("");
 const isSubmitting = ref(false);
 const status = ref(null); // null | "success" | "error"
 const file = ref(null); // the chosen PDF, or null
@@ -81,6 +89,7 @@ async function submit(event) {
 		status.value = "success";
 		email.value = "";
 		message.value = "";
+		game.value = "";
 		removeFile();
 		resetTimer = setTimeout(() => (status.value = null), 8000);
 	} catch {
@@ -96,10 +105,14 @@ const fieldClass =
 
 <template>
 	<form :action="SITE.contact" method="POST" class="card flex h-full flex-col p-6 sm:p-8" @submit.prevent="submit">
-		<h3 class="text-xl">{{ t("form.title") }}</h3>
+		<h3 class="text-xl">{{ props.title ?? t("form.title") }}</h3>
 		<p class="mt-1 text-sm text-date">{{ props.subtitle ?? t("form.subtitle") }}</p>
 
-		<input type="hidden" name="_subject" :value="`New ${props.topic ? `${props.topic} ` : ''}message from fourgames.se (${code})`" />
+		<input
+			type="hidden"
+			name="_subject"
+			:value="`New ${props.topic ? `${props.topic} ` : ''}message from fourgames.se${game && game !== 'no game' ? ` about ${game}` : ''} (${code})`"
+		/>
 		<input type="hidden" name="_elapsed" value="" />
 		<!-- Honeypot for bots: hidden from people and assistive tech. -->
 		<div class="hidden" aria-hidden="true">
@@ -107,6 +120,14 @@ const fieldClass =
 		</div>
 
 		<div class="mt-6 space-y-5">
+			<div v-if="props.games">
+				<label :for="gameId" class="mb-2 block text-sm font-semibold">{{ t("form.game") }}</label>
+				<select :id="gameId" v-model="game" name="game" required :disabled="isSubmitting" :class="[fieldClass, 'h-12']">
+					<option value="" disabled>{{ t("form.gamePick") }}</option>
+					<option v-for="name in props.games" :key="name" :value="name">{{ name }}</option>
+					<option value="no game">{{ t("form.gameNone") }}</option>
+				</select>
+			</div>
 			<div>
 				<label :for="emailId" class="mb-2 block text-sm font-semibold">{{ t("form.email") }}</label>
 				<input
@@ -117,7 +138,7 @@ const fieldClass =
 					autocomplete="email"
 					inputmode="email"
 					required
-					:placeholder="t('form.emailPlaceholder')"
+					:placeholder="props.emailPlaceholder ?? t('form.emailPlaceholder')"
 					:disabled="isSubmitting"
 					:class="[fieldClass, 'h-12']"
 				/>
@@ -135,7 +156,7 @@ const fieldClass =
 					:class="[fieldClass, 'min-h-36 resize-y py-3']"
 				></textarea>
 			</div>
-			<div>
+			<div v-if="props.attachments">
 				<label :for="fileId" class="mb-2 block text-sm font-semibold">{{ t("form.file", { max: MAX_FILE_MB }) }}</label>
 				<input
 					v-show="!file"

@@ -7,6 +7,8 @@
 // indented under their link. The footer has its own columns in footer.js.
 // Labels are message keys (src/i18n/messages); `to` is the English path, localised by NavLink,
 // `href` is an external link (opens in a new tab).
+// The left side is for players and developers; the right side is the studio (Press, About), for
+// press, creators and partners. Discord, YouTube and Steam live in the footer and on the home page.
 // About is the one exception to the dropdown rule: it groups two pages (Principles, Work with us).
 // Privacy lives in the footer only, as on most company sites.
 import { SITE } from "./site.js";
@@ -35,6 +37,9 @@ export const NAV_LEFT = [
 			{ label: "nav.issue", href: SITE.links.issues },
 		],
 	},
+];
+
+export const NAV_RIGHT = [
 	{
 		label: "nav.press",
 		to: "/press",
@@ -45,18 +50,6 @@ export const NAV_LEFT = [
 			{ label: "nav.pressContact", to: "/press#contact" },
 		],
 	},
-	{
-		label: "nav.community",
-		to: "/#community",
-		children: [
-			{ label: "nav.discord", href: SITE.links.discord },
-			{ label: "nav.youtubeShort", href: SITE.links.youtube },
-			{ label: "nav.steamShort", href: SITE.links.steam },
-		],
-	},
-];
-
-export const NAV_RIGHT = [
 	{
 		label: "nav.about",
 		to: "/principles",

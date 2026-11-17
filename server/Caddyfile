@@ -29,10 +29,6 @@ steam.fourgames.se {
 	redir https://store.steampowered.com/publisher/fourgamesab
 }
 
-github.fourgames.se {
-	redir https://github.com/fourgames
-}
-
 # The press kit; press.fourgames.se/<game> opens that game's press page.
 press.fourgames.se {
 	@root path /

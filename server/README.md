@@ -23,7 +23,7 @@ something does, like the player data API's database.
 | `creators/`, `creators.service`, `creators.timer`, `creators-send.*` | The creator collector and outreach: every hour it searches YouTube for videos of Steam games (ours first, then games like ours) and saves the channels that made them, with subscribers, language and any public email, into one SQLite file; `creators-send.timer` sends approved outreach emails slowly and reads replies: [creators/README.md](creators/README.md) |
 | `gamedata/`, `gamedata.service`, `gamedata-geo.service`, `gamedata-geo.timer` | The player game-data API at `api.fourgames.se/gamedata`: sessions, game actions, hardware, settings and crash reports from the games under a pseudonym, and the privacy page's sign-in, download, opt-out and anonymise; plus the monthly update of its country/region database: [gamedata/README.md](gamedata/README.md) |
 | `broadcast/`, `steam-broadcast@.service`, `steam-broadcast-status.*` | Looping videos as 24/7 broadcasts on the games' Steam store pages, one service per stream, plus their status for the status page: [broadcast/README.md](broadcast/README.md) |
-| `Caddyfile` | The subdomains: `discord`, `youtube`, `steam`, `github`, `press`, `support` (short links) and `api` (status, key bot) |
+| `Caddyfile` | The subdomains: `discord`, `youtube`, `steam`, `press`, `support` (short links) and `api` (status, key bot) |
 | `status-page/` | The public status page at `status.fourgames.se`: static files Caddy serves from `/srv/fourgames/own/server/status-page` |
 | `uptime/`, `uptime-check.service`, `uptime-check.timer` | The status page's 90-day history: every part checked from the server once a minute, kept in SQLite and written to `api.fourgames.se/status/history.json`: [uptime/README.md](uptime/README.md) |
 
@@ -98,7 +98,7 @@ then `gh workflow enable` both workflows and start them (*Run workflow*). The Sa
 
 ## 5. Subdomains with HTTPS
 
-In Strato's *Domänadministration*, for each of `discord`, `youtube`, `steam`, `github`, `press`, `support`, `api`, `verify` and
+In Strato's *Domänadministration*, for each of `discord`, `youtube`, `steam`, `press`, `support`, `api`, `verify` and
 `status`: remove the redirect and set an **A record** to the server's IP (`www` stays on GitHub Pages;
 `join` isn't used). Then:
 

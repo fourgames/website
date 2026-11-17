@@ -167,8 +167,8 @@ onBeforeUnmount(() => {
 			<div class="hero-stack mt-6">
 				<p class="text-[15px]/[1.2] font-light text-white/85 [text-shadow:0_0_10px_#000]">
 					<I18nT keypath="hero.lookingFor">
-						<template #videos>
-							<NavLink to="/videos" class="underline decoration-1 underline-offset-2 hover:text-white">{{ t("hero.videos") }}</NavLink>
+						<template #press>
+							<NavLink to="/press" class="underline decoration-1 underline-offset-2 hover:text-white">{{ t("hero.press") }}</NavLink>
 						</template>
 						<template #code>
 							<NavLink to="/code" class="underline decoration-1 underline-offset-2 hover:text-white">{{ t("hero.code") }}</NavLink>
@@ -179,7 +179,7 @@ onBeforeUnmount(() => {
 					</I18nT>
 				</p>
 				<p v-if="!isEnglish" aria-hidden="true" lang="en" class="invisible text-[15px]/[1.2] font-light">
-					{{ en("hero.lookingFor", { videos: en("hero.videos"), code: en("hero.code"), jobs: en("hero.jobs") }) }}
+					{{ en("hero.lookingFor", { press: en("hero.press"), code: en("hero.code"), jobs: en("hero.jobs") }) }}
 				</p>
 			</div>
 		</div>

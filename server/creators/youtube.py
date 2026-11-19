@@ -76,6 +76,7 @@ def video_row(appid: int, video: dict) -> dict:
         "likes": _int(st.get("likeCount")), "comments": _int(st.get("commentCount")),
         "duration": duration((video.get("contentDetails") or {}).get("duration")),
         "language": sn.get("defaultAudioLanguage") or sn.get("defaultLanguage"),
+        "emails": contacts.emails(sn.get("description")),  # "Business inquiries: ..." under the video
     }
 
 

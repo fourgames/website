@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS reveal_limits (
 CREATE TABLE IF NOT EXISTS channel_links (
     channel_id  TEXT NOT NULL,
     url         TEXT NOT NULL,
-    source      TEXT NOT NULL,          -- 'description' or 'about'
+    source      TEXT NOT NULL,          -- 'description', 'about', or 'video' (an email under one of its videos)
     PRIMARY KEY (channel_id, url)
 );
 CREATE INDEX IF NOT EXISTS channel_links_url ON channel_links (url);
@@ -197,7 +197,21 @@ class Store:
                            comments = excluded.comments, title = excluded.title""",
                     {**{k: r.get(k) for k in ("video_id", "appid", "channel_id", "title", "published", "views",
                                               "likes", "comments", "duration", "language")}, "now": now})
+                self.save_video_emails(r["channel_id"], r["video_id"], r.get("emails") or [], now)
         return new
+
+    def save_video_emails(self, channel_id: str, video_id: str, emails: list[str], now: int) -> None:
+        """Emails in a video's description count as found through the channel's links (site_emails),
+        under the video's address with source 'video', which the link follower leaves alone."""
+        if not emails or len(emails) > 3:  # a list of sponsors or guests, not the creator's own
+            return
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        self.db.execute("INSERT OR IGNORE INTO channel_links (channel_id, url, source) VALUES (?, ?, 'video')",
+                        (channel_id, url))
+        self.db.execute(
+            """INSERT INTO sites (url, fetched_at, status, emails) VALUES (?, ?, 'ok', ?)
+               ON CONFLICT(url) DO UPDATE SET fetched_at = excluded.fetched_at, emails = excluded.emails""",
+            (url, now, json.dumps(emails)))
 
     def channels_to_refresh(self, now: int, refresh_days: int, limit: int) -> list[str]:
         """Channels never read first, then the stalest."""

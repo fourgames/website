@@ -91,6 +91,14 @@ def host(url: str) -> str:
     return h[4:] if h.startswith("www.") else h
 
 
+def typed_email(url: str) -> str | None:
+    """The email when a link is really one: an About panel link where the creator typed their email
+    instead of a web address, saved as "https://name@gmail.com", or a mailto: link."""
+    rest = re.sub(r"^(?:https?://|mailto:)", "", urllib.parse.unquote(url.strip()), flags=re.IGNORECASE).rstrip("/")
+    found = contacts.emails(rest)
+    return found[0] if len(found) == 1 and rest.lower() == found[0] else None
+
+
 def followable(url: str) -> bool:
     """False for big platforms (SKIP_HOSTS: "x.com" is that host and its subdomains, "amazon." any
     amazon.<tld>, "bit.ly/m/" a path) and for anything that isn't a web address."""
@@ -165,6 +173,9 @@ class Follower:
             return body.decode("utf-8", errors="replace"), "ok", final
 
     def visit(self, url: str) -> tuple[str, list[str]]:
+        email = typed_email(url)
+        if email:
+            return "ok", [email]
         if not followable(url):
             return "skipped", []
         text, status, final = self._get(url)
@@ -209,7 +220,7 @@ class Follower:
         (reveal.rank: our games' creators, then expected value)."""
         rows = self.store.db.execute(
             f"""SELECT l.url, c.channel_id {CANDIDATES.replace('FROM youtube_channels c', 'FROM youtube_channels c JOIN channel_links l ON l.channel_id = c.channel_id')}
-                AND l.url NOT IN (SELECT url FROM sites WHERE fetched_at >= ?)
+                AND l.source != 'video' AND l.url NOT IN (SELECT url FROM sites WHERE fetched_at >= ?)
                 AND c.channel_id NOT IN (SELECT channel_id FROM site_emails)""", (now - REFETCH_DAYS * 86400,)).fetchall()
         by_channel: dict[str, list[str]] = {}
         for url, channel in rows:
@@ -243,6 +254,27 @@ class Follower:
         return counts
 
 
+def video_emails(store: Store, youtube, max_units: int, now: float) -> dict[str, int]:
+    """Once, for videos saved before their descriptions were read for emails: reads the videos of
+    channels without any email again (1 unit per 50) and keeps the emails under them."""
+    from .collector import quota_day
+    ids = [v for (v,) in store.db.execute(
+        f"""SELECT DISTINCT v.video_id {CANDIDATES.replace('FROM youtube_channels c', 'FROM youtube_channels c JOIN youtube_videos v ON v.channel_id = c.channel_id')}
+            AND c.channel_id NOT IN (SELECT channel_id FROM site_emails) ORDER BY c.email_button DESC, v.video_id""")]
+    counts = {"videos": 0, "with email": 0, "units": 0}
+    for start in range(0, min(len(ids), max_units * 50), 50):
+        videos = youtube.videos(ids[start:start + 50])
+        store.spend(quota_day(now)[0], 1)
+        counts["units"] += 1
+        with store.db:
+            for video in videos:
+                emails = contacts.emails((video.get("snippet") or {}).get("description"))
+                store.save_video_emails((video.get("snippet") or {}).get("channelId"), video["id"], emails, int(now))
+                counts["videos"] += 1
+                counts["with email"] += 0 < len(emails) <= 3
+    return counts
+
+
 def main(argv: list[str] | None = None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     try:
@@ -253,8 +285,14 @@ def main(argv: list[str] | None = None) -> int:
     logging.basicConfig(level=config.log_level, format="%(levelname)s %(name)s: %(message)s")
     store = Store(config.db_path)
     try:
-        counts = Follower(store).run(own_appids(config.steam_db, config.own_appids, config.own_studio),
-                                     int(argv[0]) if argv else 150)
+        if argv and argv[0] == "videos":  # python -m creators.sites videos [max units, default 1000]
+            from steamdata.net import Http
+            from .youtube import YouTube
+            counts = video_emails(store, YouTube(Http(USER_AGENT), config.youtube_api_key),
+                                  int(argv[1]) if len(argv) > 1 else 1000, time.time())
+        else:
+            counts = Follower(store).run(own_appids(config.steam_db, config.own_appids, config.own_studio),
+                                         int(argv[0]) if argv else 150)
         print(", ".join(f"{k}: {v}" for k, v in counts.items()))
     finally:
         store.close()

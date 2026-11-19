@@ -298,6 +298,34 @@ def test_follower(tmp_path):
     assert Follower(store, transport, pause=0).run(set(), 50, NOW)["followed"] == 0  # nothing due again
 
 
+def test_typed_and_video_emails(tmp_path):
+    from creators import reveal
+    from creators.sites import Follower, typed_email
+    from creators.youtube import video_row
+    assert typed_email("https://Wes.Amp2017@gmail.com") == "wes.amp2017@gmail.com"
+    assert typed_email("mailto:hi@me.com/") == "hi@me.com"
+    assert typed_email("https://user@site.com/page") is None and typed_email("https://bbb.com") is None
+    store = Store(str(tmp_path / "c.db"))
+    for cid in ("UCa", "UCb", "UCc"):
+        store.db.execute("INSERT INTO youtube_channels (channel_id, emails, first_seen, email_button) "
+                         "VALUES (?, '[]', ?, 1)", (cid, int(NOW)))
+    store.db.commit()
+    # An About link where the creator typed the email: found without fetching anything.
+    reveal.save(store, ['{"channel_id": "UCa", "links": ["hello@aaa.com"]}'], NOW)
+
+    def transport(url, headers, timeout):
+        raise AssertionError(url)
+
+    assert Follower(store, transport, pause=0).run(set(), 50, NOW)["with email"] == 1
+    # "Business inquiries" under a video; a description listing many sponsors doesn't count.
+    video = {"id": "vb", "snippet": {"channelId": "UCb", "description": "Business inquiries: b@bbb.com"}}
+    many = {"id": "vc", "snippet": {"channelId": "UCc", "description": "a@x.com b@y.com c@z.com d@w.com"}}
+    store.save_videos([video_row(1, video), video_row(1, many)], int(NOW))
+    found = dict(store.db.execute("SELECT channel_id, email FROM site_emails").fetchall())
+    assert found == {"UCa": "hello@aaa.com", "UCb": "b@bbb.com"}
+    assert [r["channel_id"] for r in reveal.to_reveal(store, set(), NOW, 10)] == ["UCc"]
+
+
 def test_export(tmp_path, steam_db, monkeypatch):
     import gzip as gz
     from creators import export

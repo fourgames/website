@@ -234,6 +234,14 @@ contact/about pages on the same site are tried. Emails of the host or web tools 
 wixpress...) are dropped. Each link is followed again after 90 days. Results: `sites` (per link) and
 the `site_emails` view (per channel); channels with one are left out of the captcha queue.
 
+Two kinds need no page at all and land in `site_emails` the same way:
+
+- an About link where the creator typed their email instead of a web address (saved as
+  `https://name@gmail.com`): taken as the email;
+- an email under one of their videos ("Business inquiries: ..."), read from the descriptions the
+  collector already gets, kept as a link with source `video` (at most 3 emails per video). Videos saved
+  before this were read once with `python -m creators.sites videos [max units]` (1 unit per 50 videos).
+
 ## About the emails
 
 Only addresses the creator published in their own channel description are collected, the ones they

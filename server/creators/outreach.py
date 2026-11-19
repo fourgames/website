@@ -319,10 +319,9 @@ def _creator(store: Store, channel_id: str, own: set[int]) -> dict | None:
                          (channel_id,)).fetchone()
     if not r:
         return None
-    emails = json.loads(r["emails"] or "[]")
-    if r["revealed_email"]:
-        emails.append(r["revealed_email"])
-    emails += [e for (e,) in store.db.execute("SELECT email FROM site_emails WHERE channel_id = ?", (channel_id,))]
+    from .quality import BOUNCED, channel_emails
+    # Their best email (quality.py); never one that bounced.
+    emails = [e for e, _, g in channel_emails(store.db, time.time(), channel_id).get(channel_id, []) if g != BOUNCED]
     if not emails:
         return None
     covered = store.db.execute(

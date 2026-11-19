@@ -30,6 +30,10 @@
 //     60-view demo video doesn't beat a 50k-view channel that fits.
 //   - Best overall: our games' creators first, then reach x activity x pn/(pn+2) (more games behind
 //     their genres, more sure). Having an email is a filter, not a score.
+//   - Email quality (badge and filter, e[2], graded on the server in quality.py): Diamond replied to us
+//     or revealed and confirmed elsewhere, Platinum revealed or in the description, Gold typed into the
+//     About links, a linked page or 2+ videos, Silver one recent video, Bronze one old video. Bounced
+//     addresses are listed last and never copied or queued.
 //   - fa: a soft flag for very few likes and comments per view on a big channel (maybe a bought or
 //     auto-played audience). Shown only; not in any score.
 //
@@ -45,6 +49,22 @@ export const TIERS = ["bronze", "silver", "gold", "diamond"];
 const TIER_NAME = { bronze: "Bronze", silver: "Silver", gold: "Gold", diamond: "Diamond" };
 const TIER_EMOJI = { bronze: "🥉", silver: "🥈", gold: "🥇", diamond: "💎" };
 export const TIER_MIN = { yt: { bronze: 1e3, silver: 5e3, gold: 25e3, diamond: 1e5 }, tw: { bronze: 10, silver: 50, gold: 200, diamond: 1000 } };
+// Email quality, lowest first (the server's grade, e[2]; "bounced" sits below all of them).
+export const EGRADES = ["bronze", "silver", "gold", "platinum", "diamond"];
+const EGRADE_NAME = { bronze: "Bronze", silver: "Silver", gold: "Gold", platinum: "Platinum", diamond: "Diamond", bounced: "Bounced" };
+const EGRADE_EMOJI = { bronze: "🥉", silver: "🥈", gold: "🥇", platinum: "🏆", diamond: "💎", bounced: "⚠️" };
+const EGRADE_HELP = {
+  diamond: "they replied to us from it, or the revealed email matches another source",
+  platinum: "revealed by hand, or in their channel description",
+  gold: "typed into their About links, on a page they link to, or under 2+ of their videos",
+  silver: "under one of their videos from the last year, or on a page we read over a year ago",
+  bronze: "only under one older video",
+  bounced: "an email to it bounced; never sent to again",
+};
+// Their best email that didn't bounce, as [email, source, grade], or undefined.
+export const bestEmail = (c) => c.e.find((e) => e[2] !== "bounced");
+const egradeBadge = (g) => g && EGRADE_NAME[g]
+  ? C.h(`span.cr-tier.is-${g}`, { title: `Email quality ${EGRADE_NAME[g]}: ${EGRADE_HELP[g]}` }, `${EGRADE_EMOJI[g]} ${EGRADE_NAME[g]}`) : null;
 const TYPES = { "indie-variety": "Indie variety", variety: "Variety", "one-game": "One game", "few-games": "A few games" };
 const TYPE_HELP = {
   "indie-variety": "Plays lots of different games, mostly small ones",
@@ -52,7 +72,7 @@ const TYPE_HELP = {
   "one-game": "Mostly one game",
   "few-games": "Only a few of the games we searched so far",
 };
-const SOURCES = { youtube: "on their YouTube channel (on our list)", description: "in their channel description", links: "on a page they link to (Linktree, website)", revealed: "behind YouTube's View email button" };
+const SOURCES = { youtube: "on their YouTube channel (on our list)", description: "in their channel description", links: "on a page they link to (Linktree, website) or typed into their About links", video: "under one of their videos", revealed: "behind YouTube's View email button" };
 const LANGS = { en: "English", ru: "Russian", de: "German", fr: "French", pt: "Portuguese", es: "Spanish", ja: "Japanese", tr: "Turkish", it: "Italian", pl: "Polish", ko: "Korean", zh: "Chinese", nl: "Dutch", sv: "Swedish", uk: "Ukrainian", ar: "Arabic", id: "Indonesian", vi: "Vietnamese", th: "Thai", cs: "Czech", hu: "Hungarian", fi: "Finnish", da: "Danish", no: "Norwegian", ro: "Romanian", el: "Greek", he: "Hebrew", hi: "Hindi" };
 
 import { huntStrip, HUNT_CSS } from "./creators-hunt.js";
@@ -170,6 +190,7 @@ export function filterCreators(list, f, data, today = now()) {
     if (f.email === "yes" && !c.e.length) return false;
     if (f.email === "no" && c.e.length) return false;
     if (f.email === "hidden" && (c.e.length || c.b !== 1)) return false;
+    if (EGRADES.includes(f.email) && EGRADES.indexOf(bestEmail(c)?.[2]) < EGRADES.indexOf(f.email)) return false;
     if (f.active !== "all" && activity(c, today) !== f.active) return false;
     if (f.size !== "all") { const [lo, hi] = SIZE_RANGE[f.size]; if (c.s == null || c.s < lo || c.s >= hi) return false; }
     if (f.views && f.views !== "all" && TIERS.indexOf(tier(c)) < TIERS.indexOf(f.views)) return false;
@@ -266,7 +287,7 @@ function draw() {
   const setF = (patch) => { Object.assign(st.f, patch); st.shown = PAGE; draw(); };
   const cards = h("div.cr-cards",
     card(tw ? "Streamers" : "Creators", num(all.length), `${num(all.filter((c) => c.own).length)} ${tw ? "streamed" : "made a video of"} our games`),
-    card("With an email", num(withEmail.length), tw ? `${num(bySource("description"))} description · ${num(bySource("youtube"))} from their YouTube` : `${num(bySource("description"))} description · ${num(bySource("links"))} links · ${num(bySource("revealed"))} revealed`, () => setF({ email: "yes" })),
+    card("With an email", num(withEmail.length), tw ? `${num(bySource("description"))} description · ${num(bySource("youtube"))} from their YouTube` : `${num(bySource("description"))} description · ${num(bySource("links"))} links · ${num(bySource("video"))} videos · ${num(bySource("revealed"))} revealed`, () => setF({ email: "yes" })),
     tw ? card("Also on YouTube", num(all.filter((c) => c.yt).length), "their YouTube channel is on our list")
       : card("Hidden email only", num(all.filter((c) => !c.e.length && c.b === 1).length), "behind YouTube's captcha button", () => setF({ email: "hidden" })),
     card("Active", num(all.filter((c) => activity(c, today) === "active").length), tw ? "streamed a searched game in 30 days" : "uploaded in the last 30 days", () => setF({ active: "active" })));
@@ -285,7 +306,7 @@ function draw() {
   search.addEventListener("input", () => { st.f.q = search.value; st.shown = PAGE; drawList(); });
   const filters = h("div.cr-filters",
     h("div.cr-row", search,
-      select("Email", st.f.email, [["any", "Any"], ["yes", "Has an email"], ["no", "No email yet"], ["hidden", "Hidden email only"]], "email"),
+      select("Email", st.f.email, [["any", "Any"], ["yes", "Has an email"], ["no", "No email yet"], ["hidden", "Hidden email only"], ["gold", "🥇 Gold+ email"], ["platinum", "🏆 Platinum+ email"], ["diamond", "💎 Diamond email"]], "email"),
       select("Active", st.f.active, [["all", "Any"], ["active", "Active (30 days)"], ["quiet", "Quiet (30–90 days)"], ["inactive", "Inactive (90+ days)"], ["unknown", "Not known yet"]], "active"),
       select("Language", st.f.lang, [["all", "Any"], ...langs.map(([l, n]) => [l, `${LANGS[l] || (l === "?" ? "Not set" : l.toUpperCase())} (${n})`])], "lang"),
       select("Genre", st.f.genre, [["all", "Any"], ...genres.map(([t, n]) => [t, `${d.tags[t]} (${n})`])], "genre"),
@@ -312,10 +333,10 @@ function draw() {
     rows = rows.map((c) => [key(c), c]).sort((a, b) => b[0] - a[0]).map(([, c]) => c);
     const top = gameId ? Math.max(...rows.map((c) => scored.get(c.id).score), 0.0001) : 1;
     const shown = rows.slice(0, st.shown);
-    const emails = rows.filter((c) => c.e.length);
+    const emails = rows.filter((c) => bestEmail(c));
     const head = h("div.cr-listhead",
       h("span", `${C.plural(rows.length, who)}${rows.length !== all.length ? ` of ${num(all.length)}` : ""}, ${num(emails.length)} with an email`),
-      h("button.btn", { type: "button", disabled: !emails.length, title: "One email per creator, the first found, one per line", onclick: (e) => C.copy(emails.map((c) => c.e[0][0]).join("\n"), e.currentTarget) }, `Copy ${C.plural(emails.length, "email")}`));
+      h("button.btn", { type: "button", disabled: !emails.length, title: "One email per creator, their best (bounced ones left out), one per line", onclick: (e) => C.copy(emails.map((c) => bestEmail(c)[0]).join("\n"), e.currentTarget) }, `Copy ${C.plural(emails.length, "email")}`));
     const table = h("table.cr-table",
       h("thead", h("tr", ...(gameId ? [h("th.cr-num", "Fit")] : []), h("th", "Channel"), h("th.cr-num", tw ? "Followers" : "Subs"), h("th.cr-num", { title: tw ? "Typical viewers: the median viewer count seen while they were live in a searched game, or, if never seen live, their past broadcasts' views (marked vod)" : "Typical views per video: the median of their game videos of 3+ minutes, a week old or more" }, tw ? "Viewers" : "Views"), h("th", "Lang"), h("th", tw ? "Last stream" : "Last upload"),
         h("th", "Games"), h("th", "Type"), h("th", "Genres"), h("th", "Email"))),
@@ -330,10 +351,11 @@ function draw() {
     const act = activity(c, today);
     const games = c.g.map((g) => d.games[g[0]]?.n || `App ${g[0]}`);
     const url = c.pl === "tw" ? `https://www.twitch.tv/${c.h}` : c.h ? `https://www.youtube.com/${c.h}` : `https://www.youtube.com/channel/${c.id}`;
+    const best = bestEmail(c) || c.e[0];
     const email = c.e.length
-      ? h("span.cr-email", h("a", { href: `mailto:${c.e[0][0]}`, title: `Found ${SOURCES[c.e[0][1]] || c.e[0][1]}` }, c.e[0][0]),
+      ? h("span.cr-email", h("a", { href: `mailto:${best[0]}`, title: `Found ${SOURCES[best[1]] || best[1]}` }, best[0]), egradeBadge(best[2]),
           c.e.length > 1 ? h("span.cr-muted", ` +${c.e.length - 1}`) : null,
-          h("button.cr-copy", { type: "button", title: "Copy", onclick: (e) => { e.stopPropagation(); C.copy(c.e[0][0], e.currentTarget); } }, "Copy"))
+          h("button.cr-copy", { type: "button", title: "Copy", onclick: (e) => { e.stopPropagation(); C.copy(best[0], e.currentTarget); } }, "Copy"))
       : c.b === 1 ? h("span.cr-muted", { title: "Has a business email behind YouTube's View email address button (needs a captcha)" }, "hidden")
       : h("span.cr-muted", "–");
     const main = h("tr.cr-main", { class: open ? "is-open" : null, onclick: toggle },
@@ -364,7 +386,7 @@ function draw() {
     }).filter(Boolean);
     const detail = h("tr.cr-detail", h("td", { colspan: cols },
       h("div.cr-detailgrid",
-        h("div", h("div.cr-dh", "Emails"), c.e.length ? h("ul", ...c.e.map(([e, s]) => h("li", h("a", { href: `mailto:${e}` }, e), h("span.cr-muted", ` ${SOURCES[s] || s}`)))) : h("p.cr-muted", c.b === 1 ? "None public. There's one behind YouTube's View email address button (the creator-emails skill, with a captcha)." : c.b === 0 ? "None found, and no hidden one on YouTube." : "None found yet.")),
+        h("div", h("div.cr-dh", "Emails"), c.e.length ? h("ul", ...c.e.map(([e, s, g]) => h("li", h("a", { href: `mailto:${e}` }, e), egradeBadge(g), h("span.cr-muted", ` ${SOURCES[s] || s}`)))) : h("p.cr-muted", c.b === 1 ? "None public. There's one behind YouTube's View email address button (the creator-emails skill, with a captcha)." : c.b === 0 ? "None found, and no hidden one on YouTube." : "None found yet.")),
         h("div", h("div.cr-dh", "Channel"), tw
           ? h("p", `${subs(c.s)} followers · ${C.plural(c.n || 0, "broadcast")} of searched games`, h("br"),
             c.mv == null ? "Typical viewers: not known yet" : c.mvk === "live" ? `Typical viewers: ${num(c.mv)} live (median of ${C.plural(c.mvn, "stream")} we saw)` : `Never seen live; past broadcasts get ${num(c.mv)} views (median of ${c.mvn})`, h("br"),
@@ -619,10 +641,10 @@ function recipientsFor(d, f, contacted) {
   // Streamers: Twitch streamers, and YouTube creators with a Twitch channel; one email each.
   const pool = f.audience === "streamers" ? [...d.streamers, ...d.creators.filter((c) => c.k.twitch)] : d.creators;
   const seen = new Set();
-  return pool.filter((c) => c.e.length && !contacted.has(c.e[0][0]) && (!f.activeOnly || activity(c, today) !== "inactive"))
+  return pool.filter((c) => bestEmail(c) && !contacted.has(bestEmail(c)[0]) && (!f.activeOnly || activity(c, today) !== "inactive"))
     .map((c) => [fit(c, f.appid, weights, today).score, c]).sort((a, b) => b[0] - a[0])
-    .filter(([, c]) => !seen.has(c.e[0][0]) && seen.add(c.e[0][0])).slice(0, f.n)
-    .map(([, c]) => ({ id: c.id, label: c.t, email: c.e[0][0], lang: (c.l || "en").slice(0, 2) }));
+    .filter(([, c]) => !seen.has(bestEmail(c)[0]) && seen.add(bestEmail(c)[0])).slice(0, f.n)
+    .map(([, c]) => ({ id: c.id, label: c.t, email: bestEmail(c)[0], lang: (c.l || "en").slice(0, 2) }));
 }
 export function pressKey(url) {
   const u = new URL(url);
@@ -738,16 +760,20 @@ function campaignView(d) {
 const CSS = `
 .crv { min-width: 0; color: var(--fb-ink);
   --cr-bronze: #8a4b16; --cr-bronze-bg: #f7e6d6; --cr-silver: #4f5863; --cr-silver-bg: #e9edf1;
-  --cr-gold: #7a5a00; --cr-gold-bg: #fbefc2; --cr-diamond: #155e9c; --cr-diamond-bg: #dcefff; }
+  --cr-gold: #7a5a00; --cr-gold-bg: #fbefc2; --cr-diamond: #155e9c; --cr-diamond-bg: #dcefff;
+  --cr-platinum: #4a5568; --cr-platinum-bg: #e6eaf0; --cr-bounced: #a12a2a; --cr-bounced-bg: #fbe3e3; }
 @media (prefers-color-scheme: dark) {
   .crv { --cr-bronze: #e6a873; --cr-bronze-bg: #3b2a1b; --cr-silver: #c9d1da; --cr-silver-bg: #2c3238;
-    --cr-gold: #f2cf55; --cr-gold-bg: #3a3214; --cr-diamond: #86c8ff; --cr-diamond-bg: #15304a; }
+    --cr-gold: #f2cf55; --cr-gold-bg: #3a3214; --cr-diamond: #86c8ff; --cr-diamond-bg: #15304a;
+    --cr-platinum: #d5dbe5; --cr-platinum-bg: #2c323c; --cr-bounced: #ff9a9a; --cr-bounced-bg: #4a1c1c; }
 }
 .crv .cr-tier { display: inline-block; margin-left: 6px; padding: 0 6px; border-radius: 999px; font-size: 0.68rem; font-weight: 700; vertical-align: 1px; border: 1px solid var(--fb-line); }
 .crv .cr-tier.is-bronze { color: var(--cr-bronze); background: var(--cr-bronze-bg); }
 .crv .cr-tier.is-silver { color: var(--cr-silver); background: var(--cr-silver-bg); }
 .crv .cr-tier.is-gold { color: var(--cr-gold); background: var(--cr-gold-bg); }
 .crv .cr-tier.is-diamond { color: var(--cr-diamond); background: var(--cr-diamond-bg); }
+.crv .cr-tier.is-platinum { color: var(--cr-platinum); background: var(--cr-platinum-bg); }
+.crv .cr-tier.is-bounced { color: var(--cr-bounced); background: var(--cr-bounced-bg); }
 .crv .cr-flag { color: var(--fb-warning); cursor: help; }
 .crv .cr-switch { margin-bottom: 14px; }
 .crv .cr-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin: 0 0 16px; }

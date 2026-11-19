@@ -90,9 +90,9 @@ def test_export_and_campaign(tmp_path, steam_db):  # noqa: F811
     store.db.commit()
     data = export.build(store, steam_db, {1}, NOW)
     tw = {s["h"]: s for s in data["streamers"]}
-    assert tw["icy"]["id"] == "tw:u1" and tw["icy"]["e"] == [["icy@mail.de", "description"]] and tw["icy"]["own"]
+    assert tw["icy"]["id"] == "tw:u1" and tw["icy"]["e"] == [["icy@mail.de", "description", "platinum"]] and tw["icy"]["own"]
     assert tw["icy"]["g"][0][:2] == [1, 1] and tw["icy"]["s"] == 1200 and tw["icy"]["pl"] == "tw"
-    assert tw["fisher"]["e"] == [["fish@mail.com", "youtube"]] and tw["fisher"]["yt"] == "UCf"
+    assert [e[:2] for e in tw["fisher"]["e"]] == [["fish@mail.com", "youtube"]] and tw["fisher"]["yt"] == "UCf"
     outreach.migrate(store)
     spec = {"appid": 1, "game": "Our Ice Game", "audience": "streamers", "from_name": "Danny", "from_email": "a@fourgames.se",
             "subject": "{game}", "body": "Hi {name}, you streamed {their_game}. {steam}\nDanny", "recipients": ["tw:u1", "tw:u2", "tw:nope"]}

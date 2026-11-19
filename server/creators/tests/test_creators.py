@@ -346,7 +346,7 @@ def test_export(tmp_path, steam_db, monkeypatch):
     q = data["quota"]
     assert q["limit"] == collector.config.daily_units and q["spent"] > 0 and q["reset"] > NOW
     assert q["reset"] - NOW <= 25 * 3600 and q["exhausted"] == (q["spent"] >= q["limit"])
-    assert by["UCa"]["e"] == [["uca@mail.com", "description"], ["a@a.com", "links"]]
+    assert [e[:2] for e in by["UCa"]["e"]] == [["uca@mail.com", "description"], ["a@a.com", "links"]]
     assert by["UCa"]["own"] and not by["UCb"]["own"] and by["UCb"]["g"][0][0] == 2
     assert by["UCa"]["cat"] == "few-games" and by["UCa"]["lu"] is not None and by["UCa"]["v30"] == 1
     tags = [t for t, _ in by["UCb"]["p"]]
@@ -356,7 +356,7 @@ def test_export(tmp_path, steam_db, monkeypatch):
     store.db.execute("UPDATE youtube_channels SET revealed_email = 'b@b.com', revealed_at = ? WHERE channel_id = 'UCb'", (int(NOW),))
     store.db.commit()
     by = {c["id"]: c for c in export.build(store, collector.config.steam_db, set(), NOW)["creators"]}
-    assert by["UCb"]["ra"] == int(NOW) and ["b@b.com", "revealed"] in by["UCb"]["e"]
+    assert by["UCb"]["ra"] == int(NOW) and ["b@b.com", "revealed", "platinum"] in by["UCb"]["e"]
     assert export.category([(1, 5)], {}) == "one-game"
     assert export.category([(1, 1), (2, 1), (3, 1), (4, 1)], {1: 10, 2: 10, 3: 90000, 4: 20}) == "indie-variety"
 
@@ -487,3 +487,27 @@ def test_trailer_channels_and_twitch_typical_viewers(tmp_path, steam_db):
     assert export.typical([30, 10, 500], [9999]) == {"mv": 30, "mvn": 3, "mvk": "live"}
     assert export.typical(None, [100, 300]) == {"mv": 200, "mvn": 2, "mvk": "vod"}
     assert export.typical([], None) == {}
+
+
+def test_email_quality(tmp_path):
+    from creators import quality
+    from creators.youtube import video_row
+    g = lambda **ev: quality.grade({"videos": [], **ev}, NOW)
+    old, recent = NOW - 2 * quality.YEAR, NOW - 30 * 86400
+    assert g(revealed=True, description=True) == "diamond"
+    assert g(revealed=True) == g(description=True) == "platinum"
+    assert g(typed=True) == g(site=recent) == g(videos=[old, old]) == "gold"
+    assert g(videos=[recent]) == g(site=old) == "silver"
+    assert g(videos=[old]) == "bronze"
+    assert quality.grade({"description": True}, NOW, replied=True) == "diamond"
+    assert quality.grade({"revealed": True}, NOW, bounced=True) == "bounced"
+    store = Store(str(tmp_path / "c.db"))
+    store.db.execute("INSERT INTO youtube_channels (channel_id, emails, revealed_email, first_seen) "
+                     "VALUES ('UCa', '[\"Desc@a.com\"]', 'biz@a.com', ?)", (int(NOW),))
+    store.db.commit()
+    vid = lambda i, when: video_row(1, {"id": i, "snippet": {"channelId": "UCa", "publishedAt": when,
+                                                            "description": "Business: biz@a.com, editor: ed@b.com"}})
+    store.save_videos([vid("v1", "2026-11-01T00:00:00Z"), vid("v2", "2020-01-01T00:00:00Z")], int(NOW))
+    graded = quality.channel_emails(store.db, NOW)["UCa"]
+    assert graded == [["biz@a.com", "revealed", "diamond"], ["desc@a.com", "description", "platinum"],
+                      ["ed@b.com", "video", "gold"]]

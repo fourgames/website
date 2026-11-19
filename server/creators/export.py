@@ -7,7 +7,7 @@ Written after every hourly run, gzipped: /srv/fourgames/creators/export/creators
 
 Per creator (short keys, the file grows to thousands): id, t title, h handle, s subscribers, n videos
 on the channel, c country, l language (what most of their videos are in; the channel's setting when
-none says), e [[email, source]] (source: description, revealed, links), k links {twitch, x, ...},
+none says), e [[email, source, grade]] best first (source: description, revealed, links, video; grade: quality.py), k links {twitch, x, ...},
 b hidden-email button (1/0/null), lu newest upload, u90 uploads in the 90 days before it was read
 (of the newest 50), lv newest video of a game we searched, g [[appid, videos, newest, views, typical
 views of those videos (null: none 3+ minutes and a week old)]], cat category, p genre profile
@@ -51,7 +51,7 @@ from .games import _json, connect, own_appids
 from .press import key as press_key, rows as press_rows
 from .reveal import limit_status
 from .score import LONG_VIDEO, META_TAGS, SETTLED_DAYS, TOP_TAGS, genre_profile, typical as median_of
-from . import twitch as twitch_mod
+from . import quality, twitch as twitch_mod
 
 DEFAULT_DIR = "/srv/fourgames/creators/export"
 # A game this small (reviews) counts as a small game: their videos of those say how our games may do.
@@ -141,10 +141,7 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
             tw_vod[uid].append(views)
     v30 = dict(db.execute("SELECT channel_id, COUNT(*) FROM youtube_videos WHERE published >= ? GROUP BY channel_id",
                           (now - 30 * 86400,)).fetchall())
-    site = defaultdict(list)
-    for cid, email in db.execute("SELECT channel_id, email FROM site_emails"):
-        if email not in site[cid]:
-            site[cid].append(email)
+    graded = quality.channel_emails(db, now)
 
     games: dict[int, dict] = {}
     tag_names: dict[int, str] = {}
@@ -188,18 +185,15 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
         return {"fa": round(rate, 4)} if rate < FLAG_RATE else {}
 
     creators = []
-    yt_emails: dict[str, list[str]] = {}
+    yt_emails: dict[str, list[list[str]]] = {}  # graded, bounced left out
     by_twitch: dict[str, str] = {}   # twitch login (lower case) -> the YouTube channel that links it
     by_handle: dict[str, str] = {}   # "@handle" or "channel/UC..." (lower case) -> YouTube channel id
     for r in db.execute("SELECT * FROM youtube_channels WHERE gone = 0 AND refreshed_at IS NOT NULL"):
         cid = r["channel_id"]
         g = sorted(covered.get(cid, []), key=lambda x: -x[1])
-        emails = [[e, "description"] for e in json.loads(r["emails"] or "[]")]
-        if r["revealed_email"] and r["revealed_email"] not in [e for e, _ in emails]:
-            emails.append([r["revealed_email"], "revealed"])
-        emails += [[e, "links"] for e in site.get(cid, []) if e not in [x for x, _ in emails]]
+        emails = graded.get(cid, [])
         links = json.loads(r["links"] or "{}")
-        yt_emails[cid] = [e for e, _ in emails]
+        yt_emails[cid] = [e for e in emails if e[2] != quality.BOUNCED]
         if links.get("twitch"):
             by_twitch.setdefault(links["twitch"].lower(), cid)
         if r["handle"]:
@@ -227,10 +221,11 @@ def build(store: Store, steam_db: str, own: set[int], now: float, daily_units: i
         uid = r["user_id"]
         g = sorted(tw_covered.get(uid, []), key=lambda x: -x[1])
         links = json.loads(r["links"] or "{}")
-        emails = [[e, "description"] for e in json.loads(r["emails"] or "[]")]
+        emails = [[e, "description", "platinum"] for e in json.loads(r["emails"] or "[]")]
         # Their YouTube channel, when it's on our list (it links this Twitch, or this Twitch links it).
         yt = by_twitch.get((r["login"] or "").lower()) or by_handle.get((links.get("youtube") or "").lower())
-        emails += [[e, "youtube"] for e in yt_emails.get(yt, []) if e not in [x for x, _ in emails]]
+        emails += [[e, "youtube", g] for e, _, g in yt_emails.get(yt, []) if e not in [x[0] for x in emails]]
+        emails.sort(key=lambda x: -quality.rank(x[2]))
         streamers.append({
             "id": f"tw:{uid}", "pl": "tw", "t": r["name"], "h": r["login"], "s": r["followers"],
             "n": sum(x[1] for x in g), "c": None, "l": r["language"], "e": emails, "k": links,

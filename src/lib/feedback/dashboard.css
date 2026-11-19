@@ -2919,3 +2919,21 @@
 .fb .vt-audience[open] > summary {
 	margin-bottom: 4px;
 }
+
+/* Steam goals: a ladder per track, like the Creators email hunt strip. */
+.fb .sg-track + .sg-track { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--fb-line); }
+.fb .sg-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 10px; }
+.fb .sg-title { font-weight: 700; color: var(--fb-title); }
+.fb .sg-note { font-size: 0.72rem; color: var(--fb-muted); }
+.fb .sg-main { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; margin-top: 4px; }
+.fb .sg-big { font-size: 1.6rem; font-weight: 800; color: var(--fb-title); font-variant-numeric: tabular-nums; }
+.fb .sg-next { color: var(--fb-ink-2); }
+.fb .sg-bar { position: relative; height: 16px; border-radius: 999px; background: var(--fb-card-2); border: 1px solid var(--fb-line); overflow: hidden; margin-top: 8px; }
+.fb .sg-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--fb-good-text), var(--fb-warning)); transition: width 0.6s ease; }
+.fb .sg-pct { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 0.68rem; font-weight: 700; color: var(--fb-title); }
+.fb .sg-when { font-size: 0.75rem; color: var(--fb-muted); margin-top: 4px; }
+.fb .sg-steps { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.fb .sg-step { padding: 1px 8px; border-radius: 999px; font-size: 0.72rem; font-weight: 600; border: 1px solid var(--fb-line); color: var(--fb-muted); opacity: 0.6; font-variant-numeric: tabular-nums; }
+.fb .sg-step.is-done { opacity: 1; color: var(--fb-good-text); border-color: var(--fb-good-text); }
+.fb .sg-step.is-next { opacity: 1; color: var(--fb-title); border: 2px solid var(--fb-warning); }
+.fb .sg-step.is-big { opacity: 0.85; color: var(--fb-warning); }

@@ -3327,8 +3327,8 @@ function salesView(all = false) {
         tile("Gross in range", usd(sum(inRange, "gross")), `${usd(sum(inRange, "net"))} net, after refunds and tax`),
         tile("Units kept", units - refunded, `${units} sold, ${refunded} refunded (${units ? Math.round((100 * refunded) / units) : 0}%)`),
         sum(inRange, "activations") ? tile("Key activations", sum(inRange, "activations"), "keys from outside Steam") : null),
-      revenueChart(inRange, start, end, all ? launchMarkers(start, end) : markers(start, end)),
       steamGoals(all),
+      revenueChart(inRange, start, end, all ? launchMarkers(start, end) : markers(start, end)),
       all ? null : refundReasons(),
       videoImpactCard({ h, fmtNum, usd, fmtDate }, all ? gamesLoaded().flatMap((g) => inGame(g, () => videoRows().map((r) => ({ ...r, game: g.meta.name })))) : videoRows()),
       accountTotals(from, all),
@@ -3451,30 +3451,52 @@ function revenueChart(days, start, end, releases) {
   return card;
 }
 
-// Steam milestones to aim for. Both use gross minus refunds ("adjusted gross"), which is what Steam's
-// revenue share counts. The chocolate boxes are unofficial: Valve sends them each December, and the
-// ~$800k / ~$2M lines are developer reports (Chris Zukowski), not anything Valve has published.
-const CHOCOLATE_GOALS = [[800e3, "Valve's chocolate box"], [2e6, "Bigger chocolate box"]];
-const CUT_GOALS = [[10e6, "Steam's cut drops to 25%"], [50e6, "Steam's cut drops to 20%"]];
+// Steam milestones to aim for, as a ladder like the Creators email hunt: a big number, a thick bar to
+// the next step, the steps passed lit up. Both use gross minus refunds ("adjusted gross"), which is
+// what Steam's revenue share counts. The chocolate boxes are unofficial: Valve sends them each
+// December to developers past roughly $800k / $2M that year (developer reports, Chris Zukowski), so
+// that ladder counts this calendar year and starts again in January. Steam's cut drops per game, from
+// launch. The small steps before them are only stepping stones, so there's always one in reach.
+const YEAR_STEPS = [[1e3], [5e3], [10e3], [25e3], [50e3], [100e3], [250e3], [500e3], [800e3, "🍫", "Valve's chocolate box"], [2e6, "🍫", "Bigger chocolate box"]];
+const GAME_STEPS = [[1e3], [10e3], [100e3], [1e6], [10e6, "📉", "Steam takes 25%"], [50e6, "📉", "Steam takes 20%"]];
+const shortUsd = (n) => n >= 1e6 ? `$${+(n / 1e6).toFixed(1)}M` : n >= 1e3 ? `$${+(n / 1e3).toFixed(n < 1e4 ? 1 : 0)}k` : usd(n);
+
+function goalLadder(title, have, steps, pace, note) {
+  const next = steps.find(([v]) => have < v);
+  const prev = [...steps].reverse().find(([v]) => have >= v)?.[0] || 0;
+  const pct = next ? Math.min(100, (100 * (have - prev)) / (next[0] - prev)) : 100;
+  const days = next && pace > 0 ? Math.ceil((next[0] - have) / pace) : null;
+  const when = days == null ? "no sales in the last 30 days" : days <= 1 ? "about a day at your 30-day pace"
+    : days < 730 ? `about ${plural(days, "day")} at your 30-day pace` : `about ${Math.round(days / 365)} years at your 30-day pace`;
+  return h("div.sg-track",
+    h("div.sg-head", h("span.sg-title", title), h("span.sg-note", note)),
+    h("div.sg-main",
+      h("b.sg-big", usd(have)),
+      next ? h("span.sg-next", "Next: ", h("b", `${next[1] ? next[1] + " " : ""}${next[2] || shortUsd(next[0])}`), next[2] ? ` at ${shortUsd(next[0])}` : "", ` · ${usd(next[0] - have)} to go`)
+        : h("span.sg-next", h("b", "Every goal reached 🎉"))),
+    h("div.sg-bar", h("div.sg-fill", { style: `width:${Math.max(pct, have > prev ? 2 : 0)}%` }), h("span.sg-pct", `${Math.floor(pct)}%`)),
+    next ? h("div.sg-when", `${shortUsd(prev)} → ${shortUsd(next[0])} · ${when}`) : null,
+    h("div.sg-steps", ...steps.map(([v, icon, label]) => h("span.sg-step", {
+      class: have >= v ? "is-done" : next && v === next[0] ? "is-next" : icon ? "is-big" : null,
+      title: label ? `${label} at ${shortUsd(v)}` : shortUsd(v),
+    }, have >= v ? "✓ " : icon ? icon + " " : "", shortUsd(v)))));
+}
+
 function steamGoals(all) {
   const adjusted = (t) => (t.gross || 0) - (t.returns || 0);
+  const days = Object.entries(state.sales?.days || {});
   const year = new Date().getFullYear();
-  const thisYear = Object.entries(state.sales?.days || {}).filter(([d]) => d.startsWith(year + "-"))
-    .reduce((a, [, apps]) => a + Object.values(apps).reduce((b, t) => b + adjusted(t), 0), 0);
+  const add = (list, id) => list.reduce((a, [, apps]) => a + Object.entries(apps).filter(([k]) => !id || k === id).reduce((b, [, t]) => b + adjusted(t), 0), 0);
   const perGame = new Map();
-  for (const apps of Object.values(state.sales?.days || {})) for (const [id, t] of Object.entries(apps)) perGame.set(id, (perGame.get(id) || 0) + adjusted(t));
+  for (const [, apps] of days) for (const [id, t] of Object.entries(apps)) perGame.set(id, (perGame.get(id) || 0) + adjusted(t));
   const name = (id) => state.index.games.find((g) => String(g.appId) === id)?.name || state.sales.apps?.[id] || `App ${id}`;
-  const [gameId, gameTotal] = all ? [...perGame].sort((a, b) => b[1] - a[1])[0] || [null, 0] : [String(state.game.appId), perGame.get(String(state.game.appId)) || 0];
-  const rows = (have, goals) => h("div.bars", ...goals.flatMap(([goal, label]) => {
-    const pct = Math.min(100, (100 * have) / goal);
-    return [h("span", label), h("div", h("div.bar", { style: `width:${Math.max(pct, have > 0 ? 0.5 : 0)}%` })),
-      h("span.n", have >= goal ? "✓ reached" : `${usd(goal - have)} to go · ${pct < 1 ? pct.toFixed(2) : Math.round(pct)}%`)];
-  }));
-  return h("div.chart-card", h("h3", "Steam goals"),
-    h("div.sub", `${usd(thisYear)} in ${year} so far, every game together, gross minus refunds. Valve sends the boxes each December; the amounts are what developers report, not official.`),
-    rows(thisYear, CHOCOLATE_GOALS),
-    gameId ? h("div.sub", `${usd(gameTotal)} all time for ${all ? name(gameId) + " (best seller)" : "this game"}. Steam's cut is counted per game: 30% until $10M.`) : null,
-    gameId ? rows(gameTotal, CUT_GOALS) : null);
+  const gameId = all ? [...perGame].sort((a, b) => b[1] - a[1])[0]?.[0] : String(state.game.appId);
+  const recent = days.filter(([d]) => dayTime(d) >= now() - 30 * DAY);
+  return h("div.chart-card.sg", h("h3", "Steam goals"),
+    goalLadder(`${year}, every game`, add(days.filter(([d]) => d.startsWith(year + "-"))), YEAR_STEPS, add(recent) / 30,
+      "gross minus refunds · starts over in January · chocolate amounts are developer reports, not official"),
+    gameId ? goalLadder(all ? `${name(gameId)}, all time` : "This game, all time", perGame.get(gameId) || 0, GAME_STEPS, add(recent, gameId) / 30,
+      `${all ? "best seller · " : ""}Steam takes 30% of each game until $10M`) : null);
 }
 
 // Every game on the account together, in the range and since launch, and each game's share.

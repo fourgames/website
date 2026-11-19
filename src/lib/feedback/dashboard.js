@@ -3328,6 +3328,7 @@ function salesView(all = false) {
         tile("Units kept", units - refunded, `${units} sold, ${refunded} refunded (${units ? Math.round((100 * refunded) / units) : 0}%)`),
         sum(inRange, "activations") ? tile("Key activations", sum(inRange, "activations"), "keys from outside Steam") : null),
       revenueChart(inRange, start, end, all ? launchMarkers(start, end) : markers(start, end)),
+      steamGoals(all),
       all ? null : refundReasons(),
       videoImpactCard({ h, fmtNum, usd, fmtDate }, all ? gamesLoaded().flatMap((g) => inGame(g, () => videoRows().map((r) => ({ ...r, game: g.meta.name })))) : videoRows()),
       accountTotals(from, all),
@@ -3448,6 +3449,32 @@ function revenueChart(days, start, end, releases) {
   });
   svg.addEventListener("pointerleave", () => { tip.style.display = "none"; });
   return card;
+}
+
+// Steam milestones to aim for. Both use gross minus refunds ("adjusted gross"), which is what Steam's
+// revenue share counts. The chocolate boxes are unofficial: Valve sends them each December, and the
+// ~$800k / ~$2M lines are developer reports (Chris Zukowski), not anything Valve has published.
+const CHOCOLATE_GOALS = [[800e3, "Valve's chocolate box"], [2e6, "Bigger chocolate box"]];
+const CUT_GOALS = [[10e6, "Steam's cut drops to 25%"], [50e6, "Steam's cut drops to 20%"]];
+function steamGoals(all) {
+  const adjusted = (t) => (t.gross || 0) - (t.returns || 0);
+  const year = new Date().getFullYear();
+  const thisYear = Object.entries(state.sales?.days || {}).filter(([d]) => d.startsWith(year + "-"))
+    .reduce((a, [, apps]) => a + Object.values(apps).reduce((b, t) => b + adjusted(t), 0), 0);
+  const perGame = new Map();
+  for (const apps of Object.values(state.sales?.days || {})) for (const [id, t] of Object.entries(apps)) perGame.set(id, (perGame.get(id) || 0) + adjusted(t));
+  const name = (id) => state.index.games.find((g) => String(g.appId) === id)?.name || state.sales.apps?.[id] || `App ${id}`;
+  const [gameId, gameTotal] = all ? [...perGame].sort((a, b) => b[1] - a[1])[0] || [null, 0] : [String(state.game.appId), perGame.get(String(state.game.appId)) || 0];
+  const rows = (have, goals) => h("div.bars", ...goals.flatMap(([goal, label]) => {
+    const pct = Math.min(100, (100 * have) / goal);
+    return [h("span", label), h("div", h("div.bar", { style: `width:${Math.max(pct, have > 0 ? 0.5 : 0)}%` })),
+      h("span.n", have >= goal ? "✓ reached" : `${usd(goal - have)} to go · ${pct < 1 ? pct.toFixed(2) : Math.round(pct)}%`)];
+  }));
+  return h("div.chart-card", h("h3", "Steam goals"),
+    h("div.sub", `${usd(thisYear)} in ${year} so far, every game together, gross minus refunds. Valve sends the boxes each December; the amounts are what developers report, not official.`),
+    rows(thisYear, CHOCOLATE_GOALS),
+    gameId ? h("div.sub", `${usd(gameTotal)} all time for ${all ? name(gameId) + " (best seller)" : "this game"}. Steam's cut is counted per game: 30% until $10M.`) : null,
+    gameId ? rows(gameTotal, CUT_GOALS) : null);
 }
 
 // Every game on the account together, in the range and since launch, and each game's share.

@@ -15,15 +15,18 @@ and saves what's revealed. This module is its side on the server (from the serve
         {"channel_id": "UC...", "email": null}               the button was there but showed nothing
         {"channel_id": "UC...", "links": ["throne.com/x"]}   the About panel's links (with or without the above)
 
-Best first: channels with a video of one of our games, then by expected value (score.py): typical
-views per video (the median of their game videos of 3+ minutes, a week old or more; subscribers
-stand in until that's known) x how active they are x how well their genres fit any of our games.
-Only channels without an email in their description.
+Best first: channels with a video of one of our games, then by priority (see priority()): size
+(subscribers and typical views, the bigger the better) x proof it's a gaming channel (how many
+different games we've seen them cover; one video is weak proof) x how indie those games are x how
+active they are, with genre fit to our games only as a lift (it never sinks a channel to 0: big indie
+horror or party channels still come first). Only channels without an email in their description.
+The dashboard's Email hunt keeps its own expected-value order (score.channel_values).
 """
 
 from __future__ import annotations
 
 import json
+import math
 import re
 import sys
 import time
@@ -31,7 +34,7 @@ import time
 from .config import Config, ConfigError
 from .db import Store
 from .games import own_appids
-from .score import channel_values
+from .score import ACTIVE_FACTOR, channel_details
 
 # The button is checked again after this long (creators add and remove it).
 RECHECK_DAYS = 180
@@ -48,8 +51,8 @@ CANDIDATES = """
 
 
 def rank(store: Store, ids: list[str], own: set[int], now: float, steam_db: str | None = None) -> list[str]:
-    """Best first: a video of one of our games, then expected value (score.py: typical views x
-    activity x best genre fit to any of our games)."""
+    """Best first: a video of one of our games, then priority() (size x gaming x indie x fit lift x
+    activity)."""
     ids = list(dict.fromkeys(ids))
     if not ids:
         return []
@@ -57,8 +60,34 @@ def rank(store: Store, ids: list[str], own: set[int], now: float, steam_db: str 
     if own:
         ours = {r[0] for r in store.db.execute(
             f"SELECT DISTINCT channel_id FROM youtube_videos WHERE appid IN ({','.join('?' * len(own))})", [*own])}
-    values = channel_values(store.db, ids, own, now, steam_db)
+    details = channel_details(store.db, ids, own, now, steam_db)
+    values = {c: priority(d) for c, d in details.items()}
     return sorted(ids, key=lambda c: (c not in ours, -values.get(c, 0.0)))
+
+
+def _scale(v: float | None, lo: float, hi: float) -> float | None:
+    """log10(v) from lo to hi -> 0 to 1 (None when v isn't known)."""
+    if not v:
+        return None
+    return min(1.0, max(0.0, (math.log10(v) - lo) / (hi - lo)))
+
+
+def priority(d: dict) -> float:
+    """How much a channel's hidden email is worth one of the few reveals a day.
+      size:   subscribers (1k -> 0, 10M -> 1) and typical views (300 -> 0, 1M -> 1), averaged; never
+              capped, so 1M+ channels come before 10k ones.
+      gaming: games we've seen them cover: 1 -> 0.3 (one video can be a reaction or a news piece),
+              2 -> 0.55, 3 -> 0.8, 4+ -> 1.
+      indie:  0.6 + 0.4 x the share of those games that are indie (0.8 when not known).
+      fit:    0.7 + genre fit to our games, at most 1: a lift, never a 0.
+      activity as in score.py."""
+    parts = [x for x in (_scale(d["subscribers"], 3, 7), _scale(d["mv"], math.log10(300), 6)) if x is not None]
+    size = 0.05 + 0.95 * (sum(parts) / len(parts) if parts else 0.3)
+    n = len(d["games"])
+    gaming = min(1.0, 0.3 + 0.25 * (n - 1)) if n else 0.2
+    indie = 0.8 if d["indie"] is None else 0.6 + 0.4 * d["indie"]
+    fit = min(1.0, 0.7 + d["fit"])
+    return size * gaming * indie * fit * ACTIVE_FACTOR[d["activity"]]
 
 
 def to_check(store: Store, own: set[int], now: float, limit: int, steam_db: str | None = None) -> list[str]:

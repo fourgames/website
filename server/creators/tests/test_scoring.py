@@ -81,6 +81,21 @@ def test_hunt_ranks_by_expected_value_not_subscribers(tmp_path, steam_db):  # no
     assert reveal.to_check(store, {1}, NOW, 10)[-1] == "UCbig"
 
 
+def test_reveal_puts_big_indie_channels_before_one_video_ones(tmp_path, steam_db):  # noqa: F811
+    store = Store(str(tmp_path / "c.db"))
+    recent = int(NOW - 3 * DAY)
+    # 10k commentary channel: one video of a game like ours.
+    channel(store, "UCone", 10_000, [(2, 24_000, 20, 900)], recent, 10)
+    # Huge indie channel: several games, none like ours (genre fit 0).
+    channel(store, "UCkubz", 6_750_000, [(3, 700_000, 20, 3000), (4, 650_000, 30, 3000), (5, 450_000, 40, 3000)], recent, 10)
+    # Mid gaming channel: several games like ours.
+    channel(store, "UCmid", 150_000, [(2, 40_000, 20, 900), (2, 30_000, 30, 900), (6, 30_000, 40, 900)], recent, 10)
+    store.db.commit()
+    order = reveal.to_check(store, {1}, NOW, 10, steam_db)
+    assert order[-1] == "UCone" and order.index("UCkubz") < order.index("UCone")
+    d = score.channel_details(store.db, ["UCkubz"], {1}, NOW, steam_db)["UCkubz"]
+    assert reveal.priority(d) > 0 and len(d["games"]) == 3
+
 def test_games_lookalikes_and_meta_tags(steam_db):  # noqa: F811
     add_tags(steam_db, [(1, "Indie"), (2, "Fishing"), (3, "Cozy"), (7, "FPS")])
     db = sqlite3.connect(steam_db)

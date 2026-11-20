@@ -37,6 +37,8 @@ SETTLED_DAYS = 7
 # Uploads in 90 days below this: "quiet" even with a recent upload.
 ACTIVE_UPLOADS_90D = 3
 ACTIVE_FACTOR = {"active": 1.0, "quiet": 0.6, "inactive": 0.15, "unknown": 0.5}
+# A game with at most this many Steam reviews counts as indie (a big studio's game has far more).
+INDIE_REVIEWS = 20_000
 
 
 def tag_weights(tags: Iterable[int], meta: set[int]) -> dict[int, float]:
@@ -164,6 +166,16 @@ def channel_values(db: sqlite3.Connection, ids: Iterable[str], own: set[int], no
     """Expected value per YouTube channel: reach x activity x its best genre fit to any of our games
     (1 for everyone when our games' tags can't be read). Own-game creators aren't lifted here; the
     callers put them first."""
+    return {cid: reach(d["mv"], d["subscribers"]) * ACTIVE_FACTOR[d["activity"]] * d["fit"]
+            for cid, d in channel_details(db, ids, own, now, steam_db).items()}
+
+
+def channel_details(db: sqlite3.Connection, ids: Iterable[str], own: set[int], now: float,
+                    steam_db: str | None = None) -> dict[str, dict]:
+    """Per YouTube channel the parts the orders are built from: mv (typical views or None),
+    subscribers, activity, fit (best genre fit to any of our games; 1 when tags can't be read),
+    games (the appids we've seen them cover) and indie (the share of those with at most
+    INDIE_REVIEWS Steam reviews; None when not known)."""
     ids = list(dict.fromkeys(ids))
     if not ids:
         return {}
@@ -186,11 +198,11 @@ def channel_values(db: sqlite3.Connection, ids: Iterable[str], own: set[int], no
         if cid in wanted:
             long_all.setdefault(cid, []).append(views)
     appids = {a for g in games.values() for a in g} | set(own)
-    tags, meta, _ = load_steam(steam_db, appids)
+    tags, meta, reviews = load_steam(steam_db, appids)
     own_weights = [w for w in (tag_weights(tags.get(a, []), meta) for a in own) if w]
     columns = {r[1] for r in db.execute("PRAGMA table_info(youtube_channels)")}
     u90 = "uploads_90d" if "uploads_90d" in columns else "NULL"
-    out: dict[str, float] = {}
+    out: dict[str, dict] = {}
     for start in range(0, len(ids), 500):
         chunk = ids[start:start + 500]
         for r in db.execute(f"""SELECT channel_id, subscribers, last_upload, {u90} AS u90 FROM youtube_channels
@@ -203,5 +215,8 @@ def channel_values(db: sqlite3.Connection, ids: Iterable[str], own: set[int], no
             if own_weights:
                 profile, n = genre_profile([(a, x[0], typical(x[1])) for a, x in g.items()], tags, meta, mv)
                 fit = max(genre_fit(profile, w, n) for w in own_weights) ** 0.8
-            out[cid] = reach(mv, r["subscribers"]) * ACTIVE_FACTOR[act] * fit
+            known = [a for a in g if a in reviews]
+            indie = sum(reviews[a] <= INDIE_REVIEWS for a in known) / len(known) if known else None
+            out[cid] = {"mv": mv, "subscribers": r["subscribers"], "activity": act, "fit": fit,
+                        "games": list(g), "indie": indie}
     return out

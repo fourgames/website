@@ -214,9 +214,13 @@ plus a captcha). The `yt-email-unlock` Claude skill gets them in the user's own 
   at a time, the user clicks the button, ticks the captcha and presses Submit, and the email goes to `revealed_email`.
 - `save`: JSON lines on stdin (see `reveal.py`).
 
-Best first: a video of one of our games, then expected value (`score.py`): typical views per video
-(subscribers stand in, at most 0.6, until that's known) × how active they are × how well their genres
-fit any of our games. Nobody but the user solves the captcha, so revealing is kept for the best few.
+Best first: a video of one of our games, then `reveal.priority()`: size (subscribers and typical
+views, no cap, so 1M+ channels come first) × proof it's a gaming channel (how many different games
+we've seen them cover: one video is weak proof, it can be a reaction or a news piece) × how indie those
+games are (≤ 20,000 Steam reviews) × how active they are, with genre fit to our games only as a lift
+(0.7 to 1, never 0, so big indie horror and party channels aren't buried). The same order picks which
+links the link follower tries first. The dashboard's Email hunt keeps its expected-value order
+(`score.py`). Nobody but the user solves the captcha, so revealing is kept for the best few.
 
 ## Emails from creators' links
 

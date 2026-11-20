@@ -2,8 +2,6 @@
 import { onMounted, ref, useId } from "vue";
 import Button from "@/components/ui/Button.vue";
 import Icon from "@/components/ui/Icon.vue";
-import I18nT from "@/components/ui/I18nT.vue";
-import NavLink from "@/components/ui/NavLink.vue";
 import { SITE } from "@/data/site.js";
 import { useI18n } from "@/i18n/index.js";
 
@@ -53,11 +51,7 @@ async function submit(event) {
 		<div>
 			<h2 class="text-lg text-white">{{ t("footer.news.heading") }}</h2>
 			<p :id="noteId" class="mt-2 max-w-prose text-sm">
-				<I18nT keypath="footer.news.note">
-					<template #privacy>
-						<NavLink to="/privacy" class="underline hover:text-white">{{ t("footer.news.privacy") }}</NavLink>
-					</template>
-				</I18nT>
+				{{ t("footer.news.note") }}
 			</p>
 		</div>
 

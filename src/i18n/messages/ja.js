@@ -106,7 +106,7 @@ export default {
 			status: "サーバーの状態",
 		},
 		community: { heading: "コミュニティ", discord: "Discord", youtube: "YouTube", steam: "Steam" },
-		news: { heading: "ゲームのお知らせをメールで受け取る", note: "新作、大型アップデート、セールのお知らせです。メールは多くても年に数回です。まずメールで確認していただき、すべてのメールに配信停止のリンクがあります。{privacy}", privacy: "メールアドレスの扱いについて", label: "メールアドレス", placeholder: "you@example.com", button: "登録", sending: "登録中…", success: "あと少しです。受信トレイを確認し、メール内のボタンを押して確認してください。", error: "うまくいきませんでした。アドレスを確認して、しばらくしてからもう一度お試しください。" },
+		news: { heading: "ゲームのお知らせをメールで受け取る", note: "新作、大型アップデート、セールのお知らせです。メールは多くても年に数回です。まずメールで確認していただき、すべてのメールに配信停止のリンクがあります。", label: "メールアドレス", placeholder: "you@example.com", button: "登録", sending: "登録中…", success: "あと少しです。受信トレイを確認し、メール内のボタンを押して確認してください。", error: "うまくいきませんでした。アドレスを確認して、しばらくしてからもう一度お試しください。" },
 		copyright: "© {year} {name}. All rights reserved. クローバーアイコン：{author}（CC BY 3.0）",
 	},
 	hero: {

@@ -108,7 +108,7 @@ export default {
 			status: "Server status",
 		},
 		community: { heading: "Community", discord: "Discord", youtube: "YouTube", steam: "Steam" },
-		news: { heading: "Get news about our games", note: "New games, big updates and sales. A few emails a year at most. You confirm by email first, and every email has a link to unsubscribe. {privacy}", privacy: "How we handle your email", label: "Email address", placeholder: "you@example.com", button: "Sign up", sending: "Signing up…", success: "Almost done: check your inbox and press the button in our email to confirm.", error: "That didn't work. Check the address and try again in a little while." },
+		news: { heading: "Get news about our games", note: "New games, big updates and sales. A few emails a year at most. You confirm by email first, and every email has a link to unsubscribe.", label: "Email address", placeholder: "you@example.com", button: "Sign up", sending: "Signing up…", success: "Almost done: check your inbox and press the button in our email to confirm.", error: "That didn't work. Check the address and try again in a little while." },
 		copyright: "© {year} {name}. All rights reserved. Clover icon by {author} (CC BY 3.0).",
 	},
 	hero: {

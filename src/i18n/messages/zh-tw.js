@@ -105,7 +105,7 @@ export default {
 			status: "伺服器狀態",
 		},
 		community: { heading: "社群", discord: "Discord", youtube: "YouTube", steam: "Steam" },
-		news: { heading: "透過郵件取得我們的遊戲消息", note: "新遊戲、重大更新和特價。每年最多幾封郵件。你需要先透過郵件確認，每封郵件都有取消訂閱的連結。{privacy}", privacy: "我們如何處理你的電子郵件", label: "電子郵件地址", placeholder: "you@example.com", button: "訂閱", sending: "正在訂閱…", success: "快完成了：請查看收件匣，並按下郵件中的按鈕確認。", error: "沒有成功。請檢查地址，稍後再試。" },
+		news: { heading: "透過郵件取得我們的遊戲消息", note: "新遊戲、重大更新和特價。每年最多幾封郵件。你需要先透過郵件確認，每封郵件都有取消訂閱的連結。", label: "電子郵件地址", placeholder: "you@example.com", button: "訂閱", sending: "正在訂閱…", success: "快完成了：請查看收件匣，並按下郵件中的按鈕確認。", error: "沒有成功。請檢查地址，稍後再試。" },
 		copyright: "© {year} {name}。保留所有權利。四葉草圖示作者：{author}（CC BY 3.0）。",
 	},
 	hero: {

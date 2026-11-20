@@ -104,7 +104,7 @@ export default {
 			status: "服务器状态",
 		},
 		community: { heading: "社区", discord: "Discord", youtube: "YouTube", steam: "Steam" },
-		news: { heading: "通过邮件获取我们的游戏消息", note: "新游戏、重大更新和促销。每年最多几封邮件。你需要先通过邮件确认，每封邮件都有退订链接。{privacy}", privacy: "我们如何处理你的邮箱", label: "邮箱地址", placeholder: "you@example.com", button: "订阅", sending: "正在订阅…", success: "快完成了：请查看收件箱，并点击邮件中的按钮确认。", error: "没有成功。请检查地址，稍后再试。" },
+		news: { heading: "通过邮件获取我们的游戏消息", note: "新游戏、重大更新和促销。每年最多几封邮件。你需要先通过邮件确认，每封邮件都有退订链接。", label: "邮箱地址", placeholder: "you@example.com", button: "订阅", sending: "正在订阅…", success: "快完成了：请查看收件箱，并点击邮件中的按钮确认。", error: "没有成功。请检查地址，稍后再试。" },
 		copyright: "© {year} {name}。保留所有权利。四叶草图标作者：{author}（CC BY 3.0）。",
 	},
 	hero: {

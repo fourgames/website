@@ -107,7 +107,7 @@ export default {
 			status: "서버 상태",
 		},
 		community: { heading: "커뮤니티", discord: "Discord", youtube: "YouTube", steam: "Steam" },
-		news: { heading: "게임 소식을 이메일로 받기", note: "새 게임, 큰 업데이트, 할인 소식입니다. 이메일은 많아야 1년에 몇 번입니다. 먼저 이메일로 확인하며, 모든 이메일에 수신 거부 링크가 있습니다. {privacy}", privacy: "이메일 처리 방식", label: "이메일 주소", placeholder: "you@example.com", button: "가입", sending: "가입 중…", success: "거의 다 됐어요. 받은편지함을 확인하고 이메일의 버튼을 눌러 확인해 주세요.", error: "실패했습니다. 주소를 확인하고 잠시 후 다시 시도해 주세요." },
+		news: { heading: "게임 소식을 이메일로 받기", note: "새 게임, 큰 업데이트, 할인 소식입니다. 이메일은 많아야 1년에 몇 번입니다. 먼저 이메일로 확인하며, 모든 이메일에 수신 거부 링크가 있습니다.", label: "이메일 주소", placeholder: "you@example.com", button: "가입", sending: "가입 중…", success: "거의 다 됐어요. 받은편지함을 확인하고 이메일의 버튼을 눌러 확인해 주세요.", error: "실패했습니다. 주소를 확인하고 잠시 후 다시 시도해 주세요." },
 		copyright: "© {year} {name}. All rights reserved. 클로버 아이콘 제작: {author} (CC BY 3.0).",
 	},
 	hero: {

@@ -25,7 +25,7 @@ const gameNames = getGames(i18n)
 const discussions = (appId) => `https://steamcommunity.com/app/${appId}/discussions/`;
 const review = (appId) => `https://store.steampowered.com/recommended/recommendgame/${appId}`;
 
-const FAQ = ["refund", "purchase", "crash", "save", "bug", "idea", "key", "data", "down"];
+const FAQ = ["refund", "purchase", "crash", "save", "bug", "idea", "key", "down"];
 </script>
 
 <template>

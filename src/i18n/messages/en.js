@@ -259,7 +259,6 @@ export default {
 			title: "Quick answers",
 			key: { q: "Can I get a key for a game?", a: "Making a video, stream or article? Use /request in our {discord}; the {press} has the details. Want every game? They're free for YouTube members." },
 			bug: { q: "I found a bug or need help with a game.", a: "Post in the game's Steam discussions, on its Steam page. That's where we keep track of bugs and can reply to everyone who has the same problem. Our {discord} works too." },
-			down: { q: "Is something down?", a: "Our {status} page shows what's working right now." },
 			coverage: { q: "Can I make videos or streams of your games?", a: "Yes. Logos, art and trailers in our {press} are free to use in articles, videos and streams." },
 		},
 		licensedIp: "Licensed IP",
@@ -325,7 +324,6 @@ export default {
 			bug: { q: "I found a bug.", a: "Post it in the game's Steam discussions, with what you did just before and a screenshot if you can. That's where we track bugs. Our {discord} works too." },
 			idea: { q: "I have an idea or feedback.", a: "Post it in the game's Steam discussions, or leave a Steam review. We read them all, and reviews help other players decide." },
 			key: { q: "Can I get a key to make videos or streams?", a: "Yes. Use /request in our {discord}; the {press} has the details." },
-			down: { q: "Is something down?", a: "Our {status} page shows what's working right now." },
 		},
 		contact: {
 			title: "Still need help?",

@@ -4,11 +4,11 @@ import { SITE } from "@/data/site.js";
 import { useI18n } from "@/i18n/index.js";
 
 // Quick answers above the contact form, so the common questions get answered without a message.
-// Each answer is <prefix>.<id>.a; {discord}, {press}, {status} and {steamHelp} render as
+// Each answer is <prefix>.<id>.a; {discord}, {press} and {steamHelp} render as
 // links wherever a translation puts them. The support page passes its own prefix and items.
 const props = defineProps({
 	prefix: { type: String, default: "jobs.faq" },
-	items: { type: Array, default: () => ["key", "bug", "down", "coverage"] },
+	items: { type: Array, default: () => ["key", "bug", "coverage"] },
 	heading: { type: Boolean, default: true },
 });
 
@@ -38,11 +38,6 @@ const { t, path } = useI18n();
 						<template #steamHelp>
 							<a :href="STEAM_HELP" target="_blank" rel="noopener noreferrer" class="link"
 								>Steam Support<span class="sr-only"> {{ t("a11y.newTab") }}</span></a
-							>
-						</template>
-						<template #status>
-							<a :href="SITE.status" target="_blank" rel="noopener noreferrer" class="link"
-								>{{ t("footer.resources.status") }}<span class="sr-only"> {{ t("a11y.newTab") }}</span></a
 							>
 						</template>
 					</I18nT>
